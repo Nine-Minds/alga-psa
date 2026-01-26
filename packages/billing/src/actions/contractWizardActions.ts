@@ -171,7 +171,16 @@ export type ContractWizardResult = {
   contract_line_ids?: string[];
 };
 
-const normalizeDateOnly = (input?: string): string | undefined => {
+const normalizeDateOnly = (input?: unknown): string | undefined => {
+  if (input == null) return undefined;
+
+  if (input instanceof Date) {
+    if (Number.isNaN(input.getTime())) return undefined;
+    return input.toISOString().split('T')[0];
+  }
+
+  if (typeof input !== 'string') return undefined;
+
   if (!input) return undefined;
   const trimmed = input.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
@@ -1702,10 +1711,15 @@ export const getDraftContractForResume = withAuth(async (
     }
   }
 
+  const startDate = normalizeDateOnly(clientContract.start_date);
+  if (!startDate) {
+    throw new Error('Draft contract has an invalid start date');
+  }
+
   return {
     client_id: clientContract.client_id,
     contract_name: contract.contract_name,
-    start_date: normalizeDateOnly(clientContract.start_date) ?? String(clientContract.start_date),
+    start_date: startDate,
     end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,
     description: contract.contract_description ?? undefined,
     billing_frequency: contract.billing_frequency ?? 'monthly',

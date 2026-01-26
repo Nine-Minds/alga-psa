@@ -23,6 +23,10 @@ import {
   getContractsWithClients,
   updateContract,
 } from '@alga-psa/billing/actions/contractActions';
+import {
+  getDraftContractForResume,
+  type DraftContractWizardData,
+} from '@alga-psa/billing/actions/contractWizardActions';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
 
@@ -35,6 +39,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const router = useRouter();
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [showClientWizard, setShowClientWizard] = useState(false);
+  const [draftToResume, setDraftToResume] = useState<DraftContractWizardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
@@ -112,6 +117,20 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to activate contract';
       alert(message);
+    }
+  };
+
+  const handleResumeDraft = async (contractId: string) => {
+    try {
+      setIsLoading(true);
+      const draftData = await getDraftContractForResume(contractId);
+      setDraftToResume(draftData);
+      setShowClientWizard(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to resume draft';
+      alert(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -365,7 +384,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
               />
               <Button
                 id="client-wizard-button"
-                onClick={() => setShowClientWizard(true)}
+                onClick={() => {
+                  setDraftToResume(null);
+                  setShowClientWizard(true);
+                }}
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
               >
                 <Wand2 className="h-4 w-4" />
@@ -385,12 +407,19 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       </Card>
       <ContractWizard
         open={showClientWizard}
-        onOpenChange={setShowClientWizard}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDraftToResume(null);
+          }
+          setShowClientWizard(open);
+        }}
         onComplete={() => {
           setShowClientWizard(false);
+          setDraftToResume(null);
           void fetchClientContracts();
           onRefreshNeeded?.();
         }}
+        editingContract={draftToResume}
       />
     </>
   );
