@@ -58,13 +58,9 @@ export const importWorkflowBundleV1 = async (
             { status: 409, details: { workflowKey: wf.key, existingWorkflowId: existing.workflow_id } }
           );
         }
-        await trx('workflow_definitions')
-          .where({ workflow_id: existing.workflow_id })
-          .del();
-        summary.deletedWorkflows.push({ key: wf.key, workflowId: existing.workflow_id });
       }
 
-      const workflowId = uuidv4();
+      const workflowId = existing?.workflow_id ?? uuidv4();
       const draftDefinition = rewriteWorkflowDefinitionId(wf.draft.definition, workflowId);
       const publishedVersions = wf.publishedVersions
         .map((v) => ({
@@ -74,45 +70,75 @@ export const importWorkflowBundleV1 = async (
         }))
         .sort((a, b) => a.version - b.version);
 
-      await WorkflowDefinitionModelV2.create(trx, {
-        workflow_id: workflowId,
-        key: wf.key,
-        name: wf.metadata.name,
-        description: wf.metadata.description,
-        payload_schema_ref: wf.metadata.payloadSchemaRef,
-        payload_schema_mode: wf.metadata.payloadSchemaMode,
-        pinned_payload_schema_ref: wf.metadata.pinnedPayloadSchemaRef,
-        trigger: wf.metadata.trigger,
-        draft_definition: draftDefinition,
-        draft_version: wf.draft.draftVersion,
-        status: publishedVersions.length ? 'published' : 'draft',
-        is_system: wf.metadata.isSystem,
-        is_visible: wf.metadata.isVisible,
-        is_paused: wf.metadata.isPaused,
-        concurrency_limit: wf.metadata.concurrencyLimit,
-        auto_pause_on_failure: wf.metadata.autoPauseOnFailure,
-        failure_rate_threshold: wf.metadata.failureRateThreshold,
-        failure_rate_min_runs: wf.metadata.failureRateMinRuns,
-        retention_policy_override: wf.metadata.retentionPolicyOverride,
-        created_by: actorUserId,
-        updated_by: actorUserId
-      });
+      if (existing) {
+        await WorkflowDefinitionModelV2.update(trx, workflowId, {
+          key: wf.key,
+          name: wf.metadata.name,
+          description: wf.metadata.description,
+          payload_schema_ref: wf.metadata.payloadSchemaRef,
+          payload_schema_mode: wf.metadata.payloadSchemaMode,
+          pinned_payload_schema_ref: wf.metadata.pinnedPayloadSchemaRef,
+          trigger: wf.metadata.trigger,
+          draft_definition: draftDefinition,
+          draft_version: wf.draft.draftVersion,
+          status: publishedVersions.length ? 'published' : 'draft',
+          is_system: wf.metadata.isSystem,
+          is_visible: wf.metadata.isVisible,
+          is_paused: wf.metadata.isPaused,
+          concurrency_limit: wf.metadata.concurrencyLimit,
+          auto_pause_on_failure: wf.metadata.autoPauseOnFailure,
+          failure_rate_threshold: wf.metadata.failureRateThreshold,
+          failure_rate_min_runs: wf.metadata.failureRateMinRuns,
+          retention_policy_override: wf.metadata.retentionPolicyOverride,
+          updated_by: actorUserId
+        });
+      } else {
+        await WorkflowDefinitionModelV2.create(trx, {
+          workflow_id: workflowId,
+          key: wf.key,
+          name: wf.metadata.name,
+          description: wf.metadata.description,
+          payload_schema_ref: wf.metadata.payloadSchemaRef,
+          payload_schema_mode: wf.metadata.payloadSchemaMode,
+          pinned_payload_schema_ref: wf.metadata.pinnedPayloadSchemaRef,
+          trigger: wf.metadata.trigger,
+          draft_definition: draftDefinition,
+          draft_version: wf.draft.draftVersion,
+          status: publishedVersions.length ? 'published' : 'draft',
+          is_system: wf.metadata.isSystem,
+          is_visible: wf.metadata.isVisible,
+          is_paused: wf.metadata.isPaused,
+          concurrency_limit: wf.metadata.concurrencyLimit,
+          auto_pause_on_failure: wf.metadata.autoPauseOnFailure,
+          failure_rate_threshold: wf.metadata.failureRateThreshold,
+          failure_rate_min_runs: wf.metadata.failureRateMinRuns,
+          retention_policy_override: wf.metadata.retentionPolicyOverride,
+          created_by: actorUserId,
+          updated_by: actorUserId
+        });
+      }
 
       summary.createdWorkflows.push({ key: wf.key, workflowId });
 
-      if (publishedVersions.length) {
-        const versionsCreated: number[] = [];
-        for (const v of publishedVersions) {
-          await WorkflowDefinitionVersionModelV2.create(trx, {
-            workflow_id: workflowId,
-            version: v.version,
-            definition_json: v.definition,
-            payload_schema_json: v.payloadSchemaJson ?? null,
-            published_by: actorUserId,
-            published_at: new Date().toISOString()
-          });
-          versionsCreated.push(v.version);
-        }
+      if (existing) {
+        await trx('workflow_definition_versions')
+          .where({ workflow_id: workflowId })
+          .del();
+      }
+
+      const versionsCreated: number[] = [];
+      for (const v of publishedVersions) {
+        await WorkflowDefinitionVersionModelV2.create(trx, {
+          workflow_id: workflowId,
+          version: v.version,
+          definition_json: v.definition,
+          payload_schema_json: v.payloadSchemaJson ?? null,
+          published_by: actorUserId,
+          published_at: new Date().toISOString()
+        });
+        versionsCreated.push(v.version);
+      }
+      if (versionsCreated.length) {
         summary.createdPublishedVersions.push({ key: wf.key, workflowId, versions: versionsCreated });
       }
     }

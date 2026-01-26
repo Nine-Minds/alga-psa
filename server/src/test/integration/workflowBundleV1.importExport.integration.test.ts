@@ -419,7 +419,7 @@ describe('workflow bundle v1 import/export', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('import force overwrite deletes the existing workflow by key and recreates it with a regenerated workflow_id', async () => {
+  it('import force overwrite updates the existing workflow by key and publishes a new version', async () => {
     const bundle = {
       format: 'alga-psa.workflow-bundle',
       formatVersion: 1,
@@ -481,14 +481,17 @@ describe('workflow bundle v1 import/export', () => {
     const second = await importWorkflowBundleV1(db, bundle, { force: true });
     const secondId = second.createdWorkflows[0].workflowId;
 
-    expect(secondId).not.toBe(firstId);
+    expect(secondId).toBe(firstId);
 
-    const oldRow = await db('workflow_definitions').where({ workflow_id: firstId }).first();
-    expect(oldRow).toBeFalsy();
+    const row = await db('workflow_definitions').where({ workflow_id: secondId }).first();
+    expect(row).toBeTruthy();
+    expect(row.key).toBe('test.force-overwrite');
 
-    const newRow = await db('workflow_definitions').where({ workflow_id: secondId }).first();
-    expect(newRow).toBeTruthy();
-    expect(newRow.key).toBe('test.force-overwrite');
+    const versions = await db('workflow_definition_versions')
+      .where({ workflow_id: secondId })
+      .orderBy('version', 'asc');
+    expect(versions).toHaveLength(1);
+    expect(versions[0].version).toBe(1);
   });
 
   it('import is transactional: if any DB write fails, no workflow_definitions or workflow_definition_versions are persisted', async () => {
