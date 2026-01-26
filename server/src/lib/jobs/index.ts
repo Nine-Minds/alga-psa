@@ -324,7 +324,7 @@ export const scheduleCleanupAiSessionKeysJob = async (
   return await scheduler.scheduleRecurringJob<CleanupAiSessionKeysJobData>(
     'cleanup-ai-session-keys',
     cronExpression,
-    { trigger: 'cron' }
+    { tenantId: 'system', trigger: 'cron' }
   );
 };
 

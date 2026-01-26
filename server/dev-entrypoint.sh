@@ -34,6 +34,15 @@ export REDIS_HOST="${REDIS_HOST:-redis}"
 export REDIS_PORT="${REDIS_PORT:-6379}"
 export HOCUSPOCUS_URL="${HOCUSPOCUS_URL:-ws://hocuspocus:1234}"
 
+# Some startup tasks (e.g. standard invoice template sync) require the AssemblyScript compiler.
+# The template compiler lives in a nested package with its own node_modules.
+ASC_JS="/app/server/src/invoice-templates/assemblyscript/node_modules/assemblyscript/dist/asc.js"
+if [ ! -f "$ASC_JS" ]; then
+  echo "[server-dev-entrypoint] Installing AssemblyScript deps for invoice templates..."
+  mkdir -p /app/.npm-cache >/dev/null 2>&1 || true
+  (cd /app/server/src/invoice-templates/assemblyscript && npm install --cache /app/.npm-cache --silent)
+fi
+
 cd /app/server
 # Avoid Nx flakiness inside long-lived containers (e.g. `docker compose restart`) by running Next directly.
 # Next 16 defaults to Turbopack; keep that default. Webpack can be forced for debugging via ALGA_NEXT_WEBPACK=1.

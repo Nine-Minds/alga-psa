@@ -232,6 +232,11 @@ const nextConfig = {
       'knex/lib/dialects/oracledb/index.js': emptyShim,
       'knex/lib/dialects/oracledb/utils.js': emptyShim,
 
+      // Ensure Yjs resolves to a single ESM entrypoint to avoid "Yjs was already imported" warnings
+      // caused by mixing CJS + ESM Yjs bundles in the same runtime.
+      'yjs': '../node_modules/yjs/dist/yjs.mjs',
+      'yjs/dist/yjs.cjs': '../node_modules/yjs/dist/yjs.mjs',
+
       // Product feature aliasing - point stable import paths to OSS or EE implementations
       '@product/extensions/entry': isEE
         ? '@product/extensions/ee/entry'
@@ -283,11 +288,6 @@ const nextConfig = {
         ? '../packages/product-extension-actions/ee/entry'
         : '../packages/product-extension-actions/oss/entry',
     },
-  },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
 	  transpilePackages: [
@@ -778,7 +778,7 @@ const nextConfig = {
       bodySizeLimit: serverActionsBodyLimit,
     },
     // Increase middleware body size limit for extension installs
-    middlewareClientMaxBodySize: '100mb',
+    proxyClientMaxBodySize: '100mb',
   },
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
