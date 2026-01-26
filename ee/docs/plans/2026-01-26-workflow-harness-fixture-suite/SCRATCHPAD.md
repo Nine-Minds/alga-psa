@@ -677,3 +677,8 @@ When implementing a new action:
 - Added shared scaffolded fixture runner helper: `ee/test-data/workflow-harness/_lib/scaffolded-fixture.cjs`.
 - Ran `node tools/workflow-harness/generate-fixture-catalog.cjs` to create missing fixture folders from `tests.json` (created 139 scaffolded fixtures).
 - Result: all 161 fixtures referenced by `tests.json` now exist under `ee/test-data/workflow-harness/` (plus a handful of earlier non-plan fixtures like schema-validation + negative cases).
+
+## 2026-01-26 — Scaffolded Fixture Tests
+
+- Added `tools/workflow-harness/tests/fixture-catalog.test.cjs` which dynamically creates one stubbed harness test per plan entry whose fixture folder is marked `.scaffolded`.
+- Marked `T115` implemented (validated via `node --test tools/workflow-harness/tests/fixture-catalog.test.cjs`).
