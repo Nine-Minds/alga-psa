@@ -342,6 +342,15 @@ export class WorkflowRuntimeV2 {
         }
       } catch (error) {
         const runtimeError = toRuntimeError(error, currentPath!);
+        if (runtimeError.message === '[object Object]') {
+          const raw = safeJsonString(error) ?? formatUnknownErrorMessage(error);
+          // eslint-disable-next-line no-console
+          console.error('[WorkflowRuntimeV2] Step failed with non-Error throw', {
+            runId,
+            stepPath: currentPath,
+            raw
+          });
+        }
         const onErrorPolicy = getOnErrorPolicy(step);
 
         if (onErrorPolicy === 'continue') {
@@ -840,9 +849,10 @@ export class WorkflowRuntimeV2 {
       });
       return validatedOutput;
     } catch (error) {
+      const errorMessage = formatUnknownErrorMessage(error);
       await WorkflowActionInvocationModelV2.update(knex, invocation.invocation_id, {
         status: 'FAILED',
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: errorMessage,
         completed_at: new Date().toISOString()
       });
     await this.logRunEvent(knex, run, {
@@ -854,7 +864,7 @@ export class WorkflowRuntimeV2 {
         actionId,
         actionVersion: version,
         attempt: invocation.attempt,
-          error: error instanceof Error ? error.message : String(error)
+          error: errorMessage
         },
         source: 'runtime',
         redactions
@@ -1096,21 +1106,55 @@ function createRuntimeError(category: WorkflowErrorCategory, message: string, no
   };
 }
 
+function safeJsonString(value: unknown): string | null {
+  try {
+    return JSON.stringify(safeSerialize(value));
+  } catch {
+    return null;
+  }
+}
+
+function formatUnknownErrorMessage(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value instanceof Error) return value.message;
+
+  const json = safeJsonString(value);
+  if (json) return json.slice(0, 2000);
+
+  return String(value);
+}
+
 function toRuntimeError(error: unknown, nodePath: string): RuntimeError {
-  if (error instanceof ZodError) {
+  const zodLike = typeof error === 'object'
+    && error !== null
+    && 'issues' in error
+    && Array.isArray((error as any).issues);
+
+  if (error instanceof ZodError || zodLike) {
+    const issues = (error as any).issues;
     return {
       category: 'ValidationError',
       code: 'VALIDATION_ERROR',
       message: 'Validation failed',
       nodePath,
       at: new Date().toISOString(),
-      issues: error.issues
+      issues
     } as RuntimeError;
   }
   if (typeof error === 'object' && error && 'category' in error) {
-    return error as RuntimeError;
+    const errAny = error as any;
+    return {
+      ...errAny,
+      message: formatUnknownErrorMessage(errAny.message ?? errAny),
+      nodePath: typeof errAny.nodePath === 'string' ? errAny.nodePath : nodePath,
+      at: typeof errAny.at === 'string' ? errAny.at : new Date().toISOString()
+    } as RuntimeError;
   }
-  return createRuntimeError('ActionError', error instanceof Error ? error.message : String(error), nodePath);
+  if (typeof error === 'object' && error !== null) {
+    const message = formatUnknownErrorMessage((error as any).message ?? error);
+    return createRuntimeError('ActionError', message, nodePath);
+  }
+  return createRuntimeError('ActionError', formatUnknownErrorMessage(error), nodePath);
 }
 
 function applyErrorToEnv(env: Envelope, error: RuntimeError, nodePath: string): Envelope {

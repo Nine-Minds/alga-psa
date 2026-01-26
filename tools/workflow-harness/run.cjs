@@ -107,6 +107,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
   const http = createHttpClient({ baseUrl, tenantId, cookie, debug });
   let db;
   let dbWrite;
+  let primaryError;
   const state = {
     testId,
     baseUrl,
@@ -318,8 +319,21 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
 
     // eslint-disable-next-line no-param-reassign
     err.artifactsDir = writer.root;
+    primaryError = err;
     throw err;
   } finally {
+    // Cleanup the imported workflow (outside fixture cleanup) so that:
+    // - we can still export/debug on failure before deletion
+    // - workflows from previous runs don't accumulate and slow down iteration
+    let workflowDeleteError;
+    if (dbWrite && state.workflowId) {
+      try {
+        await dbWrite.query(`delete from workflow_definitions where workflow_id = $1`, [state.workflowId]);
+      } catch (err) {
+        workflowDeleteError = err;
+      }
+    }
+
     if (db) {
       try {
         await db.close();
@@ -332,6 +346,15 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
         await dbWrite.close();
       } catch {
         // ignore
+      }
+    }
+
+    if (workflowDeleteError) {
+      if (primaryError) {
+        // eslint-disable-next-line no-param-reassign
+        primaryError.workflowCleanup = workflowDeleteError;
+      } else {
+        throw workflowDeleteError;
       }
     }
   }

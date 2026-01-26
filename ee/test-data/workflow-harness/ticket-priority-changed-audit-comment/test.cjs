@@ -31,7 +31,7 @@ module.exports = async function run(ctx) {
   });
   const status = await pickOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and item_type = 'ticket' order by is_default desc, order_number asc limit 1`,
+    sql: `select status_id from statuses where tenant = $1 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
     params: [tenantId]
   });
   const lowPriority = await pickOne(ctx, {

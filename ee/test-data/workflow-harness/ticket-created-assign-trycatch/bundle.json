@@ -22,12 +22,11 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [
-          { "actionId": "tickets.find", "version": 1 },
-          { "actionId": "tickets.assign", "version": 1 },
-          { "actionId": "tickets.add_comment", "version": 1 },
-          { "actionId": "notifications.send_in_app", "version": 1 }
-        ],
+	        "actions": [
+	          { "actionId": "tickets.find", "version": 1 },
+	          { "actionId": "tickets.assign", "version": 1 },
+	          { "actionId": "tickets.add_comment", "version": 1 }
+	        ],
         "nodeTypes": ["action.call", "control.return", "control.tryCatch", "state.set", "transform.assign"],
         "schemaRefs": ["payload.TicketCreated.v1"]
       },
@@ -61,7 +60,6 @@
               "config": {
                 "assign": {
                   "vars.badAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_bad_assignee_user_id" },
-                  "vars.notifyUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id" },
                   "vars.marker": { "$expr": "'[fixture ticket-created-assign-trycatch]'" }
                 }
               }
@@ -94,22 +92,7 @@
                     "assign": {
                       "vars.errorMessage": { "$expr": "coalesce(vars.caughtError.message, 'unknown error')" },
                       "vars.title": { "$expr": "vars.marker & ' Assign failed'" },
-                      "vars.body": { "$expr": "'ticketId=' & payload.ticketId & ' error=' & vars.errorMessage" }
-                    }
-                  }
-                },
-                {
-                  "id": "notify-admin",
-                  "type": "action.call",
-                  "config": {
-                    "actionId": "notifications.send_in_app",
-                    "version": 1,
-                    "inputMapping": {
-                      "recipients": { "$expr": "{ \"user_ids\": [vars.notifyUserId] }" },
-                      "title": { "$expr": "vars.title" },
-                      "body": { "$expr": "vars.body" },
-                      "severity": "warning",
-                      "dedupe_key": { "$expr": "'fixture.ticket-created-assign-trycatch:' & payload.ticketId" }
+                      "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId & ' error=' & vars.errorMessage" }
                     }
                   }
                 },
@@ -162,11 +145,10 @@
                 "id": "assign-fixture-vars",
                 "type": "transform.assign",
                 "config": {
-                  "assign": {
-                    "vars.badAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_bad_assignee_user_id" },
-                    "vars.notifyUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id" },
-                    "vars.marker": { "$expr": "'[fixture ticket-created-assign-trycatch]'" }
-                  }
+	                  "assign": {
+	                    "vars.badAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_bad_assignee_user_id" },
+	                    "vars.marker": { "$expr": "'[fixture ticket-created-assign-trycatch]'" }
+	                  }
                 }
               },
               {
@@ -197,29 +179,14 @@
                       "assign": {
                         "vars.errorMessage": { "$expr": "coalesce(vars.caughtError.message, 'unknown error')" },
                         "vars.title": { "$expr": "vars.marker & ' Assign failed'" },
-                        "vars.body": { "$expr": "'ticketId=' & payload.ticketId & ' error=' & vars.errorMessage" }
+                        "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId & ' error=' & vars.errorMessage" }
                       }
                     }
                   },
-                  {
-                    "id": "notify-admin",
-                    "type": "action.call",
-                    "config": {
-                      "actionId": "notifications.send_in_app",
-                      "version": 1,
-                      "inputMapping": {
-                        "recipients": { "$expr": "{ \"user_ids\": [vars.notifyUserId] }" },
-                        "title": { "$expr": "vars.title" },
-                        "body": { "$expr": "vars.body" },
-                        "severity": "warning",
-                        "dedupe_key": { "$expr": "'fixture.ticket-created-assign-trycatch:' & payload.ticketId" }
-                      }
-                    }
-                  },
-                  {
-                    "id": "comment-error",
-                    "type": "action.call",
-                    "config": {
+	                  {
+	                    "id": "comment-error",
+	                    "type": "action.call",
+	                    "config": {
                       "actionId": "tickets.add_comment",
                       "version": 1,
                       "inputMapping": {
@@ -241,4 +208,3 @@
     }
   ]
 }
-

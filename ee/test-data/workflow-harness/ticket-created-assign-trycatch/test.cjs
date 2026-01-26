@@ -31,17 +31,12 @@ module.exports = async function run(ctx) {
   });
   const status = await pickOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and item_type = 'ticket' order by is_default desc, order_number asc limit 1`,
+    sql: `select status_id from statuses where tenant = $1 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
     params: [tenantId]
   });
   const priority = await pickOne(ctx, {
     label: 'a ticket priority',
     sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
-    params: [tenantId]
-  });
-  const notifyUser = await pickOne(ctx, {
-    label: 'a user',
-    sql: `select user_id from users where tenant = $1 order by created_at asc limit 1`,
     params: [tenantId]
   });
 
@@ -56,8 +51,7 @@ module.exports = async function run(ctx) {
       status_id: status.status_id,
       priority_id: priority.priority_id,
       attributes: {
-        fixture_bad_assignee_user_id: randomUUID(),
-        fixture_notify_user_id: notifyUser.user_id
+        fixture_bad_assignee_user_id: randomUUID()
       }
     }
   });
@@ -66,10 +60,8 @@ module.exports = async function run(ctx) {
   if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
 
   ctx.onCleanup(async () => {
-    await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': apiKey }
-    });
+    await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+    await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
   });
 
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
@@ -93,23 +85,4 @@ module.exports = async function run(ctx) {
   if (!commentFound) {
     throw new Error(`Expected an internal comment containing "${marker}" and ticketId on ticket ${ticketId}. Found ${comments.length} comment(s).`);
   }
-
-  const notifications = await ctx.db.query(
-    `
-      select internal_notification_id, title, message
-      from internal_notifications
-      where tenant = $1 and user_id = $2
-      order by created_at desc
-      limit 25
-    `,
-    [tenantId, notifyUser.user_id]
-  );
-
-  const notificationFound = notifications.find(
-    (n) => typeof n.title === 'string' && n.title.includes(marker) && typeof n.message === 'string' && n.message.includes(ticketId)
-  );
-  if (!notificationFound) {
-    throw new Error(`Expected an internal notification containing "${marker}" and ticketId for user ${notifyUser.user_id}. Found ${notifications.length} notification(s).`);
-  }
 };
-

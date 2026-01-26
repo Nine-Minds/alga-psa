@@ -2552,7 +2552,10 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   const triggered = await WorkflowDefinitionModelV2.list(knex);
   const matching = triggered.filter(
-    (workflow) => workflow.trigger?.eventName === parsed.eventName && workflow.status === 'published'
+    (workflow) =>
+      workflow.trigger?.eventName === parsed.eventName
+      && workflow.status === 'published'
+      && workflow.is_paused !== true
   );
 
   const startedRuns: string[] = [];

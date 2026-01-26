@@ -29,6 +29,11 @@ function createHttpClient({ baseUrl, tenantId, cookie, debug = false, fetchImpl 
     const headers = { ...(opts.headers ?? {}) };
     if (cookie) headers.Cookie = cookie;
     if (tenantId) headers['x-tenant-id'] = tenantId;
+    const envApiKey = process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
+    if (envApiKey) {
+      const hasApiKeyHeader = Object.keys(headers).some((k) => String(k).toLowerCase() === 'x-api-key');
+      if (!hasApiKeyHeader) headers['x-api-key'] = envApiKey;
+    }
 
     let body = opts.body;
     if (opts.json !== undefined) {
@@ -68,4 +73,3 @@ module.exports = {
   HttpError,
   createHttpClient
 };
-
