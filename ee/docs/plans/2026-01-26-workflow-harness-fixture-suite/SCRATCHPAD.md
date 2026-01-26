@@ -41,3 +41,4 @@
 - T010: Added stubbed runner test that asserts `--debug` emits verbose logs (import summary + workflow id/key).
 - T011: Added stubbed runner test verifying cleanup hooks run on both success and failure.
 - T020: Added stubbed harness execution test for `ee/test-data/workflow-harness/ticket-created-hello` to validate bundle import, event submission call, and run success path without requiring a live server/DB.
+- T100: Added stubbed harness execution test for `ee/test-data/workflow-harness/ticket-created-triage-comment` validating `/api/v1/tickets` trigger calls include `x-api-key`, and cleanup issues a DELETE.
