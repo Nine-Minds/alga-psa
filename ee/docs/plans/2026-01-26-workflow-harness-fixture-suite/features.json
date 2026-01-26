@@ -4,7 +4,7 @@
   { "id": "F003", "description": "Implement test discovery by folder path (validate required files exist)", "implemented": true },
   { "id": "F004", "description": "Define test runtime context object passed into test.cjs", "implemented": true },
   { "id": "F005", "description": "Provide HTTP helper that automatically sets Cookie + x-tenant-id", "implemented": true },
-  { "id": "F006", "description": "Provide Postgres read helper (required; configurable host/port/password) for assertions", "implemented": false },
+  { "id": "F006", "description": "Provide Postgres read helper (required; configurable host/port/password) for assertions", "implemented": true },
   { "id": "F007", "description": "Integrate workflow import via existing workflow bundle import API (supports force overwrite)", "implemented": false },
   { "id": "F008", "description": "Add workflow export helper (for debug artifacts and optional assertions)", "implemented": false },
   { "id": "F009", "description": "Implement waitForRun helper (poll workflow_runs for imported workflow after trigger time)", "implemented": false },

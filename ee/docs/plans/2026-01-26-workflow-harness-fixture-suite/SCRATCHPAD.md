@@ -7,3 +7,4 @@
 - F003: Added fixture discovery + required file validation (`bundle.json`, `test.cjs`).
 - F004: Added `tools/workflow-harness/lib/context.cjs` (ctx config, logging, cleanup registration/execution).
 - F005: Added `tools/workflow-harness/lib/http.cjs` (fetch wrapper that sets Cookie + x-tenant-id).
+- F006: Added `tools/workflow-harness/lib/db.cjs` (read-only Postgres client via `DATABASE_URL` / connection string).
