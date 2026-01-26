@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 
-const fs = require('fs');
+import fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const usage = (consoleImpl) => {
   consoleImpl.error(`
@@ -113,12 +114,22 @@ async function runWorkflowBundleCli(argv, deps = {}) {
   throw new Error(`Unknown command: ${cmd}`);
 }
 
-if (require.main === module) {
+const isMain = (() => {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  try {
+    return import.meta.url === pathToFileURL(argv1).href;
+  } catch {
+    return false;
+  }
+})();
+
+if (isMain) {
   runWorkflowBundleCli(process.argv.slice(2)).catch((err) => {
-    console.error(err.message);
-    if (err.details) console.error(JSON.stringify(err.details, null, 2));
+    console.error(err?.message ?? String(err));
+    if (err?.details) console.error(JSON.stringify(err.details, null, 2));
     process.exit(1);
   });
 }
 
-module.exports = { runWorkflowBundleCli };
+export { runWorkflowBundleCli };
