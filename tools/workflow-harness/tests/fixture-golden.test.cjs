@@ -874,3 +874,95 @@ test('T108: ticket-assigned-acknowledge fixture loads and executes via harness',
   assert.equal(requests[2].opts.method, 'DELETE');
   assert.equal(requests[2].opts.headers['x-api-key'], 'api-key');
 });
+
+test('T109: ticket-unassigned-return-to-triage fixture loads and executes via harness', async () => {
+  const fixtureDir = path.resolve(process.cwd(), 'ee/test-data/workflow-harness/ticket-unassigned-return-to-triage');
+  const bundlePath = path.join(fixtureDir, 'bundle.json');
+  const testPath = path.join(fixtureDir, 'test.cjs');
+
+  const savedApiKey = process.env.WORKFLOW_HARNESS_API_KEY;
+  process.env.WORKFLOW_HARNESS_API_KEY = 'api-key';
+
+  const requests = [];
+  const harness = loadHarnessWithStubs({
+    http: {
+      createHttpClient: () => ({
+        request: async (p, opts) => {
+          requests.push({ path: p, opts });
+          if (p === '/api/v1/tickets' && opts?.method === 'POST') {
+            return { json: { data: { ticket_id: 'ticket-109' } } };
+          }
+          return { json: { data: {} } };
+        }
+      })
+    },
+    db: {
+      createDbClient: async () => ({
+        query: async (text) => {
+          const sql = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+          if (sql.includes('from clients')) return [{ client_id: 'client-109' }];
+          if (sql.includes('from boards')) return [{ board_id: 'board-109' }];
+          if (sql.includes('from statuses')) return [{ status_id: 'status-109' }];
+          if (sql.includes('from priorities')) return [{ priority_id: 'priority-109' }];
+          if (sql.includes('from users')) return [{ user_id: 'user-109' }];
+          if (sql.includes('select status_id from tickets')) return [{ status_id: 'status-109' }];
+          if (sql.includes('from internal_notifications')) {
+            return [
+              {
+                internal_notification_id: 'notif-109',
+                title: '[fixture ticket-unassigned-return-to-triage] Ticket unassigned',
+                message: '[fixture ticket-unassigned-return-to-triage] ticketId=ticket-109'
+              }
+            ];
+          }
+          return [];
+        },
+        close: async () => {}
+      })
+    },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.ticket-unassigned-return-to-triage', workflowId: 'wf-109' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-109', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await runFixture({
+      testDir: fixtureDir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+  } finally {
+    harness.restore();
+    if (savedApiKey === undefined) delete process.env.WORKFLOW_HARNESS_API_KEY;
+    else process.env.WORKFLOW_HARNESS_API_KEY = savedApiKey;
+  }
+
+  assert.equal(requests.length, 3);
+  assert.equal(requests[0].path, '/api/v1/tickets');
+  assert.equal(requests[0].opts.method, 'POST');
+  assert.equal(requests[0].opts.headers['x-api-key'], 'api-key');
+  assert.equal(requests[1].path, '/api/workflow/events');
+  assert.equal(requests[1].opts.method, 'POST');
+  assert.equal(requests[1].opts.json.eventName, 'TICKET_UNASSIGNED');
+  assert.equal(requests[1].opts.json.payloadSchemaRef, 'payload.TicketUnassigned.v1');
+  assert.equal(requests[1].opts.json.payload.ticketId, 'ticket-109');
+  assert.equal(requests[2].path, '/api/v1/tickets/ticket-109');
+  assert.equal(requests[2].opts.method, 'DELETE');
+  assert.equal(requests[2].opts.headers['x-api-key'], 'api-key');
+});

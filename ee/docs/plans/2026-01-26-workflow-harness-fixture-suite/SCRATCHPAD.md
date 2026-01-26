@@ -74,7 +74,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 ### Architecture: Stubbed Tests and Integration Tests
 
-(2026-01-26) The harness comes with two layers of tests: unit tests (T001-T011) that stub HTTP/DB clients to test the harness infrastructure itself, and fixture-level integration tests (T020, T100-T108) that use the same stubs to validate fixture logic without requiring a live server or database. Tests are written in Node.js (CommonJS), loaded dynamically at runtime via `require()`, and executed through `tools/workflow-harness/tests/runner-stubbed.test.cjs`. This dual-layer approach lets developers validate both harness behavior and fixture correctness in isolation before running against a real environment.
+(2026-01-26) The harness comes with two layers of tests: unit tests (T001-T011) that stub HTTP/DB clients to test the harness infrastructure itself, and fixture-level integration tests (T020, T100-T109) that use the same stubs to validate fixture logic without requiring a live server or database. Tests are written in Node.js (CommonJS), loaded dynamically at runtime via `require()`, and executed through `tools/workflow-harness/tests/runner-stubbed.test.cjs`. This dual-layer approach lets developers validate both harness behavior and fixture correctness in isolation before running against a real environment.
 
 ### Unit & Integration Tests
 
@@ -84,7 +84,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Stubbed runner tests for import, error handling, timeouts, cleanup, debug/JSON output
   - Cookie-file unit test extracted to `tools/workflow-harness/lib/cookie.cjs`
 - (2026-01-26) T020: Stubbed harness execution test for `ticket-created-hello` validates bundle import, event submission, run success without live server/DB.
-- (2026-01-26) T100-T108: Fixture-specific stubbed execution tests covering:
+- (2026-01-26) T100-T109: Fixture-specific stubbed execution tests covering:
   - `ticket-created-triage-comment`: `/api/v1/tickets` trigger + API key headers + cleanup DELETE
   - `ticket-created-auto-assign-by-priority`: Reads `attributes.fixture_priority`, assigns to `attributes.fixture_assignee_user_id`
   - `ticket-created-vip-notify`: Reads `attributes.fixture_is_vip`, sends in-app notification
@@ -94,6 +94,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ticket-created-notify-multiple`: Uses `control.forEach` to send notifications to multiple recipients
   - `ticket-created-ignore-system`: Uses `control.if` + early `control.return` to skip system-created tickets
   - `ticket-assigned-acknowledge`: On `TICKET_ASSIGNED`, adds a public comment and sends an email
+  - `ticket-unassigned-return-to-triage`: On `TICKET_UNASSIGNED`, updates ticket status and notifies dispatch
 
 ## Common Fixture Test Patterns
 

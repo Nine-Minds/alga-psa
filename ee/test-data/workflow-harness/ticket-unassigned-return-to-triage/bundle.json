@@ -1,0 +1,146 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-unassigned-return-to-triage",
+      "metadata": {
+        "name": "Fixture: Ticket Unassigned → Return to Triage",
+        "description": "On unassignment, notify dispatch and set the ticket back to triage status.",
+        "payloadSchemaRef": "payload.TicketUnassigned.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketUnassigned.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_UNASSIGNED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.update_fields", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketUnassigned.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f109",
+          "version": 1,
+          "name": "Fixture: Ticket Unassigned → Return to Triage",
+          "description": "Sets ticket status back to triage and notifies dispatch.",
+          "payloadSchemaRef": "payload.TicketUnassigned.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_UNASSIGNED" },
+          "steps": [
+            { "id": "state-triage", "type": "state.set", "config": { "state": "TRIAGE" } },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-unassigned-return-to-triage]'" },
+                  "vars.title": { "$expr": "vars.marker & ' Ticket unassigned'" },
+                  "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "set-triage-status",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.update_fields",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "patch": { "$expr": "{\\\"status_id\\\": payload.fixtureTriageStatusId}" },
+                  "idempotency_key": { "$expr": "'fixture.ticket-unassigned-return-to-triage:update:' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "notify-dispatch",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                  "title": { "$expr": "vars.title" },
+                  "body": { "$expr": "vars.body" },
+                  "severity": "info",
+                  "dedupe_key": { "$expr": "'fixture.ticket-unassigned-return-to-triage:notify:' & payload.ticketId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f109",
+            "version": 1,
+            "name": "Fixture: Ticket Unassigned → Return to Triage",
+            "description": "Sets ticket status back to triage and notifies dispatch.",
+            "payloadSchemaRef": "payload.TicketUnassigned.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_UNASSIGNED" },
+            "steps": [
+              { "id": "state-triage", "type": "state.set", "config": { "state": "TRIAGE" } },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-unassigned-return-to-triage]'" },
+                    "vars.title": { "$expr": "vars.marker & ' Ticket unassigned'" },
+                    "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "set-triage-status",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.update_fields",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "patch": { "$expr": "{\\\"status_id\\\": payload.fixtureTriageStatusId}" },
+                    "idempotency_key": { "$expr": "'fixture.ticket-unassigned-return-to-triage:update:' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "notify-dispatch",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                    "title": { "$expr": "vars.title" },
+                    "body": { "$expr": "vars.body" },
+                    "severity": "info",
+                    "dedupe_key": { "$expr": "'fixture.ticket-unassigned-return-to-triage:notify:' & payload.ticketId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+
