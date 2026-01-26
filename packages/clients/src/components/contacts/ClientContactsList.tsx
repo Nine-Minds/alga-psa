@@ -106,7 +106,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     const handleDrawerClose = () => {
       if (changesSavedInDrawer) {
         // Refresh contacts list
-        getContactsByClient(clientId, statusFilter).then(setContacts);
+        getContactsByClient(clientId, statusFilter)
+          .then(data => setContacts(addIdToContacts(data)))
+          .catch(err => console.error('Error refreshing contacts after drawer close:', err));
         setChangesSavedInDrawer(false);
       }
     };
@@ -286,7 +288,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             setLoading(true);
             setError(null);
             getContactsByClient(clientId, statusFilter)
-              .then(setContacts)
+              .then(data => setContacts(addIdToContacts(data)))
               .catch(err => {
                 console.error('Error retrying contact fetch:', err);
                 setError('Failed to load contacts. Please try again.');
@@ -338,7 +340,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         isOpen={isQuickAddContactOpen}
         onClose={() => setIsQuickAddContactOpen(false)}
         onContactAdded={() => {
-          getContactsByClient(clientId, statusFilter).then(setContacts);
+          getContactsByClient(clientId, statusFilter)
+            .then(data => setContacts(addIdToContacts(data)))
+            .catch(err => console.error('Error refreshing contacts after quick add:', err));
         }}
         clients={clients}
         selectedClientId={clientId}
