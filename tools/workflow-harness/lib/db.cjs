@@ -1,10 +1,18 @@
-const { Client } = require('pg');
-
 function getDefaultConnectionString() {
   return process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING || '';
 }
 
 async function createDbClient({ connectionString, debug = false } = {}) {
+  let Client;
+  try {
+    // eslint-disable-next-line global-require
+    ({ Client } = require('pg'));
+  } catch (err) {
+    const e = new Error('Missing dependency: "pg". Install workspace dependencies (e.g. `npm ci`) to use DB assertions.');
+    e.cause = err;
+    throw e;
+  }
+
   const conn = connectionString ?? getDefaultConnectionString();
   if (!conn) {
     throw new Error('Missing Postgres connection string. Set DATABASE_URL (or pass --pg-url).');
@@ -39,4 +47,3 @@ async function createDbClient({ connectionString, debug = false } = {}) {
 module.exports = {
   createDbClient
 };
-
