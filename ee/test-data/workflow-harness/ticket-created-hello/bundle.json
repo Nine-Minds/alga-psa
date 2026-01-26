@@ -1,0 +1,75 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-hello",
+      "metadata": {
+        "name": "Fixture: Ticket Created → Hello",
+        "description": "Golden path fixture for workflow harness (import → trigger → assert run SUCCEEDED).",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": ["state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f001",
+          "version": 1,
+          "name": "Fixture: Ticket Created → Hello",
+          "description": "Golden path fixture for workflow harness.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+          "steps": [
+            { "id": "state-ready", "type": "state.set", "config": { "state": "READY" } },
+            {
+              "id": "assign-message",
+              "type": "transform.assign",
+              "config": { "assign": { "vars.message": { "$expr": "'hello'" } } }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f001",
+            "version": 1,
+            "name": "Fixture: Ticket Created → Hello",
+            "description": "Golden path fixture for workflow harness.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+            "steps": [
+              { "id": "state-ready", "type": "state.set", "config": { "state": "READY" } },
+              {
+                "id": "assign-message",
+                "type": "transform.assign",
+                "config": { "assign": { "vars.message": { "$expr": "'hello'" } } }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

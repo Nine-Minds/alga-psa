@@ -15,3 +15,4 @@
 - F011: Wired `tools/workflow-harness/run.cjs` to execute one fixture and emit single-line `PASS/FAIL <testId> <durationMs>` with exit codes.
 - F012: Added failure artifact writing (`tools/workflow-harness/lib/artifacts.cjs` + harness wiring) capturing error, import summary, workflow export, run/steps/logs when available.
 - F013: Added fixture root `ee/test-data/workflow-harness/` with README and conventions.
+- F014: Added golden fixture `ee/test-data/workflow-harness/ticket-created-hello/` (published workflow, triggers via `/api/workflow/events`, asserts run SUCCEEDED).
