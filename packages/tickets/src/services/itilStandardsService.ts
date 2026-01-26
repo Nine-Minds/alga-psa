@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { configureItilSlaForBoard } from '@alga-psa/sla';
 
 /**
  * Service to manage copying ITIL standards to tenant-specific tables
@@ -175,6 +176,7 @@ export class ItilStandardsService {
   /**
    * Handle ITIL configuration for a board
    * Copies necessary ITIL standards to tenant tables when ITIL is enabled
+   * Also auto-creates and assigns "ITIL Standard" SLA policy when using ITIL priorities
    */
   static async handleItilConfiguration(
     trx: Knex.Transaction,
@@ -187,6 +189,13 @@ export class ItilStandardsService {
     // Copy ITIL priorities if priority_type is 'itil'
     if (priorityType === 'itil') {
       await this.copyItilPrioritiesToTenant(trx, tenant, createdBy);
+
+      // Auto-create "ITIL Standard" SLA policy and assign to board
+      // This creates industry-standard SLA targets for each ITIL priority level
+      const slaResult = await configureItilSlaForBoard(trx, tenant, boardId);
+      if (slaResult.created) {
+        console.log(`[ItilStandardsService] Auto-created ITIL Standard SLA policy for board ${boardId}`);
+      }
     }
 
     // Copy ITIL categories if category_type is 'itil'

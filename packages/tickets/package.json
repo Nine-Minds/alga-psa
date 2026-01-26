@@ -40,6 +40,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/sla": "*",
     "@alga-psa/tags": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
