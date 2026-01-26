@@ -34,8 +34,7 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List } from 'lucide-react';
-import { ChevronRightIcon } from '@radix-ui/react-icons';
+import { ChevronRight, HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -1779,7 +1778,7 @@ export default function ProjectDetail({
                 title={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
                 aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
               >
-                <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
+                <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Phases panel content */}
