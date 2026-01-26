@@ -292,7 +292,12 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
     writer.writeJson('failure.context.json', {
       ...state,
       exportedWorkflowBundle: exported,
-      stepSummary: Array.isArray(state.steps) ? summarizeSteps(state.steps) : null
+      stepSummary: Array.isArray(state.steps) ? summarizeSteps(state.steps) : null,
+      error: {
+        name: err?.name ?? null,
+        message: err?.message ?? String(err),
+        details: err?.details ?? null
+      }
     });
     const extra =
       err?.cleanup ? `\n\n--- cleanup error ---\n${err.cleanup?.stack ?? err.cleanup?.message ?? String(err.cleanup)}` : '';

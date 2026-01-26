@@ -125,7 +125,74 @@ test('T005: surfaces thrown error as FAIL and writes stack trace artifacts', asy
         throw new Error('boom');
       };
     `
+});
+
+test('T006: waitForRun timeout produces helpful diagnostic in artifacts', async () => {
+  const { dir, bundlePath, testPath } = writeFixture({
+    name: 't006',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t006', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `
+      module.exports = async (ctx) => {
+        await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt, timeoutMs: 5 });
+      };
+    `
   });
+
+  const timeoutError = new Error('Timed out waiting for workflow run');
+  timeoutError.details = { lastSeen: null, recentRuns: [] };
+
+  const harness = loadHarnessWithStubs({
+    http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.t006', workflowId: 'wf-006' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => {
+        throw timeoutError;
+      },
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await assert.rejects(
+      () =>
+        runFixture({
+          testDir: dir,
+          bundlePath,
+          testPath,
+          baseUrl: 'http://localhost:3010',
+          tenantId: 'tenant',
+          cookie: 'cookie',
+          force: true,
+          timeoutMs: 1000,
+          debug: false,
+          artifactsDir: os.tmpdir(),
+          pgUrl: 'postgres://unused'
+        }),
+      (err) => {
+        assert.ok(err.artifactsDir, 'expected err.artifactsDir to be set');
+        const ctxPath = path.join(err.artifactsDir, 'failure.context.json');
+        const parsed = JSON.parse(fs.readFileSync(ctxPath, 'utf8'));
+        assert.equal(parsed.error.message, 'Timed out waiting for workflow run');
+        assert.deepEqual(parsed.error.details, { lastSeen: null, recentRuns: [] });
+        return true;
+      }
+    );
+  } finally {
+    harness.restore();
+  }
+});
 
   const harness = loadHarnessWithStubs({
     http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
