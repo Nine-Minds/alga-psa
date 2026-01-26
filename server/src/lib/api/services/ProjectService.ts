@@ -32,6 +32,7 @@ import ProjectModel from 'server/src/lib/models/project';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
+import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
@@ -221,6 +222,8 @@ export class ProjectService extends BaseService<IProject> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      const projectNumber = data.project_number ?? await SharedNumberingService.getNextNumber('PROJECT', { knex: trx, tenant: context.tenant });
+
       // Generate WBS code
       const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
       
@@ -246,6 +249,7 @@ export class ProjectService extends BaseService<IProject> {
       const projectData: any = {
         ...dataForInsert,
         wbs_code: wbsCode,
+        project_number: projectNumber,
         status: status, // Status is required in the database
         tenant: context.tenant,
         created_at: new Date(),
@@ -256,6 +260,7 @@ export class ProjectService extends BaseService<IProject> {
 
       // Create initial phase if needed
       if (data.create_default_phase) {
+        const phaseWbsCode = await ProjectModel.generateNextWbsCode(trx, project.wbs_code);
         await trx('project_phases').insert({
           phase_id: trx.raw('gen_random_uuid()'),
           project_id: project.project_id,
@@ -264,6 +269,8 @@ export class ProjectService extends BaseService<IProject> {
           start_date: project.start_date,
           end_date: project.end_date,
           status: 'active',
+          order_number: 1,
+          wbs_code: phaseWbsCode,
           tenant: context.tenant,
           created_at: new Date(),
           updated_at: new Date()

@@ -43,7 +43,7 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture integration-webhook-received-notify]'" },
-                  "vars.title": { "$expr": "vars.marker & ' Webhook received'" },
+                  "vars.title": { "$expr": "'[fixture integration-webhook-received-notify] Webhook received'" },
                   "vars.body": {
                     "$expr": "'provider=' & payload.provider & ' eventName=' & payload.eventName & ' webhookId=' & payload.webhookId"
                   }
@@ -87,7 +87,7 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture integration-webhook-received-notify]'" },
-                    "vars.title": { "$expr": "vars.marker & ' Webhook received'" },
+                    "vars.title": { "$expr": "'[fixture integration-webhook-received-notify] Webhook received'" },
                     "vars.body": {
                       "$expr": "'provider=' & payload.provider & ' eventName=' & payload.eventName & ' webhookId=' & payload.webhookId"
                     }
@@ -118,4 +118,3 @@
     }
   ]
 }
-

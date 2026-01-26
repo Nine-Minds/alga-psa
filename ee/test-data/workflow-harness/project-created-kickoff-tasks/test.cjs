@@ -18,6 +18,7 @@ module.exports = async function run(ctx) {
 
   const tenantId = ctx.config.tenantId;
   const marker = '[fixture project-created-kickoff-tasks]';
+  const correlationKey = randomUUID();
 
   const client = await pickOne(ctx, {
     label: 'a client',
@@ -40,10 +41,37 @@ module.exports = async function run(ctx) {
   if (!projectId) throw new Error('Project create response missing data.project_id');
 
   ctx.onCleanup(async () => {
-    await ctx.http.request(`/api/v1/projects/${projectId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': apiKey }
-    });
+    const phaseIds = await ctx.db.query(`select phase_id from project_phases where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+    const phaseIdList = phaseIds.map((r) => r.phase_id);
+
+    if (phaseIdList.length) {
+      const taskIds = await ctx.db.query(`select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`, [
+        tenantId,
+        phaseIdList
+      ]);
+      const taskIdList = taskIds.map((r) => r.task_id);
+
+      if (taskIdList.length) {
+        await ctx.dbWrite.query(`delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+        await ctx.dbWrite.query(`delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+      }
+
+      await ctx.dbWrite.query(`delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`, [tenantId, phaseIdList]);
+    }
+
+    await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+    await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+    await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  });
+
+  await ctx.http.request('/api/workflow/events', {
+    method: 'POST',
+    json: {
+      eventName: 'PROJECT_CREATED',
+      correlationKey,
+      payloadSchemaRef: 'payload.ProjectCreated.v1',
+      payload: { projectId, fixtureName: 'project-created-kickoff-tasks', correlationKey }
+    }
   });
 
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });

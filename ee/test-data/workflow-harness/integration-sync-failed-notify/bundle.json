@@ -43,7 +43,7 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture integration-sync-failed-notify]'" },
-                  "vars.title": { "$expr": "vars.marker & ' Sync failed'" },
+                  "vars.title": { "$expr": "'[fixture integration-sync-failed-notify] Sync failed'" },
                   "vars.body": { "$expr": "'provider=' & payload.provider & ' syncId=' & payload.syncId & ' error=' & payload.errorMessage" }
                 }
               }
@@ -85,7 +85,7 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture integration-sync-failed-notify]'" },
-                    "vars.title": { "$expr": "vars.marker & ' Sync failed'" },
+                    "vars.title": { "$expr": "'[fixture integration-sync-failed-notify] Sync failed'" },
                     "vars.body": { "$expr": "'provider=' & payload.provider & ' syncId=' & payload.syncId & ' error=' & payload.errorMessage" }
                   }
                 }
@@ -114,4 +114,3 @@
     }
   ]
 }
-

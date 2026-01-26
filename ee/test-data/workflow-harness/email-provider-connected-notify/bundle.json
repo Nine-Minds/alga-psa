@@ -43,7 +43,7 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture email-provider-connected-notify]'" },
-                  "vars.title": { "$expr": "vars.marker & ' Provider connected'" },
+                  "vars.title": { "$expr": "'[fixture email-provider-connected-notify] Provider connected'" },
                   "vars.body": { "$expr": "'providerId=' & payload.providerId & ' mailbox=' & payload.mailbox" }
                 }
               }
@@ -85,7 +85,7 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture email-provider-connected-notify]'" },
-                    "vars.title": { "$expr": "vars.marker & ' Provider connected'" },
+                    "vars.title": { "$expr": "'[fixture email-provider-connected-notify] Provider connected'" },
                     "vars.body": { "$expr": "'providerId=' & payload.providerId & ' mailbox=' & payload.mailbox" }
                   }
                 }
@@ -114,4 +114,3 @@
     }
   ]
 }
-

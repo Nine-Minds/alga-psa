@@ -43,7 +43,7 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture payment-recorded-notify]'" },
-                  "vars.title": { "$expr": "vars.marker & ' Payment recorded'" },
+                  "vars.title": { "$expr": "'[fixture payment-recorded-notify] Payment recorded'" },
                   "vars.body": { "$expr": "'paymentId=' & payload.paymentId & ' amount=' & payload.amount & ' ' & payload.currency" }
                 }
               }
@@ -85,7 +85,7 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture payment-recorded-notify]'" },
-                    "vars.title": { "$expr": "vars.marker & ' Payment recorded'" },
+                    "vars.title": { "$expr": "'[fixture payment-recorded-notify] Payment recorded'" },
                     "vars.body": { "$expr": "'paymentId=' & payload.paymentId & ' amount=' & payload.amount & ' ' & payload.currency" }
                   }
                 }
@@ -114,4 +114,3 @@
     }
   ]
 }
-

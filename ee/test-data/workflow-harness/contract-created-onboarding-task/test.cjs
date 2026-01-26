@@ -10,6 +10,43 @@ async function pickOne(ctx, { label, sql, params }) {
   return rows[0];
 }
 
+async function ensureDefaultProjectStatus(ctx, { tenantId, createdByUserId }) {
+  const existing = await ctx.db.query(
+    `
+      select status_id
+      from statuses
+      where tenant = $1 and item_type = 'project' and is_default = true
+      order by order_number asc
+      limit 1
+    `,
+    [tenantId]
+  );
+  if (existing.length) return existing[0].status_id;
+
+  const maxRow = await ctx.db.query(
+    `select coalesce(max(order_number), 0) as max_order from statuses where tenant = $1 and status_type = 'project'`,
+    [tenantId]
+  );
+  const nextOrder = Number(maxRow?.[0]?.max_order ?? 0) + 1;
+
+  const name = 'Fixture Project Default';
+  await ctx.dbWrite.query(
+    `
+      insert into statuses (tenant, name, status_type, order_number, is_closed, item_type, is_default, created_by)
+      values ($1, $2, 'project', $3, false, 'project', true, $4)
+      on conflict (tenant, name, status_type) do nothing
+    `,
+    [tenantId, name, nextOrder, createdByUserId]
+  );
+
+  const inserted = await ctx.db.query(
+    `select status_id from statuses where tenant = $1 and name = $2 and status_type = 'project' order by order_number asc limit 1`,
+    [tenantId, name]
+  );
+  if (!inserted.length) throw new Error('Failed to create default project status for fixture');
+  return inserted[0].status_id;
+}
+
 module.exports = async function run(ctx) {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -30,6 +67,8 @@ module.exports = async function run(ctx) {
     params: [tenantId]
   });
 
+  await ensureDefaultProjectStatus(ctx, { tenantId, createdByUserId: user.user_id });
+
   const projectName = `Fixture contract onboarding ${randomUUID()}`;
   const createProjectRes = await ctx.http.request('/api/v1/projects', {
     method: 'POST',
@@ -45,10 +84,48 @@ module.exports = async function run(ctx) {
   if (!projectId) throw new Error('Project create response missing data.project_id');
 
   ctx.onCleanup(async () => {
-    await ctx.http.request(`/api/v1/projects/${projectId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': apiKey }
-    });
+    const phaseIds = await ctx.db.query(
+      `select phase_id from project_phases where tenant = $1 and project_id = $2`,
+      [tenantId, projectId]
+    );
+    const phaseIdList = phaseIds.map((r) => r.phase_id);
+
+    if (phaseIdList.length) {
+      const taskIds = await ctx.db.query(
+        `select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`,
+        [tenantId, phaseIdList]
+      );
+      const taskIdList = taskIds.map((r) => r.task_id);
+
+      if (taskIdList.length) {
+        await ctx.dbWrite.query(
+          `delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`,
+          [tenantId, taskIdList]
+        );
+        await ctx.dbWrite.query(
+          `delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`,
+          [tenantId, taskIdList]
+        );
+      }
+
+      await ctx.dbWrite.query(
+        `delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`,
+        [tenantId, phaseIdList]
+      );
+    }
+
+    await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+    await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+    await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+
+    await ctx.dbWrite.query(
+      `delete from interactions where tenant = $1 and client_id = $2 and notes like $3`,
+      [tenantId, client.client_id, `%${marker}%${contractId}%`]
+    );
+    await ctx.dbWrite.query(
+      `delete from internal_notifications where tenant = $1 and user_id = $2 and (title like $3 or message like $3)`,
+      [tenantId, user.user_id, `%${marker}%${contractId}%`]
+    );
   });
 
   const contractId = randomUUID();
@@ -125,4 +202,3 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected an internal notification containing "${marker}" and contractId for user ${user.user_id}. Found ${notifications.length} notification(s).`);
   }
 };
-
