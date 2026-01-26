@@ -35,3 +35,4 @@
 - T008: Added stubbed runner test for PASS/FAIL line format and exit code via exported `runCliOnceForTests`.
 - T009: Added cookie-file unit test and extracted `readCookieFromFile` into `tools/workflow-harness/lib/cookie.cjs` (trims whitespace/newlines).
 - T010: Added stubbed runner test that asserts `--debug` emits verbose logs (import summary + workflow id/key).
+- T011: Added stubbed runner test verifying cleanup hooks run on both success and failure.

@@ -356,6 +356,101 @@ test('T010: supports --debug to print verbose logs', async () => {
   assert.ok(captured.some((l) => l.includes('[harness] workflow')), 'expected workflow debug log');
 });
 
+test('T011: runs registered cleanup hooks on PASS and on FAIL', async () => {
+  const cleanupDir = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-harness-cleanup-'));
+  const passMarker = path.join(cleanupDir, 'pass.txt');
+  const failMarker = path.join(cleanupDir, 'fail.txt');
+
+  const passFixture = writeFixture({
+    name: 't011-pass',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t011', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `
+      const fs = require('node:fs');
+      module.exports = async (ctx) => {
+        ctx.onCleanup(async () => fs.writeFileSync(${JSON.stringify(passMarker)}, 'ok', 'utf8'));
+      };
+    `
+  });
+
+  const failFixture = writeFixture({
+    name: 't011-fail',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t011', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `
+      const fs = require('node:fs');
+      module.exports = async (ctx) => {
+        ctx.onCleanup(async () => fs.writeFileSync(${JSON.stringify(failMarker)}, 'ok', 'utf8'));
+        throw new Error('boom');
+      };
+    `
+  });
+
+  const baseStubs = {
+    http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.t011', workflowId: 'wf-011' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-011', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  };
+
+  const harness = loadHarnessWithStubs(baseStubs);
+  try {
+    const { runFixture } = harness.mod;
+
+    await runFixture({
+      testDir: passFixture.dir,
+      bundlePath: passFixture.bundlePath,
+      testPath: passFixture.testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+    assert.ok(fs.existsSync(passMarker), 'expected pass cleanup marker to be written');
+
+    await assert.rejects(
+      () =>
+        runFixture({
+          testDir: failFixture.dir,
+          bundlePath: failFixture.bundlePath,
+          testPath: failFixture.testPath,
+          baseUrl: 'http://localhost:3010',
+          tenantId: 'tenant',
+          cookie: 'cookie',
+          force: true,
+          timeoutMs: 1000,
+          debug: false,
+          artifactsDir: os.tmpdir(),
+          pgUrl: 'postgres://unused'
+        }),
+      /boom/
+    );
+    assert.ok(fs.existsSync(failMarker), 'expected fail cleanup marker to be written');
+  } finally {
+    harness.restore();
+  }
+});
+
   const harness = loadHarnessWithStubs({
     http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
     db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
