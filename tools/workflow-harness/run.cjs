@@ -11,6 +11,7 @@ const { createDbClient } = require('./lib/db.cjs');
 const { importWorkflowBundleV1, exportWorkflowBundleV1 } = require('./lib/workflow.cjs');
 const { waitForRun, getRunSteps, summarizeSteps, getRunLogs } = require('./lib/runs.cjs');
 const { createArtifactWriter } = require('./lib/artifacts.cjs');
+const expect = require('./lib/expect.cjs');
 
 function usage() {
   console.error(`
@@ -190,11 +191,16 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
 
     const writer = createArtifactWriter({ artifactsDir, testId });
     ctx.artifacts = writer;
+    ctx.expect = expect;
 
     state.triggerStartedAt = new Date().toISOString();
     ctx.triggerStartedAt = state.triggerStartedAt;
 
-    const result = await runTest(ctx);
+    const result = await expect.withTimeout(
+      Promise.resolve().then(() => runTest(ctx)),
+      timeoutMs,
+      `Global timeout exceeded (${timeoutMs}ms)`
+    );
 
     return { result, state };
   } catch (err) {

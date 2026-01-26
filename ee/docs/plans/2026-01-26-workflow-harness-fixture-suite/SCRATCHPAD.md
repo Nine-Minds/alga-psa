@@ -17,3 +17,4 @@
 - F013: Added fixture root `ee/test-data/workflow-harness/` with README and conventions.
 - F014: Added golden fixture `ee/test-data/workflow-harness/ticket-created-hello/` (published workflow, triggers via `/api/workflow/events`, asserts run SUCCEEDED).
 - F015: Standardized fixture key convention (`fixture.<folderName>`) and documented always using `--force` imports for reruns.
+- F016: Added harness assertion/timeouts (`tools/workflow-harness/lib/expect.cjs`) and exposed via `ctx.expect`; harness enforces a global timeout.
