@@ -16,7 +16,14 @@
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('system_event_catalog'))) return;
 
-  const now = knex.fn.now();
+  // Use a literal timestamp instead of CURRENT_TIMESTAMP function
+  // Citus requires IMMUTABLE functions in ON CONFLICT DO UPDATE SET clauses
+  const now = new Date().toISOString();
+
+  // Remove deprecated COMPANY_* events (company has been renamed to client)
+  await knex('system_event_catalog')
+    .whereIn('event_type', ['COMPANY_CREATED', 'COMPANY_UPDATED'])
+    .del();
 
   if (!(await knex.schema.hasColumn('system_event_catalog', 'payload_schema_ref'))) {
     await knex.schema.alterTable('system_event_catalog', (t) => {
@@ -26,19 +33,6 @@ exports.up = async function up(knex) {
   }
 
   const baseEvents = [
-    // Already present (avoid duplicating) — ensure payload_schema_ref + metadata are aligned.
-    {
-      event_type: 'COMPANY_CREATED',
-      name: 'Company Created',
-      description: 'Triggered when a new company record is created in the system.',
-      category: 'Company Management',
-    },
-    {
-      event_type: 'COMPANY_UPDATED',
-      name: 'Company Updated',
-      description: 'Triggered when an existing company record is updated.',
-      category: 'Company Management',
-    },
     { event_type: 'TICKET_CREATED', name: 'Ticket Created', description: 'Triggered when a new ticket is created.', category: 'Tickets' },
     { event_type: 'TICKET_UPDATED', name: 'Ticket Updated', description: 'Triggered when a ticket is updated.', category: 'Tickets' },
     { event_type: 'TICKET_CLOSED', name: 'Ticket Closed', description: 'Triggered when a ticket is closed.', category: 'Tickets' },
@@ -257,28 +251,22 @@ exports.up = async function up(knex) {
     return `payload.${pascal}.v1`;
   };
 
-  const rows = catalogEvents.map((e) => ({
-    event_id: knex.raw('gen_random_uuid()'),
-    event_type: e.event_type,
-    name: e.name,
-    description: e.description,
-    category: e.category,
-    payload_schema_ref: toPayloadSchemaRef(e.event_type),
-    created_at: now,
-    updated_at: now,
-  }));
+  // Upsert each event individually using raw SQL to avoid Citus IMMUTABLE function issues
+  // Knex's .onConflict().merge() generates CURRENT_TIMESTAMP which Citus rejects
+  for (const e of catalogEvents) {
+    const payloadSchemaRef = toPayloadSchemaRef(e.event_type);
 
-  // Upsert by event_type, without clobbering created_at / event_id on existing rows.
-  await knex('system_event_catalog')
-    .insert(rows)
-    .onConflict('event_type')
-    .merge({
-      name: knex.raw('excluded.name'),
-      description: knex.raw('excluded.description'),
-      category: knex.raw('excluded.category'),
-      payload_schema_ref: knex.raw('excluded.payload_schema_ref'),
-      updated_at: now,
-    });
+    await knex.raw(`
+      INSERT INTO system_event_catalog (event_id, event_type, name, description, category, payload_schema_ref, created_at, updated_at)
+      VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, ?::timestamptz, ?::timestamptz)
+      ON CONFLICT (event_type) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        category = EXCLUDED.category,
+        payload_schema_ref = EXCLUDED.payload_schema_ref,
+        updated_at = ?::timestamptz
+    `, [e.event_type, e.name, e.description, e.category, payloadSchemaRef, now, now, now]);
+  }
 };
 
 /**
