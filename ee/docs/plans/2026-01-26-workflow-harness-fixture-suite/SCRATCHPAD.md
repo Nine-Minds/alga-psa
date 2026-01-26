@@ -6,3 +6,4 @@
 - F002: Implemented CLI arg parsing + validation in `tools/workflow-harness/run.cjs` (supports cookie-file with newline trimming).
 - F003: Added fixture discovery + required file validation (`bundle.json`, `test.cjs`).
 - F004: Added `tools/workflow-harness/lib/context.cjs` (ctx config, logging, cleanup registration/execution).
+- F005: Added `tools/workflow-harness/lib/http.cjs` (fetch wrapper that sets Cookie + x-tenant-id).
