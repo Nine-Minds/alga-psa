@@ -1,12 +1,5 @@
 import type { IEventPublisher } from '@alga-psa/types';
-import { getEventBus } from '@alga-psa/event-bus';
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
-}
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 export class TicketModelEventPublisher implements IEventPublisher {
   async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
@@ -50,7 +43,7 @@ export class TicketModelEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('COMMENT_CREATED', {
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', {
       tenantId: data.tenantId,
       ticketId: data.ticketId,
       commentId: data.commentId,
@@ -70,23 +63,19 @@ export class TicketModelEventPublisher implements IEventPublisher {
 
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
     try {
-      // Publish to email channel
-      await getEventBus().publish(
-        {
-          eventType,
-          payload,
-        },
-        { channel: getEmailEventChannel() }
-      );
+      const actorUserId =
+        typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
+          ? payload.assignedByUserId
+          : (typeof payload?.userId === 'string' ? payload.userId : undefined);
 
-      // Also publish to internal notifications channel
-      await getEventBus().publish(
-        {
-          eventType,
-          payload,
-        },
-        { channel: 'internal-notifications' }
-      );
+      await publishWorkflowEvent({
+        eventType: eventType as any,
+        payload,
+        ctx: {
+          tenantId: String(payload?.tenantId ?? ''),
+          actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
+        }
+      });
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
