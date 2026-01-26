@@ -154,6 +154,13 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
       throw new Error('Workflow import did not return a workflowId (createdWorkflows missing?).');
     }
 
+    if (debug) {
+      // eslint-disable-next-line no-console
+      console.error('[harness] importSummary', JSON.stringify(importSummary, null, 2));
+      // eslint-disable-next-line no-console
+      console.error('[harness] workflow', JSON.stringify({ workflowId, workflowKey }, null, 2));
+    }
+
     // eslint-disable-next-line global-require, import/no-dynamic-require
     const runTest = require(testPath);
     if (typeof runTest !== 'function') {

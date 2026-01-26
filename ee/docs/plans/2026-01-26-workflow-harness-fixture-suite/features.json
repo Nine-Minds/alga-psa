@@ -15,7 +15,7 @@
   { "id": "F014", "description": "Add a golden path fixture: ticket-created-hello (import → create ticket → assert run SUCCEEDED)", "implemented": true },
   { "id": "F015", "description": "Support deterministic fixture workflow keys (fixture.<name>) and always import with --force in docs", "implemented": true },
   { "id": "F016", "description": "Provide harness assertion utilities (expect helpers, structured errors, timeout handling)", "implemented": true },
-  { "id": "F017", "description": "Add harness option to run in debug/verbose mode", "implemented": false },
+  { "id": "F017", "description": "Add harness option to run in debug/verbose mode", "implemented": true },
   { "id": "F018", "description": "Add harness option to print a JSON result blob for programmatic consumption", "implemented": false },
   { "id": "F019", "description": "Create a fixture scaffolding helper script (generate folder with template bundle.json + test.cjs)", "implemented": false },
   { "id": "F020", "description": "Define fixture categories and naming scheme (trigger domain + behavior + assertion type)", "implemented": false },
