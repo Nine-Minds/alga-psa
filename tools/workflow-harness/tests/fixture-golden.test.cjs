@@ -966,3 +966,88 @@ test('T109: ticket-unassigned-return-to-triage fixture loads and executes via ha
   assert.equal(requests[2].opts.method, 'DELETE');
   assert.equal(requests[2].opts.headers['x-api-key'], 'api-key');
 });
+
+test('T110: ticket-status-waiting-on-customer-reminder fixture loads and executes via harness', async () => {
+  const fixtureDir = path.resolve(process.cwd(), 'ee/test-data/workflow-harness/ticket-status-waiting-on-customer-reminder');
+  const bundlePath = path.join(fixtureDir, 'bundle.json');
+  const testPath = path.join(fixtureDir, 'test.cjs');
+
+  const savedApiKey = process.env.WORKFLOW_HARNESS_API_KEY;
+  process.env.WORKFLOW_HARNESS_API_KEY = 'api-key';
+
+  const requests = [];
+  const harness = loadHarnessWithStubs({
+    http: {
+      createHttpClient: () => ({
+        request: async (p, opts) => {
+          requests.push({ path: p, opts });
+          if (p === '/api/v1/tickets' && opts?.method === 'POST') {
+            return { json: { data: { ticket_id: 'ticket-110' } } };
+          }
+          return { json: { data: {} } };
+        }
+      })
+    },
+    db: {
+      createDbClient: async () => ({
+        query: async (text) => {
+          const sql = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+          if (sql.includes('from clients')) return [{ client_id: 'client-110' }];
+          if (sql.includes('from boards')) return [{ board_id: 'board-110' }];
+          if (sql.includes('from statuses')) return [{ status_id: 'status-110' }];
+          if (sql.includes('from priorities')) return [{ priority_id: 'priority-110' }];
+          return [];
+        },
+        close: async () => {}
+      })
+    },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.ticket-status-waiting-on-customer-reminder', workflowId: 'wf-110' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-110', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [
+        { step_id: 's1', run_id: 'run-110', step_path: '/0', definition_step_id: 'wait-for-time-entry', status: 'SUCCEEDED', attempt: 1 },
+        { step_id: 's2', run_id: 'run-110', step_path: '/1', definition_step_id: 'send-reminder', status: 'SUCCEEDED', attempt: 1 }
+      ],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await runFixture({
+      testDir: fixtureDir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+  } finally {
+    harness.restore();
+    if (savedApiKey === undefined) delete process.env.WORKFLOW_HARNESS_API_KEY;
+    else process.env.WORKFLOW_HARNESS_API_KEY = savedApiKey;
+  }
+
+  assert.equal(requests.length, 4);
+  assert.equal(requests[0].path, '/api/v1/tickets');
+  assert.equal(requests[0].opts.method, 'POST');
+  assert.equal(requests[0].opts.headers['x-api-key'], 'api-key');
+  assert.equal(requests[1].path, '/api/workflow/events');
+  assert.equal(requests[1].opts.json.eventName, 'TICKET_STATUS_CHANGED');
+  assert.equal(requests[1].opts.json.payloadSchemaRef, 'payload.TicketStatusChanged.v1');
+  assert.equal(requests[2].path, '/api/workflow/events');
+  assert.equal(requests[2].opts.json.eventName, 'TICKET_TIME_ENTRY_ADDED');
+  assert.equal(requests[2].opts.json.payloadSchemaRef, 'payload.TicketTimeEntryAdded.v1');
+  assert.equal(requests[3].path, '/api/v1/tickets/ticket-110');
+  assert.equal(requests[3].opts.method, 'DELETE');
+  assert.equal(requests[3].opts.headers['x-api-key'], 'api-key');
+});
