@@ -1,0 +1,54 @@
+[
+  { "id": "T001", "description": "Harness: fails with clear error when --test is missing", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T002", "description": "Harness: fails with clear error when bundle.json is missing", "implemented": false, "featureIds": ["F003"] },
+  { "id": "T003", "description": "Harness: fails with clear error when test.cjs is missing", "implemented": false, "featureIds": ["F003"] },
+  { "id": "T004", "description": "Harness: imports bundle with --force and reports workflow id/key used", "implemented": false, "featureIds": ["F007", "F015"] },
+  { "id": "T005", "description": "Harness: runs test.cjs and surfaces thrown error as FAIL with stack trace in artifacts", "implemented": false, "featureIds": ["F004", "F012"] },
+  { "id": "T006", "description": "Harness: waitForRun times out and reports a helpful diagnostic (no run found)", "implemented": false, "featureIds": ["F009", "F012"] },
+  { "id": "T007", "description": "Harness: captures run + step status summary on success", "implemented": false, "featureIds": ["F010", "F011"] },
+  { "id": "T008", "description": "Harness: prints single-line PASS/FAIL summary and correct exit code", "implemented": false, "featureIds": ["F011"] },
+  { "id": "T009", "description": "Harness: supports --cookie-file and trims newlines", "implemented": false, "featureIds": ["F002", "F005"] },
+  { "id": "T010", "description": "Harness: supports --debug to print verbose logs", "implemented": false, "featureIds": ["F017"] },
+  { "id": "T011", "description": "Harness: runs registered cleanup hooks on PASS and on FAIL", "implemented": false, "featureIds": ["F021"] },
+
+  { "id": "T020", "description": "Fixture: ticket-created-hello imports, triggers ticket creation, run SUCCEEDED", "implemented": false, "featureIds": ["F014"] },
+
+  { "id": "T100", "description": "Fixture: TICKET_CREATED + transform.assign + assert run steps succeed", "implemented": false, "featureIds": ["F030", "F040"] },
+  { "id": "T101", "description": "Fixture: TICKET_CREATED + state.set + assert run steps succeed", "implemented": false, "featureIds": ["F030", "F040"] },
+  { "id": "T102", "description": "Fixture: TICKET_CREATED + control.if (true branch) + assert path taken", "implemented": false, "featureIds": ["F030", "F040"] },
+  { "id": "T103", "description": "Fixture: TICKET_CREATED + control.if (false branch) + assert path taken", "implemented": false, "featureIds": ["F030", "F040"] },
+  { "id": "T104", "description": "Fixture: TICKET_CREATED + control.tryCatch (no throw) + assert try path", "implemented": false, "featureIds": ["F030", "F040"] },
+  { "id": "T105", "description": "Fixture: TICKET_CREATED + control.tryCatch (forced throw) + assert catch path", "implemented": false, "featureIds": ["F030", "F040"] },
+  { "id": "T106", "description": "Fixture: TICKET_UPDATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T107", "description": "Fixture: TICKET_CLOSED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T108", "description": "Fixture: TICKET_ASSIGNED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T109", "description": "Fixture: TICKET_COMMENT_ADDED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F030"] },
+
+  { "id": "T120", "description": "Fixture: PROJECT_CREATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F031"] },
+  { "id": "T121", "description": "Fixture: PROJECT_UPDATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F031"] },
+  { "id": "T122", "description": "Fixture: PROJECT_TASK_ASSIGNED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F031"] },
+
+  { "id": "T130", "description": "Fixture: CONTRACT_CREATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F032"] },
+  { "id": "T131", "description": "Fixture: INVOICE_GENERATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F032"] },
+  { "id": "T132", "description": "Fixture: INVOICE_FINALIZED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F032"] },
+  { "id": "T133", "description": "Fixture: PAYMENT_RECORDED triggers workflow and asserts run exists (if supported)", "implemented": false, "featureIds": ["F032"] },
+
+  { "id": "T140", "description": "Fixture: INBOUND_EMAIL_RECEIVED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F033"] },
+  { "id": "T141", "description": "Fixture: OUTBOUND_EMAIL_SENT triggers workflow and asserts run exists (if supported)", "implemented": false, "featureIds": ["F033"] },
+
+  { "id": "T150", "description": "Fixture: APPOINTMENT_CREATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F034"] },
+  { "id": "T151", "description": "Fixture: APPOINTMENT_RESCHEDULED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F034"] },
+  { "id": "T152", "description": "Fixture: SCHEDULE_BLOCK_CREATED triggers workflow and asserts run exists", "implemented": false, "featureIds": ["F034"] },
+
+  { "id": "T160", "description": "Fixture: schema validation error (unknown payload schema ref) is detected on publish", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T161", "description": "Fixture: trigger schema mismatch requires mapping and blocks publish until mapping provided", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T162", "description": "Fixture: paused workflow does not start runs on matching events", "implemented": false, "featureIds": ["F042"] },
+  { "id": "T163", "description": "Fixture: invisible workflow is not runnable by non-admin (if applicable) but still triggers via events", "implemented": false, "featureIds": ["F042"] },
+
+  { "id": "T170", "description": "Scale-out: add 25 additional ticket fixtures (variations across payload fields, mapping, and control flow)", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T171", "description": "Scale-out: add 25 additional project fixtures (variations across payload fields, mapping, and control flow)", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T172", "description": "Scale-out: add 25 additional billing fixtures (variations across payload fields, mapping, and control flow)", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T173", "description": "Scale-out: add 25 additional email fixtures (variations across payload fields, mapping, and control flow)", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T174", "description": "Scale-out: add 25 additional scheduling fixtures (variations across payload fields, mapping, and control flow)", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T175", "description": "Scale-out: add 25 additional integration fixtures where supported", "implemented": false, "featureIds": ["F050"] }
+]
