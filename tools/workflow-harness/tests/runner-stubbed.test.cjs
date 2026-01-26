@@ -252,6 +252,55 @@ test('T007: captures run and step status summary on success', async () => {
   }
 });
 
+test('T008: prints single-line PASS/FAIL summary and correct exit code', async () => {
+  const { dir } = writeFixture({
+    name: 't008',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t008', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `module.exports = async () => {};`
+  });
+
+  const harness = loadHarnessWithStubs({
+    http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.t008', workflowId: 'wf-008' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-008', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runCliOnceForTests } = harness.mod;
+    const res = await runCliOnceForTests([
+      '--test',
+      dir,
+      '--base-url',
+      'http://localhost:3010',
+      '--tenant',
+      'tenant',
+      '--cookie',
+      'cookie',
+      '--force',
+      '--timeout-ms',
+      '1000'
+    ]);
+    assert.equal(res.exitCode, 0);
+    assert.match(res.stdout[0], /^PASS workflow-harness-t008-/);
+  } finally {
+    harness.restore();
+  }
+});
+
   const harness = loadHarnessWithStubs({
     http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
     db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },

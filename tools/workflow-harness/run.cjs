@@ -410,6 +410,87 @@ async function main() {
   }
 }
 
+async function runCliOnceForTests(argv) {
+  const out = [];
+  const err = [];
+
+  const args = parseArgs(argv);
+  if (args.help) {
+    err.push('usage');
+    return { exitCode: 0, stdout: out, stderr: err };
+  }
+
+  const testDir = args.test;
+  const baseUrl = args['base-url'];
+  const tenant = args.tenant;
+  const cookie = args.cookie ?? (args['cookie-file'] ? readCookieFromFile(args['cookie-file']) : undefined);
+  const force = !!args.force;
+  const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : 60_000;
+  const debug = !!args.debug;
+  const artifactsDir = args['artifacts-dir'] ?? getDefaultArtifactsDir();
+  const pgUrl = args['pg-url'] ?? undefined;
+  const jsonOutput = !!args.json;
+
+  if (!testDir) throw new Error('Missing --test');
+  if (!baseUrl) throw new Error('Missing --base-url');
+  if (!tenant) throw new Error('Missing --tenant');
+  if (!cookie) throw new Error('Missing --cookie or --cookie-file');
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
+
+  const fixture = validateFixtureDir(testDir);
+  const testId = fixtureIdFromDir(testDir);
+  const startedAtMs = Date.now();
+
+  try {
+    const { state } = await runFixture({
+      testDir,
+      ...fixture,
+      baseUrl,
+      tenantId: tenant,
+      cookie,
+      force,
+      timeoutMs,
+      debug,
+      artifactsDir,
+      pgUrl
+    });
+    const durationMs = Date.now() - startedAtMs;
+    out.push(`PASS ${testId} ${durationMs}`);
+    if (jsonOutput) {
+      out.push(
+        JSON.stringify({
+          ok: true,
+          testId,
+          durationMs,
+          workflowId: state?.workflowId ?? null,
+          workflowKey: state?.workflowKey ?? null,
+          importSummary: state?.importSummary ?? null,
+          run: state?.run ?? null,
+          stepSummary: Array.isArray(state?.steps) ? summarizeSteps(state.steps) : null
+        })
+      );
+    }
+    return { exitCode: 0, stdout: out, stderr: err };
+  } catch (e) {
+    const durationMs = Date.now() - startedAtMs;
+    const reason = sanitizeSingleLine(e?.message ?? String(e));
+    out.push(`FAIL ${testId} ${durationMs} ${reason}`);
+    if (e?.artifactsDir) err.push(`Artifacts: ${e.artifactsDir}`);
+    if (jsonOutput) {
+      out.push(
+        JSON.stringify({
+          ok: false,
+          testId,
+          durationMs,
+          reason,
+          artifactsDir: e?.artifactsDir ?? null
+        })
+      );
+    }
+    return { exitCode: 1, stdout: out, stderr: err };
+  }
+}
+
 if (require.main === module) {
   main().catch((err) => {
     console.error(err?.stack ?? err?.message ?? String(err));
@@ -422,5 +503,6 @@ module.exports = {
   parseArgs,
   validateFixtureDir,
   runFixture,
-  usage
+  usage,
+  runCliOnceForTests
 };
