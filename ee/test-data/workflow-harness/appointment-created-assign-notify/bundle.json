@@ -1,0 +1,168 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.appointment-created-assign-notify",
+      "metadata": {
+        "name": "Fixture: Appointment Created → Assign + Notify",
+        "description": "On appointment created, create a schedule entry for the technician and send an in-app notification.",
+        "payloadSchemaRef": "payload.AppointmentCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.AppointmentCreated.v1",
+        "trigger": { "type": "event", "eventName": "APPOINTMENT_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "scheduling.assign_user", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.forEach", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.AppointmentCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f500",
+          "version": 1,
+          "name": "Fixture: Appointment Created → Assign + Notify",
+          "description": "On appointment created, create a schedule entry for the technician and send an in-app notification.",
+          "payloadSchemaRef": "payload.AppointmentCreated.v1",
+          "trigger": { "type": "event", "eventName": "APPOINTMENT_CREATED" },
+          "steps": [
+            { "id": "state-appointment", "type": "state.set", "config": { "state": "APPOINTMENT" } },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture appointment-created-assign-notify]'" },
+                  "vars.title": { "$expr": "vars.marker & ' appointmentId=' & payload.appointmentId" },
+                  "vars.body": { "$expr": "'ticketId=' & payload.ticketId & ' startAt=' & payload.startAt" }
+                }
+              }
+            },
+            {
+              "id": "assign-tech",
+              "type": "action.call",
+              "config": {
+                "actionId": "scheduling.assign_user",
+                "version": 1,
+                "inputMapping": {
+                  "user_id": { "$expr": "payload.assigneeId" },
+                  "window": { "$expr": "{ \"start\": payload.startAt, \"end\": payload.endAt, \"timezone\": payload.timezone }" },
+                  "link": { "$expr": "{ \"type\": \"ticket\", \"id\": payload.ticketId }" },
+                  "title": { "$expr": "vars.title" },
+                  "notes": { "$expr": "vars.body" },
+                  "conflict_mode": "override"
+                }
+              }
+            },
+            {
+              "id": "notify-each",
+              "type": "control.forEach",
+              "items": { "$expr": "[payload.assigneeId]" },
+              "itemVar": "recipientUserId",
+              "body": [
+                {
+                  "id": "notify-tech",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": { "$expr": "{ \"user_ids\": [vars.recipientUserId] }" },
+                      "title": { "$expr": "vars.title" },
+                      "body": { "$expr": "vars.body" },
+                      "severity": "info",
+                      "dedupe_key": { "$expr": "'fixture.appointment-created-assign-notify:' & payload.appointmentId" }
+                    }
+                  }
+                }
+              ]
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f500",
+            "version": 1,
+            "name": "Fixture: Appointment Created → Assign + Notify",
+            "description": "On appointment created, create a schedule entry for the technician and send an in-app notification.",
+            "payloadSchemaRef": "payload.AppointmentCreated.v1",
+            "trigger": { "type": "event", "eventName": "APPOINTMENT_CREATED" },
+            "steps": [
+              { "id": "state-appointment", "type": "state.set", "config": { "state": "APPOINTMENT" } },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture appointment-created-assign-notify]'" },
+                    "vars.title": { "$expr": "vars.marker & ' appointmentId=' & payload.appointmentId" },
+                    "vars.body": { "$expr": "'ticketId=' & payload.ticketId & ' startAt=' & payload.startAt" }
+                  }
+                }
+              },
+              {
+                "id": "assign-tech",
+                "type": "action.call",
+                "config": {
+                  "actionId": "scheduling.assign_user",
+                  "version": 1,
+                  "inputMapping": {
+                    "user_id": { "$expr": "payload.assigneeId" },
+                    "window": { "$expr": "{ \"start\": payload.startAt, \"end\": payload.endAt, \"timezone\": payload.timezone }" },
+                    "link": { "$expr": "{ \"type\": \"ticket\", \"id\": payload.ticketId }" },
+                    "title": { "$expr": "vars.title" },
+                    "notes": { "$expr": "vars.body" },
+                    "conflict_mode": "override"
+                  }
+                }
+              },
+              {
+                "id": "notify-each",
+                "type": "control.forEach",
+                "items": { "$expr": "[payload.assigneeId]" },
+                "itemVar": "recipientUserId",
+                "body": [
+                  {
+                    "id": "notify-tech",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": { "$expr": "{ \"user_ids\": [vars.recipientUserId] }" },
+                        "title": { "$expr": "vars.title" },
+                        "body": { "$expr": "vars.body" },
+                        "severity": "info",
+                        "dedupe_key": { "$expr": "'fixture.appointment-created-assign-notify:' & payload.appointmentId" }
+                      }
+                    }
+                  }
+                ]
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

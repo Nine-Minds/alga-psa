@@ -35,6 +35,9 @@
 - F033: Added initial email-trigger fixture set:
   - `ee/test-data/workflow-harness/email-inbound-received-ticket-comment/` (create ticket via `/api/v1/tickets`, submit `INBOUND_EMAIL_RECEIVED` event via `/api/workflow/events`, assert workflow adds internal comment)
   - `ee/test-data/workflow-harness/email-provider-connected-notify/` (submit `EMAIL_PROVIDER_CONNECTED` event via `/api/workflow/events`, assert workflow sends an internal notification)
+- F034: Added initial scheduling-trigger fixture set:
+  - `ee/test-data/workflow-harness/appointment-created-assign-notify/` (submit `APPOINTMENT_CREATED` event via `/api/workflow/events`, assert workflow creates `schedule_entries` row via `scheduling.assign_user` and sends notification; cleanup deletes ticket + schedule entry)
+  - `ee/test-data/workflow-harness/schedule-block-created/` (submit `SCHEDULE_BLOCK_CREATED` event via `/api/workflow/events`, assert workflow creates a project task and sends notification; cleanup deletes project)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.
