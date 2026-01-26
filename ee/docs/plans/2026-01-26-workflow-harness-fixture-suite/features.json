@@ -1,5 +1,5 @@
 [
-  { "id": "F001", "description": "Create harness folder tools/workflow-harness with documented CLI entrypoint", "implemented": false },
+  { "id": "F001", "description": "Create harness folder tools/workflow-harness with documented CLI entrypoint", "implemented": true },
   { "id": "F002", "description": "Implement CLI argument parsing: --test, --base-url, --tenant, --cookie/--cookie-file, --force, --timeout-ms", "implemented": false },
   { "id": "F003", "description": "Implement test discovery by folder path (validate required files exist)", "implemented": false },
   { "id": "F004", "description": "Define test runtime context object passed into test.cjs", "implemented": false },
