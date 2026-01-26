@@ -356,3 +356,94 @@ test('T102: ticket-created-vip-notify fixture loads and executes via harness', a
   assert.equal(requests[1].opts.method, 'DELETE');
   assert.equal(requests[1].opts.headers['x-api-key'], 'api-key');
 });
+
+test('T103: ticket-created-outage-escalate fixture loads and executes via harness', async () => {
+  const fixtureDir = path.resolve(process.cwd(), 'ee/test-data/workflow-harness/ticket-created-outage-escalate');
+  const bundlePath = path.join(fixtureDir, 'bundle.json');
+  const testPath = path.join(fixtureDir, 'test.cjs');
+
+  const savedApiKey = process.env.WORKFLOW_HARNESS_API_KEY;
+  process.env.WORKFLOW_HARNESS_API_KEY = 'api-key';
+
+  const requests = [];
+  const harness = loadHarnessWithStubs({
+    http: {
+      createHttpClient: () => ({
+        request: async (p, opts) => {
+          requests.push({ path: p, opts });
+          if (p === '/api/v1/tickets' && opts?.method === 'POST') {
+            return { json: { data: { ticket_id: 'ticket-103' } } };
+          }
+          return { json: { data: {} } };
+        }
+      })
+    },
+    db: {
+      createDbClient: async () => ({
+        query: async (text) => {
+          const sql = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+          if (sql.includes('from clients')) return [{ client_id: 'client-103' }];
+          if (sql.includes('from boards')) return [{ board_id: 'board-103' }];
+          if (sql.includes('from statuses')) return [{ status_id: 'status-103' }];
+          if (sql.includes('from priorities')) return [{ priority_id: 'priority-103' }];
+          if (sql.includes('from users')) return [{ user_id: 'user-103' }];
+          if (sql.includes('select attributes from tickets')) {
+            return [{ attributes: { fixture_escalated: true } }];
+          }
+          if (sql.includes('from internal_notifications')) {
+            return [
+              {
+                internal_notification_id: 'notif-103',
+                title: '[fixture ticket-created-outage-escalate] Outage escalation',
+                message: 'ticketId=ticket-103'
+              }
+            ];
+          }
+          return [];
+        },
+        close: async () => {}
+      })
+    },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.ticket-created-outage-escalate', workflowId: 'wf-103' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-103', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await runFixture({
+      testDir: fixtureDir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+  } finally {
+    harness.restore();
+    if (savedApiKey === undefined) delete process.env.WORKFLOW_HARNESS_API_KEY;
+    else process.env.WORKFLOW_HARNESS_API_KEY = savedApiKey;
+  }
+
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].path, '/api/v1/tickets');
+  assert.equal(requests[0].opts.method, 'POST');
+  assert.equal(requests[0].opts.headers['x-api-key'], 'api-key');
+  assert.equal(requests[0].opts.json.attributes.fixture_is_outage, true);
+  assert.equal(requests[0].opts.json.attributes.fixture_notify_user_id, 'user-103');
+  assert.equal(requests[1].path, '/api/v1/tickets/ticket-103');
+  assert.equal(requests[1].opts.method, 'DELETE');
+  assert.equal(requests[1].opts.headers['x-api-key'], 'api-key');
+});
