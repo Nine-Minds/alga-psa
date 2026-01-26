@@ -43,6 +43,9 @@
   - `ee/test-data/workflow-harness/integration-sync-failed-notify/` (submit `INTEGRATION_SYNC_FAILED` via `/api/workflow/events`, assert workflow sends internal notification)
 - F040: Added initial node-type coverage fixture:
   - `ee/test-data/workflow-harness/ticket-created-assign-trycatch/` (covers `control.tryCatch` + error capture, and asserts both notification + comment side effects)
+- F041: Added schema-validation fixtures:
+  - `ee/test-data/workflow-harness/schema-unknown-schema-ref/` (submitting an event with an unknown `payloadSchemaRef` fails with 400 + schemaRef details)
+  - `ee/test-data/workflow-harness/schema-invalid-event-payload/` (submitting an event with invalid payload fails with 400 + Zod issues)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.

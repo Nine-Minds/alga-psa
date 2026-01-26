@@ -1,0 +1,65 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.schema-invalid-event-payload",
+      "metadata": {
+        "name": "Fixture: Schema Invalid Event Payload",
+        "description": "Schema-validation fixture: event submission should fail when required payload fields are missing.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": ["control.return", "state.set"],
+        "schemaRefs": ["payload.TicketCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f710",
+          "version": 1,
+          "name": "Fixture: Schema Invalid Event Payload",
+          "description": "Schema-validation fixture: event submission should fail when required payload fields are missing.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+          "steps": [
+            { "id": "state-schema", "type": "state.set", "config": { "state": "SCHEMA" } },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f710",
+            "version": 1,
+            "name": "Fixture: Schema Invalid Event Payload",
+            "description": "Schema-validation fixture: event submission should fail when required payload fields are missing.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+            "steps": [
+              { "id": "state-schema", "type": "state.set", "config": { "state": "SCHEMA" } },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+
