@@ -46,6 +46,8 @@
 - F041: Added schema-validation fixtures:
   - `ee/test-data/workflow-harness/schema-unknown-schema-ref/` (submitting an event with an unknown `payloadSchemaRef` fails with 400 + schemaRef details)
   - `ee/test-data/workflow-harness/schema-invalid-event-payload/` (submitting an event with invalid payload fails with 400 + Zod issues)
+- F042: Added runtime-behavior fixture:
+  - `ee/test-data/workflow-harness/runtime-paused-no-run/` (workflow imported with `isPaused=true`; submitting `TICKET_CREATED` should not create a run; fixture asserts `waitForRun` times out)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.
