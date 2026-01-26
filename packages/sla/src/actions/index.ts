@@ -7,3 +7,5 @@
 export * from './slaActions';
 export * from './slaPauseConfigActions';
 export * from './businessHoursActions';
+export * from './escalationManagerActions';
+export * from './slaReportingActions';

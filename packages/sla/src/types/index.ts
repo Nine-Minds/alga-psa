@@ -416,3 +416,225 @@ export interface ISlaPauseHistory {
   /** Reference to status that caused pause (if applicable) */
   status_id?: string | null;
 }
+
+// ============================================================================
+// Escalation Manager Interfaces (Phase 4)
+// ============================================================================
+
+/**
+ * Escalation manager configuration for a board level.
+ * When a ticket reaches this escalation level, the configured manager
+ * is added as a resource and notified.
+ */
+export interface IEscalationManager {
+  tenant?: string;
+  /** Unique identifier for the configuration */
+  config_id: string;
+  /** Reference to the board this config applies to */
+  board_id: string;
+  /** Escalation level (1, 2, or 3) */
+  escalation_level: 1 | 2 | 3;
+  /** Reference to the manager user */
+  manager_user_id: string | null;
+  /** Notification channels for this manager */
+  notify_via: SlaNotificationChannel[];
+  /** When the configuration was created */
+  created_at?: ISODateString;
+  /** When the configuration was last updated */
+  updated_at?: ISODateString;
+}
+
+/**
+ * Input type for setting an escalation manager.
+ */
+export interface IEscalationManagerInput {
+  /** Reference to the board */
+  board_id: string;
+  /** Escalation level (1, 2, or 3) */
+  escalation_level: 1 | 2 | 3;
+  /** Reference to the manager user (null to remove) */
+  manager_user_id: string | null;
+  /** Notification channels for this manager */
+  notify_via?: SlaNotificationChannel[];
+}
+
+/**
+ * Escalation manager with user details for display.
+ */
+export interface IEscalationManagerWithUser extends IEscalationManager {
+  /** Manager's first name */
+  manager_first_name?: string;
+  /** Manager's last name */
+  manager_last_name?: string;
+  /** Manager's email */
+  manager_email?: string;
+}
+
+/**
+ * Board escalation configuration - all three levels for a board.
+ */
+export interface IBoardEscalationConfig {
+  board_id: string;
+  board_name: string;
+  level_1?: IEscalationManagerWithUser | null;
+  level_2?: IEscalationManagerWithUser | null;
+  level_3?: IEscalationManagerWithUser | null;
+}
+
+// ============================================================================
+// SLA Reporting Interfaces (Phase 5)
+// ============================================================================
+
+/**
+ * Filters for SLA reporting queries.
+ */
+export interface ISlaReportingFilters {
+  /** Start date for the reporting period */
+  dateFrom?: string;
+  /** End date for the reporting period */
+  dateTo?: string;
+  /** Filter by specific board */
+  boardId?: string;
+  /** Filter by specific client/company */
+  clientId?: string;
+  /** Filter by specific priority */
+  priorityId?: string;
+  /** Filter by specific technician/assignee */
+  technicianId?: string;
+  /** Filter by specific SLA policy */
+  slaPolicyId?: string;
+}
+
+/**
+ * SLA compliance rate metrics.
+ */
+export interface ISlaComplianceRate {
+  /** Overall compliance rate (0-100) */
+  overallRate: number;
+  /** Response SLA compliance rate (0-100) */
+  responseRate: number;
+  /** Resolution SLA compliance rate (0-100) */
+  resolutionRate: number;
+  /** Total tickets with SLA tracking */
+  totalTickets: number;
+  /** Tickets that met response SLA */
+  responseMetCount: number;
+  /** Tickets that breached response SLA */
+  responseBreachedCount: number;
+  /** Tickets that met resolution SLA */
+  resolutionMetCount: number;
+  /** Tickets that breached resolution SLA */
+  resolutionBreachedCount: number;
+}
+
+/**
+ * Average time metrics for SLA reporting.
+ */
+export interface ISlaAverageTimeMetrics {
+  /** Average response time in minutes */
+  avgResponseMinutes: number;
+  /** Average resolution time in minutes */
+  avgResolutionMinutes: number;
+  /** Average target response time in minutes */
+  avgTargetResponseMinutes: number;
+  /** Average target resolution time in minutes */
+  avgTargetResolutionMinutes: number;
+}
+
+/**
+ * Breach rate grouped by a dimension (priority, technician, client).
+ */
+export interface ISlaBreachRateByDimension {
+  /** Dimension ID (priority_id, user_id, company_id) */
+  dimensionId: string;
+  /** Dimension name for display */
+  dimensionName: string;
+  /** Total tickets in this dimension */
+  totalTickets: number;
+  /** Number of breached tickets */
+  breachedCount: number;
+  /** Breach rate (0-100) */
+  breachRate: number;
+}
+
+/**
+ * SLA trend data point for a single day.
+ */
+export interface ISlaTrendDataPoint {
+  /** Date in YYYY-MM-DD format */
+  date: string;
+  /** Compliance rate for this day (0-100) */
+  complianceRate: number;
+  /** Number of tickets closed this day */
+  ticketCount: number;
+  /** Number of breaches this day */
+  breachCount: number;
+}
+
+/**
+ * Recent breach record for display.
+ */
+export interface ISlaRecentBreach {
+  /** Ticket ID */
+  ticketId: string;
+  /** Ticket number */
+  ticketNumber: string;
+  /** Ticket title */
+  ticketTitle: string;
+  /** Client/company name */
+  companyName: string;
+  /** Priority name */
+  priorityName: string;
+  /** Assignee name */
+  assigneeName: string | null;
+  /** Whether response SLA was breached */
+  responseBreached: boolean;
+  /** Whether resolution SLA was breached */
+  resolutionBreached: boolean;
+  /** When the breach occurred */
+  breachedAt: string;
+}
+
+/**
+ * Ticket at risk of SLA breach.
+ */
+export interface ISlaTicketAtRisk {
+  /** Ticket ID */
+  ticketId: string;
+  /** Ticket number */
+  ticketNumber: string;
+  /** Ticket title */
+  ticketTitle: string;
+  /** Client/company name */
+  companyName: string;
+  /** Priority name */
+  priorityName: string;
+  /** Assignee name */
+  assigneeName: string | null;
+  /** Minutes remaining until breach (negative if already breached) */
+  minutesRemaining: number;
+  /** Percentage of SLA time elapsed */
+  percentElapsed: number;
+  /** Type of SLA at risk (response or resolution) */
+  slaType: 'response' | 'resolution';
+  /** Due date/time */
+  dueAt: string;
+}
+
+/**
+ * Combined SLA overview for dashboard.
+ */
+export interface ISlaOverview {
+  /** Compliance metrics */
+  compliance: ISlaComplianceRate;
+  /** Average time metrics */
+  averageTimes: ISlaAverageTimeMetrics;
+  /** Active tickets count */
+  activeTicketsCount: number;
+  /** Tickets at risk count */
+  atRiskCount: number;
+  /** Currently breached count */
+  breachedCount: number;
+  /** Paused tickets count */
+  pausedCount: number;
+}

@@ -56,3 +56,11 @@ export {
   configureItilSlaForBoard,
   type CreateItilSlaPolicyResult
 } from './itilSlaService';
+
+// Escalation service
+export {
+  escalateTicket,
+  getEscalationManagerForTicket,
+  checkEscalationNeeded,
+  type EscalationResult
+} from './escalationService';
