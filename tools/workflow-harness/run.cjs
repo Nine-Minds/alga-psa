@@ -10,6 +10,7 @@ const { createHttpClient } = require('./lib/http.cjs');
 const { createDbClient } = require('./lib/db.cjs');
 const { importWorkflowBundleV1, exportWorkflowBundleV1 } = require('./lib/workflow.cjs');
 const { waitForRun, getRunSteps, summarizeSteps, getRunLogs } = require('./lib/runs.cjs');
+const { createArtifactWriter } = require('./lib/artifacts.cjs');
 
 function usage() {
   console.error(`
@@ -104,67 +105,174 @@ function sanitizeSingleLine(value) {
 }
 
 async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, cookie, force, timeoutMs, debug, artifactsDir, pgUrl }) {
+  const testId = fixtureIdFromDir(testDir);
   const http = createHttpClient({ baseUrl, tenantId, cookie, debug });
-  const db = await createDbClient({ connectionString: pgUrl, debug });
-
-  let bundle;
-  try {
-    bundle = JSON.parse(fs.readFileSync(bundlePath, 'utf8'));
-  } catch (err) {
-    throw new Error(`Failed to parse bundle JSON: ${bundlePath}\n${err?.message ?? String(err)}`);
-  }
-
-  const importSummary = await importWorkflowBundleV1({ http, bundle, force });
-  const workflowKey =
-    Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0].key === 'string'
-      ? bundle.workflows[0].key
-      : null;
-  const workflowId =
-    workflowKey && Array.isArray(importSummary?.createdWorkflows)
-      ? importSummary.createdWorkflows.find((w) => w.key === workflowKey)?.workflowId ?? importSummary.createdWorkflows[0]?.workflowId ?? null
-      : importSummary?.createdWorkflows?.[0]?.workflowId ?? null;
-
-  if (!workflowId) {
-    throw new Error('Workflow import did not return a workflowId (createdWorkflows missing?).');
-  }
-
-  // eslint-disable-next-line global-require, import/no-dynamic-require
-  const runTest = require(testPath);
-  if (typeof runTest !== 'function') {
-    throw new Error(`Fixture test.cjs must export an async function. Got: ${typeof runTest}`);
-  }
-
-  const ctx = createTestContext(
-    { baseUrl, tenantId, timeoutMs, debug, artifactsDir },
-    {}
-  );
-
-  ctx.http = http;
-  ctx.db = db;
-  ctx.fixture = { id: fixtureIdFromDir(testDir), dir: testDir };
-  ctx.workflow = {
-    id: workflowId,
-    key: workflowKey,
-    importSummary,
-    export: () => exportWorkflowBundleV1({ http, workflowId })
+  let db;
+  const state = {
+    testId,
+    baseUrl,
+    tenantId,
+    force,
+    timeoutMs,
+    startedAt: new Date().toISOString(),
+    triggerStartedAt: null,
+    importSummary: null,
+    workflowId: null,
+    workflowKey: null,
+    run: null,
+    steps: null,
+    logs: null
   };
-  ctx.waitForRun = async (opts = {}) =>
-    waitForRun({
-      db,
-      workflowId,
-      tenantId,
-      startedAfter: opts.startedAfter ?? ctx.triggerStartedAt ?? new Date(0).toISOString(),
-      timeoutMs: opts.timeoutMs ?? timeoutMs
+
+  try {
+    db = await createDbClient({ connectionString: pgUrl, debug });
+
+    let bundle;
+    try {
+      bundle = JSON.parse(fs.readFileSync(bundlePath, 'utf8'));
+    } catch (err) {
+      throw new Error(`Failed to parse bundle JSON: ${bundlePath}\n${err?.message ?? String(err)}`);
+    }
+
+    const importSummary = await importWorkflowBundleV1({ http, bundle, force });
+    state.importSummary = importSummary;
+
+    const workflowKey =
+      Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0].key === 'string'
+        ? bundle.workflows[0].key
+        : null;
+    const workflowId =
+      workflowKey && Array.isArray(importSummary?.createdWorkflows)
+        ? importSummary.createdWorkflows.find((w) => w.key === workflowKey)?.workflowId ?? importSummary.createdWorkflows[0]?.workflowId ?? null
+        : importSummary?.createdWorkflows?.[0]?.workflowId ?? null;
+
+    state.workflowId = workflowId;
+    state.workflowKey = workflowKey;
+
+    if (!workflowId) {
+      throw new Error('Workflow import did not return a workflowId (createdWorkflows missing?).');
+    }
+
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    const runTest = require(testPath);
+    if (typeof runTest !== 'function') {
+      throw new Error(`Fixture test.cjs must export an async function. Got: ${typeof runTest}`);
+    }
+
+    const ctx = createTestContext(
+      { baseUrl, tenantId, timeoutMs, debug, artifactsDir },
+      {}
+    );
+
+    ctx.http = http;
+    ctx.db = db;
+    ctx.fixture = { id: testId, dir: testDir, bundlePath, testPath };
+    ctx.workflow = {
+      id: workflowId,
+      key: workflowKey,
+      importSummary,
+      export: () => exportWorkflowBundleV1({ http, workflowId })
+    };
+    ctx.waitForRun = async (opts = {}) => {
+      const run = await waitForRun({
+        db,
+        workflowId,
+        tenantId,
+        startedAfter: opts.startedAfter ?? ctx.triggerStartedAt ?? new Date(0).toISOString(),
+        timeoutMs: opts.timeoutMs ?? timeoutMs
+      });
+      state.run = run;
+      return run;
+    };
+    ctx.getRunSteps = async (runId) => getRunSteps({ db, runId });
+    ctx.getRunLogs = async (runId, limit) => getRunLogs({ db, runId, limit });
+    ctx.summarizeSteps = summarizeSteps;
+
+    const writer = createArtifactWriter({ artifactsDir, testId });
+    ctx.artifacts = writer;
+
+    state.triggerStartedAt = new Date().toISOString();
+    ctx.triggerStartedAt = state.triggerStartedAt;
+
+    const result = await runTest(ctx);
+
+    return { result, state };
+  } catch (err) {
+    const runId = state.run?.run_id ?? state.run?.runId ?? null;
+    const writer = createArtifactWriter({ artifactsDir, testId: state.testId, runId });
+
+    // Enrich state with DB snapshots when possible.
+    if (db && state.workflowId && state.triggerStartedAt) {
+      try {
+        const rows = await db.query(
+          `
+            select
+              run_id,
+              workflow_id,
+              workflow_version,
+              tenant_id,
+              status,
+              event_type,
+              started_at,
+              completed_at,
+              updated_at,
+              error_json
+            from workflow_runs
+            where workflow_id = $1
+              and tenant_id = $2
+              and started_at >= $3
+            order by started_at desc
+            limit 1
+          `,
+          [state.workflowId, tenantId, state.triggerStartedAt]
+        );
+        state.run = state.run ?? rows[0] ?? null;
+      } catch {
+        // best-effort
+      }
+    }
+
+    if (db && state.run?.run_id) {
+      try {
+        state.steps = await getRunSteps({ db, runId: state.run.run_id });
+      } catch {
+        // best-effort
+      }
+      try {
+        state.logs = await getRunLogs({ db, runId: state.run.run_id, limit: 200 });
+      } catch {
+        // best-effort
+      }
+    }
+
+    let exported = null;
+    if (state.workflowId) {
+      try {
+        exported = await exportWorkflowBundleV1({ http, workflowId: state.workflowId });
+      } catch {
+        // best-effort
+      }
+    }
+
+    writer.writeJson('failure.context.json', {
+      ...state,
+      exportedWorkflowBundle: exported,
+      stepSummary: Array.isArray(state.steps) ? summarizeSteps(state.steps) : null
     });
-  ctx.getRunSteps = async (runId) => getRunSteps({ db, runId });
-  ctx.getRunLogs = async (runId, limit) => getRunLogs({ db, runId, limit });
-  ctx.summarizeSteps = summarizeSteps;
+    writer.writeText('failure.error.txt', err?.stack ?? err?.message ?? String(err));
 
-  ctx.triggerStartedAt = new Date().toISOString();
-  const result = await runTest(ctx);
-
-  await db.close();
-  return { result, importSummary, workflowId, workflowKey };
+    // eslint-disable-next-line no-param-reassign
+    err.artifactsDir = writer.root;
+    throw err;
+  } finally {
+    if (db) {
+      try {
+        await db.close();
+      } catch {
+        // ignore
+      }
+    }
+  }
 }
 
 async function main() {
@@ -214,6 +322,9 @@ async function main() {
     const durationMs = Date.now() - startedAtMs;
     const reason = sanitizeSingleLine(err?.message ?? String(err));
     console.log(`FAIL ${testId} ${durationMs} ${reason}`);
+    if (err?.artifactsDir) {
+      console.error(`Artifacts: ${err.artifactsDir}`);
+    }
     process.exit(1);
   }
 }
