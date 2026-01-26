@@ -1,0 +1,121 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.integration-webhook-received-notify",
+      "metadata": {
+        "name": "Fixture: Integration Webhook Received → Notify",
+        "description": "Send an in-app notification when an integration webhook is received.",
+        "payloadSchemaRef": "payload.IntegrationWebhookReceived.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.IntegrationWebhookReceived.v1",
+        "trigger": { "type": "event", "eventName": "INTEGRATION_WEBHOOK_RECEIVED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [{ "actionId": "notifications.send_in_app", "version": 1 }],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.IntegrationWebhookReceived.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f600",
+          "version": 1,
+          "name": "Fixture: Integration Webhook Received → Notify",
+          "description": "Send an in-app notification when an integration webhook is received.",
+          "payloadSchemaRef": "payload.IntegrationWebhookReceived.v1",
+          "trigger": { "type": "event", "eventName": "INTEGRATION_WEBHOOK_RECEIVED" },
+          "steps": [
+            { "id": "state-integration", "type": "state.set", "config": { "state": "INTEGRATION" } },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture integration-webhook-received-notify]'" },
+                  "vars.title": { "$expr": "vars.marker & ' Webhook received'" },
+                  "vars.body": {
+                    "$expr": "'provider=' & payload.provider & ' eventName=' & payload.eventName & ' webhookId=' & payload.webhookId"
+                  }
+                }
+              }
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                  "title": { "$expr": "vars.title" },
+                  "body": { "$expr": "vars.body" },
+                  "severity": "info",
+                  "dedupe_key": { "$expr": "'fixture.integration-webhook-received-notify:' & payload.webhookId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f600",
+            "version": 1,
+            "name": "Fixture: Integration Webhook Received → Notify",
+            "description": "Send an in-app notification when an integration webhook is received.",
+            "payloadSchemaRef": "payload.IntegrationWebhookReceived.v1",
+            "trigger": { "type": "event", "eventName": "INTEGRATION_WEBHOOK_RECEIVED" },
+            "steps": [
+              { "id": "state-integration", "type": "state.set", "config": { "state": "INTEGRATION" } },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture integration-webhook-received-notify]'" },
+                    "vars.title": { "$expr": "vars.marker & ' Webhook received'" },
+                    "vars.body": {
+                      "$expr": "'provider=' & payload.provider & ' eventName=' & payload.eventName & ' webhookId=' & payload.webhookId"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "notify",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                    "title": { "$expr": "vars.title" },
+                    "body": { "$expr": "vars.body" },
+                    "severity": "info",
+                    "dedupe_key": { "$expr": "'fixture.integration-webhook-received-notify:' & payload.webhookId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

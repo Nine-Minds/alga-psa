@@ -38,6 +38,9 @@
 - F034: Added initial scheduling-trigger fixture set:
   - `ee/test-data/workflow-harness/appointment-created-assign-notify/` (submit `APPOINTMENT_CREATED` event via `/api/workflow/events`, assert workflow creates `schedule_entries` row via `scheduling.assign_user` and sends notification; cleanup deletes ticket + schedule entry)
   - `ee/test-data/workflow-harness/schedule-block-created/` (submit `SCHEDULE_BLOCK_CREATED` event via `/api/workflow/events`, assert workflow creates a project task and sends notification; cleanup deletes project)
+- F035: Added initial integration-trigger fixture set:
+  - `ee/test-data/workflow-harness/integration-webhook-received-notify/` (submit `INTEGRATION_WEBHOOK_RECEIVED` via `/api/workflow/events`, assert workflow sends internal notification)
+  - `ee/test-data/workflow-harness/integration-sync-failed-notify/` (submit `INTEGRATION_SYNC_FAILED` via `/api/workflow/events`, assert workflow sends internal notification)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.

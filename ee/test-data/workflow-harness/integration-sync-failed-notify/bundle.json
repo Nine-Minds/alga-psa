@@ -1,0 +1,117 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.integration-sync-failed-notify",
+      "metadata": {
+        "name": "Fixture: Integration Sync Failed → Notify",
+        "description": "Send an in-app notification when an integration sync fails.",
+        "payloadSchemaRef": "payload.IntegrationSyncFailed.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.IntegrationSyncFailed.v1",
+        "trigger": { "type": "event", "eventName": "INTEGRATION_SYNC_FAILED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [{ "actionId": "notifications.send_in_app", "version": 1 }],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.IntegrationSyncFailed.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f610",
+          "version": 1,
+          "name": "Fixture: Integration Sync Failed → Notify",
+          "description": "Send an in-app notification when an integration sync fails.",
+          "payloadSchemaRef": "payload.IntegrationSyncFailed.v1",
+          "trigger": { "type": "event", "eventName": "INTEGRATION_SYNC_FAILED" },
+          "steps": [
+            { "id": "state-integration", "type": "state.set", "config": { "state": "INTEGRATION" } },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture integration-sync-failed-notify]'" },
+                  "vars.title": { "$expr": "vars.marker & ' Sync failed'" },
+                  "vars.body": { "$expr": "'provider=' & payload.provider & ' syncId=' & payload.syncId & ' error=' & payload.errorMessage" }
+                }
+              }
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                  "title": { "$expr": "vars.title" },
+                  "body": { "$expr": "vars.body" },
+                  "severity": "error",
+                  "dedupe_key": { "$expr": "'fixture.integration-sync-failed-notify:' & payload.syncId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f610",
+            "version": 1,
+            "name": "Fixture: Integration Sync Failed → Notify",
+            "description": "Send an in-app notification when an integration sync fails.",
+            "payloadSchemaRef": "payload.IntegrationSyncFailed.v1",
+            "trigger": { "type": "event", "eventName": "INTEGRATION_SYNC_FAILED" },
+            "steps": [
+              { "id": "state-integration", "type": "state.set", "config": { "state": "INTEGRATION" } },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture integration-sync-failed-notify]'" },
+                    "vars.title": { "$expr": "vars.marker & ' Sync failed'" },
+                    "vars.body": { "$expr": "'provider=' & payload.provider & ' syncId=' & payload.syncId & ' error=' & payload.errorMessage" }
+                  }
+                }
+              },
+              {
+                "id": "notify",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                    "title": { "$expr": "vars.title" },
+                    "body": { "$expr": "vars.body" },
+                    "severity": "error",
+                    "dedupe_key": { "$expr": "'fixture.integration-sync-failed-notify:' & payload.syncId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

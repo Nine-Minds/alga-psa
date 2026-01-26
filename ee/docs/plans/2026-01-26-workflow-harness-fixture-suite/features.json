@@ -26,7 +26,7 @@
   { "id": "F032", "description": "Create billing-trigger fixture set (invoice/payment/contract events)", "implemented": true },
   { "id": "F033", "description": "Create email-trigger fixture set (inbound/outbound email events)", "implemented": true },
   { "id": "F034", "description": "Create scheduling-trigger fixture set (appointments/schedule blocks)", "implemented": true },
-  { "id": "F035", "description": "Create integration-trigger fixture set (webhooks/sync events) where supported", "implemented": false },
+  { "id": "F035", "description": "Create integration-trigger fixture set (webhooks/sync events) where supported", "implemented": true },
 
   { "id": "F040", "description": "Create node-type coverage fixtures (state.set, transform.assign, control.if, control.tryCatch, control.return, etc.)", "implemented": false },
   { "id": "F041", "description": "Create schema-validation fixtures (missing schema, unknown schema, mismatch requires mapping)", "implemented": false },
