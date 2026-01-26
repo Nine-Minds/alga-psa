@@ -1,0 +1,148 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-assigned-acknowledge",
+      "metadata": {
+        "name": "Fixture: Ticket Assigned → Acknowledge",
+        "description": "On assignment, add a public comment and send an acknowledgement email.",
+        "payloadSchemaRef": "payload.TicketAssigned.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketAssigned.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_ASSIGNED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.add_comment", "version": 1 },
+          { "actionId": "email.send", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketAssigned.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f108",
+          "version": 1,
+          "name": "Fixture: Ticket Assigned → Acknowledge",
+          "description": "Adds a public comment and sends an email acknowledgement.",
+          "payloadSchemaRef": "payload.TicketAssigned.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_ASSIGNED" },
+          "steps": [
+            { "id": "state-ack", "type": "state.set", "config": { "state": "ACKNOWLEDGE" } },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-assigned-acknowledge]'" },
+                  "vars.commentBody": { "$expr": "vars.marker & ' Assigned ticketId=' & payload.ticketId" },
+                  "vars.subject": { "$expr": "vars.marker & ' Ticket assigned'" },
+                  "vars.text": { "$expr": "vars.marker & ' Your ticket has been assigned. ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "add-public-comment",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.add_comment",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "body": { "$expr": "vars.commentBody" },
+                  "visibility": "public",
+                  "idempotency_key": { "$expr": "'fixture.ticket-assigned-acknowledge:comment:' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "send-email",
+              "type": "action.call",
+              "config": {
+                "actionId": "email.send",
+                "version": 1,
+                "inputMapping": {
+                  "to": { "$expr": "[{\\\"email\\\": payload.fixtureRequesterEmail}]" },
+                  "subject": { "$expr": "vars.subject" },
+                  "text": { "$expr": "vars.text" },
+                  "idempotency_key": { "$expr": "'fixture.ticket-assigned-acknowledge:email:' & payload.ticketId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f108",
+            "version": 1,
+            "name": "Fixture: Ticket Assigned → Acknowledge",
+            "description": "Adds a public comment and sends an email acknowledgement.",
+            "payloadSchemaRef": "payload.TicketAssigned.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_ASSIGNED" },
+            "steps": [
+              { "id": "state-ack", "type": "state.set", "config": { "state": "ACKNOWLEDGE" } },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-assigned-acknowledge]'" },
+                    "vars.commentBody": { "$expr": "vars.marker & ' Assigned ticketId=' & payload.ticketId" },
+                    "vars.subject": { "$expr": "vars.marker & ' Ticket assigned'" },
+                    "vars.text": { "$expr": "vars.marker & ' Your ticket has been assigned. ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "add-public-comment",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.add_comment",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "body": { "$expr": "vars.commentBody" },
+                    "visibility": "public",
+                    "idempotency_key": { "$expr": "'fixture.ticket-assigned-acknowledge:comment:' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "send-email",
+                "type": "action.call",
+                "config": {
+                  "actionId": "email.send",
+                  "version": 1,
+                  "inputMapping": {
+                    "to": { "$expr": "[{\\\"email\\\": payload.fixtureRequesterEmail}]" },
+                    "subject": { "$expr": "vars.subject" },
+                    "text": { "$expr": "vars.text" },
+                    "idempotency_key": { "$expr": "'fixture.ticket-assigned-acknowledge:email:' & payload.ticketId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+
