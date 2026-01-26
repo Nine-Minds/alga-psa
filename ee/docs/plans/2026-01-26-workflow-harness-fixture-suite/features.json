@@ -2,7 +2,7 @@
   { "id": "F001", "description": "Create harness folder tools/workflow-harness with documented CLI entrypoint", "implemented": true },
   { "id": "F002", "description": "Implement CLI argument parsing: --test, --base-url, --tenant, --cookie/--cookie-file, --force, --timeout-ms", "implemented": true },
   { "id": "F003", "description": "Implement test discovery by folder path (validate required files exist)", "implemented": true },
-  { "id": "F004", "description": "Define test runtime context object passed into test.cjs", "implemented": false },
+  { "id": "F004", "description": "Define test runtime context object passed into test.cjs", "implemented": true },
   { "id": "F005", "description": "Provide HTTP helper that automatically sets Cookie + x-tenant-id", "implemented": false },
   { "id": "F006", "description": "Provide Postgres read helper (required; configurable host/port/password) for assertions", "implemented": false },
   { "id": "F007", "description": "Integrate workflow import via existing workflow bundle import API (supports force overwrite)", "implemented": false },
