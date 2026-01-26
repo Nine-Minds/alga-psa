@@ -38,11 +38,17 @@
           "steps": [
             { "id": "state-email", "type": "state.set", "config": { "state": "EMAIL" } },
             {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": {
+                "assign": { "vars.marker": { "$expr": "'[fixture email-inbound-received-ticket-comment]'" } }
+              }
+            },
+            {
               "id": "assign-comment",
               "type": "transform.assign",
               "config": {
                 "assign": {
-                  "vars.marker": { "$expr": "'[fixture email-inbound-received-ticket-comment]'" },
                   "vars.commentBody": {
                     "$expr": "vars.marker & ' emailId=' & payload.emailData.id & ' subject=' & payload.emailData.subject & ' ticketId=' & payload.fixtureTicketId"
                   }
@@ -80,11 +86,17 @@
             "steps": [
               { "id": "state-email", "type": "state.set", "config": { "state": "EMAIL" } },
               {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": {
+                  "assign": { "vars.marker": { "$expr": "'[fixture email-inbound-received-ticket-comment]'" } }
+                }
+              },
+              {
                 "id": "assign-comment",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
-                    "vars.marker": { "$expr": "'[fixture email-inbound-received-ticket-comment]'" },
                     "vars.commentBody": {
                       "$expr": "vars.marker & ' emailId=' & payload.emailData.id & ' subject=' & payload.emailData.subject & ' ticketId=' & payload.fixtureTicketId"
                     }
@@ -114,4 +126,3 @@
     }
   ]
 }
-

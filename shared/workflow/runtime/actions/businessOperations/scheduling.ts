@@ -76,11 +76,14 @@ export function registerSchedulingActions(): void {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'window.start must be before window.end' });
       }
 
-      const findConflicts = async (s: Date, e: Date) => tx.trx('schedule_entries')
-        .where({ tenant: tx.tenantId, user_id: input.user_id })
-        .andWhere('scheduled_start', '<', e.toISOString())
-        .andWhere('scheduled_end', '>', s.toISOString())
-        .select('*');
+      const findConflicts = async (s: Date, e: Date) => tx.trx('schedule_entries as se')
+        .join('schedule_entry_assignees as sea', function joinAssignees() {
+          this.on('se.tenant', 'sea.tenant').andOn('se.entry_id', 'sea.entry_id');
+        })
+        .where({ 'se.tenant': tx.tenantId, 'sea.user_id': input.user_id })
+        .andWhere('se.scheduled_start', '<', e.toISOString())
+        .andWhere('se.scheduled_end', '>', s.toISOString())
+        .select('se.*');
 
       let conflicts = await findConflicts(start, end);
       if (conflicts.length && input.conflict_mode === 'fail') {
@@ -108,12 +111,18 @@ export function registerSchedulingActions(): void {
         entry_id: entryId,
         title: input.title ?? 'Scheduled work',
         work_item_id: input.link.id,
-        user_id: input.user_id,
         scheduled_start: start.toISOString(),
         scheduled_end: end.toISOString(),
         status: 'scheduled',
         notes: input.notes ?? null,
         work_item_type: input.link.type,
+        created_at: nowIso,
+        updated_at: nowIso
+      });
+      await tx.trx('schedule_entry_assignees').insert({
+        tenant: tx.tenantId,
+        entry_id: entryId,
+        user_id: input.user_id,
         created_at: nowIso,
         updated_at: nowIso
       });
@@ -146,4 +155,3 @@ export function registerSchedulingActions(): void {
     })
   });
 }
-

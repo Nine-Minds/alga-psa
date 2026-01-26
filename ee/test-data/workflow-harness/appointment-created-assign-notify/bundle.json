@@ -41,11 +41,15 @@
           "steps": [
             { "id": "state-appointment", "type": "state.set", "config": { "state": "APPOINTMENT" } },
             {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": { "assign": { "vars.marker": { "$expr": "'[fixture appointment-created-assign-notify]'" } } }
+            },
+            {
               "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
-                  "vars.marker": { "$expr": "'[fixture appointment-created-assign-notify]'" },
                   "vars.title": { "$expr": "vars.marker & ' appointmentId=' & payload.appointmentId" },
                   "vars.body": { "$expr": "'ticketId=' & payload.ticketId & ' startAt=' & payload.startAt" }
                 }
@@ -107,11 +111,15 @@
             "steps": [
               { "id": "state-appointment", "type": "state.set", "config": { "state": "APPOINTMENT" } },
               {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": { "assign": { "vars.marker": { "$expr": "'[fixture appointment-created-assign-notify]'" } } }
+              },
+              {
                 "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
-                    "vars.marker": { "$expr": "'[fixture appointment-created-assign-notify]'" },
                     "vars.title": { "$expr": "vars.marker & ' appointmentId=' & payload.appointmentId" },
                     "vars.body": { "$expr": "'ticketId=' & payload.ticketId & ' startAt=' & payload.startAt" }
                   }
@@ -165,4 +173,3 @@
     }
   ]
 }
-

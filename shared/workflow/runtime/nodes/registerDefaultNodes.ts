@@ -120,16 +120,15 @@ export function registerDefaultNodes(): void {
       env.vars.eventName = ctx.resumeEvent.name;
 
       if (config.assign) {
-        const resolvedAssign: Record<string, unknown> = {};
         for (const [path, expr] of Object.entries(config.assign)) {
-          resolvedAssign[path] = await resolveExpressions(expr, {
+          const resolved = await resolveExpressions(expr, {
             payload: env.payload,
             vars: env.vars,
             meta: env.meta,
             error: env.error
           });
+          env = applyAssignments(env, { [path]: resolved });
         }
-        env = applyAssignments(env, resolvedAssign);
       }
       return env;
     },
@@ -144,16 +143,16 @@ export function registerDefaultNodes(): void {
     id: 'transform.assign',
     configSchema: transformAssignSchema,
     handler: async (env, config) => {
-      const resolvedAssign: Record<string, unknown> = {};
       for (const [path, expr] of Object.entries(config.assign)) {
-        resolvedAssign[path] = await resolveExpressions(expr, {
+        const resolved = await resolveExpressions(expr, {
           payload: env.payload,
           vars: env.vars,
           meta: env.meta,
           error: env.error
         });
+        env = applyAssignments(env, { [path]: resolved });
       }
-      return applyAssignments(env, resolvedAssign);
+      return env;
     },
     ui: {
       label: 'Assign',

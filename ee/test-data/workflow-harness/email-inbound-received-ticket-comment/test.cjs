@@ -57,10 +57,8 @@ module.exports = async function run(ctx) {
   if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
 
   ctx.onCleanup(async () => {
-    await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': apiKey }
-    });
+    await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+    await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
   });
 
   const emailId = randomUUID();
