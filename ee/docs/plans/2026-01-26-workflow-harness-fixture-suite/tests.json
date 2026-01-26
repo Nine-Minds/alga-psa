@@ -3,7 +3,7 @@
   { "id": "T002", "description": "Harness: fails with clear error when bundle.json is missing", "implemented": true, "featureIds": ["F003"] },
   { "id": "T003", "description": "Harness: fails with clear error when test.cjs is missing", "implemented": true, "featureIds": ["F003"] },
   { "id": "T004", "description": "Harness: imports bundle with --force and reports workflow id/key used", "implemented": true, "featureIds": ["F007", "F015"] },
-  { "id": "T005", "description": "Harness: runs test.cjs and surfaces thrown error as FAIL with stack trace in artifacts", "implemented": false, "featureIds": ["F004", "F012"] },
+  { "id": "T005", "description": "Harness: runs test.cjs and surfaces thrown error as FAIL with stack trace in artifacts", "implemented": true, "featureIds": ["F004", "F012"] },
   { "id": "T006", "description": "Harness: waitForRun times out and reports a helpful diagnostic (no run found)", "implemented": false, "featureIds": ["F009", "F012"] },
   { "id": "T007", "description": "Harness: captures run + step status summary on success", "implemented": false, "featureIds": ["F010", "F011"] },
   { "id": "T008", "description": "Harness: prints single-line PASS/FAIL summary and correct exit code", "implemented": false, "featureIds": ["F011"] },

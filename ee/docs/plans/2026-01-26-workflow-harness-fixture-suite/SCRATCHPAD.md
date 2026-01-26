@@ -29,3 +29,4 @@
 - T002: Added Node test coverage for missing `bundle.json` fixture file (fails before DB/HTTP work).
 - T003: Added Node test coverage for missing `test.cjs` fixture file (fails before DB/HTTP work).
 - T004: Added stubbed runner test `tools/workflow-harness/tests/runner-stubbed.test.cjs` validating `--force` is passed to import and ctx exposes workflow id/key.
+- T005: Added stubbed runner test ensuring thrown errors are surfaced and `failure.*` artifacts include stack trace.

@@ -111,3 +111,68 @@ test('T004: imports bundle with --force and reports workflow id/key used', async
   }
 });
 
+test('T005: surfaces thrown error as FAIL and writes stack trace artifacts', async () => {
+  const { dir, bundlePath, testPath } = writeFixture({
+    name: 't005',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t005', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `
+      module.exports = async () => {
+        throw new Error('boom');
+      };
+    `
+  });
+
+  const harness = loadHarnessWithStubs({
+    http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.t005', workflowId: 'wf-005' }] }),
+      exportWorkflowBundleV1: async () => ({ exported: true })
+    },
+    runs: {
+      waitForRun: async () => {
+        throw new Error('waitForRun should not be called for this test');
+      },
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await assert.rejects(
+      () =>
+        runFixture({
+          testDir: dir,
+          bundlePath,
+          testPath,
+          baseUrl: 'http://localhost:3010',
+          tenantId: 'tenant',
+          cookie: 'cookie',
+          force: true,
+          timeoutMs: 1000,
+          debug: false,
+          artifactsDir: os.tmpdir(),
+          pgUrl: 'postgres://unused'
+        }),
+      (err) => {
+        assert.match(String(err.message), /boom/);
+        assert.ok(err.artifactsDir, 'expected err.artifactsDir to be set');
+        const ctxPath = path.join(err.artifactsDir, 'failure.context.json');
+        const errPath = path.join(err.artifactsDir, 'failure.error.txt');
+        assert.ok(fs.existsSync(ctxPath), 'expected failure.context.json');
+        assert.ok(fs.existsSync(errPath), 'expected failure.error.txt');
+        assert.match(fs.readFileSync(errPath, 'utf8'), /boom/);
+        return true;
+      }
+    );
+  } finally {
+    harness.restore();
+  }
+});
