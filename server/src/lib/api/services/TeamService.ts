@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { NotFoundError, ValidationError, ConflictError, BadRequestError } from '../middleware/apiMiddleware';
 

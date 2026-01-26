@@ -6,10 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getXeroCsvClientSyncService } from 'server/src/lib/services/xeroCsvClientSyncService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export async function GET(request: NextRequest) {
   try {

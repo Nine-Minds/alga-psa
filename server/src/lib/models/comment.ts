@@ -1,8 +1,8 @@
 import { getCurrentTenantId } from '../db';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { IComment } from '../../interfaces/comment.interface';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 const Comment = {
   getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, ticket_id: string): Promise<IComment[]> => {

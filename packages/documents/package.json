@@ -1,0 +1,87 @@
+{
+  "name": "@alga-psa/documents",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./actions": {
+      "import": "./src/actions/index.ts",
+      "types": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "import": "./src/actions/*.ts",
+      "types": "./src/actions/*.ts"
+    },
+    "./components": {
+      "import": "./src/components/index.ts",
+      "types": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "import": "./src/components/*.tsx",
+      "types": "./src/components/*.tsx"
+    },
+    "./handlers": {
+      "import": "./src/handlers/index.ts",
+      "types": "./src/handlers/index.ts"
+    },
+    "./handlers/*": {
+      "import": "./src/handlers/*.ts",
+      "types": "./src/handlers/*.ts"
+    },
+    "./lib/avatarUtils": {
+      "import": "./src/lib/avatarUtils.ts",
+      "types": "./src/lib/avatarUtils.ts"
+    },
+    "./lib/blocknoteUtils": {
+      "import": "./src/lib/blocknoteUtils.ts",
+      "types": "./src/lib/blocknoteUtils.ts"
+    },
+    "./lib/documentUtils": {
+      "import": "./src/lib/documentUtils.ts",
+      "types": "./src/lib/documentUtils.ts"
+    },
+    "./lib/entityImageService": {
+      "import": "./src/lib/entityImageService.ts",
+      "types": "./src/lib/entityImageService.ts"
+    },
+    "./storage/StorageService": {
+      "import": "./src/storage/StorageService.ts",
+      "types": "./src/storage/StorageService.ts"
+    },
+    "./models": {
+      "import": "./src/models/index.ts",
+      "types": "./src/models/index.ts"
+    },
+    "./models/*": {
+      "import": "./src/models/*.ts",
+      "types": "./src/models/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/types": "*",
+    "@alga-psa/validation": "*",
+    "zod": "^3.22.4"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "tsup": "^8.0.0"
+  }
+}

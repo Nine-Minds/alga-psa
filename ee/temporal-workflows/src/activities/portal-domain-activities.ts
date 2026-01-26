@@ -9,7 +9,7 @@ import type { Knex } from "knex";
 import { dump as dumpYaml } from "js-yaml";
 import os from "os";
 
-import { getAdminConnection } from "@alga-psa/shared/db/admin.js";
+import { getAdminConnection } from "@alga-psa/db/admin.js";
 
 import type {
   PortalDomainActivityRecord,

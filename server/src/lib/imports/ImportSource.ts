@@ -1,4 +1,4 @@
-import type { FieldMappingTemplate, ImportSourceRecord } from '@/types/imports.types';
+import type { FieldMappingTemplate, ImportSourceRecord } from '../../types/imports.types';
 
 interface ImportSourceProps {
   tenant: string;

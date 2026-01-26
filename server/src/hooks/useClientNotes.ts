@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
-import { getClientNoteContent, saveClientNote } from '../lib/actions/client-actions/clientNoteActions';
+import { getClientNoteContent, saveClientNote } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
 
 // Type for BlockNote content (simplified)

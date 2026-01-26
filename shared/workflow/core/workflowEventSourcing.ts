@@ -4,7 +4,7 @@ import { WorkflowSnapshotModel } from '../persistence/index';
 import { IWorkflowEvent } from '../persistence/index';
 import { Knex } from 'knex';
 
-// Create a simple logger if @shared/core is not available
+// Create a simple logger if @alga-psa/core is not available
 const logger = {
   debug: (message: string, ...args: any[]) => console.debug(message, ...args),
   info: (message: string, ...args: any[]) => console.info(message, ...args),

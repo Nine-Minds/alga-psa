@@ -16,7 +16,7 @@ const loggerMock = {
   debug: vi.fn()
 };
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,
   default: loggerMock,
   ...loggerMock
@@ -71,7 +71,7 @@ const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: 1
 });
 
-vi.mock('server/src/lib/actions/internal-notification-actions/internalNotificationActions', () => ({
+vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock,
   createNotificationFromTemplateAction: vi.fn(),
   getNotificationsAction: vi.fn(),

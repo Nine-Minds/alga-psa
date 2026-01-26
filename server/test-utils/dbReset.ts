@@ -75,12 +75,16 @@ export async function resetDatabase(
     verifyTestDatabase(targetDatabase);
 
     const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
+    const adminUser = process.env.DB_USER_ADMIN || 'postgres';
+    const appUser = process.env.DB_USER_SERVER || 'app_user';
+    const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', adminPassword);
 
     const adminDb = knex({
       client: clientConfig.client,
       asyncStackTraces: true,
       connection: {
         ...connectionConfig,
+        user: adminUser,
         database: 'postgres',
         password: adminPassword,
       },
@@ -91,6 +95,7 @@ export async function resetDatabase(
     });
 
     const safeDatabaseName = targetDatabase.replace(/"/g, '""');
+    const safeRoleName = sanitizeSqlIdentifier(appUser);
 
     try {
       // Tear down any existing connections from the main pool before recycling the database
@@ -108,6 +113,27 @@ export async function resetDatabase(
 
       await adminDb.raw(`DROP DATABASE IF EXISTS "${safeDatabaseName}"`);
       await adminDb.raw(`CREATE DATABASE "${safeDatabaseName}"`);
+
+      // Ensure the app role exists and can connect. (TestContext uses the app user for migrations/seeds.)
+      await adminDb.raw(`DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${safeRoleName}') THEN
+            CREATE ROLE ${safeRoleName} WITH LOGIN PASSWORD '${escapeSqlLiteral(appPassword)}';
+          ELSE
+            ALTER ROLE ${safeRoleName} WITH LOGIN PASSWORD '${escapeSqlLiteral(appPassword)}';
+          END IF;
+        END;
+      $$;`);
+
+      await adminDb.raw(`ALTER DATABASE "${safeDatabaseName}" OWNER TO ${safeRoleName}`);
+      await adminDb.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDatabaseName}" TO ${safeRoleName}`);
+
+      // Some migrations assume they can `ALTER ... OWNER TO postgres`. If they are executed
+      // under the app role in certain environments, make the app role a member of the
+      // admin role (typically `postgres`) for test resets only.
+      if (adminUser !== safeRoleName) {
+        await adminDb.raw(`GRANT ${sanitizeSqlIdentifier(adminUser)} TO ${safeRoleName}`);
+      }
     } finally {
       await adminDb.destroy();
     }
@@ -115,7 +141,11 @@ export async function resetDatabase(
     const refreshedDb = knex({
       ...clientConfig,
       asyncStackTraces: true,
-      connection: connectionConfig,
+      connection: {
+        ...connectionConfig,
+        user: adminUser,
+        password: adminPassword,
+      },
       migrations: {
         directory: path.join(serverRoot, 'migrations'),
       },
@@ -150,6 +180,17 @@ export async function resetDatabase(
     console.error('Error resetting database:', error);
     throw error;
   }
+}
+
+function sanitizeSqlIdentifier(identifier: string): string {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier)) {
+    throw new Error(`Unsafe SQL identifier: ${identifier}`);
+  }
+  return identifier;
+}
+
+function escapeSqlLiteral(value: string): string {
+  return value.replace(/'/g, "''");
 }
 
 /**

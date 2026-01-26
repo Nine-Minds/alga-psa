@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConfirmationDialog } from '../components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 interface UnsavedChangesContextType {
   /**
@@ -31,7 +31,7 @@ interface UnsavedChangesContextType {
   unregister: (componentId: string) => void;
 }
 
-const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
+export const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
 
 interface UnsavedChangesProviderProps {
   children: React.ReactNode;

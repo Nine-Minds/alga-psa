@@ -3,8 +3,8 @@ import { TenantService, TenantProvisioningError } from '../../../../services/pro
 import { CreateTenantSchema } from '../../../../services/provisioning/types/tenant.schema';
 import { ZodError } from 'zod';
 import { getServerSession } from '@/lib/auth-compat';
-import { hasPermission } from '@/lib/auth/rbac';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { hasPermission } from '@alga-psa/auth';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 export async function POST(req: NextRequest) {
   try {

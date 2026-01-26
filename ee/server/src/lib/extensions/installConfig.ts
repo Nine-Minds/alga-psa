@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 
 import { coerceProviders, normalizeCapability, withDefaultProviders } from './providers';
@@ -75,6 +75,13 @@ function safeJsonParse(value: string): unknown {
   }
 }
 
+function isUuid(value: string): boolean {
+  const trimmed = value.trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    trimmed
+  );
+}
+
 function mergeProviders(...sources: unknown[]): string[] {
   const set = new Set<string>();
   for (const source of sources) {
@@ -87,14 +94,20 @@ function mergeProviders(...sources: unknown[]): string[] {
 
 async function loadInstallRow(db: Knex, { tenantId, extensionId }: InstallLookupParams): Promise<InstallRow | null> {
   const slug = extensionId.toLowerCase();
+  const isId = isUuid(extensionId);
   const row = await db('tenant_extension_install as install')
     .leftJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .leftJoin('extension_version as version', 'version.id', 'install.version_id')
     .where('install.tenant_id', tenantId)
     .andWhere((builder) => {
-      builder.where('install.id', extensionId);
-      builder.orWhere('install.registry_id', extensionId);
-      builder.orWhereRaw('lower(concat(registry.publisher, \'.\', registry.name)) = ?', [slug]);
+      if (isId) {
+        builder.where('install.id', extensionId);
+        builder.orWhere('install.registry_id', extensionId);
+        builder.orWhereRaw('lower(concat(registry.publisher, \'.\', registry.name)) = ?', [slug]);
+        return;
+      }
+
+      builder.whereRaw('lower(concat(registry.publisher, \'.\', registry.name)) = ?', [slug]);
     })
     .select<InstallRow[]>([
       'install.id as install_id',
@@ -176,6 +189,17 @@ export async function getInstallConfig(params: InstallLookupParams): Promise<Ins
   const db = await getDb();
   const installRow = await loadInstallRow(db, params);
   if (!installRow) return null;
+  if (!installRow.install_id || !String(installRow.install_id).trim()) {
+    // Should be impossible unless DB row is corrupt; log loudly so we can track it down.
+    console.error('[installConfig] invalid install_id on install row', {
+      tenantId: params.tenantId,
+      extensionId: params.extensionId,
+      install_id: installRow.install_id,
+      registry_id: installRow.registry_id,
+      version_id: installRow.version_id,
+    });
+    return null;
+  }
   return hydrateInstallConfig(db, installRow);
 }
 
@@ -183,6 +207,16 @@ export async function getInstallConfigByInstallId(installId: string): Promise<In
   const db = await getDb();
   const installRow = await loadInstallRowById(db, installId);
   if (!installRow) return null;
+  if (!installRow.install_id || !String(installRow.install_id).trim()) {
+    console.error('[installConfig] invalid install_id on install row (lookup by id)', {
+      installId,
+      install_id: installRow.install_id,
+      tenant_id: installRow.tenant_id,
+      registry_id: installRow.registry_id,
+      version_id: installRow.version_id,
+    });
+    return null;
+  }
   return hydrateInstallConfig(db, installRow);
 }
 

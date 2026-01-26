@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from "next-auth/jwt"
 import { JWT } from 'next-auth/jwt';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 interface CustomToken extends JWT {
   error?: string;

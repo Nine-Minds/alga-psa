@@ -1,7 +1,7 @@
 'use server'
 
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
-import { TenantEmailService } from '../services/TenantEmailService';
+import { TenantEmailService } from '@alga-psa/email';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
 
 interface SendVerificationEmailParams {

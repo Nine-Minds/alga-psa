@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { ImapService } from './imapService';
 import http from 'node:http';
 

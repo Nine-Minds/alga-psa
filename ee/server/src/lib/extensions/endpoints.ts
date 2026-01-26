@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 
 export interface ExtensionApiEndpointRow {

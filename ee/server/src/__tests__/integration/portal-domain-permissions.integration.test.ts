@@ -15,7 +15,7 @@ let tenantId: string;
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 const analyticsCapture = vi.fn();
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
@@ -29,7 +29,7 @@ vi.mock('@/lib/analytics/posthog', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -38,7 +38,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock('@alga-psa/shared/core', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -60,25 +60,25 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
 }));
 
-vi.mock('@/lib/auth/rbac', async () => {
+vi.mock('@alga-psa/auth', async () => {
   const modulePath = path.resolve(process.cwd(), '..', '..', 'server', 'src', 'lib', 'auth', 'rbac.ts');
   const actual = await import(pathToFileURL(modulePath).href);
   return actual;
 });
 
-vi.mock('@shared/db/admin', async () => {
+vi.mock('@alga-psa/db/admin', async () => {
   const modulePath = path.resolve(process.cwd(), '..', '..', 'shared', 'db', 'admin.ts');
   const actual = await import(pathToFileURL(modulePath).href);
   return actual;
 });
 
-vi.mock('@shared/core', async () => {
+vi.mock('@alga-psa/core', async () => {
   const modulePath = path.resolve(process.cwd(), '..', '..', 'shared', 'core', 'index.ts');
   const actual = await import(pathToFileURL(modulePath).href);
   return actual;
 });
 
-vi.mock('@shared/core/logger', async () => {
+vi.mock('@alga-psa/core/logger', async () => {
   const modulePath = path.resolve(process.cwd(), '..', '..', 'shared', 'core', 'logger.ts');
   const actual = await import(pathToFileURL(modulePath).href);
   return actual;
@@ -90,7 +90,7 @@ vi.mock('@shared/utils/encryption', async () => {
   return actual;
 });
 
-const { getCurrentUser } = await import('@/lib/actions/user-actions/userActions');
+const { getCurrentUser } = await import('@alga-psa/users/actions');
 const { requestPortalDomainRegistrationAction } = await import('@/lib/actions/tenant-actions/portalDomainActions');
 const { runWithTenant } = await import('server/src/lib/db');
 

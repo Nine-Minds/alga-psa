@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import type { RedisClientType, RedisClientOptions } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 import { getSecret } from '../../core/getSecret';
 import { 
   WorkflowEventBase, 
@@ -169,8 +169,10 @@ export class RedisStreamClient {
    * @param streamName The name of the stream
    */
   private async ensureStreamAndGroup(streamName: string): Promise<void> {
-    // Check if we've already created this consumer group
-    if (RedisStreamClient.createdConsumerGroups.has(streamName)) {
+    const cacheKey = `${streamName}::${this.config.consumerGroup}`;
+
+    // Check if we've already created this consumer group for this stream
+    if (RedisStreamClient.createdConsumerGroups.has(cacheKey)) {
       // logger.debug(`[RedisStreamClient] Consumer group already ensured for stream: ${streamName}`);
       return;
     }
@@ -182,12 +184,12 @@ export class RedisStreamClient {
       });
       logger.info(`[RedisStreamClient] Created consumer group ${this.config.consumerGroup} for stream: ${streamName}`);
       // Add to the set of created consumer groups
-      RedisStreamClient.createdConsumerGroups.add(streamName);
+      RedisStreamClient.createdConsumerGroups.add(cacheKey);
     } catch (err: any) {
       if (err.message.includes('BUSYGROUP')) {
         logger.info(`[RedisStreamClient] Consumer group ${this.config.consumerGroup} already exists for stream: ${streamName}`);
         // Add to the set of created consumer groups even if it already existed
-        RedisStreamClient.createdConsumerGroups.add(streamName);
+        RedisStreamClient.createdConsumerGroups.add(cacheKey);
       } else {
         logger.error(`[RedisStreamClient] Error creating consumer group ${this.config.consumerGroup} for stream ${streamName}:`, err);
         throw err;

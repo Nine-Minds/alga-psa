@@ -17,8 +17,8 @@ import { NextResponse } from 'next/server';
 import {
   getAssetSoftware,
   getAssetSoftwareSummary,
-} from 'server/src/lib/actions/asset-actions/softwareActions';
-import { SoftwareCategory, SoftwareType } from 'server/src/interfaces/software.interfaces';
+} from '@alga-psa/assets/actions/softwareActions';
+import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
 
 export async function GET(
   request: Request,

@@ -1,8 +1,8 @@
-import ManagerApprovalDashboard from 'server/src/components/time-management/approvals/ManagerApprovalDashboard';
-import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import ManagerApprovalDashboard from '@alga-psa/scheduling/components/time-management/approvals/ManagerApprovalDashboard';
+import { findUserById } from '@alga-psa/users/actions';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Users } from 'lucide-react';
 import { getSession } from 'server/src/lib/auth/getSession';
 

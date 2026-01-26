@@ -19,22 +19,22 @@ vi.mock('next/image', () => ({
   default: () => null,
 }));
 
-vi.mock('server/src/components/auth/MspLoginForm', () => ({
+vi.mock('../../../../../packages/auth/src/components/MspLoginForm', () => ({
   __esModule: true,
   default: loginFormMock,
 }));
 
-vi.mock('server/src/components/auth/TwoFA', () => ({
+vi.mock('../../../../../packages/auth/src/components/TwoFA', () => ({
   __esModule: true,
   default: () => null,
 }));
 
-vi.mock('server/src/components/auth/Alert', () => ({
+vi.mock('../../../../../packages/auth/src/components/Alert', () => ({
   __esModule: true,
   default: () => null,
 }));
 
-const { default: MspSignIn } = await import('server/src/components/auth/MspSignIn');
+const { MspSignIn } = await import('@alga-psa/auth');
 
 describe('MspSignIn', () => {
   beforeEach(() => {

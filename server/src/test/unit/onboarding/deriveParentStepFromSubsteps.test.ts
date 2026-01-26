@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveParentStepFromSubsteps } from '@/lib/onboarding/deriveParentStepFromSubsteps';
+import { deriveParentStepFromSubsteps } from '@alga-psa/onboarding/lib/deriveParentStepFromSubsteps';
 
 describe('deriveParentStepFromSubsteps', () => {
   it('marks complete only when all sub-steps complete', () => {
@@ -49,4 +49,3 @@ describe('deriveParentStepFromSubsteps', () => {
     expect(derived.lastUpdated).toBe('2026-01-04T00:00:00.000Z');
   });
 });
-

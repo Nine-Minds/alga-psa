@@ -6,7 +6,7 @@ import type {
   MapToAssetContext,
   ParsedRecord,
   ValidationResult
-} from '@/types/imports.types';
+} from '../../types/imports.types';
 
 /**
  * Base class for all importers (CSV, RMM exports, API connectors, etc).

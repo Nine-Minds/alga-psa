@@ -8,14 +8,14 @@ import {
   getAccountingExportBatch,
   listAccountingExportBatches,
   executeAccountingExportBatch
-} from '../../actions/accountingExportActions';
+} from '@alga-psa/billing/actions';
 import {
   CreateExportBatchInput,
   CreateExportLineInput,
   CreateExportErrorInput,
   UpdateExportBatchStatusInput
 } from '../../repositories/accountingExportRepository';
-import { AccountingExportValidation } from '../../validation/accountingExportValidation';
+import { AccountingExportValidation } from '@alga-psa/billing';
 import { AppError } from '../../errors';
 import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
 import { runWithTenant, createTenantKnex } from '../../db';
@@ -26,7 +26,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
 import { getSession } from '../../auth/getSession';
-import { findUserById } from '../../actions/user-actions/userActions';
+import { findUserById } from '@alga-psa/users/actions';
 import { UnauthorizedError } from '../middleware/apiMiddleware';
 
 const PREVIEW_LINE_LIMIT = 50;
@@ -107,7 +107,7 @@ export class ApiAccountingExportController extends ApiBaseController {
           const batch = await createAccountingExportBatch({
             ...body,
             created_by: body.created_by ?? apiRequest.context.userId
-          }, { user: apiRequest.context.user });
+          });
           return NextResponse.json(batch, { status: 201 });
         } catch (error) {
           if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE') {
@@ -142,7 +142,7 @@ export class ApiAccountingExportController extends ApiBaseController {
         const batches = await listAccountingExportBatches({
           status: status as any,
           adapter_type: adapter || undefined
-        }, { user: apiRequest.context.user });
+        });
 
         return NextResponse.json(batches);
       });
@@ -159,7 +159,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       return await runWithTenant(apiRequest.context.tenant, async () => {
         await this.authorize(apiRequest, 'read');
 
-        const data = await getAccountingExportBatch(params.batchId, { user: apiRequest.context.user });
+        const data = await getAccountingExportBatch(params.batchId);
 
         if (!data.batch) {
           return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -391,7 +391,7 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as { lines: CreateExportLineInput[] };
-        const lines = await appendAccountingExportLines(params.batchId, body.lines, { user: apiRequest.context.user });
+        const lines = await appendAccountingExportLines(params.batchId, body.lines);
 
         await AccountingExportValidation.ensureMappingsForBatch(params.batchId);
         return NextResponse.json(lines, { status: 201 });
@@ -410,7 +410,7 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as { errors: CreateExportErrorInput[] };
-        const errors = await appendAccountingExportErrors(params.batchId, body.errors, { user: apiRequest.context.user });
+        const errors = await appendAccountingExportErrors(params.batchId, body.errors);
 
         return NextResponse.json(errors, { status: 201 });
       });
@@ -428,7 +428,7 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as UpdateExportBatchStatusInput;
-        const batch = await updateAccountingExportBatchStatus(params.batchId, body, { user: apiRequest.context.user });
+        const batch = await updateAccountingExportBatchStatus(params.batchId, body);
 
         if (!batch) {
           return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -450,7 +450,7 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'execute');
 
         try {
-          const result = await executeAccountingExportBatch(params.batchId, { user: apiRequest.context.user });
+          const result = await executeAccountingExportBatch(params.batchId);
 
           return NextResponse.json(result);
         } catch (error) {
@@ -490,7 +490,7 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'execute');
 
         try {
-          const result = await executeAccountingExportBatch(params.batchId, { user: apiRequest.context.user });
+          const result = await executeAccountingExportBatch(params.batchId);
           const files = (result.metadata as any)?.files ?? [];
 
           if (!Array.isArray(files) || files.length === 0) {

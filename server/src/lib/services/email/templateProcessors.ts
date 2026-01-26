@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import logger from '@alga-psa/shared/core/logger';
-import { SupportedLocale } from '../../i18n/config';
+import logger from '@alga-psa/core/logger';
+import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 export interface EmailTemplateContent {
   subject: string;

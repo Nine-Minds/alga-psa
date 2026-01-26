@@ -1,19 +1,20 @@
 'use client';
 
+// App shell: quick-create modal used in the MSP header.
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { QuickAddAsset } from 'server/src/components/assets/QuickAddAsset';
-import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
-import QuickAddClient from 'server/src/components/clients/QuickAddClient';
-import QuickAddContact from 'server/src/components/contacts/QuickAddContact';
-import ProjectQuickAdd from 'server/src/components/projects/ProjectQuickAdd';
-import { QuickAddService } from 'server/src/components/settings/billing/QuickAddService';
-import { QuickAddProduct } from 'server/src/components/settings/billing/QuickAddProduct';
-import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { ITicket, IClient, IContact, IProject } from 'server/src/interfaces';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
+import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
+import { QuickAddTicket } from '@alga-psa/tickets/components';
+import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
+import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
+import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd';
+import { QuickAddProduct, QuickAddService } from '@alga-psa/billing/components';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { ITicket, IClient, IContact, IProject } from '@alga-psa/types';
+import { getAllClients } from '@alga-psa/clients/actions';
+import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { toast } from 'react-hot-toast';
 
 export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;

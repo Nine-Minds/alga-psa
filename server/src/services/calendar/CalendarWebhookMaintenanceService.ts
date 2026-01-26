@@ -1,7 +1,7 @@
-import { getAdminConnection } from '@shared/db';
+import { getAdminConnection } from '@alga-psa/db';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { CalendarProviderService } from './CalendarProviderService';
 
 // PostHog analytics (EE only)

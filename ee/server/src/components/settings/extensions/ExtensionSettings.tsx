@@ -3,15 +3,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft, Plus, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
-import { Switch } from '@/components/ui/Switch';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import {
   fetchExtensionById,
   getExtensionApiEndpoints,

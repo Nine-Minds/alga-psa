@@ -25,7 +25,8 @@ export default defineConfig({
     testTimeout: 30000, // Increased for integration tests
     include: [
       'src/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      'src/__tests__/**/*.playwright.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
+      'src/__tests__/**/*.playwright.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'src/components/**/__tests__/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
     ]
   },
   resolve: {
@@ -57,6 +58,21 @@ export default defineConfig({
       { find: '@main-server', replacement: path.resolve(__dirname, '../../server/src') },
       { find: '@main-test-utils', replacement: path.resolve(__dirname, '../../server/test-utils') },
       { find: 'server', replacement: path.resolve(__dirname, '../../server') },
+
+      // Next.js server stubs for non-Next test runtime (required by next-auth env helpers).
+      { find: 'next/server', replacement: path.resolve(__dirname, '../../server/src/test/stubs/next-server.ts') },
     ],
+  },
+  server: {
+    deps: {
+      inline: [
+        'next-auth',
+        '@auth/core',
+        'next',
+      ],
+    },
+    fs: {
+      allow: [path.resolve(__dirname, '../..')],
+    },
   },
 });

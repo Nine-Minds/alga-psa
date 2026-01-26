@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 
 export const runtime = 'nodejs';
@@ -229,7 +229,19 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     if (!install) {
       return applyCorsHeaders(NextResponse.json({ error: 'not_installed' }, { status: 404 }), corsOrigin);
     }
-    const { installId: install_id, contentHash: content_hash, versionId: version_id, providers, secretEnvelope, config } = install;
+    const install_id = String(install.installId ?? '').trim();
+    if (!install_id) {
+      console.error('[api/ext] resolved install context is missing installId', {
+        tenantId,
+        extensionId,
+        install,
+      });
+      return applyCorsHeaders(
+        NextResponse.json({ error: 'install_context_missing', detail: 'installId missing' }, { status: 502 }),
+        corsOrigin
+      );
+    }
+    const { contentHash: content_hash, versionId: version_id, providers, secretEnvelope, config } = install;
 
     const headers = filterRequestHeaders(req.headers);
     headers['x-alga-tenant'] = tenantId;
@@ -255,7 +267,18 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      console.log('[api/ext] fetching from runner', { runnerUrl, requestId, elapsed: Date.now() - start });
+      console.log('[api/ext] fetching from runner', {
+        runnerUrl,
+        requestId,
+        tenantId,
+        extensionId,
+        method,
+        path,
+        installId: install_id,
+        installIdLen: install_id.length,
+        hasIdempotencyKey: Boolean(idempotencyKey),
+        elapsed: Date.now() - start,
+      });
       const resp = await fetch(`${runnerUrl}/v1/execute`, {
         method: 'POST',
         headers: {

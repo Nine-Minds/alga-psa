@@ -1,0 +1,34 @@
+{
+  "name": "@alga-psa/core",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/core/src",
+  "projectType": "library",
+  "tags": ["scope:core", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/core",
+        "tsConfig": "packages/core/tsconfig.json",
+        "packageJson": "packages/core/package.json",
+        "main": "packages/core/src/index.ts",
+        "assets": []
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/core"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/core/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

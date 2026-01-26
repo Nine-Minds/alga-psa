@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
 import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle } from 'lucide-react';
 import {
@@ -18,7 +18,7 @@ import {
   cancelSubscriptionAction,
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
-} from '@ee/lib/actions/license-actions';
+} from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
@@ -46,6 +46,12 @@ export default function AccountManagement() {
   });
 
   const router = useRouter();
+
+  const formatDate = (value?: string | Date | null) => {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+  };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -503,20 +509,23 @@ export default function AccountManagement() {
               <div className="flex justify-between">
                 <Label className="text-muted-foreground">Current Period</Label>
                 <span className="text-sm font-medium">
-                  {new Date(subscriptionInfo?.current_period_start || '').toLocaleDateString()} - {' '}
-                  {new Date(subscriptionInfo?.current_period_end || '').toLocaleDateString()}
+                  {subscriptionInfo?.current_period_start && subscriptionInfo?.current_period_end
+                    ? `${formatDate(subscriptionInfo.current_period_start)} - ${formatDate(subscriptionInfo.current_period_end)}`
+                    : 'N/A'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <Label className="text-muted-foreground">Next Billing Date</Label>
                 <span className="text-sm font-medium">
-                  {new Date(subscriptionInfo?.next_billing_date || '').toLocaleDateString()}
+                  {formatDate(subscriptionInfo?.next_billing_date)}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <Label className="font-semibold">Monthly Amount</Label>
                 <span className="text-lg font-bold">
-                  ${subscriptionInfo?.monthly_amount?.toFixed(2)}
+                  {typeof subscriptionInfo?.monthly_amount === 'number'
+                    ? `$${subscriptionInfo.monthly_amount.toFixed(2)}`
+                    : 'N/A'}
                 </span>
               </div>
             </div>

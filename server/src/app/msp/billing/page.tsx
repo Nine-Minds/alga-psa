@@ -1,9 +1,9 @@
 import React, { Suspense } from 'react';
-import BillingDashboard from '../../../components/billing-dashboard/BillingDashboard';
-import { getServices } from '../../../lib/actions/serviceActions';
-import { getDocumentsByContractId } from '../../../lib/actions/document-actions/documentActions';
-import { getCurrentUser } from '../../../lib/actions/user-actions/userActions';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { BillingDashboard } from '@alga-psa/billing';
+import { getServices } from '@alga-psa/billing/actions';
+import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import type { IDocument } from '@alga-psa/types';
 
 interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -11,6 +11,10 @@ interface BillingPageProps {
 
 const BillingPage = async ({ searchParams }: BillingPageProps) => {
   const params = await searchParams;
+  const tab = typeof params.tab === 'string' ? params.tab : undefined;
+  const subtab = typeof params.subtab === 'string' ? params.subtab : undefined;
+  const templateId = typeof params.templateId === 'string' ? params.templateId : undefined;
+  const presetId = typeof params.presetId === 'string' ? params.presetId : undefined;
   const contractId = typeof params.contractId === 'string' ? params.contractId : undefined;
   const contractView = typeof params.contractView === 'string' ? params.contractView : undefined;
 
@@ -38,6 +42,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
         initialServices={services}
         contractDocuments={contractDocuments}
         currentUserId={currentUserId}
+        initialQuery={{ tab, subtab, templateId, presetId, contractId, contractView }}
       />
     </Suspense>
   );

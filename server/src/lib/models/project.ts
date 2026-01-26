@@ -332,7 +332,13 @@ const ProjectModel = {
         
         // Delete project tags
         await deleteEntityTags(trx, projectId, 'project');
-        
+
+        // Clear project_id on interactions
+        await trx('interactions')
+          .where('project_id', projectId)
+          .andWhere('tenant', tenant)
+          .update({ project_id: null });
+
         // Finally, delete the project
         await trx('projects')
           .where('project_id', projectId)

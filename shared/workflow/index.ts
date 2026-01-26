@@ -11,7 +11,7 @@ export * from './init/index';
 export * from './streams/index';
 
 // Re-export logger from shared core package index
-export { logger } from '@alga-psa/shared/core';
+export { logger } from '@alga-psa/core';
 
 // Re-export utilities
 export * from './utils/index';

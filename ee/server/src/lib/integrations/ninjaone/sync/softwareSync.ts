@@ -8,10 +8,10 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.3.3
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/db';
+import { createTenantKnex } from '@/lib/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
 import type {
@@ -304,7 +304,7 @@ export async function syncSoftwareInventory(
     if (!tenant) {
       throw new Error('No tenant found');
     }
-    const client = await createNinjaOneClient(tenantId);
+    const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
 
     // Build query for assets to sync
     let assetsQuery = knex('assets')
@@ -483,7 +483,7 @@ export async function syncDeviceSoftware(
       throw new Error('Software inventory only available for workstations and servers');
     }
 
-    const client = await createNinjaOneClient(tenantId);
+    const client = await createNinjaOneClient(tenantId, undefined, {});
     const deviceId = parseInt(asset.rmm_device_id, 10);
     const ninjaSoftware = await client.getDeviceSoftware(deviceId) as NinjaOneSoftware[];
     const software = transformSoftware(ninjaSoftware);

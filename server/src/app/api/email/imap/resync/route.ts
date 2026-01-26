@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { createTenantKnex } from '@/lib/db';
 
 export async function POST(request: NextRequest) {

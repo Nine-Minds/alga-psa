@@ -11,9 +11,9 @@
  */
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   Monitor,
   MonitorOff,

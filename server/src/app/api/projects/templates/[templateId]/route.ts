@@ -3,7 +3,7 @@ import {
   getTemplateWithDetails,
   updateTemplate,
   deleteTemplate
-} from '@/lib/actions/project-actions/projectTemplateActions';
+} from '@alga-psa/projects/actions/projectTemplateActions';
 
 export async function GET(
   request: NextRequest,

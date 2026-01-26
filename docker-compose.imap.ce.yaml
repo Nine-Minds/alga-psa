@@ -34,6 +34,8 @@ services:
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow-specific configuration
+      # Run v2 runtime by default (legacy can be re-enabled via WORKFLOW_WORKER_MODE=all|legacy)
+      WORKFLOW_WORKER_MODE: ${WORKFLOW_WORKER_MODE:-v2}
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "generators": {
+    "alga-module": {
+      "factory": "./alga-module/index",
+      "schema": "./alga-module/schema.json",
+      "description": "Create a new Alga PSA module"
+    }
+  }
+}

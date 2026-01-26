@@ -13,7 +13,7 @@ const ExtensionSettings = dynamic(
 );
 
 const FeaturePlaceholder = dynamic(
-  () => import('server/src/components/FeaturePlaceholder').then(mod => mod.FeaturePlaceholder),
+  () => import('@alga-psa/ui/components/feature-flags/FeaturePlaceholder').then(mod => mod.FeaturePlaceholder),
   { ssr: false }
 );
 

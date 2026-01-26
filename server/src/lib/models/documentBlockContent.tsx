@@ -9,7 +9,7 @@ import {
 } from '../../interfaces/documentBlockContent.interface';
 import { IDocument } from '../../interfaces';
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import Document from './document';
 

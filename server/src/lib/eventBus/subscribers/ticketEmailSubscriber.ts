@@ -10,7 +10,7 @@ import {
   TicketCommentAddedEvent
 } from '../events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
@@ -19,9 +19,9 @@ import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
-import { TenantEmailService } from '../../services/TenantEmailService';
+import { TenantEmailService } from '@alga-psa/email';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
-import { isValidEmail } from '../../utils/validation';
+import { isValidEmail } from '@alga-psa/core';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -207,32 +207,15 @@ async function sendNotificationIfEnabled(
         return;
       }
 
-      // Check rate limiting (only if settings exist)
-      if (settings) {
-        const recentCount = await knex('notification_logs')
-          .where({
-            tenant: params.tenantId,
-            user_id: recipientUserId
-          })
-          .where('created_at', '>', new Date(Date.now() - 60000))
-          .count('id')
-          .first()
-          .then((result): number => Number(result?.count));
-
-        if (recentCount >= settings.rate_limit_per_minute) {
-          logger.warn('[TicketEmailSubscriber] Rate limit exceeded for user:', {
-            userId: recipientUserId,
-            recentCount,
-            limit: settings.rate_limit_per_minute,
-            recipient: params.to
-          });
-          return;
-        }
-      }
+      // Rate limiting is now centralized in TenantEmailService.sendEmail()
     }
 
     // 6. All checks passed - send the email
-    await sendEventEmail(params);
+    // Pass recipientUserId for rate limiting in TenantEmailService
+    await sendEventEmail({
+      ...params,
+      recipientUserId
+    });
 
     // 7. Log the notification (only for internal users with userId)
     if (recipientUserId && subtype) {

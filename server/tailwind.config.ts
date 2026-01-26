@@ -5,6 +5,17 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // EE UI lives outside this package but is imported via Next's `externalDir`.
+    "../ee/server/src/**/*.{js,ts,jsx,tsx,mdx}",
+
+    // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
+    // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.
+    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,auth,workflows,onboarding,tags,jobs,notifications,reference-data,tenancy,users,ee}/src/**/*.{jsx,tsx,mdx}",
+
+    // A small number of `.ts` files contain Tailwind class strings (not JSX). Include them
+    // explicitly rather than enabling a broad `**/*.ts` glob.
+    "../packages/scheduling/src/components/technician-dispatch/utils.ts",
+    "../packages/tickets/src/actions/optimizedTicketActions.ts",
   ],
   theme: {
     extend: {
@@ -28,9 +39,32 @@ const config: Config = {
         },
       },
       colors: {
+        // Base semantic colors for UI components
+        border: 'rgb(var(--color-border-200))',
+        background: 'white',
+        foreground: 'rgb(var(--color-text-900))',
+        muted: {
+          DEFAULT: 'rgb(var(--color-border-100))',
+          foreground: 'rgb(var(--color-text-500))',
+        },
+        // Status colors
+        success: {
+          DEFAULT: '#22c55e', // green-500
+          foreground: '#ffffff',
+        },
+        warning: {
+          DEFAULT: '#f59e0b', // amber-500
+          foreground: '#ffffff',
+        },
+        error: {
+          DEFAULT: '#ef4444', // red-500
+          foreground: '#ffffff',
+        },
         card: 'white',
         'card-foreground': 'rgb(var(--color-text-900))',
         primary: {
+          DEFAULT: 'rgb(var(--color-primary-500) / <alpha-value>)',
+          foreground: 'rgb(var(--color-primary-50) / <alpha-value>)',
           50: 'rgb(var(--color-primary-50) / <alpha-value>)',
           100: 'rgb(var(--color-primary-100) / <alpha-value>)',
           200: 'rgb(var(--color-primary-200) / <alpha-value>)',
@@ -43,6 +77,8 @@ const config: Config = {
           900: 'rgb(var(--color-primary-900) / <alpha-value>)',
         },
         secondary: {
+          DEFAULT: 'rgb(var(--color-secondary-500) / <alpha-value>)',
+          foreground: 'rgb(var(--color-secondary-900) / <alpha-value>)',
           50: 'rgb(var(--color-secondary-50) / <alpha-value>)',
           100: 'rgb(var(--color-secondary-100) / <alpha-value>)',
           200: 'rgb(var(--color-secondary-200) / <alpha-value>)',
@@ -55,6 +91,8 @@ const config: Config = {
           900: 'rgb(var(--color-secondary-900) / <alpha-value>)',
         },
         accent: {
+          DEFAULT: 'rgb(var(--color-accent-500) / <alpha-value>)',
+          foreground: 'rgb(var(--color-accent-900) / <alpha-value>)',
           50: 'rgb(var(--color-accent-50) / <alpha-value>)',
           100: 'rgb(var(--color-accent-100) / <alpha-value>)',
           200: 'rgb(var(--color-accent-200) / <alpha-value>)',

@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@/lib/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import {
@@ -64,7 +64,7 @@ class DirectNinjaOneSyncStrategy implements NinjaOneSyncStrategy {
           updated_at: knex.fn.now(),
         });
 
-      const client = await createNinjaOneClient(tenantId);
+      const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
       const organizations = await client.getOrganizations();
 
       itemsProcessed = organizations.length;

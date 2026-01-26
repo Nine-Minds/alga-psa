@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PickerProps, PickerOption } from '../../services/flow/types/nodes';
 import styles from './Picker.module.css';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@alga-psa/ui/components/Input';
 
 const Picker: React.FC<PickerProps> = ({ label, value, options, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);

@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   handleNinjaOneWebhook,
   verifyWebhookSignature,

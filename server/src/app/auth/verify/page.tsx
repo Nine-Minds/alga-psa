@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 export default function VerifyPage() {
   const router = useRouter();

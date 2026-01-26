@@ -399,7 +399,7 @@ const withTransactionSpy = vi.fn(async (_knex: unknown, callback: (trx: MockTran
   return callback(trx);
 });
 
-vi.mock('@shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: withTransactionSpy
 }));
 

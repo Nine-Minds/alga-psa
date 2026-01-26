@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllClients } from '@/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@alga-psa/clients/actions';
 
 export async function GET(request: NextRequest) {
   try {

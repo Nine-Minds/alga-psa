@@ -1,0 +1,128 @@
+[
+  {
+    "id": "T001",
+    "description": "cap:invoice.manual.create appears in KNOWN_PROVIDER_CAPABILITIES",
+    "implemented": true,
+    "featureIds": ["F002"],
+    "type": "unit"
+  },
+  {
+    "id": "T002",
+    "description": "cap:invoice.manual.create is NOT in DEFAULT_PROVIDER_CAPABILITIES",
+    "implemented": true,
+    "featureIds": ["F003"],
+    "type": "unit"
+  },
+  {
+    "id": "T003",
+    "description": "isKnownCapability('cap:invoice.manual.create') returns true and normalizes case/whitespace",
+    "implemented": true,
+    "featureIds": ["F002"],
+    "type": "unit"
+  },
+  {
+    "id": "T004",
+    "description": "Extension manifest with cap:invoice.manual.create validates successfully",
+    "implemented": true,
+    "featureIds": ["F004"],
+    "type": "unit"
+  },
+  {
+    "id": "T005",
+    "description": "SDK HostBindings includes host.invoicing with createManualInvoice()",
+    "implemented": true,
+    "featureIds": ["F005"],
+    "type": "unit"
+  },
+  {
+    "id": "T006",
+    "description": "Runner rejects invoicing host calls when cap:invoice.manual.create not granted",
+    "implemented": true,
+    "featureIds": ["F008"],
+    "type": "unit"
+  },
+  {
+    "id": "T007",
+    "description": "Runner rejects invoicing host calls when install_id is missing",
+    "implemented": true,
+    "featureIds": ["F009"],
+    "type": "unit"
+  },
+  {
+    "id": "T008",
+    "description": "Internal ext-invoicing endpoint rejects requests with missing/invalid x-runner-auth",
+    "implemented": true,
+    "featureIds": ["F011"],
+    "type": "integration"
+  },
+  {
+    "id": "T009",
+    "description": "Internal ext-invoicing endpoint returns NOT_FOUND for unknown installId",
+    "implemented": true,
+    "featureIds": ["F011"],
+    "type": "integration"
+  },
+  {
+    "id": "T010",
+    "description": "createManualInvoice creates a draft manual invoice in the tenant for a valid clientId + items",
+    "implemented": true,
+    "featureIds": ["F010"],
+    "type": "integration"
+  },
+  {
+    "id": "T011",
+    "description": "createManualInvoice returns a stable success payload with invoiceId + invoiceNumber + totals",
+    "implemented": true,
+    "featureIds": ["F013"],
+    "type": "integration"
+  },
+  {
+    "id": "T012",
+    "description": "createManualInvoice rejects when items array is empty or missing required fields",
+    "implemented": true,
+    "featureIds": ["F010", "F013"],
+    "type": "unit"
+  },
+  {
+    "id": "T013",
+    "description": "createManualInvoice rejects when clientId does not exist in tenant",
+    "implemented": true,
+    "featureIds": ["F010", "F013"],
+    "type": "integration"
+  },
+  {
+    "id": "T014",
+    "description": "createManualInvoice rejects when serviceId does not exist in tenant",
+    "implemented": true,
+    "featureIds": ["F010", "F013"],
+    "type": "integration"
+  },
+  {
+    "id": "T015",
+    "description": "Authorization model: capability-only mode allows creation without user context",
+    "implemented": true,
+    "featureIds": ["F012"],
+    "type": "integration"
+  },
+  {
+    "id": "T016",
+    "description": "Header fields: createManualInvoice accepts invoiceDate, dueDate, poNumber and persists them on the invoice record",
+    "implemented": true,
+    "featureIds": ["F016"],
+    "type": "integration"
+  },
+  {
+    "id": "T017",
+    "description": "Header fields: createManualInvoice rejects invalid invoiceDate/dueDate formats",
+    "implemented": true,
+    "featureIds": ["F016", "F013"],
+    "type": "unit"
+  },
+  {
+    "id": "T018",
+    "description": "SDK sample invoicing-demo handler validates input and calls host.invoicing.createManualInvoice with a stable response payload",
+    "implemented": true,
+    "featureIds": ["F017"],
+    "type": "unit"
+  }
+]

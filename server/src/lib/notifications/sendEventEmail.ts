@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
-import logger from '@alga-psa/shared/core/logger';
-import { TenantEmailService } from '../services/TenantEmailService';
+import logger from '@alga-psa/core/logger';
+import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
-import { SupportedLocale } from '../i18n/config';
+import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress } from '../../types/email.types';
 
@@ -394,7 +394,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       templateProcessor: processor,
       headers: params.headers,
       providerId: params.providerId,
-      from: params.from
+      from: params.from,
+      userId: params.recipientUserId  // For rate limiting
     });
 
     if (!result.success) {

@@ -9,6 +9,7 @@ pub const CAP_LOG_EMIT: &str = "cap:log.emit";
 pub const CAP_UI_PROXY: &str = "cap:ui.proxy";
 pub const CAP_USER_READ: &str = "cap:user.read";
 pub const CAP_SCHEDULER_MANAGE: &str = "cap:scheduler.manage";
+pub const CAP_INVOICE_MANUAL_CREATE: &str = "cap:invoice.manual.create";
 
 static KNOWN_CAPABILITIES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     HashSet::from([
@@ -20,6 +21,7 @@ static KNOWN_CAPABILITIES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
         CAP_UI_PROXY,
         CAP_USER_READ,
         CAP_SCHEDULER_MANAGE,
+        CAP_INVOICE_MANUAL_CREATE,
     ])
 });
 

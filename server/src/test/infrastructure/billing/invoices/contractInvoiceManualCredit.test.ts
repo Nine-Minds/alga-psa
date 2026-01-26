@@ -4,8 +4,8 @@ import { TestContext } from '../../../../../test-utils/testContext';
 import { createFixedPlanAssignment, createTestService, setupClientTaxConfiguration, assignServiceTaxRate, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { addManualItemsToInvoice } from 'server/src/lib/actions/invoiceModification';
+import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { addManualItemsToInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -46,8 +46,8 @@ describe('Contract Invoice Manual Credit', () => {
     }
   }));
 
-  vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  vi.mock('@alga-psa/db', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@alga-psa/db')>();
     return {
       ...actual,
       withTransaction: vi.fn(async (knex, callback) => callback(knex)),

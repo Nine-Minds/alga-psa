@@ -20,7 +20,7 @@ type InstallRequestBody = z.infer<typeof installRequestSchema>;
 
 const installHandler = withPermission('extension', 'write')(
   withValidation(installRequestSchema)(async (req: ApiRequest, body: InstallRequestBody) => {
-    const result = await installExtensionForCurrentTenantV2(body);
+    const result = await installExtensionForCurrentTenantV2({ registryId: body.registryId!, version: body.version! });
 
     return createSuccessResponse(
       {

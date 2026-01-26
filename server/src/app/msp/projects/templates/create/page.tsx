@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IProject } from 'server/src/interfaces/project.interfaces';
-import { getProjects } from 'server/src/lib/actions/project-actions/projectActions';
-import { getTemplateCategories } from 'server/src/lib/actions/project-actions/projectTemplateActions';
-import CreateTemplateForm from 'server/src/components/projects/project-templates/CreateTemplateForm';
+import type { IProject } from '@alga-psa/types';
+import { getProjects } from '@alga-psa/projects/actions/projectActions';
+import { getTemplateCategories } from '@alga-psa/projects/actions/projectTemplateActions';
+import CreateTemplateForm from '@alga-psa/projects/components/project-templates/CreateTemplateForm';
 
 export default function CreateTemplatePage() {
   const [projects, setProjects] = useState<IProject[]>([]);

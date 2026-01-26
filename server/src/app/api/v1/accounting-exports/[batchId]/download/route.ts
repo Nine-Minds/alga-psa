@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { AccountingExportService } from 'server/src/lib/services/accountingExportService';
 import { AccountingAdapterRegistry } from 'server/src/lib/adapters/accounting/registry';
@@ -16,8 +16,8 @@ import {
   AccountingExportAdapterContext,
   TaxDelegationMode
 } from 'server/src/lib/adapters/accounting/accountingExportAdapter';
-import { getXeroCsvSettings } from 'server/src/lib/actions/integrations/xeroCsvActions';
-import logger from '@shared/core/logger';
+import { getXeroCsvSettings } from '@alga-psa/integrations/actions/integrations/xeroCsvActions';
+import logger from '@alga-psa/core/logger';
 
 export async function GET(
   request: NextRequest,

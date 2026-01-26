@@ -7,16 +7,16 @@
  * These actions handle connection status, organization sync, and integration settings.
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import { hasPermission } from '@/lib/auth/rbac';
-import { createTenantKnex } from '@/db';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex } from '@/lib/db';
 import { auditLog } from '@/lib/logging/auditLog';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
 import type { SyncOptions } from '../../integrations/ninjaone/sync/syncEngine';
@@ -34,6 +34,7 @@ import {
   NinjaOneRegion,
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
+import { buildIntegrationDisconnectedPayload } from '@shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
 
 // Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
@@ -100,25 +101,17 @@ function extractErrorInfo(error: unknown): object {
  * Save NinjaOne API credentials for a tenant
  * These credentials are used for OAuth authentication with NinjaOne
  */
-export async function saveNinjaOneCredentials(
+export const saveNinjaOneCredentials = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   clientSecret: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to update NinjaOne settings');
-    }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
     }
 
     // Validate inputs
@@ -143,32 +136,22 @@ export async function saveNinjaOneCredentials(
     logger.error('[NinjaOneActions] Error saving NinjaOne credentials:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get the status of stored NinjaOne credentials
  * Returns whether credentials exist and a masked version of the secret
  */
-export async function getNinjaOneCredentialsStatus(): Promise<{
+export const getNinjaOneCredentialsStatus = withAuth(async (user, { tenant }): Promise<{
   hasCredentials: boolean;
   clientId?: string;
   clientSecretMasked?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to view NinjaOne settings');
-    }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
     }
 
     const secretProvider = await getSecretProviderInstance();
@@ -193,27 +176,17 @@ export async function getNinjaOneCredentialsStatus(): Promise<{
     logger.error('[NinjaOneActions] Error getting NinjaOne credentials status:', extractErrorInfo(error));
     return { hasCredentials: false };
   }
-}
+});
 
 /**
  * Clear NinjaOne API credentials for a tenant
  */
-export async function clearNinjaOneCredentials(): Promise<{ success: boolean; error?: string }> {
+export const clearNinjaOneCredentials = withAuth(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to update NinjaOne settings');
-    }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
     }
 
     const secretProvider = await getSecretProviderInstance();
@@ -229,28 +202,20 @@ export async function clearNinjaOneCredentials(): Promise<{ success: boolean; er
     logger.error('[NinjaOneActions] Error clearing NinjaOne credentials:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get the current NinjaOne connection status
  */
-export async function getNinjaOneConnectionStatus(): Promise<RmmConnectionStatus> {
+export const getNinjaOneConnectionStatus = withAuth(async (user, { tenant }): Promise<RmmConnectionStatus> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to view NinjaOne settings');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration record
     const integration = await knex('rmm_integrations')
@@ -302,28 +267,20 @@ export async function getNinjaOneConnectionStatus(): Promise<RmmConnectionStatus
       is_active: false,
     };
   }
-}
+});
 
 /**
  * Disconnect NinjaOne integration
  */
-export async function disconnectNinjaOneIntegration(): Promise<{ success: boolean; error?: string }> {
+export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to disconnect NinjaOne');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // 1. Try to remove webhook from NinjaOne before clearing credentials
     // This is best-effort - we proceed even if it fails
@@ -375,7 +332,7 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
           settings = existingIntegration.settings as Record<string, any>;
         }
       }
-      
+
       // Remove webhook-related settings
       delete settings.webhookSecret;
       delete settings.webhookRegisteredAt;
@@ -391,6 +348,35 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
         });
     }
 
+    // Emit workflow v2 integration disconnected event (best-effort)
+    if (existingIntegration?.integration_id) {
+      const disconnectedAt = new Date().toISOString();
+      try {
+        await publishWorkflowEvent({
+          eventType: 'INTEGRATION_DISCONNECTED',
+          payload: buildIntegrationDisconnectedPayload({
+            integrationId: existingIntegration.integration_id,
+            provider: 'ninjaone',
+            connectionId: existingIntegration.integration_id,
+            disconnectedAt,
+            disconnectedByUserId: user.user_id,
+            reason: 'user_requested',
+          }),
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
+            occurredAt: disconnectedAt,
+          },
+          idempotencyKey: `integration_disconnected:${tenant}:${existingIntegration.integration_id}:${disconnectedAt}`,
+        });
+      } catch (publishError) {
+        logger.warn('[NinjaOneActions] Failed to publish workflow INTEGRATION_DISCONNECTED event', {
+          tenant,
+          error: extractErrorInfo(publishError),
+        });
+      }
+    }
+
     logger.info('[NinjaOneActions] Successfully disconnected NinjaOne', { tenant });
     revalidatePath('/msp/settings');
 
@@ -400,27 +386,17 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
     logger.error('[NinjaOneActions] Error disconnecting NinjaOne:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Test the NinjaOne connection
  */
-export async function testNinjaOneConnection(): Promise<{ success: boolean; error?: string }> {
+export const testNinjaOneConnection = withAuth(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to test NinjaOne connection');
-    }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
     }
 
     // Create client and test connection
@@ -437,28 +413,20 @@ export async function testNinjaOneConnection(): Promise<{ success: boolean; erro
     logger.error('[NinjaOneActions] Error testing NinjaOne connection:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Sync organizations from NinjaOne
  */
-export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
+export const syncNinjaOneOrganizations = withAuth(async (user, { tenant }): Promise<RmmSyncResult> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to sync NinjaOne organizations');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -485,7 +453,7 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
 
     // Try to update sync status to error
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
       await knex('rmm_integrations')
         .where({ tenant, provider: 'ninjaone' })
         .update({
@@ -510,28 +478,20 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
       errors: [errorMessage],
     };
   }
-}
+});
 
 /**
  * Get organization mappings
  */
-export async function getNinjaOneOrganizationMappings(): Promise<RmmOrganizationMapping[]> {
+export const getNinjaOneOrganizationMappings = withAuth(async (user, { tenant }): Promise<RmmOrganizationMapping[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to view NinjaOne organizations');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -564,35 +524,29 @@ export async function getNinjaOneOrganizationMappings(): Promise<RmmOrganization
     logger.error('[NinjaOneActions] Error getting organization mappings:', extractErrorInfo(error));
     return [];
   }
-}
+});
 
 /**
  * Update organization mapping
  */
-export async function updateNinjaOneOrganizationMapping(
+export const updateNinjaOneOrganizationMapping = withAuth(async (
+  user,
+  { tenant },
   mappingId: string,
   updates: {
     company_id?: string | null;
     auto_sync_assets?: boolean;
     auto_create_tickets?: boolean;
   }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to update NinjaOne mapping');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Map company_id to client_id (database column name)
     const dbUpdates: Record<string, unknown> = {};
@@ -621,29 +575,19 @@ export async function updateNinjaOneOrganizationMapping(
     logger.error('[NinjaOneActions] Error updating organization mapping:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get connect URL for NinjaOne OAuth
  */
-export async function getNinjaOneConnectUrl(region: NinjaOneRegion = 'US'): Promise<string> {
+export const getNinjaOneConnectUrl = withAuth(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<string> => {
   if (!NINJAONE_REGIONS[region]) {
     throw new Error(`Invalid region: ${region}`);
-  }
-
-  const user = await getCurrentUser();
-  if (!user || !user.tenant) {
-    throw new Error('User not authenticated');
   }
 
   const canView = await hasPermission(user, 'settings', 'read');
   if (!canView) {
     throw new Error('Insufficient permissions to view NinjaOne settings');
-  }
-
-  const { tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
   }
 
   const secretProvider = await getSecretProviderInstance();
@@ -672,30 +616,24 @@ export async function getNinjaOneConnectUrl(region: NinjaOneRegion = 'US'): Prom
   });
 
   return `${instanceUrl}/oauth/authorize?${params.toString()}`;
-}
+});
 
 /**
  * Trigger a full device sync
  */
-export async function triggerNinjaOneFullSync(
+export const triggerNinjaOneFullSync = withAuth(async (
+  user,
+  { tenant },
   options?: Partial<SyncOptions>
-): Promise<RmmSyncResult> {
+): Promise<RmmSyncResult> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to trigger sync');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -736,28 +674,20 @@ export async function triggerNinjaOneFullSync(
       errors: [errorMessage],
     };
   }
-}
+});
 
 /**
  * Trigger an incremental device sync
  */
-export async function triggerNinjaOneIncrementalSync(): Promise<RmmSyncResult> {
+export const triggerNinjaOneIncrementalSync = withAuth(async (user, { tenant }): Promise<RmmSyncResult> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to trigger sync');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -802,32 +732,24 @@ export async function triggerNinjaOneIncrementalSync(): Promise<RmmSyncResult> {
       errors: [errorMessage],
     };
   }
-}
+});
 
 /**
  * Sync a single device by its NinjaOne ID
  */
-export async function syncNinjaOneDevice(deviceId: number): Promise<{
+export const syncNinjaOneDevice = withAuth(async (user, { tenant }, deviceId: number): Promise<{
   success: boolean;
   asset?: Asset;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'asset', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to sync device');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -855,32 +777,24 @@ export async function syncNinjaOneDevice(deviceId: number): Promise<{
     logger.error('[NinjaOneActions] Error syncing device:', { deviceId, error });
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get remote access URL for a device
  */
-export async function getNinjaOneRemoteAccessUrl(assetId: string): Promise<{
+export const getNinjaOneRemoteAccessUrl = withAuth(async (user, { tenant }, assetId: string): Promise<{
   success: boolean;
   url?: string;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'asset', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to access remote tools');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get the asset to find the RMM device ID
     const asset = await knex('assets')
@@ -937,32 +851,24 @@ export async function getNinjaOneRemoteAccessUrl(assetId: string): Promise<{
     logger.error('[NinjaOneActions] Error getting remote access URL:', { assetId, error });
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get active RMM alerts for an asset
  */
-export async function getAssetAlerts(assetId: string): Promise<{
+export const getAssetAlerts = withAuth(async (user, { tenant }, assetId: string): Promise<{
   success: boolean;
   alerts?: RmmAlert[];
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'asset', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to view alerts');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get the asset to verify RMM management
     const asset = await knex('assets')
@@ -996,31 +902,23 @@ export async function getAssetAlerts(assetId: string): Promise<{
     logger.error('[NinjaOneActions] Error getting asset alerts:', { assetId, error });
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Acknowledge an RMM alert
  */
-export async function acknowledgeRmmAlert(alertId: string): Promise<{
+export const acknowledgeRmmAlert = withAuth(async (user, { tenant }, alertId: string): Promise<{
   success: boolean;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'asset', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to acknowledge alerts');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Update the alert
     const updated = await knex('rmm_alerts')
@@ -1044,32 +942,24 @@ export async function acknowledgeRmmAlert(alertId: string): Promise<{
     logger.error('[NinjaOneActions] Error acknowledging alert:', { alertId, error });
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Create a ticket from an RMM alert
  */
-export async function createTicketFromRmmAlert(alertId: string): Promise<{
+export const createTicketFromRmmAlert = withAuth(async (user, { tenant }, alertId: string): Promise<{
   success: boolean;
   ticketId?: string;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canCreate = await hasPermission(user, 'ticket', 'create');
     if (!canCreate) {
       throw new Error('Insufficient permissions to create tickets');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get the alert with asset info
     const alert = await knex('rmm_alerts as a')
@@ -1114,32 +1004,24 @@ export async function createTicketFromRmmAlert(alertId: string): Promise<{
     logger.error('[NinjaOneActions] Error creating ticket from alert:', { alertId, error });
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get NinjaOne device details for an asset
  */
-export async function getNinjaOneDeviceDetails(assetId: string): Promise<{
+export const getNinjaOneDeviceDetails = withAuth(async (user, { tenant }, assetId: string): Promise<{
   success: boolean;
   device?: any;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'asset', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to view device details');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get the asset to find the RMM device ID
     const asset = await knex('assets')
@@ -1164,12 +1046,12 @@ export async function getNinjaOneDeviceDetails(assetId: string): Promise<{
     logger.error('[NinjaOneActions] Error getting device details:', { assetId, error });
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Trigger patch status sync for all RMM-managed assets
  */
-export async function triggerPatchStatusSync(options?: {
+export const triggerPatchStatusSync = withAuth(async (user, { tenant }, options?: {
   assetIds?: string[];
 }): Promise<{
   success: boolean;
@@ -1179,23 +1061,15 @@ export async function triggerPatchStatusSync(options?: {
     assetsFailed: number;
   };
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'asset', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to sync patch status');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -1229,12 +1103,12 @@ export async function triggerPatchStatusSync(options?: {
     logger.error('[NinjaOneActions] Error triggering patch sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Trigger software inventory sync for all RMM-managed assets
  */
-export async function triggerSoftwareInventorySync(options?: {
+export const triggerSoftwareInventorySync = withAuth(async (user, { tenant }, options?: {
   assetIds?: string[];
   trackChanges?: boolean;
 }): Promise<{
@@ -1246,23 +1120,15 @@ export async function triggerSoftwareInventorySync(options?: {
     totalSoftwareItems: number;
   };
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canUpdate = await hasPermission(user, 'asset', 'update');
     if (!canUpdate) {
       throw new Error('Insufficient permissions to sync software inventory');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -1298,12 +1164,14 @@ export async function triggerSoftwareInventorySync(options?: {
     logger.error('[NinjaOneActions] Error triggering software sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Search for software across all assets
  */
-export async function searchSoftware(
+export const searchSoftware = withAuth(async (
+  user,
+  { tenant },
   searchTerm: string,
   options?: {
     companyId?: string;
@@ -1326,22 +1194,12 @@ export async function searchSoftware(
     };
   }>;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'asset', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to search software');
-    }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
     }
 
     // Import software sync dynamically
@@ -1358,12 +1216,12 @@ export async function searchSoftware(
     logger.error('[NinjaOneActions] Error searching software:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});
 
 /**
  * Get compliance summary for RMM-managed assets
  */
-export async function getRmmComplianceSummary(): Promise<{
+export const getRmmComplianceSummary = withAuth(async (user, { tenant }): Promise<{
   success: boolean;
   summary?: {
     totalDevices: number;
@@ -1376,23 +1234,15 @@ export async function getRmmComplianceSummary(): Promise<{
     lastSyncAt?: string;
   };
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
-      throw new Error('User not authenticated');
-    }
-
     // Check permission
     const canView = await hasPermission(user, 'asset', 'read');
     if (!canView) {
       throw new Error('Insufficient permissions to view compliance summary');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get total RMM-managed devices
     const totalDevicesResult = await knex('assets')
@@ -1480,4 +1330,4 @@ export async function getRmmComplianceSummary(): Promise<{
     logger.error('[NinjaOneActions] Error getting compliance summary:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-}
+});

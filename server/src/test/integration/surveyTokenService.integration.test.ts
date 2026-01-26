@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
-type SurveyTokenServiceModule = typeof import('../../lib/actions/surveyTokenService');
+type SurveyTokenServiceModule = typeof import('@alga-psa/surveys/actions/surveyTokenService');
 
 let issueSurveyToken!: SurveyTokenServiceModule['issueSurveyToken'];
 let resolveSurveyTenantFromToken!: SurveyTokenServiceModule['resolveSurveyTenantFromToken'];
@@ -11,7 +11,7 @@ let resolveSurveyTenantFromToken!: SurveyTokenServiceModule['resolveSurveyTenant
 let integrationDb: Knex | null = null;
 let currentTenantId: string | null = null;
 
-vi.mock('@alga-psa/shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     if (!integrationDb) {
       throw new Error('Test database connection is not initialised');
@@ -21,8 +21,8 @@ vi.mock('@alga-psa/shared/db/admin', () => ({
   destroyAdminConnection: vi.fn(async () => undefined),
 }));
 
-vi.mock('../../lib/db', async () => {
-  const actual = await vi.importActual<typeof import('../../lib/db')>('../../lib/db');
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
   return {
     ...actual,
     createTenantKnex: vi.fn(async () => {
@@ -59,7 +59,7 @@ describe('Survey Token Service integration', () => {
       db = await createTestDbConnection();
       integrationDb = db;
 
-      const surveyModule = await import('../../lib/actions/surveyTokenService');
+      const surveyModule = await import('@alga-psa/surveys/actions/surveyTokenService');
       issueSurveyToken = surveyModule.issueSurveyToken;
       resolveSurveyTenantFromToken = surveyModule.resolveSurveyTenantFromToken;
 

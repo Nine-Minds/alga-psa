@@ -51,20 +51,27 @@ vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(),
 }));
 
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
 import sharpModule from 'sharp';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
 import { generateDocumentPreviews } from '@/lib/utils/documentPreviewGenerator';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 const { metadataMock, resizeArgs, reset: resetSharpMocks } = (sharpModule as any)._test;
 const uploadFileMock = vi.mocked(StorageService.uploadFile);
 const createTenantKnexMock = vi.mocked(createTenantKnex);
+const publishWorkflowEventMock = vi.mocked(publishWorkflowEvent);
 
 describe('generateDocumentPreviews', () => {
   beforeEach(() => {
     resetSharpMocks();
     uploadFileMock.mockReset();
     createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-123' });
+    publishWorkflowEventMock.mockReset();
   });
 
   afterEach(() => {
@@ -84,6 +91,7 @@ describe('generateDocumentPreviews', () => {
     expect(result.preview_file_id).toBeNull();
     expect(result.preview_generated_at).toBeInstanceOf(Date);
     expect(uploadFileMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
   });
 
   it('creates thumbnail and preview uploads for large images', async () => {
@@ -94,8 +102,8 @@ describe('generateDocumentPreviews', () => {
     const document = {
       document_id: 'doc-2',
       mime_type: 'image/png',
-      created_by: 'user-7',
-      file_id: 'file-original',
+      created_by: 'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0',
+      file_id: '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
     } as any;
 
     const result = await generateDocumentPreviews(document, Buffer.from('image-data'));
@@ -107,6 +115,13 @@ describe('generateDocumentPreviews', () => {
 
     expect(createTenantKnexMock).toHaveBeenCalled();
     expect(uploadFileMock).toHaveBeenCalledTimes(2);
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+        payload: expect.objectContaining({ fileId: document.file_id }),
+        ctx: expect.objectContaining({ tenantId: 'tenant-123' }),
+      })
+    );
 
     const [thumbnailCall, previewCall] = uploadFileMock.mock.calls;
     expect(thumbnailCall[1]).toBeInstanceOf(Buffer);

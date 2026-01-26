@@ -1,0 +1,30 @@
+{
+  "name": "@alga-psa/email",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/types": "*",
+    "nodemailer": "^6.9.14"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,6 +1,6 @@
 import { Client, Connection, WorkflowHandle } from '@temporalio/client';
 import { Duration } from '@temporalio/common';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { JobStatus } from 'server/src/types/job';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import {

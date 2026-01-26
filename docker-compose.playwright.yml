@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   minio-test:
     image: minio/minio:latest
@@ -13,11 +11,6 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio-test-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     networks:
       - playwright-test
 

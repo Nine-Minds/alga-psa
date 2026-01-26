@@ -1,6 +1,6 @@
 import { createTenantKnex } from 'server/src/lib/db';
-import { getImageUrlInternal } from 'server/src/lib/actions/document-actions/documentActions';
-import { withTransaction } from '@alga-psa/shared/db';
+import { getImageUrlInternal } from '@alga-psa/documents/actions/documentActions';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**
@@ -223,6 +223,16 @@ export async function getContactAvatarUrlsBatch(
   tenant: string
 ): Promise<Map<string, string | null>> {
   return getEntityImageUrlsBatch('contact', contactIds, tenant);
+}
+
+/**
+ * Convenience function to get multiple user avatar URLs at once
+ */
+export async function getUserAvatarUrlsBatch(
+  userIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  return getEntityImageUrlsBatch('user', userIds, tenant);
 }
 
 /**

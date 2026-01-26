@@ -1,7 +1,7 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
 import { registerAccountingExportWorkflowActions } from './workflow/registerAccountingExportActions';
 import { syncStandardTemplates } from './startupTasks';
@@ -18,19 +18,21 @@ import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initiali
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
-import { createNextTimePeriod } from './actions/timePeriodsActions';
+import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
-import { CompositeSecretProvider } from '@alga-psa/shared/core/CompositeSecretProvider';
-import { FileSystemSecretProvider } from '@alga-psa/shared/core/FileSystemSecretProvider';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import type { ISecretProvider } from '@alga-psa/shared/core/ISecretProvider';
-import { EnvSecretProvider } from '@alga-psa/shared/core/EnvSecretProvider';
+import { CompositeSecretProvider } from '@alga-psa/core/secrets';
+import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import type { ISecretProvider } from '@alga-psa/core';
+import { EnvSecretProvider } from '@alga-psa/core/secrets';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
+import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
+import { getRedisClient } from '../config/redisConfig';
 
 let isFunctionExecuted = false;
 
@@ -114,6 +116,56 @@ export async function initializeApp() {
       // Continue startup - accumulator failure is not critical (falls back to immediate sending)
     }
 
+    // Initialize token bucket rate limiter for email rate limiting
+    // This is non-critical - if it fails, the system falls back to database-based rate limiting
+    try {
+      await TokenBucketRateLimiter.getInstance().initialize(
+        getRedisClient,
+        async (tenantId: string): Promise<BucketConfig> => {
+          // Get rate limit from notification_settings for this tenant
+          try {
+            const knex = await getConnection(tenantId);
+            const settings = await knex('notification_settings')
+              .where({ tenant: tenantId })
+              .first();
+
+            const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
+
+            // Convert rate per minute to token bucket config:
+            // maxTokens = rate limit (allows burst up to this amount)
+            // refillRate = rate per minute / 60 (tokens per second)
+            return {
+              maxTokens: ratePerMinute,
+              refillRate: ratePerMinute / 60
+            };
+          } catch (error) {
+            logger.warn(`Failed to get rate limit settings for tenant ${tenantId}, using defaults`);
+            return { maxTokens: 60, refillRate: 1 };
+          }
+        }
+      );
+      logger.info('Token bucket rate limiter initialized');
+    } catch (error) {
+      logger.error('Failed to initialize token bucket rate limiter:', error);
+      // Continue startup - falls back to database-based rate limiting
+    }
+
+    // Initialize delayed email queue for rate-limited email retry
+    // This is non-critical - if it fails, rate-limited emails will be dropped instead of queued
+    try {
+      await DelayedEmailQueue.getInstance().initialize(
+        getRedisClient,
+        async (tenantId: string, params) => {
+          const service = TenantEmailService.getInstance(tenantId);
+          await service.sendEmail(params);
+        }
+      );
+      logger.info('Delayed email queue initialized');
+    } catch (error) {
+      logger.error('Failed to initialize delayed email queue:', error);
+      // Continue startup - queue failure is not critical (rate-limited emails will be dropped)
+    }
+
     // Initialize storage service
     const storageService = new StorageService();
 
@@ -145,7 +197,13 @@ export async function initializeApp() {
     // Initialize workflow system
     try {
       await initializeServerWorkflows();
-      registerAccountingExportWorkflowActions();
+      // Register accounting export workflow actions
+      await registerAccountingExportWorkflowActions();
+
+      // Register invoice-specific workflow actions
+      const { registerInvoiceActions } = await import('@alga-psa/billing/actions/invoiceWorkflowRegistration');
+      registerInvoiceActions();
+
       logger.info('Workflow system initialized');
     } catch (error) {
       logger.error('Failed to initialize workflow system:', error);
@@ -165,6 +223,8 @@ export async function initializeApp() {
     try {
       process.on('SIGTERM', async () => {
         await shutdownNotificationAccumulator();
+        await TokenBucketRateLimiter.getInstance().shutdown();
+        await DelayedEmailQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
@@ -172,6 +232,8 @@ export async function initializeApp() {
 
       process.on('SIGINT', async () => {
         await shutdownNotificationAccumulator();
+        await TokenBucketRateLimiter.getInstance().shutdown();
+        await DelayedEmailQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);

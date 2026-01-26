@@ -1,7 +1,7 @@
 import React from 'react';
-import { getClientProjectDetails } from 'server/src/lib/actions/client-portal-actions/client-projects';
-import ProjectDetailsContainer from './ProjectDetailsContainer';
-import logger from '@alga-psa/shared/core/logger';
+import { getClientProjectDetails } from '@alga-psa/client-portal/actions';
+import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
+import logger from '@alga-psa/core/logger';
 
 interface ProjectPageProps {
   params: Promise<{

@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getRedisConfig, getEventStream, getConsumerName, DEFAULT_EVENT_CHANNEL } from '../../config/redisConfig';
 import { getSecret } from '../utils/getSecret';
 import {
@@ -9,7 +9,8 @@ import {
   EventType,
   EventSchemas,
   BaseEventSchema,
-  convertToWorkflowEvent
+  convertToWorkflowEvent,
+  type WorkflowPublishHooks
 } from '@shared/workflow/streams/eventBusSchema';
 import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventSchema';
 
@@ -26,10 +27,8 @@ const createRedisClient = async () => {
   if (!password) {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
-
-  const client = createClient({
+  const clientOptions: Parameters<typeof createClient>[0] = {
     url: config.url,
-    password: password || undefined,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
@@ -45,7 +44,14 @@ const createRedisClient = async () => {
         return delay;
       }
     }
-  });
+  };
+
+  // Avoid sending AUTH when no password is configured (node-redis will AUTH if `password` is set, even to an empty string).
+  if (password) {
+    (clientOptions as any).password = password;
+  }
+
+  const client = createClient(clientOptions);
 
   client.on('error', (err) => {
     logger.error('[EventBus] Redis Client Error:', err);
@@ -604,7 +610,7 @@ export class EventBus {
 
   public async publish(
     event: Omit<Event, 'id' | 'timestamp'>,
-    options?: { channel?: string }
+    options?: { channel?: string; workflow?: WorkflowPublishHooks }
   ): Promise<void> {
     if (eventBusDisabled) {
       logger.debug('[EventBus] Skipping publish because the event bus is disabled');
@@ -646,7 +652,7 @@ export class EventBus {
         await this.ensureStreamAndGroup(globalStream);
 
         const workflowEvent = WorkflowEventBaseSchema.parse(
-          convertToWorkflowEvent(fullEvent)
+          convertToWorkflowEvent(fullEvent, options?.workflow)
         );
 
         logger.debug('[EventBus] Publishing event in workflow format:', {

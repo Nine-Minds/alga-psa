@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { WorkflowStateSnapshot } from '../core/workflowEventSourcing';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 
 /**
  * Interface for workflow state snapshots in the database

@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { ClientProfile } from 'server/src/components/client-portal/profile/ClientProfile';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { ClientProfile } from '@alga-psa/client-portal/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ProfilePage() {
   const { t } = useTranslation('clientPortal');

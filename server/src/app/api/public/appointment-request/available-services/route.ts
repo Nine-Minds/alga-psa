@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
+import { getTenantIdBySlug } from '@alga-psa/tenancy/actions';
 import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 /**
  * GET /api/public/appointment-request/available-services?tenant={tenant-slug-or-id}

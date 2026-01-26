@@ -16,9 +16,9 @@ let contactEmail: string;
 let clientUserId: string;
 let staffUserId: string;
 let staffUser2Id: string;
-let createAppointmentRequest: typeof import('server/src/lib/actions/client-portal-actions/appointmentRequestActions').createAppointmentRequest;
-let approveAppointmentRequest: typeof import('server/src/lib/actions/appointmentRequestManagementActions').approveAppointmentRequest;
-let declineAppointmentRequest: typeof import('server/src/lib/actions/appointmentRequestManagementActions').declineAppointmentRequest;
+let createAppointmentRequest: typeof import('@alga-psa/client-portal/actions').createAppointmentRequest;
+let approveAppointmentRequest: typeof import('@alga-psa/scheduling/actions').approveAppointmentRequest;
+let declineAppointmentRequest: typeof import('@alga-psa/scheduling/actions').declineAppointmentRequest;
 let runWithTenant: typeof import('server/src/lib/db').runWithTenant;
 
 // Mock email service
@@ -45,7 +45,7 @@ const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: uuidv4()
 });
 
-vi.mock('server/src/lib/actions/internal-notification-actions/internalNotificationActions', () => ({
+vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock
 }));
 
@@ -73,8 +73,8 @@ describe('Appointment Notification System Integration Tests', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
     await runMigrationsAndSeeds(db);
-    ({ createAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions'));
-    ({ approveAppointmentRequest, declineAppointmentRequest } = await import('server/src/lib/actions/appointmentRequestManagementActions'));
+    ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
+    ({ approveAppointmentRequest, declineAppointmentRequest } = await import('@alga-psa/scheduling/actions'));
     ({ runWithTenant } = await import('server/src/lib/db'));
     tenantId = await createTenant(db, 'Test MSP');
 
@@ -712,7 +712,7 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Helper Function Integration', () => {
     it('should get correct schedule approvers', async () => {
-      const { getScheduleApprovers } = await import('server/src/lib/actions/appointmentHelpers');
+      const { getScheduleApprovers } = await import('@alga-psa/scheduling/actions');
 
       const approvers = await getScheduleApprovers(tenantId);
 
@@ -731,7 +731,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should get correct tenant settings', async () => {
-      const { getTenantSettings } = await import('server/src/lib/actions/appointmentHelpers');
+      const { getTenantSettings } = await import('@alga-psa/scheduling/actions');
 
       const settings = await getTenantSettings(tenantId);
 
@@ -742,7 +742,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should map contact to client user ID correctly', async () => {
-      const { getClientUserIdFromContact } = await import('server/src/lib/actions/appointmentHelpers');
+      const { getClientUserIdFromContact } = await import('@alga-psa/scheduling/actions');
 
       const userId = await getClientUserIdFromContact(contactId, tenantId);
 
@@ -750,7 +750,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should return null for non-existent contact', async () => {
-      const { getClientUserIdFromContact } = await import('server/src/lib/actions/appointmentHelpers');
+      const { getClientUserIdFromContact } = await import('@alga-psa/scheduling/actions');
 
       const userId = await getClientUserIdFromContact(uuidv4(), tenantId);
 
@@ -758,7 +758,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should format dates with correct locale', async () => {
-      const { formatDate } = await import('server/src/lib/actions/appointmentHelpers');
+      const { formatDate } = await import('@alga-psa/scheduling/actions');
 
       const dateString = '2025-12-15';
 
@@ -771,7 +771,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should format times with correct locale', async () => {
-      const { formatTime } = await import('server/src/lib/actions/appointmentHelpers');
+      const { formatTime } = await import('@alga-psa/scheduling/actions');
 
       const timeString = '14:30';
 
@@ -836,7 +836,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should format dates according to locale in notifications', async () => {
-      const { formatDate } = await import('server/src/lib/actions/appointmentHelpers');
+      const { formatDate } = await import('@alga-psa/scheduling/actions');
 
       const dateString = '2025-12-15';
 
@@ -859,7 +859,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should default to English when locale is not supported', async () => {
-      const { formatDate, formatTime } = await import('server/src/lib/actions/appointmentHelpers');
+      const { formatDate, formatTime } = await import('@alga-psa/scheduling/actions');
 
       const dateResult = await formatDate('2025-12-15', 'unsupported-locale');
       const timeResult = await formatTime('14:30', 'unsupported-locale');
@@ -897,7 +897,7 @@ describe('Appointment Notification System Integration Tests', () => {
       createNotificationFromTemplateInternalMock.mockClear();
 
       // Cancel the request
-      const { cancelAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
+      const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
 
       await runWithTenant(tenantId, async () => {
         const result = await cancelAppointmentRequest({
@@ -942,7 +942,7 @@ describe('Appointment Notification System Integration Tests', () => {
         appointmentRequestId = result.data!.appointment_request_id;
       });
 
-      const { cancelAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
+      const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
 
       // Cancel once
       await runWithTenant(tenantId, async () => {

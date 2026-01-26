@@ -13,10 +13,20 @@ try {
 }
 
 // Determine if this is an EE build
-const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
+
+const appVersion = (() => {
+  try {
+    const pkgPath = path.join(__dirname, '../package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    return pkg?.version || 'dev';
+  } catch {
+    return 'dev';
+  }
+})();
 
 const aliasEeEntryVariants = (aliasMap, pairs) => {
   pairs.forEach(({ fromCandidates = [], to }) => {
@@ -138,6 +148,9 @@ class EditionBuildDiagnosticsPlugin {
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
 
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
+  },
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
     // Alias optional DB drivers we don't use to an empty shim for Turbopack
@@ -147,12 +160,39 @@ const nextConfig = {
       // Base app alias
       '@': './src',
       'server/src': './src', // Add explicit alias for server/src imports
+	      '@alga-psa/ui': '../packages/ui/src',
+	      '@alga-psa/ui/': '../packages/ui/src/',
+	      '@alga-psa/clients': '../packages/clients/src',
+	      '@alga-psa/clients/': '../packages/clients/src/',
+	      '@alga-psa/auth': '../packages/auth/src',
+	      '@alga-psa/auth/': '../packages/auth/src/',
+	      '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
+	      '@alga-psa/scheduling': '../packages/scheduling/src',
+	      '@alga-psa/scheduling/': '../packages/scheduling/src/',
+	      '@alga-psa/tags': '../packages/tags/src',
+	      '@alga-psa/tags/': '../packages/tags/src/',
+	      '@alga-psa/users': '../packages/users/src',
+	      '@alga-psa/users/': '../packages/users/src/',
+	      '@alga-psa/teams': '../packages/teams/src',
+	      '@alga-psa/teams/': '../packages/teams/src/',
+	      '@alga-psa/tenancy': '../packages/tenancy/src',
+	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
+	      // DB package (use precompiled output so Turbopack ESM resolution works)
+	      '@alga-psa/db': '../packages/db/dist/index.js',
+	      '@alga-psa/db/admin': '../packages/db/dist/lib/admin.js',
+	      '@alga-psa/db/admin.js': '../packages/db/dist/lib/admin.js',
+      '@alga-psa/db/connection': '../packages/db/dist/lib/connection.js',
+      '@alga-psa/db/connection.js': '../packages/db/dist/lib/connection.js',
+      '@alga-psa/db/tenant': '../packages/db/dist/lib/tenant.js',
+      '@alga-psa/db/tenant.js': '../packages/db/dist/lib/tenant.js',
+      '@alga-psa/db/models': '../packages/db/dist/models/index.js',
+      '@alga-psa/db/models/': '../packages/db/dist/models/',
       '@/empty': isEE ? '../ee/server/src' : './src/empty',
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
       './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
-      '@ee': isEE ? '../ee/server/src' : './src/empty',
-      '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
+      '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
       'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
       // Native DB drivers not used
@@ -162,11 +202,18 @@ const nextConfig = {
       'mysql2': emptyShim,
       'oracledb': emptyShim,
       'tedious': emptyShim,
+      // Node.js-only modules that shouldn't be bundled for client
+      'node-vault': emptyShim,
+      'postman-request': emptyShim,
       // Optional ffmpeg dependencies
       'ffmpeg-static': emptyShim,
       'ffprobe-static': emptyShim,
       'ffprobe-static/package.json': './src/empty/shims/ffprobe-package.json',
       'ffmpeg-static/package.json': './src/empty/shims/ffprobe-package.json',
+      // sharp tries to conditionally require these optional packages; webpack can't statically resolve them
+      '@img/sharp-libvips-dev/include': emptyShim,
+      '@img/sharp-libvips-dev/cplusplus': emptyShim,
+      '@img/sharp-wasm32/versions': emptyShim,
       // Knex dialect modules we don't use; alias directly to avoid cascading requires
       'knex/lib/dialects/sqlite3': emptyShim,
       'knex/lib/dialects/sqlite3/index.js': emptyShim,
@@ -189,22 +236,25 @@ const nextConfig = {
         : '@product/settings-extensions/oss/entry',
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
-        : './src/services/chatStreamService',
+        : '@product/chat/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
-      '@product/email-providers/entry': isEE
-        ? '@product/email-providers/ee/entry'
-        : '@product/email-providers/oss/entry',
-      '@product/email-settings/entry': isEE
-        ? '@product/email-settings/ee/entry'
-        : '@product/email-settings/oss/entry',
-      '@product/client-portal-domain/entry': isEE
-        ? '@product/client-portal-domain/ee/entry'
-        : '@product/client-portal-domain/oss/entry',
-      '@product/workflows/entry': isEE
-        ? '@product/workflows/ee/entry'
-        : './src/empty/components/flow/DnDFlow.tsx',
+      '@alga-psa/integrations/email/providers/entry': isEE
+        ? '@alga-psa/integrations/email/providers/ee/entry'
+        : '@alga-psa/integrations/email/providers/oss/entry',
+      '@alga-psa/integrations/email/settings/entry': isEE
+        ? '@alga-psa/integrations/email/settings/ee/entry'
+        : '@alga-psa/integrations/email/settings/oss/entry',
+      '@alga-psa/integrations/email/domains/entry': isEE
+        ? '@alga-psa/integrations/email/domains/ee/entry'
+        : '@alga-psa/integrations/email/domains/oss/entry',
+      '@alga-psa/client-portal/domain-settings/entry': isEE
+        ? '@alga-psa/client-portal/domain-settings/ee/entry'
+        : '@alga-psa/client-portal/domain-settings/oss/entry',
+      '@alga-psa/workflows/entry': isEE
+        ? '../packages/workflows/src/ee/entry'
+        : '../packages/workflows/src/oss/entry',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -235,19 +285,27 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
-  transpilePackages: [
-    '@blocknote/core',
-    '@blocknote/react',
-    '@blocknote/mantine',
-    '@emoji-mart/data',
-    // Product feature packages (only those needed in this app)
-    '@product/extensions',
+	  transpilePackages: [
+	    '@blocknote/core',
+	    '@blocknote/react',
+	    '@blocknote/mantine',
+	    '@emoji-mart/data',
+	    '@alga-psa/core',
+	    '@alga-psa/auth',
+	    '@alga-psa/tags',
+	    '@alga-psa/ui',
+	    '@alga-psa/clients',
+	    '@alga-psa/scheduling',
+	    '@alga-psa/users',
+	    '@alga-psa/teams',
+	    '@alga-psa/tenancy',
+	    '@alga-psa/integrations',
+	    '@alga-psa/client-portal',
+	    // Product feature packages (only those needed in this app)
+	    '@product/extensions',
     '@product/settings-extensions',
-    '@product/email-providers',
-    '@product/email-settings',
-    '@product/client-portal-domain',
     '@product/billing',
-    '@product/workflows',
+    '@alga-psa/workflows',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
@@ -285,77 +343,87 @@ const nextConfig = {
       LOG_MODULE_RESOLUTION: process.env.LOG_MODULE_RESOLUTION,
     });
 
-    config.resolve = {
-      ...config.resolve,
-      extensionAlias: {
-        '.js': ['.ts', '.tsx', '.js', '.jsx'],
-        '.mjs': ['.mts', '.mjs'],
-        '.jsx': ['.tsx', '.jsx']
-      },
-      alias: {
-        ...config.resolve.alias,
-        '@': path.join(__dirname, 'src'),
-        'server/src': path.join(__dirname, 'src'), // Add explicit alias for server/src imports
-        '@ee': isEE
-          ? path.join(__dirname, '../ee/server/src')
-          : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
-        // Also map deep EE paths used without the @ee alias to CE stubs
-        // This ensures CE builds don't fail when code references ee/server/src directly
-        'ee/server/src': isEE
-          ? path.join(__dirname, '../ee/server/src')
-          : path.join(__dirname, 'src/empty'),
+    config.resolve ??= {};
 
-        // Avoid base-prefix aliases that can shadow more specific '/entry' aliases
-        // Feature swap aliases for Webpack (point directly to ts/tsx files)
-        '@product/extensions/entry': (() => {
-          const eePath = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
-          const ossPath = path.join(__dirname, '../packages/product-extensions/oss/entry.tsx');
-          const selectedPath = isEE ? eePath : ossPath;
-          console.log(`[WEBPACK ALIAS DEBUG] @product/extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
-          return selectedPath;
-        })(),
-        '@product/settings-extensions/entry': (() => {
-          const eePath = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
-          const ossPath = path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx');
-          const selectedPath = isEE ? eePath : ossPath;
-          console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
-          return selectedPath;
-        })(),
-        '@product/email-providers/entry': isEE
-          ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
-        '@product/email-settings/entry': isEE
-          ? path.join(__dirname, '../packages/product-email-settings/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-email-settings/oss/entry.tsx'),
-        '@product/email-domains/entry': isEE
-          ? path.join(__dirname, '../packages/product-email-domains/ee/entry.ts')
-          : path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
-        '@product/client-portal-domain/entry': isEE
-          ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
-        '@product/workflows/entry': isEE
-          ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
-          : path.join(__dirname, '../packages/product-workflows/oss/entry.tsx'),
-        '@product/billing/entry': isEE
-          ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
-        // Point stable specifiers to exact entry files to avoid conditional exports in package index
-        '@alga-psa/product-extension-initialization': isEE
-          ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
-          : path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
-        '@alga-psa/product-extension-actions': isEE
-          ? path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts')
-          : path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
-        '@alga-psa/product-auth-ee': path.join(__dirname, '../packages/product-auth-ee'),
-      },
-      modules: [
-        ...config.resolve.modules || ['node_modules'],
-        path.join(__dirname, '../node_modules')
-      ],
-      fallback: {
-        ...config.resolve.fallback,
-        'querystring': require.resolve('querystring-es3'),
-      }
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+      '.jsx': ['.tsx', '.jsx'],
+    };
+
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      '@': path.join(__dirname, 'src'),
+      'server/src': path.join(__dirname, 'src'), // Add explicit alias for server/src imports
+      // sharp tries to conditionally require these optional packages; webpack can't statically resolve them
+      '@img/sharp-libvips-dev/include': path.join(__dirname, 'src/empty/shims/empty.ts'),
+      '@img/sharp-libvips-dev/cplusplus': path.join(__dirname, 'src/empty/shims/empty.ts'),
+      '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
+      '@alga-psa/auth': path.join(__dirname, '../packages/auth/src'),
+      '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
+      '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
+      '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
+      '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@ee': isEE
+        ? path.join(__dirname, '../ee/server/src')
+        : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
+      // Also map deep EE paths used without the @ee alias to CE stubs
+      // This ensures CE builds don't fail when code references ee/server/src directly
+      'ee/server/src': isEE
+        ? path.join(__dirname, '../ee/server/src')
+        : path.join(__dirname, 'src/empty'),
+
+      // Feature swap aliases for Webpack (point directly to ts/tsx files)
+      '@product/extensions/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
+        const ossPath = path.join(__dirname, '../packages/product-extensions/oss/entry.tsx');
+        const selectedPath = isEE ? eePath : ossPath;
+        console.log(`[WEBPACK ALIAS DEBUG] @product/extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+        return selectedPath;
+      })(),
+      '@product/settings-extensions/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
+        const ossPath = path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx');
+        const selectedPath = isEE ? eePath : ossPath;
+        console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+        return selectedPath;
+      })(),
+      '@alga-psa/integrations/email/providers/entry': isEE
+        ? path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx')
+        : path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),
+      '@alga-psa/integrations/email/settings/entry': isEE
+        ? path.join(__dirname, '../packages/integrations/src/email/settings/ee/entry.tsx')
+        : path.join(__dirname, '../packages/integrations/src/email/settings/oss/entry.tsx'),
+      '@alga-psa/integrations/email/domains/entry': isEE
+        ? path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts')
+        : path.join(__dirname, '../packages/integrations/src/email/domains/oss/entry.ts'),
+      '@alga-psa/client-portal/domain-settings/entry': isEE
+        ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
+        : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
+      '@alga-psa/workflows/entry': isEE
+        ? path.join(__dirname, '../packages/workflows/src/ee/entry.tsx')
+        : path.join(__dirname, '../packages/workflows/src/oss/entry.tsx'),
+      '@product/billing/entry': isEE
+        ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
+        : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
+      // Point stable specifiers to exact entry files to avoid conditional exports in package index
+      '@alga-psa/product-extension-initialization': isEE
+        ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
+        : path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
+      '@alga-psa/product-extension-actions': isEE
+        ? path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts')
+        : path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
+      '@alga-psa/product-auth-ee': path.join(__dirname, '../packages/product-auth-ee'),
+    };
+
+    const resolveModules = config.resolve.modules ?? ['node_modules'];
+    config.resolve.modules = [...resolveModules, path.join(__dirname, '../node_modules')];
+
+    config.resolve.fallback = {
+      ...(config.resolve.fallback ?? {}),
+      querystring: require.resolve('querystring-es3'),
     };
 
     // In EE mode, also alias any absolute CE-stub path prefix to EE source root
@@ -382,14 +450,14 @@ const nextConfig = {
       config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
       config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
 
-      const pkgClientPortalEntry = path.join(__dirname, '../packages/product-client-portal-domain/entry.ts');
-      const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/product-client-portal-domain/entry.tsx');
-      const pkgClientPortalEeEntry = path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx');
+      const pkgClientPortalEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.ts');
+      const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.tsx');
+      const pkgClientPortalEeEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx');
       config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
       config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
 
-      const pkgEmailDomainsEntry = path.join(__dirname, '../packages/product-email-domains/entry.ts');
-      const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/product-email-domains/ee/entry.ts');
+      const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
+      const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
       config.resolve.alias[pkgEmailDomainsEntry] = pkgEmailDomainsEeEntry;
 
       aliasEeEntryVariants(config.resolve.alias, [
@@ -410,33 +478,31 @@ const nextConfig = {
         {
           to: pkgClientPortalEeEntry,
           fromCandidates: [
-            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
+            path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.ts'),
+            path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
           ],
         },
         {
-          to: path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx'),
+          to: path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx'),
           fromCandidates: [
-            path.join(__dirname, '../packages/product-email-providers/entry.ts'),
-            path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
-            path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+            path.join(__dirname, '../packages/integrations/src/email/providers/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),
           ],
         },
         {
-          to: path.join(__dirname, '../packages/product-email-settings/ee/entry.tsx'),
+          to: path.join(__dirname, '../packages/integrations/src/email/settings/ee/entry.tsx'),
           fromCandidates: [
-            path.join(__dirname, '../packages/product-email-settings/entry.ts'),
-            path.join(__dirname, '../packages/product-email-settings/entry.tsx'),
-            path.join(__dirname, '../packages/product-email-settings/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-email-settings/oss/entry.tsx'),
+            path.join(__dirname, '../packages/integrations/src/email/settings/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/email/settings/oss/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/email/settings/oss/entry.tsx'),
           ],
         },
         {
-          to: path.join(__dirname, '../packages/product-email-domains/ee/entry.ts'),
+          to: path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts'),
           fromCandidates: [
-            path.join(__dirname, '../packages/product-email-domains/entry.ts'),
-            path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/email/domains/oss/entry.ts'),
           ],
         },
         {
@@ -506,6 +572,39 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Externalize sharp for server builds to avoid bundling native dependencies.
+    // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.
+    if (isServer) {
+      config.externals.push('sharp');
+    } else if (webpack) {
+      // For client builds, make sure any accidental sharp import is replaced with an empty shim.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        sharp: emptyShim,
+      };
+    }
+
+    // sharp conditionally requires these optional packages; webpack can't statically resolve them
+    // and we don't want missing-module failures during compilation.
+    if (webpack) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-libvips-dev\/(include|cplusplus)$/ })
+      );
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-wasm32\/versions$/ })
+      );
+    }
+
+    // Replace Node.js-only modules with empty shims for client builds
+    // These modules use Node.js built-ins like 'tls', 'net', etc. that don't exist in the browser
+    if (!isServer && webpack) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'node-vault': emptyShim,
+        'postman-request': emptyShim,
+      };
+    }
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({
@@ -670,7 +769,9 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: serverActionsBodyLimit,
-    }
+    },
+    // Increase middleware body size limit for extension installs
+    middlewareClientMaxBodySize: '100mb',
   },
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {

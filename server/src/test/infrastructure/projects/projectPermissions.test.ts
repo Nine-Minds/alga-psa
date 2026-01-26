@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { IProject } from '../../interfaces/project.interfaces';
-import * as projectActions from '../../lib/actions/project-actions/projectActions';
-import * as userActions from '../../lib/actions/user-actions/userActions';
+import type { IProject } from '@alga-psa/types';
+import * as projectActions from '@alga-psa/projects/actions/projectActions';
+import * as auth from '@alga-psa/auth';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,
   mockNextHeaders,
   mockNextAuth,
-  mockRBAC,
   createMockUser
 } from '../../../../test-utils/testMocks';
 import {
@@ -26,6 +25,11 @@ import {
   expectPermissionDenied,
   expectError
 } from '../../../../test-utils/errorUtils';
+
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(),
+  hasPermission: vi.fn(),
+}));
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({
@@ -92,10 +96,9 @@ describe('Project Permissions Infrastructure', () => {
       user: createMockUser('admin')
     });
 
-    // Mock RBAC with proper type annotations
-    mockRBAC((user: { username: string }, resource: string, action: string): boolean => {
-      if (user.username === 'janeadmin') return true;
-      if (user.username === 'johndoe' && resource === 'project' && action === 'read') return true;
+    vi.mocked(auth.hasPermission).mockImplementation(async (user: any, resource: string, action: string): Promise<boolean> => {
+      if (user?.username === 'janeadmin') return true;
+      if (user?.username === 'johndoe' && resource === 'project' && action === 'read') return true;
       return false;
     });
 
@@ -131,14 +134,14 @@ describe('Project Permissions Infrastructure', () => {
   afterEach(cleanup);
 
   it('should allow regular user to view projects', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(regularUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     const projects = await projectActions.getProjects();
     expect(projects.length).toBeGreaterThanOrEqual(1);
     expect(projects.map((project): string => project.project_id)).toContain(testProject.project_id);
   });
 
   it('should allow admin user to edit a project', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(adminUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
     const updateData: Partial<IProject> = {
       project_name: 'Updated Test Project',
     };
@@ -150,7 +153,7 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   it('should not allow regular user to edit a project', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(regularUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     const updateData: Partial<IProject> = {
       project_name: 'Updated Test Project',
     };
@@ -164,7 +167,7 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   it('should allow admin user to create a project', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(adminUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
     const { tenantId } = context;
     
     const newProjectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at'> = {
@@ -188,7 +191,7 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   it('should not allow regular user to create a project', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(regularUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     const { tenantId } = context;
 
     const newProjectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at'> = {
@@ -209,7 +212,7 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   it('should allow admin user to delete a project', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(adminUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
     await projectActions.deleteProject(testProject.project_id);
 
     const deletedProject = await context.db('projects').where('project_id', testProject.project_id).first();
@@ -217,7 +220,7 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   it('should not allow regular user to delete a project', async () => {
-    vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(regularUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     
     await expectPermissionDenied(
       () => projectActions.deleteProject(testProject.project_id)

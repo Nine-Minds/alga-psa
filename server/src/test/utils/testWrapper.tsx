@@ -1,5 +1,5 @@
 import React from 'react';
-import { UIStateProvider } from '../../types/ui-reflection/UIStateContext';
+import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 
 interface TestWrapperProps {
   children: React.ReactNode;

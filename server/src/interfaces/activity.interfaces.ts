@@ -1,5 +1,5 @@
 import { TenantEntity } from ".";
-import { ISO8601String } from "@alga-psa/shared/types/temporal";
+import { ISO8601String } from "@alga-psa/types";
 import { IScheduleEntry } from "./schedule.interfaces";
 import { IProjectTask } from "./project.interfaces";
 import { ITimeEntry } from "./timeEntry.interfaces";

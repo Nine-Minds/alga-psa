@@ -1,5 +1,5 @@
 import { TenantEntity } from './index';
-import { ISO8601String } from '../types/types.d';
+import { ISO8601String } from '@alga-psa/types';
 
 /**
  * Base interface for all contract line service configurations

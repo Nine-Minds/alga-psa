@@ -1,2 +1,2 @@
 // Re-export the shared encryption functions
-export { hashPassword, verifyPassword, generateSecurePassword } from '@shared/utils/encryption';
+export { hashPassword, verifyPassword, generateSecurePassword } from '@alga-psa/core/encryption';

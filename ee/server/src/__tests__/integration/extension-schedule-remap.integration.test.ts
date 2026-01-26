@@ -17,14 +17,14 @@ const runner = {
   cancelJob: vi.fn(async () => true),
 };
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
 }));
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
 }));
 
-vi.mock('@/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 vi.mock('server/src/lib/auth/rbac', () => ({

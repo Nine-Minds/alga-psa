@@ -6,7 +6,7 @@ import {
 } from '@/lib/security/rateLimiting';
 import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
 import { verifyPassword } from '@/utils/encryption/encryption';
-import { withAdminTransaction } from '@alga-psa/shared/db';
+import { withAdminTransaction } from '@alga-psa/db';
 import { withNmStoreApiKey } from '@ee/lib/middleware/withNmStoreApiKey';
 
 // Interface definitions

@@ -457,7 +457,7 @@ export class E2ETestContext extends TestContext {
   async clearWorkflowEventStream(): Promise<void> {
     try {
       const { createClient } = await import('redis');
-      const { getSecret } = await import('@shared/core/getSecret');
+      const { getSecret } = await import('@alga-psa/core');
       
       const password = await getSecret('redis_password', 'REDIS_PASSWORD');
       const client = createClient({

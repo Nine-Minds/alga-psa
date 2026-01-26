@@ -27,11 +27,11 @@ let db: Knex;
 let tenantId: string;
 
 // Dynamic imports for actions that need tenant context
-let createClientContractFromWizard: typeof import('server/src/lib/actions/contractWizardActions').createClientContractFromWizard;
-let createPrepaymentInvoice: typeof import('server/src/lib/actions/creditActions').createPrepaymentInvoice;
-let applyCreditToInvoice: typeof import('server/src/lib/actions/creditActions').applyCreditToInvoice;
-let listClientCredits: typeof import('server/src/lib/actions/creditActions').listClientCredits;
-let getCreditHistory: typeof import('server/src/lib/actions/creditActions').getCreditHistory;
+let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
+let createPrepaymentInvoice: typeof import('@alga-psa/billing/actions/creditActions').createPrepaymentInvoice;
+let applyCreditToInvoice: typeof import('@alga-psa/billing/actions/creditActions').applyCreditToInvoice;
+let listClientCredits: typeof import('@alga-psa/billing/actions/creditActions').listClientCredits;
+let getCreditHistory: typeof import('@alga-psa/billing/actions/creditActions').getCreditHistory;
 
 type CreatedIds = {
   serviceTypeId?: string;
@@ -85,8 +85,8 @@ describe('Multi-Currency Gap Tests', () => {
     setupCommonMocks({ tenantId, permissionCheck: () => true });
 
     // Import actions after mocks are set up
-    ({ createClientContractFromWizard } = await import('server/src/lib/actions/contractWizardActions'));
-    ({ createPrepaymentInvoice, applyCreditToInvoice, listClientCredits, getCreditHistory } = await import('server/src/lib/actions/creditActions'));
+    ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
+    ({ createPrepaymentInvoice, applyCreditToInvoice, listClientCredits, getCreditHistory } = await import('@alga-psa/billing/actions/creditActions'));
   }, 120_000);
 
   afterAll(async () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { TicketsPanel } from './tickets-panel';
-import { IframeBridge } from '@alga/extension-iframe-sdk';
+import { IframeBridge } from '@alga-psa/extension-iframe-sdk';
 
 // Initialize the SDK bridge
 // The bridge handles the postMessage handshake and proxy communication

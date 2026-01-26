@@ -1,4 +1,4 @@
-// server/src/config/sidebarNavigationConfig.ts
+// server/src/config/menuConfig.ts
 
 import type { ElementType } from 'react';
 import {
@@ -16,13 +16,13 @@ import {
   FileOutput,
   FileSignature,
   FileText,
+  FlaskConical,
   Gauge,
-  Globe,
   Handshake,
   HelpCircle,
   Home,
+  KeyRound,
   Layers,
-  Layout,
   LayoutDashboard,
   LayoutTemplate,
   ListTree,
@@ -43,10 +43,8 @@ import {
   User,
   UserCog,
   Users,
-  Workflow,
   Star
 } from 'lucide-react';
-import { billingTabDefinitions } from '../components/billing-dashboard/billingTabsConfig';
 
 // Navigation modes for the unified sidebar
 export type NavMode = 'main' | 'settings' | 'billing';
@@ -143,28 +141,11 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Automation Hub',
         icon: Rocket,
-        href: '/msp/automation-hub',
         subItems: [
-          {
-            name: 'Template Library',
-            icon: Layout,
-            href: '/msp/automation-hub?tab=template-library'
-          },
-          {
-            name: 'Workflows',
-            icon: Workflow,
-            href: '/msp/automation-hub?tab=workflows'
-          },
-          {
-            name: 'Events Catalog',
-            icon: Bell,
-            href: '/msp/automation-hub?tab=events-catalog'
-          },
-          {
-            name: 'Logs & History',
-            icon: Clock,
-            href: '/msp/automation-hub?tab=logs-history'
-          }
+          { name: 'Workflows', icon: ListTree, href: '/msp/workflows?tab=workflows' },
+          { name: 'Runs', icon: Clock, href: '/msp/workflows?tab=runs' },
+          { name: 'Events', icon: Bell, href: '/msp/workflows?tab=events' },
+          { name: 'Dead Letter', icon: Mail, href: '/msp/workflows?tab=dead-letter' },
         ]
       },
       {
@@ -202,6 +183,7 @@ export const settingsNavigationSections: NavigationSection[] = [
     title: 'Organization & Access',
     items: [
       { name: 'General', icon: Settings, href: '/msp/settings?tab=general' },
+      { name: 'Experimental Features', icon: FlaskConical, href: '/msp/settings?tab=experimental-features' },
       { name: 'Users', icon: UserCog, href: '/msp/settings?tab=users' },
       { name: 'Teams', icon: Users, href: '/msp/settings?tab=teams' },
       { name: 'Client Portal', icon: AtSign, href: '/msp/settings?tab=client-portal' },
@@ -233,6 +215,7 @@ export const settingsNavigationSections: NavigationSection[] = [
   {
     title: 'Data & Integration',
     items: [
+      { name: 'Secrets', icon: KeyRound, href: '/msp/settings?tab=secrets' },
       { name: 'Import/Export', icon: Download, href: '/msp/settings?tab=import-export' },
       { name: 'Integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
       { name: 'Extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },

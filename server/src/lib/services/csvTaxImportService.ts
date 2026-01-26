@@ -7,7 +7,7 @@
  */
 
 import { v4 as uuid4 } from 'uuid';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../db';
 import { TaxSource } from '../../interfaces/tax.interfaces';
 import { parseCSV } from '../utils/csvParser';

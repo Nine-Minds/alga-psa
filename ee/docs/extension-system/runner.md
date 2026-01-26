@@ -104,6 +104,7 @@ Earlier versions included an `endpoint` field pointing at `dist/handlers/...`. C
   - `storage.kv` with tenant-namespaced keys.
   - `secrets.get` returning handles/tokens; plaintext minimized.
   - `ui_proxy.call_route` bridging from components to host-approved UI proxy endpoints.
+  - `invoicing.create_manual_invoice` to create draft manual invoices (requires `cap:invoice.manual.create`).
   - `log`, `metrics`, and live debug events emitting structured telemetry.
 
 ## Security and signing

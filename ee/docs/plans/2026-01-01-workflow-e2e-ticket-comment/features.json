@@ -1,0 +1,13 @@
+[
+  { "id": "F001", "description": "Define the basic workflow scenario (TICKET_CREATED → tickets.add_comment) and success criteria", "implemented": true },
+  { "id": "F002", "description": "Ensure Playwright test environment has Postgres + Redis available on known ports", "implemented": true },
+  { "id": "F003", "description": "Ensure Playwright test environment starts a workflow worker connected to the Playwright DB/Redis", "implemented": true },
+  { "id": "F004", "description": "Add stable UI selectors (data-automation-id) for key workflow designer interactions as needed", "implemented": false },
+  { "id": "F005", "description": "Implement Playwright test that creates and activates the workflow via UI", "implemented": true },
+  { "id": "F006", "description": "Implement Playwright test that creates a ticket to emit TICKET_CREATED", "implemented": true },
+  { "id": "F007", "description": "Assert workflow side effect via UI (ticket shows comment \"hello from workflow\")", "implemented": false },
+  { "id": "F008", "description": "Assert workflow execution via DB (workflow_runtime_events + workflow_runs + workflow_action_invocations)", "implemented": true },
+  { "id": "F009", "description": "Ensure TICKET_CREATED is published to the workflow event stream (workflow:events:global) on ticket creation", "implemented": true },
+  { "id": "F010", "description": "Ensure workflow worker ingests workflow:events:global into runtime v2 tables and starts runs for matching published workflows", "implemented": true },
+  { "id": "F011", "description": "Document a local runbook for starting/stopping the Playwright workflow deps and debugging failures", "implemented": false }
+]

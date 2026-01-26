@@ -12,7 +12,7 @@ vi.mock('server/src/lib/auth/getSession', () => ({
 }));
 
 // Mock shared db transaction helper used within actions
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: async (_knex: any, fn: any) => {
     // Execute callback immediately with the provided knex mock
     return await fn(_knex);
@@ -20,7 +20,7 @@ vi.mock('@alga-psa/shared/db', () => ({
 }));
 
 // Mock shared logger used by various model/action imports pulled into module graph
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('@alga-psa/shared/core/logger', () => ({
 }));
 
 // Mock secret provider used by config/storage
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: () => ({
     getSecret: async (_k: string) => undefined,
     setSecret: async (_k: string, _v: string) => {},
@@ -39,8 +39,8 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   }),
 }));
 
-// Some server actions import from '@alga-psa/shared/core'; provide the same stub
-vi.mock('@alga-psa/shared/core', () => ({
+// Some server actions import from '@alga-psa/core'; provide the same stub
+vi.mock('@alga-psa/core', () => ({
   getSecretProviderInstance: () => ({
     getSecret: async (_k: string) => undefined,
     setSecret: async (_k: string, _v: string) => {},

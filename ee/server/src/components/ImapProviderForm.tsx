@@ -8,17 +8,10 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Switch } from '@/components/ui/Switch';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
-import type { EmailProvider } from '@/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider } from '@/lib/actions/email-actions/emailProviderActions';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
+import type { EmailProvider } from '@alga-psa/integrations';
+import { createEmailProvider, updateEmailProvider, getInboundTicketDefaults } from '@alga-psa/integrations';
 
 const eeImapProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

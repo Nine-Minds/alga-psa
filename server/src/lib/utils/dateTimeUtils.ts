@@ -4,7 +4,7 @@ import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { parseISO, isToday, isYesterday } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
-import { DateValue } from '@alga-psa/shared/types';
+import { DateValue } from '@alga-psa/types';
 
 // Date conversion utilities
 

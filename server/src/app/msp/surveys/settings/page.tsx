@@ -1,4 +1,4 @@
-import SurveySettings from 'server/src/components/surveys/SurveySettings';
+import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
 
 export default function SurveySetupPage() {
   return <SurveySettings />;

@@ -7,8 +7,8 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
-import { withTransaction } from '@shared/db';
-import logger from '@shared/core/logger';
+import { withTransaction } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@shared/events/publisher';
 import {
   RmmAlert,

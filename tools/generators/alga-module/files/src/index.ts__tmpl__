@@ -1,0 +1,20 @@
+/**
+ * @alga-psa/<%= name %>
+ *
+ * <%= type === 'horizontal' ? 'Shared infrastructure module' : 'Feature module' %> for Alga PSA
+ */
+
+// Re-export public API
+export * from './types';
+
+// Actions
+// export * from './actions';
+
+// Components
+// export * from './components';
+
+// Hooks
+// export * from './hooks';
+
+// Library utilities
+// export * from './lib';

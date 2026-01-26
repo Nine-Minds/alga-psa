@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/users",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/users/src",
+  "projectType": "library",
+  "tags": ["scope:users", "type:vertical"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/users"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/users/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

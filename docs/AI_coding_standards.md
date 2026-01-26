@@ -241,12 +241,53 @@ When implementing action menus in DataTable components, follow these guidelines:
 
 Lucide icons can (and should) be used from the `lucide` package.
 
-## User session handling
-To get the current user on server side actions, use the getCurrentUser function from the server/src/lib/actions/user-actions/userActions.ts file.
+## Server Action Authentication
+
+**Recommended Pattern:** Use the `withAuth` wrapper from `@alga-psa/auth` for all server actions that need authentication:
+
+```typescript
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
+
+export const myAction = withAuth(async (user, { tenant }, arg1: string): Promise<Result> => {
+  const { knex } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'resource', 'action')) {
+    throw new Error('Permission denied');
+  }
+
+  return knex('table').where({ tenant }).select('*');
+});
+```
+
+**Why `withAuth`?**
+- Sets tenant context via AsyncLocalStorage (works with Turbopack)
+- Handles authentication checks consistently
+- Provides typed `user` (IUserWithRoles) and `tenant` context
+- Eliminates 15-20 lines of boilerplate per action
+
+**Available wrappers:**
+- `withAuth(action)` - Requires authentication, throws if not authenticated
+- `withOptionalAuth(action)` - Allows unauthenticated access (user/ctx may be null)
+- `withAuthCheck(action)` - Auth check only, no tenant context (for non-DB actions)
+
+**Legacy Pattern (avoid in new code):**
+```typescript
+// OLD PATTERN - do not use in new code
+import { getCurrentUser } from '@alga-psa/users/actions';
+
+export async function myAction(): Promise<Result> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated');
+  if (!currentUser.tenant) throw new Error('No tenant');
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  // ... more boilerplate validation ...
+}
+```
 
 ## Server Communication
 
-We use server actions that are located in the `/server/src/lib/actions` folder.
+We use server actions that are located in the `/server/src/lib/actions` folder and package-specific actions in `packages/*/src/actions/`.
 
 # ee folder
 The ee folder contains the server code for the enterprise edition of the application. It is a parallel structure 
@@ -279,7 +320,7 @@ const documents = await knex('documents')
 
 **Transaction Pattern:**
 ```typescript
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 
 // CORRECT: Pass knex as first parameter
 const { knex } = await createTenantKnex();

@@ -16,7 +16,7 @@ import {
 import { IEmailProvider } from '../../../types/email.types';
 import { SystemEmailProviderFactory } from './SystemEmailProviderFactory';
 import { getConnection } from '@/lib/db/db';
-import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '@/lib/i18n/config';
+import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 import { resolveEmailLocale } from '@/lib/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
 

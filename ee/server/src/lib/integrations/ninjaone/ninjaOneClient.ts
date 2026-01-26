@@ -6,8 +6,15 @@
  */
 
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import logger from '@shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import logger from '@alga-psa/core/logger';
+import { createTenantKnex } from '@/lib/db';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  buildIntegrationTokenExpiringPayload,
+  buildIntegrationTokenRefreshFailedPayload,
+  getIntegrationTokenExpiringStatus,
+} from '@shared/workflow/streams/domainEventBuilders/integrationTokenEventBuilders';
 import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,
@@ -101,6 +108,11 @@ export interface NinjaOneClientConfig {
   tenantId: string;
   region?: NinjaOneRegion;
   instanceUrl?: string;
+  workflowContext?: {
+    integrationId: string;
+    connectionId: string;
+    provider: string;
+  };
 }
 
 export class NinjaOneClient {
@@ -109,10 +121,12 @@ export class NinjaOneClient {
   private axiosInstance: AxiosInstance;
   private credentials: NinjaOneOAuthCredentials | null = null;
   private refreshPromise: Promise<void> | null = null;
+  private workflowContext?: NinjaOneClientConfig['workflowContext'];
 
   constructor(config: NinjaOneClientConfig) {
     this.tenantId = config.tenantId;
     this.instanceUrl = config.instanceUrl || NINJAONE_REGIONS[config.region || 'US'];
+    this.workflowContext = config.workflowContext;
 
     this.axiosInstance = axios.create({
       baseURL: `${this.instanceUrl}/v2`,
@@ -230,11 +244,46 @@ export class NinjaOneClient {
     const now = Date.now();
     const expiresAt = this.credentials.expires_at;
 
+    void this.maybePublishTokenExpiring(expiresAt).catch((error) => {
+      logger.warn('[NinjaOneClient] Failed to publish token expiring event', extractErrorInfo(error));
+    });
+
     if (now >= expiresAt - TOKEN_REFRESH_BUFFER * 1000) {
       await this.refreshAccessToken();
     }
 
     return this.credentials?.access_token || null;
+  }
+
+  private async maybePublishTokenExpiring(expiresAtMs: number): Promise<void> {
+    if (!this.workflowContext) {
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const expiresAtIso = new Date(expiresAtMs).toISOString();
+    const { shouldNotify, daysUntilExpiry } = getIntegrationTokenExpiringStatus({
+      now: nowIso,
+      expiresAt: expiresAtIso,
+    });
+
+    if (!shouldNotify) {
+      return;
+    }
+
+    await publishWorkflowEvent({
+      eventType: 'INTEGRATION_TOKEN_EXPIRING',
+      payload: buildIntegrationTokenExpiringPayload({
+        integrationId: this.workflowContext.integrationId,
+        provider: this.workflowContext.provider,
+        connectionId: this.workflowContext.connectionId,
+        expiresAt: expiresAtIso,
+        daysUntilExpiry,
+        notifiedAt: nowIso,
+      }),
+      ctx: { tenantId: this.tenantId, occurredAt: nowIso, actor: { actorType: 'SYSTEM' } },
+      idempotencyKey: `integration_token_expiring:${this.tenantId}:${this.workflowContext.integrationId}:${expiresAtMs}`,
+    });
   }
 
   /**
@@ -293,6 +342,12 @@ export class NinjaOneClient {
         });
       } catch (error) {
         logger.error('[NinjaOneClient] Failed to refresh access token:', extractErrorInfo(error));
+        void this.maybePublishTokenRefreshFailed(error).catch((publishError) => {
+          logger.warn(
+            '[NinjaOneClient] Failed to publish token refresh failed event',
+            extractErrorInfo(publishError)
+          );
+        });
         throw error;
       } finally {
         this.refreshPromise = null;
@@ -300,6 +355,31 @@ export class NinjaOneClient {
     })();
 
     return this.refreshPromise;
+  }
+
+  private async maybePublishTokenRefreshFailed(error: unknown): Promise<void> {
+    if (!this.workflowContext) {
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const { errorCode, errorMessage, retryable } = extractTokenRefreshFailureDetails(error);
+    const bucket = Math.floor(Date.now() / (5 * 60 * 1000));
+
+    await publishWorkflowEvent({
+      eventType: 'INTEGRATION_TOKEN_REFRESH_FAILED',
+      payload: buildIntegrationTokenRefreshFailedPayload({
+        integrationId: this.workflowContext.integrationId,
+        provider: this.workflowContext.provider,
+        connectionId: this.workflowContext.connectionId,
+        failedAt: nowIso,
+        errorCode,
+        errorMessage,
+        retryable,
+      }),
+      ctx: { tenantId: this.tenantId, occurredAt: nowIso, actor: { actorType: 'SYSTEM' } },
+      idempotencyKey: `integration_token_refresh_failed:${this.tenantId}:${this.workflowContext.integrationId}:${bucket}`,
+    });
   }
 
   /**
@@ -838,10 +918,12 @@ export class NinjaOneClient {
  */
 export async function createNinjaOneClient(
   tenantId: string,
-  region?: NinjaOneRegion
+  region?: NinjaOneRegion,
+  workflowContext?: { integrationId?: string; connectionId?: string; provider?: string }
 ): Promise<NinjaOneClient> {
   // Try to load stored credentials to get the correct instance URL
   let instanceUrl: string | undefined;
+  const resolvedWorkflowContext = await resolveNinjaOneWorkflowContext(tenantId, workflowContext);
 
   try {
     const secretProvider = await getSecretProviderInstance();
@@ -859,7 +941,7 @@ export async function createNinjaOneClient(
     logger.warn('[NinjaOneClient] Could not load stored credentials for instance URL', extractErrorInfo(error));
   }
 
-  return new NinjaOneClient({ tenantId, region, instanceUrl });
+  return new NinjaOneClient({ tenantId, region, instanceUrl, workflowContext: resolvedWorkflowContext });
 }
 
 /**
@@ -956,4 +1038,93 @@ export async function disconnectNinjaOne(tenantId: string): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
   await secretProvider.deleteTenantSecret(tenantId, NINJAONE_CREDENTIALS_SECRET);
   logger.info('[NinjaOneClient] Disconnected NinjaOne integration', { tenantId });
+}
+
+function extractTokenRefreshFailureDetails(error: unknown): {
+  errorCode?: string;
+  errorMessage: string;
+  retryable?: boolean;
+} {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const code = error.code;
+    const data = error.response?.data;
+
+    const errorCode = status ? String(status) : code;
+    const errorMessage = safeErrorMessage({
+      message: error.message,
+      status,
+      data,
+    });
+
+    const retryable =
+      typeof status === 'number' ? status >= 500 || status === 429 : isNetworkRetryable(code);
+
+    return { errorCode, errorMessage, retryable };
+  }
+
+  if (error instanceof Error) {
+    return { errorMessage: error.message, retryable: false };
+  }
+
+  return { errorMessage: String(error), retryable: false };
+}
+
+function safeErrorMessage(input: { message?: string; status?: number; data?: unknown }): string {
+  const parts: string[] = [];
+  if (input.status) {
+    parts.push(`status=${input.status}`);
+  }
+  if (input.message) {
+    parts.push(input.message);
+  }
+  if (input.data !== undefined) {
+    try {
+      const json = typeof input.data === 'string' ? input.data : JSON.stringify(input.data);
+      if (json) {
+        parts.push(json.slice(0, 500));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const value = parts.filter(Boolean).join(' | ').trim();
+  return value.length > 0 ? value : 'Token refresh failed';
+}
+
+function isNetworkRetryable(code?: string): boolean {
+  if (!code) return false;
+  return new Set(['ECONNABORTED', 'ECONNRESET', 'ENOTFOUND', 'ETIMEDOUT', 'EAI_AGAIN']).has(code);
+}
+
+async function resolveNinjaOneWorkflowContext(
+  tenantId: string,
+  workflowContext?: { integrationId?: string; connectionId?: string; provider?: string }
+): Promise<NinjaOneClientConfig['workflowContext'] | undefined> {
+  const provider = workflowContext?.provider ?? 'ninjaone';
+
+  let integrationId = workflowContext?.integrationId;
+  if (!integrationId) {
+    try {
+      const { knex } = await createTenantKnex(tenantId);
+      const row = (await knex('rmm_integrations')
+        .where({ tenant: tenantId, provider: 'ninjaone' })
+        .select('integration_id')
+        .first()) as { integration_id: string } | undefined;
+      integrationId = row?.integration_id;
+    } catch (error) {
+      logger.warn('[NinjaOneClient] Could not resolve integration id for workflow context', extractErrorInfo(error));
+    }
+  }
+
+  if (!integrationId) {
+    return undefined;
+  }
+
+  return {
+    integrationId,
+    connectionId: workflowContext?.connectionId ?? integrationId,
+    provider,
+  };
 }

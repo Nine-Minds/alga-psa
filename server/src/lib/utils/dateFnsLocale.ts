@@ -6,7 +6,7 @@ import { de } from 'date-fns/locale/de';
 import { nl } from 'date-fns/locale/nl';
 import { it } from 'date-fns/locale/it';
 import { pl } from 'date-fns/locale/pl';
-import type { SupportedLocale } from 'server/src/lib/i18n/config';
+import type { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   en: enUS,

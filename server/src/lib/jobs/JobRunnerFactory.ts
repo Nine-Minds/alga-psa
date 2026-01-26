@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { isEnterprise } from '../features';
 import {
   IJobRunner,
@@ -263,7 +263,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
       const { TemporalJobRunner } = await import(
         '@ee/lib/jobs/runners/TemporalJobRunner'
       );
-      return TemporalJobRunner.create(temporalConfig);
+      return (await TemporalJobRunner.create(temporalConfig)) as unknown as IJobRunner;
     } catch (error) {
       logger.error('Failed to load TemporalJobRunner:', error);
       throw new Error(

@@ -1,8 +1,8 @@
 "use server";
 
-import { getAdminConnection } from "@shared/db/admin";
-import { getTenantIdBySlug } from "server/src/lib/actions/tenant-actions/tenantSlugActions";
-import logger from "@alga-psa/shared/core/logger";
+import { getAdminConnection } from "@alga-psa/db/admin";
+import { getTenantIdBySlug } from "@alga-psa/db";
+import logger from "@alga-psa/core/logger";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 
 interface GetLinkedSsoProvidersInput {

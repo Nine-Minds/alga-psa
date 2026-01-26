@@ -7,9 +7,9 @@ import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-uti
 
 let db: Knex;
 let tenantId: string;
-let createAppointmentRequest: typeof import('server/src/lib/actions/client-portal-actions/appointmentRequestActions').createAppointmentRequest;
-let approveAppointmentRequest: typeof import('server/src/lib/actions/appointmentRequestManagementActions').approveAppointmentRequest;
-let declineAppointmentRequest: typeof import('server/src/lib/actions/appointmentRequestManagementActions').declineAppointmentRequest;
+let createAppointmentRequest: typeof import('@alga-psa/client-portal/actions').createAppointmentRequest;
+let approveAppointmentRequest: typeof import('@alga-psa/scheduling/actions').approveAppointmentRequest;
+let declineAppointmentRequest: typeof import('@alga-psa/scheduling/actions').declineAppointmentRequest;
 
 type CreatedIds = {
   serviceTypeId?: string;
@@ -65,12 +65,12 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 }));
 
 // Mock internal notification actions
-vi.mock('server/src/lib/actions/internal-notification-actions/internalNotificationActions', () => ({
+vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: vi.fn(() => Promise.resolve())
 }));
 
 // Mock appointment helpers
-vi.mock('server/src/lib/actions/appointmentHelpers', () => ({
+vi.mock('@alga-psa/scheduling/actions', () => ({
   getTenantSettings: vi.fn(() => Promise.resolve({
     contactEmail: 'support@test.com',
     contactPhone: '555-1234',
@@ -104,8 +104,8 @@ describe('Appointment Request Integration Tests', () => {
     tenantId = await ensureTenant(db);
 
     // Import the actions after mocks are set up
-    ({ createAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions'));
-    ({ approveAppointmentRequest, declineAppointmentRequest } = await import('server/src/lib/actions/appointmentRequestManagementActions'));
+    ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
+    ({ approveAppointmentRequest, declineAppointmentRequest } = await import('@alga-psa/scheduling/actions'));
   }, 120_000);
 
   afterAll(async () => {
@@ -361,7 +361,7 @@ describe('Appointment Request Integration Tests', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const requestDate = tomorrow.toISOString().split('T')[0];
 
-      const { createNotificationFromTemplateInternal } = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
 
       const result = await createAppointmentRequest({
         service_id: serviceId!,
@@ -569,7 +569,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { createNotificationFromTemplateInternal } = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -807,7 +807,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { createNotificationFromTemplateInternal } = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -1069,7 +1069,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
-      const { updateAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
+      const { updateAppointmentRequest } = await import('@alga-psa/client-portal/actions');
 
       const updateResult = await updateAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1131,7 +1131,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
-      const { cancelAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
+      const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
 
       const cancelResult = await cancelAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id
@@ -1387,7 +1387,7 @@ describe('Appointment Request Integration Tests', () => {
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
 
-      const { associateRequestToTicket } = await import('server/src/lib/actions/appointmentRequestManagementActions');
+      const { associateRequestToTicket } = await import('@alga-psa/scheduling/actions');
 
       const associateResult = await associateRequestToTicket({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1450,7 +1450,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { updateAppointmentRequestDateTime } = await import('server/src/lib/actions/appointmentRequestManagementActions');
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
 
       const updateResult = await updateAppointmentRequestDateTime({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1522,7 +1522,7 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       // Try to update date/time after approval
-      const { updateAppointmentRequestDateTime } = await import('server/src/lib/actions/appointmentRequestManagementActions');
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
 
       const updateResult = await updateAppointmentRequestDateTime({
         appointment_request_id: createResult.data!.appointment_request_id,

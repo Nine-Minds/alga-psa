@@ -1,0 +1,22 @@
+[
+  { "id": "T001", "description": "Gmail: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": true, "featureIds": ["F030", "F013", "F014"] },
+  { "id": "T002", "description": "Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": true, "featureIds": ["F031", "F013", "F014"] },
+  { "id": "T003", "description": "Reply threading: reply token resolves ticket and creates exactly 1 new comment", "implemented": true, "featureIds": ["F004", "F005", "F020"] },
+  { "id": "T004", "description": "Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment", "implemented": true, "featureIds": ["F004", "F005"] },
+
+  { "id": "T010", "description": "Body parsing: sanitizer returns non-empty text for plain-text emails", "implemented": true, "featureIds": ["F003"] },
+  { "id": "T011", "description": "Body parsing: sanitizer returns HTML-derived content when HTML is present", "implemented": true, "featureIds": ["F003", "F005", "F014"] },
+
+  { "id": "T020", "description": "Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id", "implemented": true, "featureIds": ["F011", "F013"] },
+  { "id": "T021", "description": "Unmatched sender: system follows the defined PRD behavior (defaults/triage/task) without throwing", "implemented": true, "featureIds": ["F012"] },
+  { "id": "T022", "description": "Missing defaults: inbound processing logs and returns without creating ticket/comment", "implemented": true, "featureIds": ["F010"] },
+
+  { "id": "T030", "description": "Attachments: attachment failure does not prevent ticket creation", "implemented": true, "featureIds": ["F015"] },
+  { "id": "T031", "description": "Attachments: attachment failure does not prevent reply comment creation", "implemented": true, "featureIds": ["F006"] },
+
+  { "id": "T040", "description": "Idempotency: replay same reply email does not create duplicate comments", "implemented": true, "featureIds": ["F020", "F022"] },
+  { "id": "T041", "description": "Idempotency: replay same new-email does not create duplicate tickets", "implemented": true, "featureIds": ["F021", "F022"] },
+  { "id": "T042", "description": "Feature flag: toggling flag keeps old behavior when disabled and new in-app behavior when enabled", "implemented": true, "featureIds": ["F040"] },
+
+  { "id": "T050", "description": "Worker: workflow-worker runs with `WORKFLOW_WORKER_MODE=v2` and inbound email still works", "implemented": true, "featureIds": ["F050"] }
+]

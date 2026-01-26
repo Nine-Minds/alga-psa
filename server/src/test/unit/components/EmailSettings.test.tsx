@@ -4,8 +4,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { cleanup } from '@testing-library/react';
-import type { EmailProvider } from '../../../components/EmailProviderConfiguration';
-import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from '../../../components/emailProviderDefaults';
+import type { EmailProvider } from '@alga-psa/integrations/components';
+import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from '@alga-psa/integrations/components';
 
 const baseProvider: EmailProvider = {
   id: 'provider-1',

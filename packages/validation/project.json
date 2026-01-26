@@ -1,0 +1,35 @@
+{
+  "name": "@alga-psa/validation",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/validation/src",
+  "projectType": "library",
+  "tags": ["scope:validation", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/validation",
+        "tsConfig": "packages/validation/tsconfig.json",
+        "packageJson": "packages/validation/package.json",
+        "main": "packages/validation/src/index.ts",
+        "assets": []
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/validation"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/validation/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}
+

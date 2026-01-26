@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { promises as dns } from 'node:dns';
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { analytics } from 'server/src/lib/analytics/posthog';
 import { buildSessionCookie, encodePortalSessionToken } from 'server/src/lib/auth/sessionCookies';

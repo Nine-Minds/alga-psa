@@ -7,11 +7,11 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
+import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
 import { NotFoundError } from '../../api/middleware/apiMiddleware';
 import {
   CreateClientData,
@@ -23,6 +23,20 @@ import {
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  buildClientArchivedPayload,
+  buildClientCreatedPayload,
+  buildClientOwnerAssignedPayload,
+  buildClientStatusChangedPayload,
+  buildClientUpdatedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
+import { buildContactPrimarySetPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+
+function maybeUserActorFromContext(context: ServiceContext) {
+  if (typeof context.userId !== 'string' || !context.userId) return undefined;
+  return { actorType: 'USER' as const, actorUserId: context.userId };
+}
 
 export class ClientService extends BaseService<IClient> {
   constructor() {
@@ -264,6 +278,27 @@ export class ClientService extends BaseService<IClient> {
       // Continue without tax settings - they can be added later
     }
 
+    const createdAt = (client as any).created_at ?? new Date().toISOString();
+    const status =
+      (client as any)?.properties?.status ??
+      ((client as any)?.is_inactive ? 'inactive' : 'active');
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId: client.client_id,
+        clientName: client.client_name,
+        createdByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+        createdAt,
+        status,
+      }),
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActorFromContext(context),
+      },
+      idempotencyKey: `client_created:${client.client_id}`,
+    });
+
     return client;
   }
 
@@ -282,19 +317,31 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     const enableDualWrite = await this.isDualWriteEnabled(context);
 
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
+      const before = await trx('clients')
+        .where('client_id', id)
+        .where('tenant', context.tenant)
+        .first();
+
+      if (!before) {
+        throw new NotFoundError('Client not found');
+      }
+
       // Prepare update data
       const updateData: any = {
         ...data,
-        updated_at: knex.raw('now()')
+        updated_at: knex.raw('now()'),
       };
 
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
+      // Remove undefined values + non-column fields
+      Object.keys(updateData).forEach((key) => {
         if (updateData[key] === undefined) {
           delete updateData[key];
         }
       });
+      delete updateData.tags;
+
+      const updatedFieldKeys = Object.keys(updateData);
 
       // Update client
       const [client] = await trx('clients')
@@ -334,7 +381,7 @@ export class ClientService extends BaseService<IClient> {
           .select('contact_name_id')
           .where({ client_id: id, tenant: context.tenant });
 
-        const contactIds = contacts.map(c => c.contact_name_id);
+        const contactIds = contacts.map((c) => c.contact_name_id);
 
         // Deactivate all contacts
         await trx('contacts')
@@ -360,8 +407,108 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      return client;
+      return { before, after: client, updatedFieldKeys };
     });
+
+    const occurredAt = (result.after as any).updated_at ?? new Date().toISOString();
+    const actor = maybeUserActorFromContext(context);
+
+    const previousLifecycleStatus = (result.before as any)?.properties?.status;
+    const newLifecycleStatus = (result.after as any)?.properties?.status;
+    if (
+      typeof previousLifecycleStatus === 'string' &&
+      typeof newLifecycleStatus === 'string' &&
+      previousLifecycleStatus &&
+      newLifecycleStatus &&
+      previousLifecycleStatus !== newLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId: id,
+          previousStatus: previousLifecycleStatus,
+          newStatus: newLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `client_status_changed:${id}:${occurredAt}`,
+      });
+    }
+
+    const previousOwnerUserId = (result.before as any)?.account_manager_id;
+    const newOwnerUserId = (result.after as any)?.account_manager_id;
+    if (previousOwnerUserId !== newOwnerUserId && typeof newOwnerUserId === 'string' && newOwnerUserId) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_OWNER_ASSIGNED',
+        payload: buildClientOwnerAssignedPayload({
+          clientId: id,
+          previousOwnerUserId: typeof previousOwnerUserId === 'string' ? previousOwnerUserId : undefined,
+          newOwnerUserId,
+          assignedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          assignedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `client_owner_assigned:${id}:${occurredAt}`,
+      });
+    }
+
+    const wasInactive = Boolean((result.before as any)?.is_inactive);
+    const isInactive = Boolean((result.after as any)?.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_ARCHIVED',
+        payload: buildClientArchivedPayload({
+          clientId: id,
+          archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `client_archived:${id}:${occurredAt}`,
+      });
+    }
+
+    const updatedPayload = buildClientUpdatedPayload({
+      clientId: id,
+      before: result.before as any,
+      after: result.after as any,
+      updatedFieldKeys: result.updatedFieldKeys ?? [],
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `client_updated:${id}:${occurredAt}`,
+      });
+    }
+
+    const previousBillingContactId = (result.before as any)?.billing_contact_id;
+    const newBillingContactId = (result.after as any)?.billing_contact_id;
+    if (
+      previousBillingContactId !== newBillingContactId &&
+      typeof newBillingContactId === 'string' &&
+      newBillingContactId
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_PRIMARY_SET',
+        payload: buildContactPrimarySetPayload({
+          clientId: id,
+          contactId: newBillingContactId,
+          previousPrimaryContactId:
+            typeof previousBillingContactId === 'string' && previousBillingContactId ? previousBillingContactId : undefined,
+          setByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          setAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_primary_set:${id}:${newBillingContactId}:${occurredAt}`,
+      });
+    }
+
+    return result.after;
   }
 
   /**

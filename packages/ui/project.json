@@ -1,0 +1,27 @@
+{
+  "name": "@alga-psa/ui",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/ui/src",
+  "projectType": "library",
+  "tags": ["scope:ui", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop",
+      "dependsOn": []
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/ui"],
+      "options": {
+        "configFile": "packages/ui/vitest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/ui/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}
