@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { headObject } from '@ee/lib/storage/s3-client';
+import { headObject, getBucket } from '@ee/lib/storage/s3-client';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -139,6 +139,9 @@ export async function GET(req: NextRequest) {
           recordCount: details.recordCount,
           fileSizeBytes: details.fileSizeBytes,
           existsInS3,
+          // MinIO location for direct access
+          bucket: existsInS3 ? getBucket() : undefined,
+          s3Key: existsInS3 ? s3Key : undefined,
         };
       })
     );

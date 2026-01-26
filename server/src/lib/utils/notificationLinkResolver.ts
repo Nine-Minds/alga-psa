@@ -47,6 +47,7 @@ export interface ProjectTaskLinkInput {
   type: 'project_task';
   projectId: string;
   taskId: string;
+  phaseId?: string; // Optional for deep linking to specific phase
   taskCommentId?: string; // Optional for deep linking to specific task comment
 }
 
@@ -126,7 +127,12 @@ function resolveInternalUrl(input: EntityLinkInput): string {
       return `${baseUrl}/msp/projects/${input.projectId}`;
 
     case 'project_task':
-      const taskUrl = `${baseUrl}/msp/projects/${input.projectId}?taskId=${input.taskId}`;
+      const taskParams = new URLSearchParams();
+      if (input.phaseId) {
+        taskParams.set('phaseId', input.phaseId);
+      }
+      taskParams.set('taskId', input.taskId);
+      const taskUrl = `${baseUrl}/msp/projects/${input.projectId}?${taskParams.toString()}`;
       return input.taskCommentId ? `${taskUrl}#comment-${input.taskCommentId}` : taskUrl;
 
     case 'invoice':

@@ -53,6 +53,8 @@ interface ProjectDetailProps {
   assignedUser?: IUserWithRoles;
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
+  initialPhaseId?: string | null;
+  onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
 export default function ProjectDetail({
@@ -64,7 +66,9 @@ export default function ProjectDetail({
   contact,
   assignedUser,
   onTagsUpdate,
-  initialTaskId
+  initialTaskId,
+  initialPhaseId,
+  onUrlUpdate
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
 
@@ -159,25 +163,38 @@ export default function ProjectDetail({
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
   
-  // Auto-select the first phase when the project has phases (but not when opening a specific task)
+  // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
     // Don't auto-select if we have an initialTaskId - that case is handled separately
     if (initialTaskId) return;
 
     // Only auto-select if we have phases but none is selected yet
     if (projectPhases.length > 0 && !selectedPhase) {
-      // Sort phases by order_key to get the first one
+      // Sort phases by order_key
       const sortedPhases = [...projectPhases].sort((a, b) => {
         const aKey = a.order_key || 'zzz';
         const bKey = b.order_key || 'zzz';
         return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
       });
 
-      const firstPhase = sortedPhases[0];
-      setSelectedPhase(firstPhase);
-      setCurrentPhase(firstPhase);
+      // If we have an initialPhaseId from URL, use that phase
+      let phaseToSelect = sortedPhases[0];
+      if (initialPhaseId) {
+        const phaseFromUrl = projectPhases.find(p => p.phase_id === initialPhaseId);
+        if (phaseFromUrl) {
+          phaseToSelect = phaseFromUrl;
+        }
+      }
+
+      setSelectedPhase(phaseToSelect);
+      setCurrentPhase(phaseToSelect);
+
+      // Update URL if we selected a phase and no phaseId was in the URL
+      if (!initialPhaseId && onUrlUpdate) {
+        onUrlUpdate(phaseToSelect.phase_id, null);
+      }
     }
-  }, [projectPhases, initialTaskId]); // Intentionally exclude selectedPhase to avoid re-triggering
+  }, [projectPhases, initialTaskId, initialPhaseId]); // Intentionally exclude selectedPhase to avoid re-triggering
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -586,6 +603,11 @@ export default function ProjectDetail({
           setSelectedPhase(taskPhase);
           setCurrentPhase(taskPhase);
         }
+
+        // Update URL to include phaseId if it wasn't already there
+        if (onUrlUpdate && !initialPhaseId) {
+          onUrlUpdate(taskPhase.phase_id, initialTaskId);
+        }
       } catch (error) {
         console.error('Error loading task from notification:', error);
         toast.error('Failed to load task');
@@ -593,7 +615,7 @@ export default function ProjectDetail({
     };
 
     loadTaskAndSelectPhase();
-  }, [initialTaskId, projectPhases]);
+  }, [initialTaskId, projectPhases, initialPhaseId, onUrlUpdate]);
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
@@ -1042,7 +1064,11 @@ export default function ProjectDetail({
     setDefaultStatus(null);
     setIsAddingTask(false);
     setSelectedTask(null);
-  }, []);
+    // Update URL to remove taskId while keeping phaseId
+    if (onUrlUpdate && selectedPhase) {
+      onUrlUpdate(selectedPhase.phase_id, null);
+    }
+  }, [onUrlUpdate, selectedPhase]);
 
   const handlePhaseAdded = useCallback((newPhase: IProjectPhase) => {
     setProjectPhases((prevPhases) => [...prevPhases, newPhase]);

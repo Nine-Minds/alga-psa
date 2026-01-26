@@ -5,6 +5,13 @@
  * from CSV files into existing or new projects.
  */
 
+import { IUser } from './user.interfaces';
+
+/**
+ * Subset of IUser fields needed for the import user picker
+ */
+export type IImportUser = Pick<IUser, 'user_id' | 'username' | 'first_name' | 'last_name' | 'email' | 'user_type' | 'is_inactive' | 'tenant'>;
+
 /**
  * All mappable fields in the CSV import
  */
@@ -153,7 +160,7 @@ export interface IPhaseTaskValidationResponse {
  */
 export interface IImportReferenceData {
   // Full objects for dropdowns
-  users: Array<{ user_id: string; first_name: string; last_name: string }>;
+  users: IImportUser[];
   priorities: Array<{ priority_id: string; priority_name: string }>;
   services: Array<{ service_id: string; service_name: string }>;
   statusMappings: Array<{

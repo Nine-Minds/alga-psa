@@ -25,8 +25,21 @@ interface ClientContactsListProps {
   clients: IClient[]; // Pass clients down for ContactDetailsView
 }
 
+// Extended contact type with id for stable DataTable keys
+type ContactWithId = IContact & { id: string };
+
+// Helper to ensure contacts have stable id for DataTable row keys
+// This prevents React DOM reconciliation errors when rows are re-rendered
+// Uses existing id if present, otherwise falls back to contact_name_id
+const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
+  return contacts.map(contact => ({
+    ...contact,
+    id: (contact as any).id ?? contact.contact_name_id
+  }));
+};
+
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients }) => {
-  const [contacts, setContacts] = useState<IContact[]>([]);
+  const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +67,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       setError(null);
       try {
         const fetchedContacts = await getContactsByClient(clientId, statusFilter);
-        setContacts(fetchedContacts);
+        setContacts(addIdToContacts(fetchedContacts));
       } catch (err) {
         console.error('Error fetching client contacts:', err);
         setError('Failed to load contacts.');
