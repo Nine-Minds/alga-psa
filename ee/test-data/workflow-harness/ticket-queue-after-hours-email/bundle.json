@@ -1,0 +1,131 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-queue-after-hours-email",
+      "metadata": {
+        "name": "Fixture: Ticket Queue → After Hours Email",
+        "description": "If ticket moved to after-hours queue, send email to on-call mailbox.",
+        "payloadSchemaRef": "payload.TicketQueueChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketQueueChanged.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_QUEUE_CHANGED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [{ "actionId": "email.send", "version": 1 }],
+        "nodeTypes": ["action.call", "control.if", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketQueueChanged.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f113",
+          "version": 1,
+          "name": "Fixture: Ticket Queue → After Hours Email",
+          "description": "Sends email when moved to after-hours queue.",
+          "payloadSchemaRef": "payload.TicketQueueChanged.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_QUEUE_CHANGED" },
+          "steps": [
+            { "id": "state-after-hours", "type": "state.set", "config": { "state": "AFTER_HOURS" } },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-queue-after-hours-email]'" },
+                  "vars.subject": { "$expr": "vars.marker & ' After-hours queue change'" },
+                  "vars.text": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "if-after-hours",
+              "type": "control.if",
+              "condition": { "$expr": "payload.newBoardId == payload.fixtureAfterHoursBoardId" },
+              "then": [
+                {
+                  "id": "send-email",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "email.send",
+                    "version": 1,
+                    "inputMapping": {
+                      "to": { "$expr": "[{\\\"email\\\": payload.fixtureOnCallEmail}]" },
+                      "subject": { "$expr": "vars.subject" },
+                      "text": { "$expr": "vars.text" },
+                      "idempotency_key": { "$expr": "'fixture.ticket-queue-after-hours-email:email:' & payload.ticketId" }
+                    }
+                  }
+                },
+                { "id": "done", "type": "control.return" }
+              ],
+              "else": [{ "id": "skip", "type": "control.return" }]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f113",
+            "version": 1,
+            "name": "Fixture: Ticket Queue → After Hours Email",
+            "description": "Sends email when moved to after-hours queue.",
+            "payloadSchemaRef": "payload.TicketQueueChanged.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_QUEUE_CHANGED" },
+            "steps": [
+              { "id": "state-after-hours", "type": "state.set", "config": { "state": "AFTER_HOURS" } },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-queue-after-hours-email]'" },
+                    "vars.subject": { "$expr": "vars.marker & ' After-hours queue change'" },
+                    "vars.text": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "if-after-hours",
+                "type": "control.if",
+                "condition": { "$expr": "payload.newBoardId == payload.fixtureAfterHoursBoardId" },
+                "then": [
+                  {
+                    "id": "send-email",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "email.send",
+                      "version": 1,
+                      "inputMapping": {
+                        "to": { "$expr": "[{\\\"email\\\": payload.fixtureOnCallEmail}]" },
+                        "subject": { "$expr": "vars.subject" },
+                        "text": { "$expr": "vars.text" },
+                        "idempotency_key": { "$expr": "'fixture.ticket-queue-after-hours-email:email:' & payload.ticketId" }
+                      }
+                    }
+                  },
+                  { "id": "done", "type": "control.return" }
+                ],
+                "else": [{ "id": "skip", "type": "control.return" }]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+
