@@ -39,3 +39,23 @@ test('T002: fails with clear error when bundle.json is missing', () => {
   assert.match(res.stderr, /Missing required fixture file:/);
   assert.match(res.stderr, /bundle\.json/);
 });
+
+test('T003: fails with clear error when test.cjs is missing', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-harness-missing-test-'));
+  fs.writeFileSync(path.join(dir, 'bundle.json'), '{}', 'utf8');
+
+  const res = runHarnessCli([
+    '--test',
+    dir,
+    '--base-url',
+    'http://localhost:3010',
+    '--tenant',
+    'tenant',
+    '--cookie',
+    'cookie'
+  ]);
+
+  assert.notEqual(res.status, 0);
+  assert.match(res.stderr, /Missing required fixture file:/);
+  assert.match(res.stderr, /test\.cjs/);
+});
