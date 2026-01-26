@@ -31,7 +31,7 @@ module.exports = async function run(ctx) {
   });
   const status = await pickOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and item_type = 'ticket' order by is_default desc, order_number asc limit 1`,
+    sql: `select status_id from statuses where tenant = $1 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
     params: [tenantId]
   });
   const priority = await pickOne(ctx, {
@@ -58,10 +58,9 @@ module.exports = async function run(ctx) {
   if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
 
   ctx.onCleanup(async () => {
-    await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': apiKey }
-    });
+    // Ticket deletion is blocked when comments reference the ticket; clean up those rows first.
+    await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+    await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
   });
 
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });

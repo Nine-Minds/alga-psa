@@ -918,7 +918,7 @@ export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, in
   const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
-  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force });
+  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force, actorUserId: user.user_id });
 });
 
 export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {

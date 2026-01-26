@@ -10,6 +10,7 @@ import { WorkflowBundleImportError } from './workflowBundleImportErrors';
 
 export type WorkflowBundleImportOptionsV1 = {
   force?: boolean;
+  actorUserId?: string | null;
 };
 
 export type WorkflowBundleImportSummaryV1 = {
@@ -34,6 +35,7 @@ export const importWorkflowBundleV1 = async (
   validateWorkflowBundleDependenciesV1(bundle);
 
   const force = options.force === true;
+  const actorUserId = options.actorUserId ?? null;
 
   return knex.transaction(async (trx) => {
     const summary: WorkflowBundleImportSummaryV1 = {
@@ -91,7 +93,9 @@ export const importWorkflowBundleV1 = async (
         auto_pause_on_failure: wf.metadata.autoPauseOnFailure,
         failure_rate_threshold: wf.metadata.failureRateThreshold,
         failure_rate_min_runs: wf.metadata.failureRateMinRuns,
-        retention_policy_override: wf.metadata.retentionPolicyOverride
+        retention_policy_override: wf.metadata.retentionPolicyOverride,
+        created_by: actorUserId,
+        updated_by: actorUserId
       });
 
       summary.createdWorkflows.push({ key: wf.key, workflowId });
@@ -104,6 +108,7 @@ export const importWorkflowBundleV1 = async (
             version: v.version,
             definition_json: v.definition,
             payload_schema_json: v.payloadSchemaJson ?? null,
+            published_by: actorUserId,
             published_at: new Date().toISOString()
           });
           versionsCreated.push(v.version);
@@ -115,4 +120,3 @@ export const importWorkflowBundleV1 = async (
     return summary;
   });
 };
-

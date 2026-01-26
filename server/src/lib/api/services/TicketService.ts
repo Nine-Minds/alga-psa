@@ -199,8 +199,8 @@ export class TicketService extends BaseService<ITicket> {
       .select(
         't.*',
         'comp.client_name',
-        'comp.email as client_email',
-        'comp.phone_no as client_phone',
+        'comp.billing_email as client_email',
+        knex.raw('null as client_phone'),
         'cont.full_name as contact_name',
         'cont.email as contact_email',
         'cont.phone_number as contact_phone',

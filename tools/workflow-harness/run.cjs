@@ -106,6 +106,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
   const testId = fixtureIdFromDir(testDir);
   const http = createHttpClient({ baseUrl, tenantId, cookie, debug });
   let db;
+  let dbWrite;
   const state = {
     testId,
     baseUrl,
@@ -123,7 +124,8 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
   };
 
   try {
-    db = await createDbClient({ connectionString: pgUrl, debug });
+    db = await createDbClient({ connectionString: pgUrl, debug, readOnly: true });
+    dbWrite = await createDbClient({ connectionString: pgUrl, debug, readOnly: false });
 
     let bundle;
     try {
@@ -159,7 +161,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
     }
 
     // eslint-disable-next-line global-require, import/no-dynamic-require
-    const runTest = require(testPath);
+    const runTest = require(path.resolve(testPath));
     if (typeof runTest !== 'function') {
       throw new Error(`Fixture test.cjs must export an async function. Got: ${typeof runTest}`);
     }
@@ -171,6 +173,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
 
     ctx.http = http;
     ctx.db = db;
+    ctx.dbWrite = dbWrite;
     ctx.fixture = { id: testId, dir: testDir, bundlePath, testPath };
     ctx.workflow = {
       id: workflowId,
@@ -320,6 +323,13 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
     if (db) {
       try {
         await db.close();
+      } catch {
+        // ignore
+      }
+    }
+    if (dbWrite) {
+      try {
+        await dbWrite.close();
       } catch {
         // ignore
       }

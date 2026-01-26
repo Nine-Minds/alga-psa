@@ -2,7 +2,14 @@ function getDefaultConnectionString() {
   return process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING || '';
 }
 
-async function createDbClient({ connectionString, debug = false } = {}) {
+function isProbablyWriteQuery(text) {
+  const trimmed = String(text ?? '').trim().toLowerCase();
+  if (!trimmed) return false;
+  // Keep this intentionally conservative (fast guardrail, not a SQL parser).
+  return /^(insert|update|delete|create|drop|alter|truncate|grant|revoke)\b/.test(trimmed);
+}
+
+async function createDbClient({ connectionString, debug = false, readOnly = true } = {}) {
   let Client;
   try {
     // eslint-disable-next-line global-require
@@ -21,17 +28,13 @@ async function createDbClient({ connectionString, debug = false } = {}) {
   const client = new Client({ connectionString: conn });
   await client.connect();
 
-  // Best-effort safety: prevent accidental writes from fixture assertions.
-  try {
-    await client.query('SET default_transaction_read_only = on');
-  } catch {
-    // ignore; some setups may not allow changing session settings
-  }
-
   async function query(text, params) {
     if (debug) {
       // eslint-disable-next-line no-console
       console.error('[db] query', text);
+    }
+    if (readOnly && isProbablyWriteQuery(text)) {
+      throw new Error('Refusing to execute write query in read-only DB client');
     }
     const res = await client.query(text, params);
     return res.rows;
