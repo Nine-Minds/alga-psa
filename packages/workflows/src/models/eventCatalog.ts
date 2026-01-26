@@ -41,14 +41,18 @@ export class EventCatalogModel extends BaseModel {
     eventId: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knexOrTrx('event_catalog')
-      .where({
-        event_id: eventId,
-        tenant: tenantId
-      })
+    const tenantEntry = await knexOrTrx('event_catalog')
+      .where({ event_id: eventId, tenant: tenantId })
       .first();
-    
-    return entry || null;
+
+    if (tenantEntry) return tenantEntry;
+
+    // System event catalog entries are global (no tenant column).
+    const systemEntry = await knexOrTrx('system_event_catalog')
+      .where({ event_id: eventId })
+      .first();
+
+    return (systemEntry as any) || null;
   }
 
   /**
@@ -64,14 +68,18 @@ export class EventCatalogModel extends BaseModel {
     eventType: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knexOrTrx('event_catalog')
-      .where({
-        event_type: eventType,
-        tenant: tenantId
-      })
+    const tenantEntry = await knexOrTrx('event_catalog')
+      .where({ event_type: eventType, tenant: tenantId })
       .first();
-    
-    return entry || null;
+
+    if (tenantEntry) return tenantEntry;
+
+    // System event catalog entries are global (no tenant column).
+    const systemEntry = await knexOrTrx('system_event_catalog')
+      .where({ event_type: eventType })
+      .first();
+
+    return (systemEntry as any) || null;
   }
 
   /**
