@@ -48,3 +48,11 @@ export {
   type SlaNotificationContext,
   type NotificationResult
 } from './slaNotificationService';
+
+// ITIL SLA auto-configuration service
+export {
+  createItilStandardSlaPolicy,
+  assignSlaPolicyToBoard,
+  configureItilSlaForBoard,
+  type CreateItilSlaPolicyResult
+} from './itilSlaService';
