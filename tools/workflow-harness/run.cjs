@@ -60,6 +60,25 @@ function readCookieFromFile(path) {
   return raw.trim();
 }
 
+function validateFixtureDir(testDir) {
+  if (!fs.existsSync(testDir)) {
+    throw new Error(`Fixture directory does not exist: ${testDir}`);
+  }
+  const stat = fs.statSync(testDir);
+  if (!stat.isDirectory()) {
+    throw new Error(`--test must point to a directory: ${testDir}`);
+  }
+  const bundlePath = `${testDir.replace(/\/$/, '')}/bundle.json`;
+  const testPath = `${testDir.replace(/\/$/, '')}/test.cjs`;
+  if (!fs.existsSync(bundlePath)) {
+    throw new Error(`Missing required fixture file: ${bundlePath}`);
+  }
+  if (!fs.existsSync(testPath)) {
+    throw new Error(`Missing required fixture file: ${testPath}`);
+  }
+  return { bundlePath, testPath };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -80,9 +99,11 @@ async function main() {
   if (!cookie) throw new Error('Missing --cookie or --cookie-file');
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
 
+  const fixture = validateFixtureDir(testDir);
+
   // Implementation is added incrementally by plan items (see ee/docs/plans/2026-01-26-workflow-harness-fixture-suite).
   console.error('Workflow harness core runtime not yet wired; CLI parsing is ready.');
-  console.error(JSON.stringify({ testDir, baseUrl, tenant, force, timeoutMs }, null, 2));
+  console.error(JSON.stringify({ testDir, ...fixture, baseUrl, tenant, force, timeoutMs }, null, 2));
   process.exit(2);
 }
 
