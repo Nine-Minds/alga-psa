@@ -18,6 +18,7 @@ export interface IContact {
   notes: string | null;
   notes_document_id?: string | null;
   is_inactive: boolean | null;
+  properties?: Record<string, any> | null; // Custom field values (UDFs)
   created_at: string;
   updated_at: string;
   [key: string]: any; // Allow additional properties for database fields
@@ -34,6 +35,7 @@ export interface CreateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  properties?: Record<string, any>;
 }
 
 /**
@@ -47,4 +49,5 @@ export interface UpdateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  properties?: Record<string, any>;
 }

@@ -47,6 +47,13 @@ import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
 } from '../lib/workflowTicketSlaStageEvents';
+import {
+  logTicketCreated,
+  logTicketClosed,
+  logStatusChange,
+  logAssignmentChange,
+  logFieldChange
+} from './ticketActivityActions';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -321,6 +328,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       if (!fullTicket) {
         throw new Error('Failed to retrieve created ticket');
       }
+
+      // Log ticket creation activity (non-blocking)
+      logTicketCreated(ticketResult.ticket_id).catch(err => {
+        console.error('Failed to log ticket creation activity:', err);
+      });
 
       const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
         tenantId: tenant,
@@ -808,6 +820,64 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updated_category: 'category_id' in updateData || 'subcategory_id' in updateData,
         updated_assignment: 'assigned_to' in updateData,
       }, user.user_id);
+
+      // Log activities to timeline (non-blocking)
+      const activityPromises: Promise<any>[] = [];
+
+      // Log ticket closed if applicable
+      if (newStatus?.is_closed && !oldStatus?.is_closed) {
+        activityPromises.push(
+          logTicketClosed(id).catch(err => {
+            console.error('Failed to log ticket closed activity:', err);
+          })
+        );
+      }
+
+      // Log status change
+      if (structuredChanges.status_id) {
+        activityPromises.push(
+          logStatusChange(
+            id,
+            structuredChanges.status_id.old,
+            structuredChanges.status_id.new
+          ).catch(err => {
+            console.error('Failed to log status change activity:', err);
+          })
+        );
+      }
+
+      // Log assignment change
+      if (structuredChanges.assigned_to) {
+        activityPromises.push(
+          logAssignmentChange(
+            id,
+            structuredChanges.assigned_to.old,
+            structuredChanges.assigned_to.new
+          ).catch(err => {
+            console.error('Failed to log assignment change activity:', err);
+          })
+        );
+      }
+
+      // Log other field changes (priority, category, due_date, etc.)
+      const fieldChangesToLog = ['priority_id', 'category_id', 'subcategory_id', 'due_date', 'board_id'];
+      for (const fieldName of fieldChangesToLog) {
+        if (structuredChanges[fieldName]) {
+          activityPromises.push(
+            logFieldChange(
+              id,
+              fieldName,
+              structuredChanges[fieldName].old,
+              structuredChanges[fieldName].new
+            ).catch(err => {
+              console.error(`Failed to log ${fieldName} change activity:`, err);
+            })
+          );
+        }
+      }
+
+      // Don't await - let logging happen in background
+      Promise.all(activityPromises).catch(() => {});
 
       return updatedTicket;
     });

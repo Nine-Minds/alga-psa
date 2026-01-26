@@ -55,6 +55,9 @@ import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
+import { CustomFieldsCard } from 'server/src/components/ui/CustomFieldsCard';
+import { TabbedCustomFieldsCard } from 'server/src/components/ui/TabbedCustomFieldsCard';
+import { ClientCustomFieldSettings } from './ClientCustomFieldSettings';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
@@ -881,6 +884,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   useInlineInput={isInDrawer}
                 />
               </div>
+
+              {/* Custom Fields - Enhanced with tabbed groups */}
+              {editedClient.client_id && (
+                <TabbedCustomFieldsCard
+                  id="company-custom-fields-card"
+                  entityType="company"
+                  entityId={editedClient.client_id}
+                  title="Custom Fields"
+                  viewMode="collapsible"
+                  autoSaveDelay={1500}
+                />
+              )}
             </div>
             
             {/* Right Column - Client Locations Only */}
@@ -1067,7 +1082,24 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               automationId="last-contact-date-field"
             />
           </div>
-          
+
+          {/* Per-Client Custom Field Settings */}
+          <div className="border-t border-gray-200 pt-6">
+            <ClientCustomFieldSettings
+              clientId={editedClient.client_id}
+              entityType="company"
+              title="Company Custom Field Settings"
+            />
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <ClientCustomFieldSettings
+              clientId={editedClient.client_id}
+              entityType="contact"
+              title="Contact Custom Field Settings"
+            />
+          </div>
+
           <Flex gap="4" justify="end" align="center">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
               <Text size="2" className="text-red-600 mr-2" role="alert">

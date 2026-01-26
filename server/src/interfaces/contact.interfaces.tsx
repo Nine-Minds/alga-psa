@@ -9,10 +9,13 @@ export interface IContact extends SharedIContact, TenantEntity, ITaggable {
   email: string;
   role: string;
   is_inactive: boolean;
-  
+
   // Server-specific fields
   avatarUrl?: string | null;
   is_client_admin?: boolean;
+
+  // Custom field values (UDFs) - stored in JSONB column
+  properties?: Record<string, any> | null;
 }
 
 export interface ICSVColumnMapping {

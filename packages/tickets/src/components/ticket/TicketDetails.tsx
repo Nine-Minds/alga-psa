@@ -30,6 +30,7 @@ import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketConversation from "./TicketConversation";
+import TicketTimeline from "./TicketTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "@alga-psa/ui";
@@ -46,7 +47,7 @@ import { addTicketResource, getTicketResources, removeTicketResource } from "@al
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Input } from "@alga-psa/ui/components/Input";
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, History, MessageSquare } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -209,6 +210,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }]
     }]);
     const [activeTab, setActiveTab] = useState('Comments');
+    const [viewMode, setViewMode] = useState<'conversation' | 'timeline'>('conversation');
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
@@ -1438,38 +1440,81 @@ const handleClose = () => {
                                 />
                             </div>
                         </Suspense>
-                        <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
-                            <div className="mb-6">
-                                <TicketConversation
-                                    id={`${id}-conversation`}
-                                    ticket={ticket}
-                                    conversations={conversations}
-                                    documents={documents}
-                                    userMap={userMap}
-                                    currentUser={currentUser ? {
-                                        id: currentUser.user_id,
-                                        name: `${currentUser.first_name} ${currentUser.last_name}`,
-                                        email: currentUser.email,
-                                        avatarUrl: null
-                                    } : session?.user}
-                                    activeTab={activeTab}
-                                    isEditing={isEditing}
-                                    currentComment={currentComment}
-                                    editorKey={editorKey}
-                                    onNewCommentContentChange={setNewCommentContent}
-                                    onAddNewComment={handleAddNewComment}
-                                    onTabChange={setActiveTab}
-                                    onEdit={handleEdit}
-                                    onSave={handleSave}
-                                    onClose={handleClose}
-                                    onDelete={handleDeleteRequest}
-                                    onContentChange={handleContentChange}
-                                    isSubmitting={isSubmitting}
-                                    hideInternalTab={false}
-                                    externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
-                                />
-                            </div>
-                        </Suspense>
+                        {/* View Mode Tabs: Conversation vs Timeline */}
+                        <div className="mb-4 flex border-b border-gray-200">
+                            <button
+                                id={`${id}-view-conversation-btn`}
+                                onClick={() => setViewMode('conversation')}
+                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                                    viewMode === 'conversation'
+                                        ? 'border-indigo-500 text-indigo-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                Conversation
+                            </button>
+                            <button
+                                id={`${id}-view-timeline-btn`}
+                                onClick={() => setViewMode('timeline')}
+                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                                    viewMode === 'timeline'
+                                        ? 'border-indigo-500 text-indigo-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <History className="w-4 h-4" />
+                                Timeline
+                            </button>
+                        </div>
+
+                        {/* Conversation View */}
+                        {viewMode === 'conversation' && (
+                            <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                                <div className="mb-6">
+                                    <TicketConversation
+                                        id={`${id}-conversation`}
+                                        ticket={ticket}
+                                        conversations={conversations}
+                                        documents={documents}
+                                        userMap={userMap}
+                                        currentUser={currentUser ? {
+                                            id: currentUser.user_id,
+                                            name: `${currentUser.first_name} ${currentUser.last_name}`,
+                                            email: currentUser.email,
+                                            avatarUrl: null
+                                        } : session?.user}
+                                        activeTab={activeTab}
+                                        isEditing={isEditing}
+                                        currentComment={currentComment}
+                                        editorKey={editorKey}
+                                        onNewCommentContentChange={setNewCommentContent}
+                                        onAddNewComment={handleAddNewComment}
+                                        onTabChange={setActiveTab}
+                                        onEdit={handleEdit}
+                                        onSave={handleSave}
+                                        onClose={handleClose}
+                                        onDelete={handleDeleteRequest}
+                                        onContentChange={handleContentChange}
+                                        isSubmitting={isSubmitting}
+                                        hideInternalTab={false}
+                                        externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
+                                    />
+                                </div>
+                            </Suspense>
+                        )}
+
+                        {/* Timeline View */}
+                        {viewMode === 'timeline' && (
+                            <Suspense fallback={<div id="ticket-timeline-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                                <div className="mb-6">
+                                    <TicketTimeline
+                                        id={`${id}-timeline`}
+                                        ticketId={ticket.ticket_id || ''}
+                                    />
+                                </div>
+                            </Suspense>
+                        )}
                         
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection

@@ -35,6 +35,7 @@ import { IBoard } from '@alga-psa/types';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
+import { CustomFieldsCard } from '@alga-psa/ui/components/CustomFieldsCard';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import ContactAvatarUpload from './ContactAvatarUpload';
@@ -718,6 +719,16 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               useInlineInput={isInDrawer}
             />
           </div>
+
+          {/* Custom Fields */}
+          {editedContact.contact_name_id && (
+            <CustomFieldsCard
+              id="contact-custom-fields-card"
+              entityType="contact"
+              entityId={editedContact.contact_name_id}
+              title="Custom Fields"
+            />
+          )}
 
           {editedContact.notes && (
             <div className="space-y-2">

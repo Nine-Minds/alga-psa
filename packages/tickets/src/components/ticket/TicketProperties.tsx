@@ -29,6 +29,7 @@ import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import TicketMaterialsCard from './TicketMaterialsCard';
+import { CustomFieldsCard } from '@alga-psa/ui/components/CustomFieldsCard';
 import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
 
 interface TicketPropertiesProps {
@@ -718,6 +719,17 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </div>
       </div>
 
+
+      {/* Custom Fields */}
+      {ticket.ticket_id && (
+        <CustomFieldsCard
+          id="ticket-custom-fields-card"
+          entityType="ticket"
+          entityId={ticket.ticket_id}
+          title="Custom Fields"
+          className="mb-6"
+        />
+      )}
 
       {ticket.ticket_id && ticket.client_id && (
         <TicketMaterialsCard
