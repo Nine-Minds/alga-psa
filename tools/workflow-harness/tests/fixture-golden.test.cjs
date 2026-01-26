@@ -536,3 +536,100 @@ test('T104: ticket-created-create-project-task fixture loads and executes via ha
   assert.equal(requests[3].opts.method, 'DELETE');
   assert.equal(requests[3].opts.headers['x-api-key'], 'api-key');
 });
+
+test('T105: ticket-created-assign-trycatch fixture loads and executes via harness', async () => {
+  const fixtureDir = path.resolve(process.cwd(), 'ee/test-data/workflow-harness/ticket-created-assign-trycatch');
+  const bundlePath = path.join(fixtureDir, 'bundle.json');
+  const testPath = path.join(fixtureDir, 'test.cjs');
+
+  const savedApiKey = process.env.WORKFLOW_HARNESS_API_KEY;
+  process.env.WORKFLOW_HARNESS_API_KEY = 'api-key';
+
+  const requests = [];
+  const harness = loadHarnessWithStubs({
+    http: {
+      createHttpClient: () => ({
+        request: async (p, opts) => {
+          requests.push({ path: p, opts });
+          if (p === '/api/v1/tickets' && opts?.method === 'POST') {
+            return { json: { data: { ticket_id: 'ticket-105' } } };
+          }
+          return { json: { data: {} } };
+        }
+      })
+    },
+    db: {
+      createDbClient: async () => ({
+        query: async (text) => {
+          const sql = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+          if (sql.includes('from clients')) return [{ client_id: 'client-105' }];
+          if (sql.includes('from boards')) return [{ board_id: 'board-105' }];
+          if (sql.includes('from statuses')) return [{ status_id: 'status-105' }];
+          if (sql.includes('from priorities')) return [{ priority_id: 'priority-105' }];
+          if (sql.includes('from users')) return [{ user_id: 'user-105' }];
+          if (sql.includes('from comments')) {
+            return [
+              {
+                comment_id: 'comment-105',
+                note: '[fixture ticket-created-assign-trycatch] ticketId=ticket-105 error=User not found',
+                is_internal: true
+              }
+            ];
+          }
+          if (sql.includes('from internal_notifications')) {
+            return [
+              {
+                internal_notification_id: 'notif-105',
+                title: '[fixture ticket-created-assign-trycatch] Assign failed',
+                message: 'ticketId=ticket-105 error=User not found'
+              }
+            ];
+          }
+          return [];
+        },
+        close: async () => {}
+      })
+    },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.ticket-created-assign-trycatch', workflowId: 'wf-105' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-105', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await runFixture({
+      testDir: fixtureDir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+  } finally {
+    harness.restore();
+    if (savedApiKey === undefined) delete process.env.WORKFLOW_HARNESS_API_KEY;
+    else process.env.WORKFLOW_HARNESS_API_KEY = savedApiKey;
+  }
+
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].path, '/api/v1/tickets');
+  assert.equal(requests[0].opts.method, 'POST');
+  assert.equal(requests[0].opts.headers['x-api-key'], 'api-key');
+  assert.equal(requests[0].opts.json.attributes.fixture_notify_user_id, 'user-105');
+  assert.ok(requests[0].opts.json.attributes.fixture_bad_assignee_user_id);
+  assert.equal(requests[1].path, '/api/v1/tickets/ticket-105');
+  assert.equal(requests[1].opts.method, 'DELETE');
+  assert.equal(requests[1].opts.headers['x-api-key'], 'api-key');
+});
