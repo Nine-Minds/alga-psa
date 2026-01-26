@@ -43,3 +43,4 @@
 - T011: Added stubbed runner test verifying cleanup hooks run on both success and failure.
 - T020: Added stubbed harness execution test for `ee/test-data/workflow-harness/ticket-created-hello` to validate bundle import, event submission call, and run success path without requiring a live server/DB.
 - T100: Added stubbed harness execution test for `ee/test-data/workflow-harness/ticket-created-triage-comment` validating `/api/v1/tickets` trigger calls include `x-api-key`, and cleanup issues a DELETE.
+- T101: Added `ee/test-data/workflow-harness/ticket-created-auto-assign-by-priority` + stubbed harness execution test. Workflow reads ticket `attributes.fixture_priority` via `tickets.find` for deterministic branching and assigns to `attributes.fixture_assignee_user_id`, then adds an internal comment with the assignee id.
