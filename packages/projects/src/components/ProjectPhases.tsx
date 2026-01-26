@@ -144,37 +144,41 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-4" onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
-      <h2 className="text-xl font-bold mb-2">Project Phases</h2>
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <Button
-          id="add-task-button"
-          onClick={onAddTask}
-          className="text-sm"
-          disabled={!selectedPhase || isAddingTask}
-        >
-          {isAddingTask ? 'Adding...' : '+ Add Task'}
-        </Button>
-        <Button
-          id="add-phase-button"
-          onClick={onAddPhase}
-          className="text-sm"
-        >
-          + Add Phase
-        </Button>
-        {onImport && (
+    <div className={styles.phasesPanel}>
+      {/* Fixed header section */}
+      <div className={styles.phasesPanelHeader}>
+        <h2 className="text-xl font-bold mb-2">Project Phases</h2>
+        <div className="flex gap-2 flex-wrap">
           <Button
-            id="import-phases-tasks-button"
-            onClick={onImport}
-            variant="outline"
+            id="add-task-button"
+            onClick={onAddTask}
+            className="text-sm"
+            disabled={!selectedPhase || isAddingTask}
+          >
+            {isAddingTask ? 'Adding...' : '+ Add Task'}
+          </Button>
+          <Button
+            id="add-phase-button"
+            onClick={onAddPhase}
             className="text-sm"
           >
-            <Upload className="h-4 w-4 mr-1" />
-            Import
+            + Add Phase
           </Button>
-        )}
+          {onImport && (
+            <Button
+              id="import-phases-tasks-button"
+              onClick={onImport}
+              variant="outline"
+              className="text-sm"
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              Import
+            </Button>
+          )}
+        </div>
       </div>
-      <ul className="space-y-2">
+      {/* Scrollable phases list */}
+      <ul className={styles.phasesScrollArea} onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
         {(() => {
           const sortedPhases = phases
             .sort((a, b) => {

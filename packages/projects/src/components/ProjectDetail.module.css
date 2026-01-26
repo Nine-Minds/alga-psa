@@ -59,13 +59,129 @@
   background: #cbd5e1;
 }
 
+/* Phases panel container with toggle */
+.phasesContainer {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.phasesContainerExpanded {
+  min-width: 230px;
+  max-width: 400px;
+  flex: 1;
+}
+
+.phasesContainerCollapsed {
+  min-width: 32px;
+  max-width: 32px;
+  flex: 0 0 32px;
+}
+
+/* Toggle button for phases panel */
+.phasesPanelToggle {
+  position: absolute;
+  top: 12px;
+  right: -12px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 50%;
+  cursor: pointer;
+  color: rgb(var(--color-text-500));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.phasesPanelToggle:hover {
+  background-color: rgb(var(--color-primary-50));
+  color: rgb(var(--color-primary-600));
+  border-color: rgb(var(--color-primary-300));
+}
+
+.phasesContainerCollapsed .phasesPanelToggle {
+  right: -12px;
+}
+
+/* Phases panel (the white card) */
+.phasesPanel {
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fixed header section */
+.phasesPanelHeader {
+  flex-shrink: 0;
+  padding: 1rem;
+  border-bottom: 1px solid rgb(var(--color-border-100));
+}
+
+/* Scrollable phases list area */
+.phasesScrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.5rem 1rem 1rem 1rem;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Scrollbar styling for phases scroll area */
+.phasesScrollArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.phasesScrollArea::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.phasesScrollArea::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.6);
+  border-radius: 3px;
+}
+
+.phasesScrollArea::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(155, 155, 155, 0.8);
+}
+
 .phasesList {
   min-width: 230px;
   width: auto;
   max-width: 400px;
   flex: 1;
-  overflow-y: auto; /* Allow phases list to scroll independently */
-  overflow-x: hidden;
+  overflow: hidden; /* Let the inner phasesScrollArea handle scrolling */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.phasesListVisible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.phasesListHidden {
+  opacity: 0;
+  transform: translateX(-100%);
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
 }
 
 .kanbanContainer {
@@ -96,24 +212,6 @@
   background: #cbd5e1;
 }
 
-/* Phases list scrollbar styling */
-.phasesList::-webkit-scrollbar {
-  width: 6px;
-}
-
-.phasesList::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 3px;
-}
-
-.phasesList::-webkit-scrollbar-thumb {
-  background-color: rgba(155, 155, 155, 0.6);
-  border-radius: 3px;
-}
-
-.phasesList::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(155, 155, 155, 0.8);
-}
 
 .kanbanBoard {
   display: flex;
