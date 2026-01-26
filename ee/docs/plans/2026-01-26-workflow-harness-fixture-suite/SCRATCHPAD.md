@@ -19,3 +19,4 @@
 - F015: Standardized fixture key convention (`fixture.<folderName>`) and documented always using `--force` imports for reruns.
 - F016: Added harness assertion/timeouts (`tools/workflow-harness/lib/expect.cjs`) and exposed via `ctx.expect`; harness enforces a global timeout.
 - F017: Enabled `--debug` verbose logging (import summary + workflow id/key + HTTP/DB debug logs).
+- F018: Implemented `--json` output (adds a machine-readable JSON line after PASS/FAIL).

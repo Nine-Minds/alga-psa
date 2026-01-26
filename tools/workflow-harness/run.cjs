@@ -304,6 +304,7 @@ async function main() {
   const debug = !!args.debug;
   const artifactsDir = args['artifacts-dir'] ?? getDefaultArtifactsDir();
   const pgUrl = args['pg-url'] ?? undefined;
+  const jsonOutput = !!args.json;
 
   if (!testDir) throw new Error('Missing --test');
   if (!baseUrl) throw new Error('Missing --base-url');
@@ -316,7 +317,7 @@ async function main() {
   const startedAtMs = Date.now();
 
   try {
-    await runFixture({
+    const { state } = await runFixture({
       testDir,
       ...fixture,
       baseUrl,
@@ -330,6 +331,20 @@ async function main() {
     });
     const durationMs = Date.now() - startedAtMs;
     console.log(`PASS ${testId} ${durationMs}`);
+    if (jsonOutput) {
+      console.log(
+        JSON.stringify({
+          ok: true,
+          testId,
+          durationMs,
+          workflowId: state?.workflowId ?? null,
+          workflowKey: state?.workflowKey ?? null,
+          importSummary: state?.importSummary ?? null,
+          run: state?.run ?? null,
+          stepSummary: Array.isArray(state?.steps) ? summarizeSteps(state.steps) : null
+        })
+      );
+    }
     process.exit(0);
   } catch (err) {
     const durationMs = Date.now() - startedAtMs;
@@ -337,6 +352,17 @@ async function main() {
     console.log(`FAIL ${testId} ${durationMs} ${reason}`);
     if (err?.artifactsDir) {
       console.error(`Artifacts: ${err.artifactsDir}`);
+    }
+    if (jsonOutput) {
+      console.log(
+        JSON.stringify({
+          ok: false,
+          testId,
+          durationMs,
+          reason,
+          artifactsDir: err?.artifactsDir ?? null
+        })
+      );
     }
     process.exit(1);
   }
