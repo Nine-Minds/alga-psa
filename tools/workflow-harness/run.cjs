@@ -141,6 +141,10 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
       Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0].key === 'string'
         ? bundle.workflows[0].key
         : null;
+    const workflowIsPausedInBundle =
+      Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0]?.metadata?.isPaused === 'boolean'
+        ? bundle.workflows[0].metadata.isPaused
+        : false;
     const workflowId =
       workflowKey && Array.isArray(importSummary?.createdWorkflows)
         ? importSummary.createdWorkflows.find((w) => w.key === workflowKey)?.workflowId ?? importSummary.createdWorkflows[0]?.workflowId ?? null
@@ -161,13 +165,13 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
         [workflowKey]
       );
     }
-    await dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1`, [workflowId]);
+    await dbWrite.query(`update workflow_definitions set is_paused = $2 where workflow_id = $1`, [workflowId, workflowIsPausedInBundle]);
 
     if (debug) {
       // eslint-disable-next-line no-console
       console.error('[harness] importSummary', JSON.stringify(importSummary, null, 2));
       // eslint-disable-next-line no-console
-      console.error('[harness] workflow', JSON.stringify({ workflowId, workflowKey }, null, 2));
+      console.error('[harness] workflow', JSON.stringify({ workflowId, workflowKey, workflowIsPausedInBundle }, null, 2));
     }
 
     // eslint-disable-next-line global-require, import/no-dynamic-require
