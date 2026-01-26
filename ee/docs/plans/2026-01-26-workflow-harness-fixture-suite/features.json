@@ -21,7 +21,7 @@
   { "id": "F020", "description": "Define fixture categories and naming scheme (trigger domain + behavior + assertion type)", "implemented": true },
   { "id": "F021", "description": "Add cleanup hooks (ctx.onCleanup) and run cleanup after each test (pass or fail)", "implemented": true },
 
-  { "id": "F030", "description": "Create ticket-trigger fixture set (coverage across ticket-related steps and validations)", "implemented": false },
+  { "id": "F030", "description": "Create ticket-trigger fixture set (coverage across ticket-related steps and validations)", "implemented": true },
   { "id": "F031", "description": "Create project-trigger fixture set (coverage across project actions/validations)", "implemented": false },
   { "id": "F032", "description": "Create billing-trigger fixture set (invoice/payment/contract events)", "implemented": false },
   { "id": "F033", "description": "Create email-trigger fixture set (inbound/outbound email events)", "implemented": false },

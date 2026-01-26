@@ -23,6 +23,10 @@
 - F019: Added fixture scaffolder `tools/workflow-harness/scaffold.cjs` (creates `bundle.json` + `test.cjs` in `ee/test-data/workflow-harness/<name>`).
 - F020: Documented fixture naming scheme + category prefixes in `ee/test-data/workflow-harness/README.md`.
 - F021: Harness always runs registered cleanup hooks after each fixture (on pass or fail), and records cleanup errors into artifacts.
+- F030: Added initial ticket-trigger fixture set:
+  - `ee/test-data/workflow-harness/ticket-created-triage-comment/` (create ticket via `/api/v1/tickets`, assert workflow adds internal triage comment)
+  - `ee/test-data/workflow-harness/ticket-priority-changed-audit-comment/` (update priority via `/api/v1/tickets/:id`, assert workflow adds internal audit comment)
+  - Updated `ee/test-data/workflow-harness/README.md` to document `WORKFLOW_HARNESS_API_KEY` / `ALGA_API_KEY` for `/api/v1` triggers.
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.
