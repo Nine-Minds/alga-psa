@@ -686,3 +686,4 @@ When implementing a new action:
 - Marked `T116` implemented (validated via `node --test tools/workflow-harness/tests/fixture-catalog.test.cjs`).
 - Marked \ implemented (covered by fixture harness stub tests).
 - Marked \ implemented (covered by fixture harness stub tests).
+- Marked \ implemented (covered by fixture harness stub tests).
