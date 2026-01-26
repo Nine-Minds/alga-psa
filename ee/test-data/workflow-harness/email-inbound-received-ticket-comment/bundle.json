@@ -1,0 +1,117 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.email-inbound-received-ticket-comment",
+      "metadata": {
+        "name": "Fixture: Inbound Email Received → Ticket Comment",
+        "description": "Simulate an inbound email event and add an internal ticket comment that includes the email id and subject.",
+        "payloadSchemaRef": "payload.InboundEmailReceived.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.InboundEmailReceived.v1",
+        "trigger": { "type": "event", "eventName": "INBOUND_EMAIL_RECEIVED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [{ "actionId": "tickets.add_comment", "version": 1 }],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.InboundEmailReceived.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f400",
+          "version": 1,
+          "name": "Fixture: Inbound Email Received → Ticket Comment",
+          "description": "Simulate an inbound email event and add an internal ticket comment that includes the email id and subject.",
+          "payloadSchemaRef": "payload.InboundEmailReceived.v1",
+          "trigger": { "type": "event", "eventName": "INBOUND_EMAIL_RECEIVED" },
+          "steps": [
+            { "id": "state-email", "type": "state.set", "config": { "state": "EMAIL" } },
+            {
+              "id": "assign-comment",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture email-inbound-received-ticket-comment]'" },
+                  "vars.commentBody": {
+                    "$expr": "vars.marker & ' emailId=' & payload.emailData.id & ' subject=' & payload.emailData.subject & ' ticketId=' & payload.fixtureTicketId"
+                  }
+                }
+              }
+            },
+            {
+              "id": "add-email-comment",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.add_comment",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.fixtureTicketId" },
+                  "body": { "$expr": "vars.commentBody" },
+                  "visibility": "internal",
+                  "idempotency_key": { "$expr": "'fixture.email-inbound-received-ticket-comment:' & payload.emailData.id" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f400",
+            "version": 1,
+            "name": "Fixture: Inbound Email Received → Ticket Comment",
+            "description": "Simulate an inbound email event and add an internal ticket comment that includes the email id and subject.",
+            "payloadSchemaRef": "payload.InboundEmailReceived.v1",
+            "trigger": { "type": "event", "eventName": "INBOUND_EMAIL_RECEIVED" },
+            "steps": [
+              { "id": "state-email", "type": "state.set", "config": { "state": "EMAIL" } },
+              {
+                "id": "assign-comment",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture email-inbound-received-ticket-comment]'" },
+                    "vars.commentBody": {
+                      "$expr": "vars.marker & ' emailId=' & payload.emailData.id & ' subject=' & payload.emailData.subject & ' ticketId=' & payload.fixtureTicketId"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "add-email-comment",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.add_comment",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.fixtureTicketId" },
+                    "body": { "$expr": "vars.commentBody" },
+                    "visibility": "internal",
+                    "idempotency_key": { "$expr": "'fixture.email-inbound-received-ticket-comment:' & payload.emailData.id" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

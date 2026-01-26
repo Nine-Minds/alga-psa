@@ -32,6 +32,9 @@
   - `ee/test-data/workflow-harness/invoice-generated-review-task/` (submit `INVOICE_GENERATED` event via `/api/workflow/events`, assert workflow creates a project task and sends an internal notification)
   - `ee/test-data/workflow-harness/payment-recorded-notify/` (submit `PAYMENT_RECORDED` event via `/api/workflow/events`, assert workflow sends an internal notification)
   - `ee/test-data/workflow-harness/contract-created-onboarding-task/` (submit `CONTRACT_CREATED` event via `/api/workflow/events`, assert workflow creates a project task, CRM note, and internal notification)
+- F033: Added initial email-trigger fixture set:
+  - `ee/test-data/workflow-harness/email-inbound-received-ticket-comment/` (create ticket via `/api/v1/tickets`, submit `INBOUND_EMAIL_RECEIVED` event via `/api/workflow/events`, assert workflow adds internal comment)
+  - `ee/test-data/workflow-harness/email-provider-connected-notify/` (submit `EMAIL_PROVIDER_CONNECTED` event via `/api/workflow/events`, assert workflow sends an internal notification)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.
