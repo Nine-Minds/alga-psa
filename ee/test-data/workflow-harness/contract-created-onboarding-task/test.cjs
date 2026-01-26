@@ -84,39 +84,52 @@ module.exports = async function run(ctx) {
   if (!projectId) throw new Error('Project create response missing data.project_id');
 
   ctx.onCleanup(async () => {
-    const phaseIds = await ctx.db.query(
-      `select phase_id from project_phases where tenant = $1 and project_id = $2`,
-      [tenantId, projectId]
-    );
-    const phaseIdList = phaseIds.map((r) => r.phase_id);
+    let projectDeleted = false;
+    try {
+      await ctx.http.request(`/api/v1/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': apiKey }
+      });
+      projectDeleted = true;
+    } catch {
+      // Fall back to DB cleanup if project deletion fails due to FK constraints.
+    }
 
-    if (phaseIdList.length) {
-      const taskIds = await ctx.db.query(
-        `select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`,
-        [tenantId, phaseIdList]
+    if (!projectDeleted) {
+      const phaseIds = await ctx.db.query(
+        `select phase_id from project_phases where tenant = $1 and project_id = $2`,
+        [tenantId, projectId]
       );
-      const taskIdList = taskIds.map((r) => r.task_id);
+      const phaseIdList = phaseIds.map((r) => r.phase_id);
 
-      if (taskIdList.length) {
-        await ctx.dbWrite.query(
-          `delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`,
-          [tenantId, taskIdList]
+      if (phaseIdList.length) {
+        const taskIds = await ctx.db.query(
+          `select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`,
+          [tenantId, phaseIdList]
         );
+        const taskIdList = taskIds.map((r) => r.task_id);
+
+        if (taskIdList.length) {
+          await ctx.dbWrite.query(
+            `delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`,
+            [tenantId, taskIdList]
+          );
+          await ctx.dbWrite.query(
+            `delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`,
+            [tenantId, taskIdList]
+          );
+        }
+
         await ctx.dbWrite.query(
-          `delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`,
-          [tenantId, taskIdList]
+          `delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`,
+          [tenantId, phaseIdList]
         );
       }
 
-      await ctx.dbWrite.query(
-        `delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`,
-        [tenantId, phaseIdList]
-      );
+      await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+      await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+      await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
     }
-
-    await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-    await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-    await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
 
     await ctx.dbWrite.query(
       `delete from interactions where tenant = $1 and client_id = $2 and notes like $3`,

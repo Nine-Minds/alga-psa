@@ -19,7 +19,7 @@ function usage() {
 Workflow Fixture Harness (V1)
 
 Usage:
-  node tools/workflow-harness/run.cjs --test <fixtureDir> --base-url <url> --tenant <tenantId> (--cookie <cookie> | --cookie-file <file>) [--force] [--timeout-ms <ms>] [--debug] [--artifacts-dir <dir>] [--json]
+  node tools/workflow-harness/run.cjs --test <fixtureDir> --base-url <url> --tenant <tenantId> [--cookie <cookie> | --cookie-file <file>] [--force] [--timeout-ms <ms>] [--debug] [--artifacts-dir <dir>] [--json]
 
 Flags:
   --test           Fixture directory path (contains bundle.json + test.cjs)
@@ -362,6 +362,7 @@ async function main() {
   const baseUrl = args['base-url'];
   const tenant = args.tenant;
   const cookie = args.cookie ?? (args['cookie-file'] ? readCookieFromFile(args['cookie-file']) : undefined);
+  const envApiKey = process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
   const force = !!args.force;
   const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : 60_000;
   const debug = !!args.debug;
@@ -372,7 +373,9 @@ async function main() {
   if (!testDir) throw new Error('Missing --test');
   if (!baseUrl) throw new Error('Missing --base-url');
   if (!tenant) throw new Error('Missing --tenant');
-  if (!cookie) throw new Error('Missing --cookie or --cookie-file');
+  if (!cookie && !envApiKey) {
+    throw new Error('Missing auth. Provide --cookie/--cookie-file or set WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY).');
+  }
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
 
   const fixture = validateFixtureDir(testDir);
@@ -445,6 +448,7 @@ async function runCliOnceForTests(argv) {
   const baseUrl = args['base-url'];
   const tenant = args.tenant;
   const cookie = args.cookie ?? (args['cookie-file'] ? readCookieFromFile(args['cookie-file']) : undefined);
+  const envApiKey = process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
   const force = !!args.force;
   const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : 60_000;
   const debug = !!args.debug;
@@ -455,7 +459,9 @@ async function runCliOnceForTests(argv) {
   if (!testDir) throw new Error('Missing --test');
   if (!baseUrl) throw new Error('Missing --base-url');
   if (!tenant) throw new Error('Missing --tenant');
-  if (!cookie) throw new Error('Missing --cookie or --cookie-file');
+  if (!cookie && !envApiKey) {
+    throw new Error('Missing auth. Provide --cookie/--cookie-file or set WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY).');
+  }
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
 
   const fixture = validateFixtureDir(testDir);

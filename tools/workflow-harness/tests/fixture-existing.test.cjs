@@ -118,13 +118,15 @@ test('T210: appointment-created-assign-notify fixture loads and executes via har
         }
         return { json: { data: {} } };
       },
-      dbQuery: async (text) => {
+      dbQuery: async (text, params) => {
         const sql = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
         if (sql.includes('from clients')) return [{ client_id: 'client-210' }];
         if (sql.includes('from boards')) return [{ board_id: 'board-210' }];
         if (sql.includes('from statuses')) return [{ status_id: 'status-210' }];
         if (sql.includes('from priorities')) return [{ priority_id: 'priority-210' }];
-        if (sql.includes('lower(r.role_name)') && sql.includes('technician')) return [{ user_id: 'tech-210' }];
+        if (sql.includes('join user_roles') && sql.includes('join roles') && sql.includes('lower(r.role_name)') && params?.[1] === 'technician') {
+          return [{ user_id: 'tech-210' }];
+        }
         if (sql.includes('from schedule_entries')) {
           const marker = '[fixture appointment-created-assign-notify]';
           return [
@@ -338,6 +340,9 @@ test('T240: contract-created-onboarding-task fixture loads and executes via harn
         const sql = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
         if (sql.includes('from clients')) return [{ client_id: 'client-240' }];
         if (sql.includes('from users')) return [{ user_id: 'user-240' }];
+        if (sql.includes('from statuses') && sql.includes("item_type = 'project'") && sql.includes('is_default = true')) {
+          return [{ status_id: 'status-project-240' }];
+        }
         if (sql.includes('from project_tasks')) {
           const marker = '[fixture contract-created-onboarding-task]';
           return [{ task_id: 'task-240', task_name: `${marker} contractId=${contractId ?? 'missing'}` }];
@@ -369,4 +374,3 @@ test('T240: contract-created-onboarding-task fixture loads and executes via harn
     else process.env.WORKFLOW_HARNESS_API_KEY = savedApiKey;
   }
 });
-

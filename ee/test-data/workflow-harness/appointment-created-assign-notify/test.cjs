@@ -101,6 +101,16 @@ module.exports = async function run(ctx) {
   if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
 
   ctx.onCleanup(async () => {
+    try {
+      await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': apiKey }
+      });
+      return;
+    } catch {
+      // Ticket deletion may be blocked by FK constraints; fall back to direct DB cleanup.
+    }
+
     await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
   });
 
@@ -151,6 +161,16 @@ module.exports = async function run(ctx) {
   }
 
   ctx.onCleanup(async () => {
+    try {
+      await ctx.http.request(`/api/v1/schedules/${entry.entry_id}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': apiKey }
+      });
+      return;
+    } catch {
+      // Schedule deletion may be blocked by FK constraints; fall back to direct DB cleanup.
+    }
+
     await ctx.dbWrite.query(
       `delete from schedule_conflicts where tenant = $1 and (entry_id_1 = $2 or entry_id_2 = $2)`,
       [tenantId, entry.entry_id]

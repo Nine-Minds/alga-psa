@@ -39,6 +39,11 @@ module.exports = async function run(ctx) {
     sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
     params: [tenantId]
   });
+  const notifyUser = await pickOne(ctx, {
+    label: 'a user (notification recipient)',
+    sql: `select user_id from users where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
 
   const title = `Fixture assign trycatch ${randomUUID()}`;
   const createRes = await ctx.http.request('/api/v1/tickets', {
@@ -51,6 +56,7 @@ module.exports = async function run(ctx) {
       status_id: status.status_id,
       priority_id: priority.priority_id,
       attributes: {
+        fixture_notify_user_id: notifyUser.user_id,
         fixture_bad_assignee_user_id: randomUUID()
       }
     }
@@ -60,6 +66,16 @@ module.exports = async function run(ctx) {
   if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
 
   ctx.onCleanup(async () => {
+    try {
+      await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': apiKey }
+      });
+      return;
+    } catch {
+      // Ticket deletion is blocked when comments reference the ticket; clean up those rows first.
+    }
+
     await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
     await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
   });
