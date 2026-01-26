@@ -3,7 +3,7 @@
 import { Suspense, useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
-import { SlaPolicyList, SlaPolicyForm, SlaPauseSettings, BusinessHoursSettings } from '@alga-psa/sla/components';
+import { SlaPolicyList, SlaPolicyForm, SlaPauseSettings, BusinessHoursSettings, EscalationManagerSettings } from '@alga-psa/sla/components';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft } from 'lucide-react';
@@ -14,6 +14,7 @@ const TAB_SLUG_TO_LABEL: Record<string, string> = {
   'policies': 'Policies',
   'business-hours': 'Business Hours',
   'pause-rules': 'Pause Rules',
+  'escalation': 'Escalation',
 };
 
 // Map tab labels to URL slugs
@@ -21,6 +22,7 @@ const TAB_LABEL_TO_SLUG: Record<string, string> = {
   'Policies': 'policies',
   'Business Hours': 'business-hours',
   'Pause Rules': 'pause-rules',
+  'Escalation': 'escalation',
 };
 
 const DEFAULT_TAB = 'Policies';
@@ -185,6 +187,22 @@ export default function SlaSettingsPage() {
           </div>
         }>
           <SlaPauseSettings />
+        </Suspense>
+      ),
+    },
+    {
+      label: 'Escalation',
+      content: (
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-8">
+            <LoadingIndicator
+              layout="stacked"
+              text="Loading escalation settings..."
+              spinnerProps={{ size: 'md' }}
+            />
+          </div>
+        }>
+          <EscalationManagerSettings />
         </Suspense>
       ),
     },
