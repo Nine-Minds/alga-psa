@@ -2,24 +2,27 @@
   "name": "@alga-psa/teams",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./models/*": {
+      "types": "./dist/models/*.d.ts",
+      "import": "./dist/models/*.js",
+      "require": "./dist/models/*.cjs"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts"
     },
     "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
-      "import": "./dist/hooks/index.mjs",
-      "require": "./dist/hooks/index.js"
+      "types": "./src/hooks/index.ts",
+      "import": "./src/hooks/index.ts"
     }
   },
   "scripts": {

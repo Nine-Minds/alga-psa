@@ -2,19 +2,23 @@
   "name": "@alga-psa/licensing",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./lib": {
+      "types": "./dist/lib/get-license-usage.d.ts",
+      "import": "./dist/lib/get-license-usage.js",
+      "require": "./dist/lib/get-license-usage.cjs"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts"
     }
   },
   "scripts": {

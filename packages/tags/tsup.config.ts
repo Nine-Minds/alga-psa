@@ -2,27 +2,36 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: {
+    // Buildable lib/models code only
+    // Actions, components, context, and hooks are runtime (Next.js transpiled)
     'index': 'src/index.ts',
-    'actions/index': 'src/actions/index.ts',
-    'components/index': 'src/components/index.ts',
-    'context/index': 'src/context/index.ts',
+    'lib/colorUtils': 'src/lib/colorUtils.ts',
+    'lib/permissions': 'src/lib/permissions.ts',
+    'lib/tagCleanup': 'src/lib/tagCleanup.ts',
+    'lib/uiHelpers': 'src/lib/uiHelpers.ts',
+    'lib/usersHelpers': 'src/lib/usersHelpers.ts',
+    'lib/authHelpers': 'src/lib/authHelpers.ts',
+    'models/tagDefinition': 'src/models/tagDefinition.ts',
+    'models/tagMapping': 'src/models/tagMapping.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
-  splitting: false,
+  bundle: true,
+  splitting: true,
   sourcemap: false,
   clean: true,
+  outDir: 'dist',
   external: [
+    '@alga-psa/auth',
+    '@alga-psa/core',
+    '@alga-psa/db',
+    '@alga-psa/documents',
+    '@alga-psa/types',
+    '@alga-psa/ui',
+    '@alga-psa/validation',
+    'knex',
+    'uuid',
     'react',
     'react-dom',
-    'next',
-    'next/navigation',
-    'next/link',
-    'next-auth',
-    'next-auth/react',
-    /^@alga-psa\//,
   ],
-  esbuildOptions(options) {
-    options.jsx = 'automatic';
-  },
 });

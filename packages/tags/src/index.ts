@@ -2,14 +2,23 @@
  * @alga-psa/tags
  *
  * Tag management module for Alga PSA.
- * Includes tag actions, components, and context.
+ *
+ * Main entry point exports buildable lib/models code only.
+ * For runtime code, use:
+ * - '@alga-psa/tags/actions' for server actions
+ * - '@alga-psa/tags/components' for React components
+ * - '@alga-psa/tags/context' for React context
+ * - '@alga-psa/tags/hooks' for React hooks
  */
 
-// Server actions
-export * from './actions';
+// Buildable exports (lib and models)
+export * from './lib/colorUtils';
+export * from './lib/permissions';
+export * from './lib/tagCleanup';
+export * from './lib/uiHelpers';
+export * from './lib/usersHelpers';
+export * from './lib/authHelpers';
 
-// Components (moved from @alga-psa/ui to break circular dependency)
-export * from './components';
-
-// Context (moved from @alga-psa/ui to break circular dependency)
-export * from './context';
+// Models
+export { default as TagDefinition, type ITagDefinition } from './models/tagDefinition';
+export { default as TagMapping, type ITagMapping, type ITagWithDefinition } from './models/tagMapping';

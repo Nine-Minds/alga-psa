@@ -1,9 +1,9 @@
 {
-  "name": "@alga-psa/reference-data",
+  "name": "@alga-psa/portal-shared",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/reference-data/src",
+  "sourceRoot": "packages/portal-shared/src",
   "projectType": "library",
-  "tags": ["scope:reference-data", "type:horizontal"],
+  "tags": ["scope:portal-shared", "type:horizontal"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
@@ -13,7 +13,7 @@
         "cwd": "{projectRoot}"
       },
       "inputs": ["production", "^production"],
-      "dependsOn": ["@alga-psa/core:build", "@alga-psa/db:build", "@alga-psa/types:build", "@alga-psa/validation:build"]
+      "dependsOn": ["@alga-psa/client-portal:build", "@alga-psa/core:build", "@alga-psa/db:build"]
     },
     "typecheck": {
       "executor": "nx:run-commands",
@@ -22,18 +22,11 @@
         "cwd": "{projectRoot}"
       }
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/reference-data"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],
       "options": {
-        "lintFilePatterns": ["packages/reference-data/**/*.{ts,tsx}"]
+        "lintFilePatterns": ["packages/portal-shared/**/*.{ts,tsx}"]
       }
     }
   }

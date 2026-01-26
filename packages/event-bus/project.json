@@ -6,8 +6,21 @@
   "tags": ["scope:event-bus", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "nx:noop",
-      "dependsOn": ["@alga-psa/event-schemas:build"]
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsup",
+        "cwd": "{projectRoot}"
+      },
+      "inputs": ["production", "^production"],
+      "dependsOn": ["@alga-psa/event-schemas:build", "@alga-psa/core:build", "@alga-psa/types:build"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
     },
     "test": {
       "executor": "@nx/vite:test",
