@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { RefreshCw, ChevronDown, History } from 'lucide-react';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   ITicketActivity,
   TicketActivityFilters,
@@ -14,11 +14,12 @@ import {
   getTicketTimeline,
   getActivityTypeCounts,
   getActivitiesGroupedByDate
-} from 'server/src/lib/actions/ticketActivityActions';
+} from '../../actions/ticketActivityActions';
 import { TimelineItem, TimelineDateSeparator } from './TimelineItem';
 import { TimelineFilters, TimelineFilterBar } from './TimelineFilters';
 
 interface TicketTimelineProps {
+  id?: string;
   ticketId: string;
   variant?: 'full' | 'compact';
   maxHeight?: string;
@@ -29,6 +30,7 @@ interface TicketTimelineProps {
  * Visual timeline showing all ticket activities
  */
 export function TicketTimeline({
+  id,
   ticketId,
   variant = 'full',
   maxHeight = '600px',

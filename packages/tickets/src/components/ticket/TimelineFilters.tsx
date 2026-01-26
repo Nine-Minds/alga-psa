@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   Filter,
   X,

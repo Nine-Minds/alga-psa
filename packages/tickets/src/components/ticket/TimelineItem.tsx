@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { ITicketActivity } from 'server/src/interfaces/ticketActivity.interfaces';
-import { ActivityIcon, getActivityLabel } from 'server/src/components/ui/ActivityIcon';
+import { ActivityIcon, getActivityLabel } from '@alga-psa/ui/components/ActivityIcon';
 import { FieldChangeDiff } from './FieldChangeDiff';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Lock, Eye } from 'lucide-react';
 
 interface TimelineItemProps {

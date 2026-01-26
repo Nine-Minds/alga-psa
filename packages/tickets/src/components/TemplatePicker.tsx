@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { FileText, ChevronRight, Check, Search, X, Zap } from 'lucide-react';
-import { Input } from 'server/src/components/ui/Input';
-import { Badge } from 'server/src/components/ui/Badge';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   ITicketTemplate,
   AppliedTemplateData
