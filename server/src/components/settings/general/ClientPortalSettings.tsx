@@ -19,6 +19,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { useBranding } from '@alga-psa/tenancy/components';
@@ -441,17 +442,32 @@ const ClientPortalSettings = () => {
                 >
                   {previewMode === 'dashboard' ? 'Hide' : 'Preview'} Client Dashboard
                 </Button>
-                <Button
-                  id="preview-signin"
-                  type="button"
-                  variant={previewMode === 'signin' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
-                  disabled={!hasCustomDomain}
-                  title={!hasCustomDomain ? 'Configure a custom domain first to preview sign-in page' : ''}
-                >
-                  {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
-                </Button>
+                {!hasCustomDomain ? (
+                  <Tooltip content="Must have custom domain set up">
+                    <span className="inline-block">
+                      <Button
+                        id="preview-signin"
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="pointer-events-none"
+                      >
+                        Preview Sign-in Page
+                      </Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    id="preview-signin"
+                    type="button"
+                    variant={previewMode === 'signin' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
+                  >
+                    {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
+                  </Button>
+                )}
               </div>
 
               {/* Dashboard Preview */}
