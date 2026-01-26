@@ -1,4 +1,4 @@
-import { Block, PartialBlock } from '@blocknote/core';
+import type { Block, PartialBlock } from '@blocknote/core';
 
 function escapeHtml(value: string): string {
   return value
