@@ -301,6 +301,61 @@ test('T008: prints single-line PASS/FAIL summary and correct exit code', async (
   }
 });
 
+test('T010: supports --debug to print verbose logs', async () => {
+  const { dir, bundlePath, testPath } = writeFixture({
+    name: 't010',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t010', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `module.exports = async () => {};`
+  });
+
+  const harness = loadHarnessWithStubs({
+    http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.t010', workflowId: 'wf-010' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-010', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  const captured = [];
+  const orig = console.error;
+  console.error = (...args) => captured.push(args.join(' '));
+
+  try {
+    const { runFixture } = harness.mod;
+    await runFixture({
+      testDir: dir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: true,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+  } finally {
+    console.error = orig;
+    harness.restore();
+  }
+
+  assert.ok(captured.some((l) => l.includes('[harness] importSummary')), 'expected importSummary debug log');
+  assert.ok(captured.some((l) => l.includes('[harness] workflow')), 'expected workflow debug log');
+});
+
   const harness = loadHarnessWithStubs({
     http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
     db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },

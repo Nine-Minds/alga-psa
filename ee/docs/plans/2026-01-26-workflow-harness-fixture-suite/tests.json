@@ -8,7 +8,7 @@
   { "id": "T007", "description": "Harness: captures run + step status summary on success", "implemented": true, "featureIds": ["F010", "F011"] },
   { "id": "T008", "description": "Harness: prints single-line PASS/FAIL summary and correct exit code", "implemented": true, "featureIds": ["F011"] },
   { "id": "T009", "description": "Harness: supports --cookie-file and trims newlines", "implemented": true, "featureIds": ["F002", "F005"] },
-  { "id": "T010", "description": "Harness: supports --debug to print verbose logs", "implemented": false, "featureIds": ["F017"] },
+  { "id": "T010", "description": "Harness: supports --debug to print verbose logs", "implemented": true, "featureIds": ["F017"] },
   { "id": "T011", "description": "Harness: runs registered cleanup hooks on PASS and on FAIL", "implemented": false, "featureIds": ["F021"] },
 
   { "id": "T020", "description": "Fixture: ticket-created-hello imports, triggers ticket creation, run SUCCEEDED", "implemented": false, "featureIds": ["F014"], "fixture": "ticket-created-hello", "eventType": "TICKET_CREATED", "actions": ["tickets.create"], "controlFlow": [] },

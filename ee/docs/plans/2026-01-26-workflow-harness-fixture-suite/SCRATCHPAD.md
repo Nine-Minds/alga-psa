@@ -34,3 +34,4 @@
 - T007: Added stubbed runner test ensuring successful runs capture `run` + `steps` into the result state for summaries/JSON output.
 - T008: Added stubbed runner test for PASS/FAIL line format and exit code via exported `runCliOnceForTests`.
 - T009: Added cookie-file unit test and extracted `readCookieFromFile` into `tools/workflow-harness/lib/cookie.cjs` (trims whitespace/newlines).
+- T010: Added stubbed runner test that asserts `--debug` emits verbose logs (import summary + workflow id/key).
