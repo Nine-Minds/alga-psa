@@ -1,0 +1,146 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.invoice-generated-review-task",
+      "metadata": {
+        "name": "Fixture: Invoice Generated → Review Task + Notify",
+        "description": "Create a billing review task and send an in-app notification when an invoice is generated.",
+        "payloadSchemaRef": "payload.InvoiceGenerated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.InvoiceGenerated.v1",
+        "trigger": { "type": "event", "eventName": "INVOICE_GENERATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "projects.create_task", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.InvoiceGenerated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f300",
+          "version": 1,
+          "name": "Fixture: Invoice Generated → Review Task + Notify",
+          "description": "Create a billing review task and send an in-app notification when an invoice is generated.",
+          "payloadSchemaRef": "payload.InvoiceGenerated.v1",
+          "trigger": { "type": "event", "eventName": "INVOICE_GENERATED" },
+          "steps": [
+            { "id": "state-billing-review", "type": "state.set", "config": { "state": "BILLING_REVIEW" } },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture invoice-generated-review-task]'" },
+                  "vars.taskTitle": { "$expr": "vars.marker & ' Review invoice ' & payload.invoiceId" },
+                  "vars.notifyTitle": { "$expr": "vars.marker & ' Invoice generated'" },
+                  "vars.notifyBody": { "$expr": "'invoiceId=' & payload.invoiceId" }
+                }
+              }
+            },
+            {
+              "id": "create-review-task",
+              "type": "action.call",
+              "config": {
+                "actionId": "projects.create_task",
+                "version": 1,
+                "inputMapping": {
+                  "project_id": { "$expr": "payload.fixtureProjectId" },
+                  "title": { "$expr": "vars.taskTitle" }
+                }
+              }
+            },
+            {
+              "id": "notify-billing",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                  "title": { "$expr": "vars.notifyTitle" },
+                  "body": { "$expr": "vars.notifyBody" },
+                  "severity": "info",
+                  "dedupe_key": { "$expr": "'fixture.invoice-generated-review-task:' & payload.invoiceId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f300",
+            "version": 1,
+            "name": "Fixture: Invoice Generated → Review Task + Notify",
+            "description": "Create a billing review task and send an in-app notification when an invoice is generated.",
+            "payloadSchemaRef": "payload.InvoiceGenerated.v1",
+            "trigger": { "type": "event", "eventName": "INVOICE_GENERATED" },
+            "steps": [
+              { "id": "state-billing-review", "type": "state.set", "config": { "state": "BILLING_REVIEW" } },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture invoice-generated-review-task]'" },
+                    "vars.taskTitle": { "$expr": "vars.marker & ' Review invoice ' & payload.invoiceId" },
+                    "vars.notifyTitle": { "$expr": "vars.marker & ' Invoice generated'" },
+                    "vars.notifyBody": { "$expr": "'invoiceId=' & payload.invoiceId" }
+                  }
+                }
+              },
+              {
+                "id": "create-review-task",
+                "type": "action.call",
+                "config": {
+                  "actionId": "projects.create_task",
+                  "version": 1,
+                  "inputMapping": {
+                    "project_id": { "$expr": "payload.fixtureProjectId" },
+                    "title": { "$expr": "vars.taskTitle" }
+                  }
+                }
+              },
+              {
+                "id": "notify-billing",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                    "title": { "$expr": "vars.notifyTitle" },
+                    "body": { "$expr": "vars.notifyBody" },
+                    "severity": "info",
+                    "dedupe_key": { "$expr": "'fixture.invoice-generated-review-task:' & payload.invoiceId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

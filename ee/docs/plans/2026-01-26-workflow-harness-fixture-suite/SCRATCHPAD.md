@@ -28,6 +28,10 @@
   - `ee/test-data/workflow-harness/ticket-priority-changed-audit-comment/` (update priority via `/api/v1/tickets/:id`, assert workflow adds internal audit comment)
   - Updated `ee/test-data/workflow-harness/README.md` to document `WORKFLOW_HARNESS_API_KEY` / `ALGA_API_KEY` for `/api/v1` triggers.
 - F031: Added initial project-trigger fixture `ee/test-data/workflow-harness/project-created-kickoff-tasks/` (create project via `/api/v1/projects`, assert workflow creates kickoff project task).
+- F032: Added initial billing-trigger fixture set:
+  - `ee/test-data/workflow-harness/invoice-generated-review-task/` (submit `INVOICE_GENERATED` event via `/api/workflow/events`, assert workflow creates a project task and sends an internal notification)
+  - `ee/test-data/workflow-harness/payment-recorded-notify/` (submit `PAYMENT_RECORDED` event via `/api/workflow/events`, assert workflow sends an internal notification)
+  - `ee/test-data/workflow-harness/contract-created-onboarding-task/` (submit `CONTRACT_CREATED` event via `/api/workflow/events`, assert workflow creates a project task, CRM note, and internal notification)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.
