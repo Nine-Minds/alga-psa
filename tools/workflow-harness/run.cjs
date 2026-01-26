@@ -12,6 +12,7 @@ const { importWorkflowBundleV1, exportWorkflowBundleV1 } = require('./lib/workfl
 const { waitForRun, getRunSteps, summarizeSteps, getRunLogs } = require('./lib/runs.cjs');
 const { createArtifactWriter } = require('./lib/artifacts.cjs');
 const expect = require('./lib/expect.cjs');
+const { readCookieFromFile } = require('./lib/cookie.cjs');
 
 function usage() {
   console.error(`
@@ -63,11 +64,6 @@ function parseArgs(argv) {
     i += 1;
   }
   return args;
-}
-
-function readCookieFromFile(path) {
-  const raw = fs.readFileSync(path, 'utf8');
-  return raw.trim();
 }
 
 function validateFixtureDir(testDir) {

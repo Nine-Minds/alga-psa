@@ -7,7 +7,7 @@
   { "id": "T006", "description": "Harness: waitForRun times out and reports a helpful diagnostic (no run found)", "implemented": true, "featureIds": ["F009", "F012"] },
   { "id": "T007", "description": "Harness: captures run + step status summary on success", "implemented": true, "featureIds": ["F010", "F011"] },
   { "id": "T008", "description": "Harness: prints single-line PASS/FAIL summary and correct exit code", "implemented": true, "featureIds": ["F011"] },
-  { "id": "T009", "description": "Harness: supports --cookie-file and trims newlines", "implemented": false, "featureIds": ["F002", "F005"] },
+  { "id": "T009", "description": "Harness: supports --cookie-file and trims newlines", "implemented": true, "featureIds": ["F002", "F005"] },
   { "id": "T010", "description": "Harness: supports --debug to print verbose logs", "implemented": false, "featureIds": ["F017"] },
   { "id": "T011", "description": "Harness: runs registered cleanup hooks on PASS and on FAIL", "implemented": false, "featureIds": ["F021"] },
 
