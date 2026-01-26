@@ -16,7 +16,14 @@
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('system_event_catalog'))) return;
 
-  const now = knex.fn.now();
+  // Use a literal timestamp instead of CURRENT_TIMESTAMP function
+  // Citus requires IMMUTABLE functions in ON CONFLICT DO UPDATE SET clauses
+  const now = new Date().toISOString();
+
+  // Remove deprecated COMPANY_* events (company has been renamed to client)
+  await knex('system_event_catalog')
+    .whereIn('event_type', ['COMPANY_CREATED', 'COMPANY_UPDATED'])
+    .del();
 
   if (!(await knex.schema.hasColumn('system_event_catalog', 'payload_schema_ref'))) {
     await knex.schema.alterTable('system_event_catalog', (t) => {
@@ -26,19 +33,6 @@ exports.up = async function up(knex) {
   }
 
   const baseEvents = [
-    // Already present (avoid duplicating) — ensure payload_schema_ref + metadata are aligned.
-    {
-      event_type: 'COMPANY_CREATED',
-      name: 'Company Created',
-      description: 'Triggered when a new company record is created in the system.',
-      category: 'Company Management',
-    },
-    {
-      event_type: 'COMPANY_UPDATED',
-      name: 'Company Updated',
-      description: 'Triggered when an existing company record is updated.',
-      category: 'Company Management',
-    },
     { event_type: 'TICKET_CREATED', name: 'Ticket Created', description: 'Triggered when a new ticket is created.', category: 'Tickets' },
     { event_type: 'TICKET_UPDATED', name: 'Ticket Updated', description: 'Triggered when a ticket is updated.', category: 'Tickets' },
     { event_type: 'TICKET_CLOSED', name: 'Ticket Closed', description: 'Triggered when a ticket is closed.', category: 'Tickets' },
