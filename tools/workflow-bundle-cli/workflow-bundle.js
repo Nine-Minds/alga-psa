@@ -12,7 +12,7 @@ Usage:
 
 Notes:
   - --cookie should be the raw Cookie header value (e.g. "next-auth.session-token=...").
-  - --tenant sets "x-alga-tenant" to select a tenant context.
+  - --tenant sets "x-tenant-id" to select a tenant context.
 `);
 };
 
@@ -44,7 +44,7 @@ const parseArgs = (argv) => {
 const request = async ({ method, url, cookie, tenant, body, fetchImpl }) => {
   const headers = {};
   if (cookie) headers.Cookie = cookie;
-  if (tenant) headers['x-alga-tenant'] = tenant;
+  if (tenant) headers['x-tenant-id'] = tenant;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
   const res = await fetchImpl(url, {

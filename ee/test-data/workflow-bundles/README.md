@@ -16,4 +16,4 @@ node tools/workflow-bundle-cli/workflow-bundle.js import \
 
 Notes:
 - `--cookie` must be the raw **request** `Cookie` header (only `name=value` pairs, separated by `; `). Do not paste `Set-Cookie` attributes like `Path`, `HttpOnly`, `Expires`, etc.
-- `--tenant` sets the `x-alga-tenant` header.
+- `--tenant` sets the `x-tenant-id` header.
