@@ -24,7 +24,7 @@ Notes:
 - `--cookie` / `--cookie-file` should be the raw `Cookie` header value (e.g. `next-auth.session-token=...`).
 - `--tenant` sets `x-tenant-id` so the server runs in the correct tenant context.
 - Prefer running with `--force` so fixtures are re-runnable (overwrites workflows by key).
-- DB assertions require Postgres connectivity. Set `DATABASE_URL` (or pass per-flag overrides; see `--help`).
+- DB assertions require Postgres connectivity. Set `DATABASE_URL` or pass `--pg-url`.
 
 ## Fixture keys
 

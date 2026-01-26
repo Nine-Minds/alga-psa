@@ -27,6 +27,7 @@ Flags:
   --tenant         Tenant id (sets x-tenant-id)
   --cookie         Raw Cookie header value (e.g. next-auth.session-token=...)
   --cookie-file    File containing the raw Cookie header value (newlines trimmed)
+  --pg-url         Postgres connection string (defaults to $DATABASE_URL)
   --force          Overwrite workflows on import
   --timeout-ms     Global timeout (default: 60000)
   --debug          Verbose logs
