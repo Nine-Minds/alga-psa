@@ -11,7 +11,7 @@
   { "id": "F010", "description": "Implement helper to fetch workflow_run_steps and summarize step statuses", "implemented": true },
   { "id": "F011", "description": "Standardize pass/fail output format and exit codes", "implemented": true },
   { "id": "F012", "description": "Write failure artifacts (run details, steps, errors, server/worker log snippets)", "implemented": true },
-  { "id": "F013", "description": "Add fixture root ee/test-data/workflow-harness with README and conventions", "implemented": false },
+  { "id": "F013", "description": "Add fixture root ee/test-data/workflow-harness with README and conventions", "implemented": true },
   { "id": "F014", "description": "Add a golden path fixture: ticket-created-hello (import → create ticket → assert run SUCCEEDED)", "implemented": false },
   { "id": "F015", "description": "Support deterministic fixture workflow keys (fixture.<name>) and always import with --force in docs", "implemented": false },
   { "id": "F016", "description": "Provide harness assertion utilities (expect helpers, structured errors, timeout handling)", "implemented": false },
