@@ -42,6 +42,10 @@ import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-acti
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 
+// Auto-scroll configuration for drag operations
+const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
+const MAX_SCROLL_SPEED = 20; // Maximum scroll speed in pixels per frame
+
 interface ProjectDetailProps {
   project: IProject;
   phases: IProjectPhase[];
@@ -279,16 +283,22 @@ export default function ProjectDetail({
     fetchTaskCounts();
   }, [project.project_id]);
 
-  const [scrollInterval, setScrollInterval] = useState<NodeJS.Timeout | null>(null);
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
+  const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
+    horizontal: 0,
+    vertical: 0,
+    column: null
+  });
 
   useEffect(() => {
     return () => {
-      if (scrollInterval) {
-        clearInterval(scrollInterval);
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
       }
     };
-  }, [scrollInterval]);
+  }, []);
 
   // Lazy load list view data when switching to list mode
   const loadListViewData = useCallback(async () => {
@@ -678,10 +688,12 @@ export default function ProjectDetail({
     document.body.classList.remove('dragging-task');
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
-    
-    if (scrollInterval) {
-      clearInterval(scrollInterval);
-      setScrollInterval(null);
+
+    // Reset scroll speeds and clear interval
+    scrollSpeedsRef.current = { horizontal: 0, vertical: 0, column: null };
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
     }
   };
 
@@ -772,42 +784,91 @@ export default function ProjectDetail({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    
-    const mouseY = e.clientY;
-    const viewportHeight = window.innerHeight;
-    const topThreshold = viewportHeight * 0.3; // Start scrolling at top 30%
-    const bottomThreshold = viewportHeight * 0.7; // Start scrolling at bottom 30%
-    const edgeThreshold = 100; // Pixels from very edge for max speed
-    const maxScrollSpeed = 25;
 
-    if (scrollInterval) {
-      clearInterval(scrollInterval);
-      setScrollInterval(null);
+    // kanbanBoardRef points to .kanbanContainer which is the horizontal scroll container
+    const kanbanContainer = kanbanBoardRef.current;
+    if (!kanbanContainer) return;
+
+    const containerRect = kanbanContainer.getBoundingClientRect();
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // Check if mouse is within the container bounds
+    if (mouseX < containerRect.left || mouseX > containerRect.right ||
+        mouseY < containerRect.top || mouseY > containerRect.bottom) {
+      // Stop scrolling if outside bounds
+      scrollSpeedsRef.current = { horizontal: 0, vertical: 0, column: null };
+      return;
     }
 
-    // Calculate scroll speed based on distance from edges
-    if (mouseY < topThreshold) {
-      const distance = Math.max(mouseY - edgeThreshold, 0);
-      const speed = Math.min(maxScrollSpeed, maxScrollSpeed * (1 - distance / (topThreshold - edgeThreshold)));
-      
-      const newInterval = setInterval(() => {
-        window.scrollBy({
-          top: -speed,
-          behavior: 'auto' // Use auto for smoother continuous scrolling
-        });
-      }, 16); // 60fps
-      setScrollInterval(newInterval);
-    } else if (mouseY > bottomThreshold) {
-      const distance = Math.max((viewportHeight - mouseY) - edgeThreshold, 0);
-      const speed = Math.min(maxScrollSpeed, maxScrollSpeed * (1 - distance / (viewportHeight - bottomThreshold - edgeThreshold)));
-      
-      const newInterval = setInterval(() => {
-        window.scrollBy({
-          top: speed,
-          behavior: 'auto' // Use auto for smoother continuous scrolling
-        });
-      }, 16); // 60fps
-      setScrollInterval(newInterval);
+    // Calculate horizontal scroll (for kanban container)
+    let horizontalScrollSpeed = 0;
+    const leftEdge = containerRect.left + SCROLL_THRESHOLD;
+    const rightEdge = containerRect.right - SCROLL_THRESHOLD;
+
+    if (mouseX < leftEdge) {
+      // Near left edge - scroll left
+      const distance = leftEdge - mouseX;
+      horizontalScrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+    } else if (mouseX > rightEdge) {
+      // Near right edge - scroll right
+      const distance = mouseX - rightEdge;
+      horizontalScrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+    }
+
+    // Find the column being dragged over and calculate vertical scroll
+    let verticalScrollSpeed = 0;
+    let targetColumn: HTMLElement | null = null;
+
+    // Find the kanban tasks containers using data attribute (more reliable than CSS classes)
+    const columns = kanbanContainer.querySelectorAll('[data-kanban-column-tasks="true"]');
+    columns.forEach((column) => {
+      const columnRect = column.getBoundingClientRect();
+      if (mouseX >= columnRect.left && mouseX <= columnRect.right &&
+          mouseY >= columnRect.top && mouseY <= columnRect.bottom) {
+        targetColumn = column as HTMLElement;
+
+        const topEdge = columnRect.top + SCROLL_THRESHOLD;
+        const bottomEdge = columnRect.bottom - SCROLL_THRESHOLD;
+
+        if (mouseY < topEdge) {
+          // Near top edge - scroll up
+          const distance = topEdge - mouseY;
+          verticalScrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        } else if (mouseY > bottomEdge) {
+          // Near bottom edge - scroll down
+          const distance = mouseY - bottomEdge;
+          verticalScrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        }
+      }
+    });
+
+    // Update scroll speeds in ref (the interval reads from this)
+    scrollSpeedsRef.current = {
+      horizontal: horizontalScrollSpeed,
+      vertical: verticalScrollSpeed,
+      column: targetColumn
+    };
+
+    // Start interval if not already running and we need to scroll
+    if (!scrollIntervalRef.current && (horizontalScrollSpeed !== 0 || verticalScrollSpeed !== 0)) {
+      scrollIntervalRef.current = setInterval(() => {
+        const { horizontal, vertical, column } = scrollSpeedsRef.current;
+        const container = kanbanBoardRef.current;
+
+        if (container && horizontal !== 0) {
+          container.scrollLeft += horizontal;
+        }
+        if (column && vertical !== 0) {
+          column.scrollTop += vertical;
+        }
+
+        // Stop interval if both speeds are 0
+        if (horizontal === 0 && vertical === 0 && scrollIntervalRef.current) {
+          clearInterval(scrollIntervalRef.current);
+          scrollIntervalRef.current = null;
+        }
+      }, 16); // ~60fps
     }
   };
 
@@ -1733,7 +1794,7 @@ export default function ProjectDetail({
             />
           </div>
           )}
-          <div className={styles.kanbanContainer}>
+          <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
             {renderContent()}
           </div>
         </div>

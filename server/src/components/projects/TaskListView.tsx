@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
@@ -14,6 +14,10 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
 import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+
+// Auto-scroll configuration for drag operations
+const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
+const MAX_SCROLL_SPEED = 15; // Maximum scroll speed in pixels per frame
 
 // Column configuration for responsive hiding
 // Lower priority number = higher importance (shown first)
@@ -155,6 +159,9 @@ export default function TaskListView({
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
   const [dragOverPhase, setDragOverPhase] = useState<string | null>(null);
   const [dropIndicatorIndex, setDropIndicatorIndex] = useState<number | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollSpeedRef = useRef<number>(0);
 
   // Filter tasks based on priority and tags
   const filteredTasks = useMemo(() => {
@@ -236,6 +243,15 @@ export default function TaskListView({
     setExpandedPhases(phasesWithTasks);
     setExpandedStatuses(statusesWithTasks);
   }, [phaseGroups]);
+
+  // Cleanup scroll interval on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const togglePhase = (phaseId: string) => {
     setExpandedPhases(prev => {
@@ -360,6 +376,12 @@ export default function TaskListView({
     if (e.currentTarget) {
       e.currentTarget.style.opacity = '1';
     }
+    // Clear scroll interval
+    scrollSpeedRef.current = 0;
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string, taskIndex: number) => {
@@ -370,6 +392,46 @@ export default function TaskListView({
       setDragOverStatus(statusId);
       setDragOverPhase(phaseId);
       setDropIndicatorIndex(taskIndex);
+
+      // Handle auto-scroll
+      const container = scrollContainerRef.current;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const mouseY = e.clientY;
+
+        // Calculate scroll speed based on distance from edges
+        let scrollSpeed = 0;
+        const topEdge = containerRect.top + SCROLL_THRESHOLD;
+        const bottomEdge = containerRect.bottom - SCROLL_THRESHOLD;
+
+        if (mouseY < topEdge && mouseY > containerRect.top) {
+          // Near top edge - scroll up
+          const distance = topEdge - mouseY;
+          scrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        } else if (mouseY > bottomEdge && mouseY < containerRect.bottom) {
+          // Near bottom edge - scroll down
+          const distance = mouseY - bottomEdge;
+          scrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        }
+
+        // Update scroll speed ref
+        scrollSpeedRef.current = scrollSpeed;
+
+        // Start interval if not already running and we need to scroll
+        if (!scrollIntervalRef.current && scrollSpeed !== 0) {
+          scrollIntervalRef.current = setInterval(() => {
+            const currentContainer = scrollContainerRef.current;
+            if (currentContainer && scrollSpeedRef.current !== 0) {
+              currentContainer.scrollTop += scrollSpeedRef.current;
+            }
+            // Stop interval if speed is 0
+            if (scrollSpeedRef.current === 0 && scrollIntervalRef.current) {
+              clearInterval(scrollIntervalRef.current);
+              scrollIntervalRef.current = null;
+            }
+          }, 16); // ~60fps
+        }
+      }
     }
   }, [draggedTask]);
 
@@ -389,11 +451,58 @@ export default function TaskListView({
       setDragOverStatus(statusId);
       setDragOverPhase(phaseId);
       setDropIndicatorIndex(-1); // -1 means drop at end
+
+      // Handle auto-scroll
+      const container = scrollContainerRef.current;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const mouseY = e.clientY;
+
+        // Calculate scroll speed based on distance from edges
+        let scrollSpeed = 0;
+        const topEdge = containerRect.top + SCROLL_THRESHOLD;
+        const bottomEdge = containerRect.bottom - SCROLL_THRESHOLD;
+
+        if (mouseY < topEdge && mouseY > containerRect.top) {
+          // Near top edge - scroll up
+          const distance = topEdge - mouseY;
+          scrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        } else if (mouseY > bottomEdge && mouseY < containerRect.bottom) {
+          // Near bottom edge - scroll down
+          const distance = mouseY - bottomEdge;
+          scrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        }
+
+        // Update scroll speed ref
+        scrollSpeedRef.current = scrollSpeed;
+
+        // Start interval if not already running and we need to scroll
+        if (!scrollIntervalRef.current && scrollSpeed !== 0) {
+          scrollIntervalRef.current = setInterval(() => {
+            const currentContainer = scrollContainerRef.current;
+            if (currentContainer && scrollSpeedRef.current !== 0) {
+              currentContainer.scrollTop += scrollSpeedRef.current;
+            }
+            // Stop interval if speed is 0
+            if (scrollSpeedRef.current === 0 && scrollIntervalRef.current) {
+              clearInterval(scrollIntervalRef.current);
+              scrollIntervalRef.current = null;
+            }
+          }, 16); // ~60fps
+        }
+      }
     }
   }, [draggedTask]);
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string, tasksInStatus: IProjectTask[], dropIndex: number) => {
     e.preventDefault();
+
+    // Clear scroll interval
+    scrollSpeedRef.current = 0;
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
 
     if (!draggedTask || !onTaskMove) {
       setDraggedTask(null);
@@ -515,7 +624,7 @@ export default function TaskListView({
       </div>
 
       {/* Hierarchical rows - scrollable */}
-      <div className="divide-y divide-gray-200 overflow-y-auto flex-1">
+      <div ref={scrollContainerRef} className="divide-y divide-gray-200 overflow-y-auto flex-1">
         {phaseGroups.map(phaseGroup => {
           const isPhaseExpanded = expandedPhases.has(phaseGroup.phase.phase_id);
 
