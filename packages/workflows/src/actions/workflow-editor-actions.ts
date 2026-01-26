@@ -10,8 +10,8 @@ import { serializeWorkflowDefinition, deserializeWorkflowDefinition } from "@alg
 import { getWorkflowRuntime } from "@alga-psa/shared/workflow";
 import { submitWorkflowEventAction } from "./workflow-event-actions";
 import { createWorkflowEventAttachment, deleteWorkflowEventAttachment } from "./workflow-event-attachment-actions";
-import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
-import { validateWorkflowCode, checkWorkflowSecurity } from '@alga-psa/workflows/lib/workflowValidation';
+import { EventCatalogModel } from '../models/eventCatalog';
+import { validateWorkflowCode, checkWorkflowSecurity } from '../lib/workflowValidation';
 import { EventType, EventTypeEnum, ICreateEventCatalogEntry } from "@alga-psa/shared/workflow";
 import { WorkflowRegistrationModel } from "@alga-psa/shared/workflow";
 

@@ -8,7 +8,7 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Button } from "@alga-psa/ui/components/Button";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { Play, Code2, AlertTriangle } from "lucide-react";
-import { getRegisteredWorkflowActions } from "@alga-psa/workflows/actions/workflow-actions/workflowActionRegistry";
+import { getRegisteredWorkflowActions } from "../../actions/workflow-actions/workflowActionRegistry";
 import { ActionParameterDefinition } from "@alga-psa/shared/workflow/core";
 import EditorSkeleton from "@alga-psa/ui/components/skeletons/EditorSkeleton";
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { getProjectProgress, getProjectManager } from '@alga-psa/client-portal/actions';
+import { getProjectProgress, getProjectManager } from '../../actions';
 import { formatDateOnly } from '@alga-psa/core';
 import { Mail } from 'lucide-react';
 

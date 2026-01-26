@@ -6,14 +6,14 @@ import { IProjectTask } from '@alga-psa/types';
 import { IScheduleEntry } from '@alga-psa/types';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
-import { getWorkItemById } from '@alga-psa/scheduling/actions';
+import { getWorkItemById } from '../../actions/workItemActions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
-import { getScheduleEntries } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries } from '../../actions/scheduleActions';
 import { getInteractionById } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
-import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
+import EntryPopup from '../schedule/EntryPopup';
 import { InteractionDetails } from '@alga-psa/clients/components';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 

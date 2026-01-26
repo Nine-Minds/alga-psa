@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { FileSpreadsheet } from 'lucide-react';
-import { CSVMappingManager } from '@alga-psa/integrations/components/csv/CSVMappingManager';
+import { CSVMappingManager } from '../../csv/CSVMappingManager';
 import { Button } from '@alga-psa/ui/components/Button';
 import { FileText, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';

@@ -10,7 +10,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '@alga-psa/workflows/actions/workflow-editor-actions';
+import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '../../actions/workflow-editor-actions';
 import WorkflowEditor from './WorkflowEditor';
 import WorkflowVersionsDialog from './WorkflowVersionsDialog';
 import TestWorkflowModal from './TestWorkflowModal';

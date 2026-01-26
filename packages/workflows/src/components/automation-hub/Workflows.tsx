@@ -27,7 +27,7 @@ import {
   getWorkflow,
   updateWorkflowStatus,
   WorkflowDataWithSystemFlag // Import the type
-} from '@alga-psa/workflows/actions/workflow-editor-actions';
+} from '../../actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from '../workflow-editor/WorkflowEditorComponent';
 import TestWorkflowModal from '../workflow-editor/TestWorkflowModal';

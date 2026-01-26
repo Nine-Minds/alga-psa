@@ -10,18 +10,16 @@ import { useRouter } from 'next/navigation';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import {
   updateActivityStatus,
-  reassignActivity
-} from "@alga-psa/workflows/actions";
-import {
+  reassignActivity,
   cancelWorkflowTask,
   reassignWorkflowTask,
   submitTaskForm
-} from "@alga-psa/workflows/actions";
+} from "../../actions";
 import {
   dismissTask,
   hideTask,
   unhideTask
-} from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
+} from "../../actions/workflow-actions/taskInboxActions";
 import { markAsReadAction } from "@alga-psa/notifications/actions";
 
 interface ActivityActionMenuProps {

@@ -4,77 +4,106 @@
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./components": {
       "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "default": "./src/components/index.ts"
     },
     "./components/*": {
       "types": "./src/components/*.tsx",
-      "import": "./dist/components/*.mjs",
-      "require": "./dist/components/*.js"
+      "default": "./src/components/*.tsx"
     },
     "./ui-reflection": {
       "types": "./src/ui-reflection/index.ts",
-      "import": "./dist/ui-reflection/index.mjs",
-      "require": "./dist/ui-reflection/index.js"
+      "default": "./src/ui-reflection/index.ts"
+    },
+    "./ui-reflection/types": {
+      "types": "./dist/ui-reflection/types.d.ts",
+      "import": "./dist/ui-reflection/types.mjs",
+      "require": "./dist/ui-reflection/types.js"
+    },
+    "./ui-reflection/actionBuilders": {
+      "types": "./dist/ui-reflection/actionBuilders.d.ts",
+      "import": "./dist/ui-reflection/actionBuilders.mjs",
+      "require": "./dist/ui-reflection/actionBuilders.js"
     },
     "./ui-reflection/*": {
       "types": "./src/ui-reflection/*.tsx",
-      "import": "./dist/ui-reflection/*.mjs",
-      "require": "./dist/ui-reflection/*.js"
+      "default": "./src/ui-reflection/*.tsx"
     },
     "./lib": {
       "types": "./src/lib/index.ts",
-      "import": "./dist/lib/index.mjs",
-      "require": "./dist/lib/index.js"
+      "default": "./src/lib/index.ts"
+    },
+    "./lib/utils": {
+      "types": "./dist/lib/utils.d.ts",
+      "import": "./dist/lib/utils.mjs",
+      "require": "./dist/lib/utils.js"
+    },
+    "./lib/colorUtils": {
+      "types": "./dist/lib/colorUtils.d.ts",
+      "import": "./dist/lib/colorUtils.mjs",
+      "require": "./dist/lib/colorUtils.js"
     },
     "./lib/*": {
       "types": "./src/lib/*.ts",
-      "import": "./dist/lib/*.mjs",
-      "require": "./dist/lib/*.js"
+      "default": "./src/lib/*.ts"
     },
     "./lib/i18n/config": {
-      "types": "./src/lib/i18n/config.ts",
+      "types": "./dist/lib/i18n/config.d.ts",
       "import": "./dist/lib/i18n/config.mjs",
       "require": "./dist/lib/i18n/config.js"
     },
+    "./lib/i18n/interpolateFallback": {
+      "types": "./dist/lib/i18n/interpolateFallback.d.ts",
+      "import": "./dist/lib/i18n/interpolateFallback.mjs",
+      "require": "./dist/lib/i18n/interpolateFallback.js"
+    },
     "./lib/i18n/client": {
       "types": "./src/lib/i18n/client.tsx",
-      "import": "./dist/lib/i18n/client.mjs",
-      "require": "./dist/lib/i18n/client.js"
+      "default": "./src/lib/i18n/client.tsx"
     },
     "./lib/i18n/*": {
       "types": "./src/lib/i18n/*.tsx",
-      "import": "./dist/lib/i18n/*.mjs",
-      "require": "./dist/lib/i18n/*.js"
+      "default": "./src/lib/i18n/*.tsx"
     },
     "./hooks": {
       "types": "./src/hooks/index.ts",
-      "import": "./dist/hooks/index.mjs",
-      "require": "./dist/hooks/index.js"
+      "default": "./src/hooks/index.ts"
     },
     "./hooks/*": {
       "types": "./src/hooks/*.ts",
-      "import": "./dist/hooks/*.mjs",
-      "require": "./dist/hooks/*.js"
+      "default": "./src/hooks/*.ts"
     },
     "./editor": {
       "types": "./src/editor/index.ts",
-      "import": "./dist/editor/index.mjs",
-      "require": "./dist/editor/index.js"
+      "default": "./src/editor/index.ts"
     },
     "./editor/*": {
       "types": "./src/editor/*.tsx",
-      "import": "./dist/editor/*.mjs",
-      "require": "./dist/editor/*.js"
+      "default": "./src/editor/*.tsx"
+    },
+    "./services": {
+      "types": "./src/services/index.ts",
+      "default": "./src/services/index.ts"
+    },
+    "./services/*": {
+      "types": "./src/services/*.ts",
+      "default": "./src/services/*.ts"
+    },
+    "./context": {
+      "types": "./src/context/index.ts",
+      "default": "./src/context/index.ts"
+    },
+    "./context/*": {
+      "types": "./src/context/*.tsx",
+      "default": "./src/context/*.tsx"
     }
   },
   "scripts": {

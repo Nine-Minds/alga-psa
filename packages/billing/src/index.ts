@@ -3,13 +3,20 @@
  *
  * Billing module for Alga PSA.
  * Provides invoice management, payment processing, contract billing, and tax calculation.
+ *
+ * BUILDABLE EXPORTS ONLY (no 'use server' or 'use client' directives)
+ *
+ * For runtime code, use direct imports:
+ * - Actions: import { ... } from '@alga-psa/billing/actions'
+ * - Actions (specific): import { ... } from '@alga-psa/billing/actions/invoiceActions'
+ * - Components: import { ... } from '@alga-psa/billing/components'
+ * - Components (specific): import { BillingDashboard } from '@alga-psa/billing/components/billing-dashboard/BillingDashboard'
  */
 
 // Models
-export { Invoice, Contract } from './models';
-
-// Components
-export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
+export { default as Invoice } from './models/invoice';
+export { default as Contract } from './models/contract';
+export { default as ClientTaxSettings } from './models/clientTaxSettings';
 
 // Re-export invoice types from @alga-psa/types
 export type {
@@ -49,7 +56,18 @@ export {
   getTaxImportState,
 } from '@alga-psa/types';
 
+// Constants
+export {
+  CONTRACT_LINE_TYPE_DISPLAY,
+  CONTRACT_LINE_TYPE_OPTIONS,
+  PLAN_TYPE_DISPLAY,
+  PLAN_TYPE_OPTIONS,
+  BILLING_FREQUENCY_DISPLAY,
+  BILLING_FREQUENCY_OPTIONS,
+} from './constants/billing';
+
 // Services
+export { TaxService } from './services/taxService';
 export { AccountingMappingResolver } from './services/accountingMappingResolver';
 export type { MappingResolution } from './services/accountingMappingResolver';
 
@@ -73,11 +91,3 @@ export { KnexInvoiceMappingRepository } from './repositories/invoiceMappingRepos
 
 // Validation
 export { AccountingExportValidation } from './lib/validation/accountingExportValidation';
-
-// Note: This module contains:
-// - Invoice CRUD operations (migrated)
-// - Contract management (migrated)
-// - Payment processing (pending migration)
-// - Tax calculation service (pending migration)
-// - Credit management (pending migration)
-// - 120+ billing dashboard components (pending migration)

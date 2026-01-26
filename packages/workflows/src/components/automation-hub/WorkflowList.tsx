@@ -30,7 +30,7 @@ import {
   listWorkflowDefinitionsAction,
   deleteWorkflowDefinitionAction,
   updateWorkflowDefinitionMetadataAction
-} from '@alga-psa/workflows/actions';
+} from '../../actions';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter, useSearchParams } from 'next/navigation';
 

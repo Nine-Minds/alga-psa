@@ -7,7 +7,7 @@ import { ActivityFilters, NotificationActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { NotificationCard } from "./NotificationCard";
-import { fetchNotificationActivities } from "@alga-psa/workflows/actions";
+import { fetchNotificationActivities } from "../../actions";
 import { NotificationSectionFiltersDialog } from "./filters/NotificationSectionFiltersDialog";
 import { Filter, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { IClientWithLocation } from '@alga-psa/types';
-import { getClientById } from '@alga-psa/clients/actions';
+import { getClientById } from '../../actions';
 import ClientDetails from './ClientDetails';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';

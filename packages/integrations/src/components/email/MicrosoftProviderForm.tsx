@@ -17,10 +17,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './types';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
-import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../../actions/email-actions/emailProviderActions';
+import { initiateEmailOAuth } from '../../actions/email-actions/oauthActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
+import { getInboundTicketDefaults } from '../../actions/email-actions/inboundTicketDefaultsActions';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

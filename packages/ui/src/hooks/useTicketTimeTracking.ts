@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { IntervalTrackingService, IntervalTrackingStateMachine } from '@alga-psa/ui/services';
+import { IntervalTrackingService, IntervalTrackingStateMachine } from '../services';
 
 export function useTicketTimeTracking(
   ticketId: string,

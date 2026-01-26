@@ -32,7 +32,7 @@ import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
-import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
+import { calculateProjectCompletion } from '../lib/projectUtils';
 import { IClient } from '@alga-psa/types';
 import { HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';

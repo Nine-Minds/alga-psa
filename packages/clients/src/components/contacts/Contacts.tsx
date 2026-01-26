@@ -5,7 +5,7 @@ import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
-import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact } from '@alga-psa/clients/actions';
+import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact } from '../../actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';

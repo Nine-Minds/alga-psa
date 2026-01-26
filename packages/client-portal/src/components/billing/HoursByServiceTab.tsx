@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/component
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Clock } from 'lucide-react';
 import { ColumnDefinition } from '@alga-psa/types';
-import type { ClientHoursByServiceResult } from '@alga-psa/client-portal/actions';
+import type { ClientHoursByServiceResult } from '../../actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 
 interface HoursByServiceTabProps {

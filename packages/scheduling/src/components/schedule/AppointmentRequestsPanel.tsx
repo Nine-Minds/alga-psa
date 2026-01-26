@@ -20,7 +20,7 @@ import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
   IAppointmentRequest
-} from '@alga-psa/scheduling/actions';
+} from '../../actions/appointmentRequestManagementActions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { ITicket } from '@alga-psa/types';

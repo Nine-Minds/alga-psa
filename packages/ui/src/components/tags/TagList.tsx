@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X, ChevronDown } from 'lucide-react';
-import { Badge } from '@alga-psa/ui/components/Badge';
+import { Badge } from '../Badge';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
 import { TagEditForm } from './TagEditForm';

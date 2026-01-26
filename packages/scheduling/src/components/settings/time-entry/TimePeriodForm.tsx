@@ -7,7 +7,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
-import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '../../../actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { toPlainDate } from '@alga-psa/core';

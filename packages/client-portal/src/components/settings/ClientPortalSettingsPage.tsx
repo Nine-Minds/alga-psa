@@ -7,7 +7,7 @@ import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "@alga-psa/ui";
-import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
+import { checkClientPortalPermissions } from '../../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 

@@ -10,9 +10,9 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Trash2, Plus, ArrowRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@alga-psa/shared/workflow";
-import { createWorkflowTrigger, createWorkflowEventMappings } from "@alga-psa/workflows/actions/workflow-trigger-actions";
-import { createWorkflowEventAttachment } from "@alga-psa/workflows/actions/workflow-event-attachment-actions";
-import { getAllWorkflowRegistrations } from "@alga-psa/workflows/actions/workflow-runtime-actions";
+import { createWorkflowTrigger, createWorkflowEventMappings } from "../../actions/workflow-trigger-actions";
+import { createWorkflowEventAttachment } from "../../actions/workflow-event-attachment-actions";
+import { getAllWorkflowRegistrations } from "../../actions/workflow-runtime-actions";
 import { getCurrentTenant } from "@alga-psa/tenancy/actions";
 
 interface EventTriggerDialogProps {

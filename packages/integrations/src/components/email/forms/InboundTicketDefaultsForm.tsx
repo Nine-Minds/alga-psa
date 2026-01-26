@@ -8,11 +8,11 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { 
-  createInboundTicketDefaults, 
-  updateInboundTicketDefaults 
-} from '@alga-psa/integrations/actions';
-import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
+import {
+  createInboundTicketDefaults,
+  updateInboundTicketDefaults
+} from '../../../actions/email-actions/inboundTicketDefaultsActions';
+import { getTicketFieldOptions, getCategoriesByBoard } from '../../../actions/email-actions/ticketFieldOptionsActions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';

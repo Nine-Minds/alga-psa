@@ -6,14 +6,13 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
-import { createWorkflowFromTemplate } from "@alga-psa/workflows/actions";
+import { createWorkflowFromTemplate, TemplateData } from "../../actions";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { Code2 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 
-import { TemplateData } from "@alga-psa/workflows/actions";
-import { extractTemplateCode } from "@alga-psa/workflows/lib/templateUtils";
+import { extractTemplateCode } from "../../lib/templateUtils";
 
 interface TemplatePreviewProps {
   isOpen: boolean;

@@ -5,15 +5,15 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/users/actions';
-import { 
-  getClientUserById, 
-  updateClientUser, 
+import {
+  getClientUserById,
+  updateClientUser,
   resetClientUserPassword,
   getClientPortalRoles,
   getClientUserRoles,
   assignClientUserRole,
   removeClientUserRole
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import { useDrawer } from "@alga-psa/ui";
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';

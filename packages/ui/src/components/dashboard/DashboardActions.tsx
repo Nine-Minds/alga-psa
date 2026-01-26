@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@alga-psa/ui/components/Button';
+import { Button } from '../Button';
 
 export function DashboardActions() {
   return (

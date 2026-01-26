@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import ProjectTaskModel from '../models/projectTask';
-import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectModel from '../models/project';
 import TaskTypeModel from '../models/taskType';
 import TaskDependencyModel from '../models/taskDependency';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';

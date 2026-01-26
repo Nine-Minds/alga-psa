@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 import { Clock, ArrowRightFromLine, ArrowLeftToLine } from 'lucide-react';
 import { TicketResponseState } from '@alga-psa/types';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Tooltip } from '../Tooltip';
 
 export interface ResponseStateLabels {
   awaitingClient: string;

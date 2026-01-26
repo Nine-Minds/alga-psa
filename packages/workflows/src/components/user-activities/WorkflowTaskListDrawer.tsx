@@ -8,7 +8,7 @@ import {
   ActivityFilters,
   Activity
 } from '@alga-psa/types';
-import { fetchWorkflowTaskActivities } from '@alga-psa/workflows/actions';
+import { fetchWorkflowTaskActivities } from '../../actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { Button } from '@alga-psa/ui/components/Button';

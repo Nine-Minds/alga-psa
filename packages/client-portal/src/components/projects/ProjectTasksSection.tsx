@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getClientProjectTasks } from '@alga-psa/client-portal/actions';
+import { getClientProjectTasks } from '../../actions';
 import { format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import TaskDocumentUpload from './TaskDocumentUpload';

@@ -7,12 +7,12 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Plus, Settings, Trash2, Edit, CheckCircle, XCircle } from 'lucide-react';
 import { InboundTicketDefaultsForm } from '../forms/InboundTicketDefaultsForm';
-import { 
-  getInboundTicketDefaults, 
-  deleteInboundTicketDefaults 
-} from '@alga-psa/integrations/actions';
+import {
+  getInboundTicketDefaults,
+  deleteInboundTicketDefaults
+} from '../../../actions/email-actions/inboundTicketDefaultsActions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
-import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getTicketFieldOptions } from '../../../actions/email-actions/ticketFieldOptionsActions';
 import { MoreVertical } from 'lucide-react';
 import { 
   DropdownMenu,

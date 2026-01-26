@@ -3,9 +3,9 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { WorkflowTriggerModel } from '@alga-psa/workflows/models/workflowTrigger';
-import { WorkflowEventMappingModel } from '@alga-psa/workflows/models/workflowEventMapping';
-import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
+import { WorkflowTriggerModel } from '../models/workflowTrigger';
+import { WorkflowEventMappingModel } from '../models/workflowEventMapping';
+import { EventCatalogModel } from '../models/eventCatalog';
 import {
   IWorkflowTrigger,
   ICreateWorkflowTrigger,

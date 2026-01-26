@@ -16,7 +16,7 @@ import type {
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { addDays } from 'date-fns';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectModel from '../models/project';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';

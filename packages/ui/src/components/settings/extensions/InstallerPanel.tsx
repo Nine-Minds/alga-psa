@@ -2,8 +2,8 @@
 
 import React from 'react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../Card';
+import { Button } from '../../Button';
 
 /**
  * OSS Stub Panel

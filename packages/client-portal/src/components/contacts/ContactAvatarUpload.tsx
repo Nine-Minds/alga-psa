@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
-import { uploadContactAvatar, deleteContactAvatar } from '@alga-psa/client-portal/actions';
+import { uploadContactAvatar, deleteContactAvatar } from '../../actions';
 
 interface ContactAvatarUploadProps {
   contactId: string;

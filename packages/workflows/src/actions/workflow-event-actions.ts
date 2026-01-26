@@ -4,12 +4,12 @@
 
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { getActionRegistry } from '@alga-psa/shared/workflow/core';
-import { workflowConfig } from '@alga-psa/workflows/config/workflowConfig';
+import { workflowConfig } from '../config/workflowConfig';
 import { withAuth } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { getEventBus } from '@alga-psa/event-bus';
-import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog'; // Added import
+import { EventCatalogModel } from '../models/eventCatalog';
 import { getWorkflowsForEventType } from './workflow-event-attachment-actions';
 
 /**

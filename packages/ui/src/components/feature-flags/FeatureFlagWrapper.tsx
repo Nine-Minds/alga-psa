@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useFeatureFlag, useFeatureFlags } from '@alga-psa/ui/hooks';
+import { useFeatureFlag, useFeatureFlags } from '../../hooks';
 import { FeaturePlaceholder } from './FeaturePlaceholder';
 
 interface FeatureFlagWrapperProps {

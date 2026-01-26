@@ -21,8 +21,8 @@ import {
   Cloud,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
-import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
-import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
+import { EmailProviderConfiguration } from '../../email/EmailProviderConfiguration';
+import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';

@@ -14,7 +14,7 @@ import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
-import { getMyAppointmentRequests, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
+import { getMyAppointmentRequests, cancelAppointmentRequest } from '../../actions';
 
 interface AppointmentRequest {
   appointment_request_id: string;

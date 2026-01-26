@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
-import { getClientNoteContent, saveClientNote } from '@alga-psa/clients/actions';
+import { getClientNoteContent, saveClientNote } from '../actions';
 import { toast } from 'react-hot-toast';
 
 type PartialBlock = unknown;

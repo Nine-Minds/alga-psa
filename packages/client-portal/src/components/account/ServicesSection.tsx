@@ -12,7 +12,7 @@ import {
   downgradeService,
   type Service,
   type ServicePlan
-} from "@alga-psa/client-portal/actions";
+} from "../../actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ServicesSection() {

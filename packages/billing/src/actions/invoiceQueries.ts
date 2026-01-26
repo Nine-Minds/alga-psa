@@ -12,8 +12,8 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate } from '@alga-psa/core';
-import Invoice from '@alga-psa/billing/models/invoice';
-import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
+import Invoice from '../models/invoice';
+import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '../services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
 
 // Types for paginated invoice fetching

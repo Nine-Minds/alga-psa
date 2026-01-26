@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Label } from '@alga-psa/ui/components/Label';
+import { Dialog } from '../Dialog';
+import { Input } from '../Input';
+import { Button } from '../Button';
+import { Label } from '../Label';
 import { ITag } from '@alga-psa/types';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { toast } from 'react-hot-toast';
 import tinycolor from 'tinycolor2';
 import { Trash2, ShieldAlert } from 'lucide-react';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { ConfirmationDialog } from '../ConfirmationDialog';
 import { handleError } from '../../lib/errorHandling';
 
 const PRESET_COLORS = [

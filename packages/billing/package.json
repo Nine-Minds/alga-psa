@@ -2,39 +2,74 @@
   "name": "@alga-psa/billing",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./constants/billing": {
+      "types": "./dist/constants/billing.d.ts",
+      "import": "./dist/constants/billing.js",
+      "require": "./dist/constants/billing.cjs"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js",
+      "require": "./dist/models/index.cjs"
+    },
+    "./models/*": {
+      "types": "./dist/models/*.d.ts",
+      "import": "./dist/models/*.js",
+      "require": "./dist/models/*.cjs"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js",
+      "require": "./dist/schemas/index.cjs"
+    },
+    "./repositories/*": {
+      "types": "./dist/repositories/*.d.ts",
+      "import": "./dist/repositories/*.js",
+      "require": "./dist/repositories/*.cjs"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "import": "./dist/services/index.js",
+      "require": "./dist/services/index.cjs"
+    },
+    "./services/*": {
+      "types": "./dist/services/*.d.ts",
+      "import": "./dist/services/*.js",
+      "require": "./dist/services/*.cjs"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "require": "./dist/lib/*.cjs"
+    },
+    "./lib/contractLineDisambiguation": {
+      "types": "./src/lib/contractLineDisambiguation.ts",
+      "import": "./src/lib/contractLineDisambiguation.ts"
     },
     "./actions": {
       "types": "./src/actions/index.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "types": "./src/actions/*.ts",
+      "import": "./src/actions/*.ts"
     },
     "./components": {
       "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./src/components/index.ts"
     },
-    "./models": {
-      "types": "./src/models/index.ts",
-      "import": "./dist/models/index.mjs",
-      "require": "./dist/models/index.js"
-    },
-    "./schemas": {
-      "types": "./src/schemas/index.ts",
-      "import": "./dist/schemas/index.mjs",
-      "require": "./dist/schemas/index.js"
-    },
-    "./services": {
-      "types": "./src/services/index.ts",
-      "import": "./dist/services/index.mjs",
-      "require": "./dist/services/index.js"
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
     }
   },
   "scripts": {

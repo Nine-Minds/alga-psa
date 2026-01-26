@@ -13,7 +13,7 @@ import {
   exportClientsToCSV,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
-} from '@alga-psa/clients/actions';
+} from '../../actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useRouter } from 'next/navigation';

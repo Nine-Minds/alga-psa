@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Dialog, DialogContent, DialogFooter } from '../../Dialog';
+import { Button } from '../../Button';
+import { Checkbox } from '../../Checkbox';
 import type { IStandardStatus } from '@alga-psa/types';
 
 interface StatusImportDialogProps {

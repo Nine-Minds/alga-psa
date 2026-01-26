@@ -5,7 +5,7 @@ import { ArrowLeft, CheckCircle, Clock, FileText, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
-import { verifyClientPortalPayment } from '@alga-psa/client-portal/actions/clientPaymentActions';
+import { verifyClientPortalPayment } from '../../actions/clientPaymentActions';
 
 interface PaymentSuccessContentProps {
   invoiceId: string;

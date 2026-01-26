@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Table } from '@alga-psa/ui/components/Table';
-import { getClientClient } from '@alga-psa/client-portal/actions';
-import { getClientContractLine, getClientInvoices } from '@alga-psa/client-portal/actions';
+import { getClientClient } from '../../actions';
+import { getClientContractLine, getClientInvoices } from '../../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 

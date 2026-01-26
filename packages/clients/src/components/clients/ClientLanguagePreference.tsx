@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { updateClientLocaleAction, getClientLocaleAction } from '@alga-psa/clients/actions';
+import { updateClientLocaleAction, getClientLocaleAction } from '../../actions';
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 

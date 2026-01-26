@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getPreferenceWithFallback, savePreference } from '@alga-psa/ui/lib';
+import { getPreferenceWithFallback, savePreference } from '../lib/cookies';
 
 interface UseCollapsiblePreferenceReturn {
   isCollapsed: boolean;

@@ -7,7 +7,7 @@ import type { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Download, X, Mail } from 'lucide-react';
-import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@alga-psa/client-portal/actions';
+import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '../../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 

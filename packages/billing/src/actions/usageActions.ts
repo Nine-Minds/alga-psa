@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex } from '@alga-psa/db';
-import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions

@@ -28,7 +28,7 @@ import {
   replayWorkflowRunAction,
   resumeWorkflowRunAction,
   retryWorkflowRunAction
-} from '@alga-psa/workflows/actions';
+} from '../../../actions';
 
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime';
 import { pathDepth } from '@shared/workflow/runtime/utils/nodePathUtils';

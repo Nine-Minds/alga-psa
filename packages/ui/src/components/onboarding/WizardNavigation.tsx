@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@alga-psa/ui/components/Button';
+import { Button } from '../Button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface WizardNavigationProps {

@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { RefreshCw, Filter, XCircleIcon } from 'lucide-react';
-import { fetchActivities } from '@alga-psa/workflows/actions';
+import { fetchActivities } from '../../actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';

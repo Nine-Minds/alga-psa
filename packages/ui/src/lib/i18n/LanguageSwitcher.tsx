@@ -6,8 +6,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useI18n } from '@alga-psa/ui/lib/i18n/client';
-import type { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { useI18n } from './client';
+import type { SupportedLocale } from './config';
 
 interface LanguageSwitcherProps {
   /** Visual variant of the switcher */

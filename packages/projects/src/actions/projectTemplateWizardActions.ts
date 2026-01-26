@@ -12,7 +12,7 @@ import type {
   TemplateStatusMapping,
   TemplateTask,
   TemplateWizardData,
-} from '@alga-psa/projects/types/templateWizard';
+} from '../types/templateWizard';
 
 async function checkPermission(
   user: IUser,

@@ -19,7 +19,7 @@ import {
   getAvailableServicesAndTickets,
   getAvailableDatesForService,
   getAvailableTimeSlotsForDate
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 
 interface AppointmentRequest {
   appointment_request_id: string;

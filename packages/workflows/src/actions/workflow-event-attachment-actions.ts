@@ -1,8 +1,8 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { WorkflowEventAttachmentModel } from '@alga-psa/workflows/models/workflowEventAttachment';
-import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
+import { WorkflowEventAttachmentModel } from '../models/workflowEventAttachment';
+import { EventCatalogModel } from '../models/eventCatalog';
 import {
   IWorkflowEventAttachment,
   ICreateWorkflowEventAttachment, // Will need update in shared types

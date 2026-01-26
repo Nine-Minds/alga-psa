@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '../Input';
+import { Button } from '../Button';
 import { Plus } from 'lucide-react';
 import { ITag } from '@alga-psa/types';
 import { generateEntityColor } from '../../lib/colorUtils';

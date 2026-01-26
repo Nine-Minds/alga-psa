@@ -7,14 +7,14 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { PhoneInput } from "@alga-psa/ui/components/PhoneInput";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
-import { addContact } from '@alga-psa/clients/actions';
+import { addContact } from '../../actions';
 import { ClientPicker } from '../clients/ClientPicker';
 import type { IClient } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getAllCountries, ICountry } from '../../actions';
 import {
   validateContactName,
   validateEmailAddress,

@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import type { IClientLocation } from '@alga-psa/types';
-import { 
-  getClientLocations, 
-  createClientLocation, 
-  updateClientLocation, 
+import {
+  getClientLocations,
+  createClientLocation,
+  updateClientLocation,
   deleteClientLocation,
-  setDefaultClientLocation 
-} from '@alga-psa/clients/actions';
+  setDefaultClientLocation
+} from '../../actions';
 import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getAllCountries, ICountry } from '../../actions';
 import { ITaxRegion } from '@alga-psa/types';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Button } from '@alga-psa/ui/components/Button';

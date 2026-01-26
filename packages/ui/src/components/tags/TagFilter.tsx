@@ -2,12 +2,12 @@
 
 import React, { useState, useSyncExternalStore } from 'react';
 import { Tag as TagIcon } from 'lucide-react';
-import { Input } from '@alga-psa/ui/components/Input';
+import { Input } from '../Input';
 import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
 import { filterTagsByText } from '../../lib/utils';
 import { ITag } from '@alga-psa/types';
-import Spinner from '@alga-psa/ui/components/Spinner';
+import Spinner from '../Spinner';
 
 interface TagFilterProps {
   tags: ITag[];

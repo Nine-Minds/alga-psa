@@ -18,7 +18,7 @@ import {
   getGoogleIntegrationStatus,
   resetGoogleProvidersToDisconnected,
   saveGoogleIntegrationSettings
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/googleActions';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 
 export function GoogleIntegrationSettings() {

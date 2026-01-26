@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { AlertCircle } from 'lucide-react';
-import { createClientTicket } from '@alga-psa/client-portal/actions';
+import { createClientTicket } from '../../actions';
 import { getClientTicketFormData } from '@alga-psa/tickets/actions/ticketFormActions';
 import { IPriority } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';

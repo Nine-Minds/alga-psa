@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { History } from 'lucide-react';
-import LogsHistoryWorkflowTable from '@alga-psa/workflows/components/logs-history/LogsHistoryWorkflowTable';
-import { WorkflowExecutionDetails } from '@alga-psa/workflows/components/logs-history/WorkflowExecutionDetails';
+import LogsHistoryWorkflowTable from '../logs-history/LogsHistoryWorkflowTable';
+import { WorkflowExecutionDetails } from '../logs-history/WorkflowExecutionDetails';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function LogsHistory() {

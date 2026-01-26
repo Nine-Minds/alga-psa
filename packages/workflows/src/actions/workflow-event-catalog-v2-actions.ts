@@ -10,7 +10,7 @@ import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from './workflow-runtime-v2-actions';
-import { createEventCatalogEntry } from '@alga-psa/workflows/actions';
+import { createEventCatalogEntry } from './event-catalog-actions';
 
 type PermissionLevel = 'read' | 'manage' | 'publish' | 'admin';
 

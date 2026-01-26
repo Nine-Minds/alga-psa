@@ -2,24 +2,111 @@
   "name": "@alga-psa/workflows",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js",
+      "require": "./dist/models/index.cjs"
+    },
+    "./models/*": {
+      "types": "./dist/models/*.d.ts",
+      "import": "./dist/models/*.js",
+      "require": "./dist/models/*.cjs"
+    },
+    "./config/*": {
+      "types": "./dist/config/*.d.ts",
+      "import": "./dist/config/*.js",
+      "require": "./dist/config/*.cjs"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "require": "./dist/lib/*.cjs"
+    },
+    "./forms/*": {
+      "types": "./dist/forms/*.d.ts",
+      "import": "./dist/forms/*.js",
+      "require": "./dist/forms/*.cjs"
+    },
+    "./visualization/types/*": {
+      "types": "./dist/visualization/types/*.d.ts",
+      "import": "./dist/visualization/types/*.js",
+      "require": "./dist/visualization/types/*.cjs"
+    },
+    "./visualization/ast": {
+      "types": "./dist/visualization/ast/index.d.ts",
+      "import": "./dist/visualization/ast/index.js",
+      "require": "./dist/visualization/ast/index.cjs"
+    },
+    "./visualization/ast/*": {
+      "types": "./dist/visualization/ast/*.d.ts",
+      "import": "./dist/visualization/ast/*.js",
+      "require": "./dist/visualization/ast/*.cjs"
+    },
+    "./actions/workflow-runtime-v2-schemas": {
+      "types": "./dist/actions/workflow-runtime-v2-schemas.d.ts",
+      "import": "./dist/actions/workflow-runtime-v2-schemas.js",
+      "require": "./dist/actions/workflow-runtime-v2-schemas.cjs"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "types": "./src/actions/*.ts",
+      "import": "./src/actions/*.ts"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "types": "./src/components/index.ts",
+      "import": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
+    },
+    "./visualization/hooks/*": {
+      "types": "./src/visualization/hooks/*.ts",
+      "import": "./src/visualization/hooks/*.ts"
+    },
+    "./visualization/services/*": {
+      "types": "./src/visualization/services/*.ts",
+      "import": "./src/visualization/services/*.ts"
+    },
+    "./visualization/types/visualizationTypes": {
+      "types": "./src/visualization/types/visualizationTypes.ts",
+      "import": "./src/visualization/types/visualizationTypes.ts"
+    },
+    "./visualization/types/statusMappingTypes": {
+      "types": "./src/visualization/types/statusMappingTypes.ts",
+      "import": "./src/visualization/types/statusMappingTypes.ts"
+    },
+    "./hooks/*": {
+      "types": "./src/hooks/*.ts",
+      "import": "./src/hooks/*.ts"
+    },
+    "./forms/customWidgets": {
+      "types": "./src/forms/customWidgets.tsx",
+      "import": "./src/forms/customWidgets.tsx"
+    },
+    "./ee/*": {
+      "types": "./src/ee/*.tsx",
+      "import": "./src/ee/*.tsx"
+    },
+    "./oss/*": {
+      "types": "./src/oss/*.tsx",
+      "import": "./src/oss/*.tsx"
+    },
+    "./entry": {
+      "types": "./src/entry.ts",
+      "import": "./src/entry.ts"
     }
   },
   "scripts": {

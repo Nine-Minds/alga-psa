@@ -2,29 +2,119 @@
   "name": "@alga-psa/integrations",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "types": "./src/actions/*.ts",
+      "import": "./src/actions/*.ts"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "types": "./src/components/index.ts",
+      "import": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "types": "./src/components/*.ts",
+      "import": "./src/components/*.ts"
+    },
+    "./components/email/types": {
+      "types": "./dist/components/email/types.d.ts",
+      "import": "./dist/components/email/types.js",
+      "require": "./dist/components/email/types.cjs"
+    },
+    "./components/email/emailProviderDefaults": {
+      "types": "./dist/components/email/emailProviderDefaults.d.ts",
+      "import": "./dist/components/email/emailProviderDefaults.js",
+      "require": "./dist/components/email/emailProviderDefaults.cjs"
+    },
+    "./components/email/providers/gmail/schemas": {
+      "types": "./dist/components/email/providers/gmail/schemas.d.ts",
+      "import": "./dist/components/email/providers/gmail/schemas.js",
+      "require": "./dist/components/email/providers/gmail/schemas.cjs"
+    },
+    "./components/accounting-mappings/types": {
+      "types": "./dist/components/accounting-mappings/types.d.ts",
+      "import": "./dist/components/accounting-mappings/types.js",
+      "require": "./dist/components/accounting-mappings/types.cjs"
+    },
+    "./components/csv/csvMappingModules": {
+      "types": "./src/components/csv/csvMappingModules.ts",
+      "import": "./src/components/csv/csvMappingModules.ts"
+    },
+    "./components/csv/xeroCsvMappingModules": {
+      "types": "./src/components/csv/xeroCsvMappingModules.ts",
+      "import": "./src/components/csv/xeroCsvMappingModules.ts"
+    },
+    "./components/csv/CSVMappingManager": {
+      "types": "./src/components/csv/CSVMappingManager.tsx",
+      "import": "./src/components/csv/CSVMappingManager.tsx"
+    },
+    "./components/csv/XeroCsvMappingManager": {
+      "types": "./src/components/csv/XeroCsvMappingManager.tsx",
+      "import": "./src/components/csv/XeroCsvMappingManager.tsx"
     },
     "./email": {
       "types": "./dist/email/index.d.ts",
-      "import": "./dist/email/index.mjs",
-      "require": "./dist/email/index.js"
+      "import": "./dist/email/index.js",
+      "require": "./dist/email/index.cjs"
+    },
+    "./email/providers/entry": {
+      "types": "./src/email/providers/entry.ts",
+      "import": "./src/email/providers/entry.ts"
+    },
+    "./email/settings/entry": {
+      "types": "./src/email/settings/entry.ts",
+      "import": "./src/email/settings/entry.ts"
+    },
+    "./email/domains/*": {
+      "types": "./dist/email/domains/*.d.ts",
+      "import": "./dist/email/domains/*.js",
+      "require": "./dist/email/domains/*.cjs"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "require": "./dist/lib/*.cjs"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js",
+      "require": "./dist/models/index.cjs"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "import": "./dist/services/index.js",
+      "require": "./dist/services/index.cjs"
+    },
+    "./services/*": {
+      "types": "./dist/services/*.d.ts",
+      "import": "./dist/services/*.js",
+      "require": "./dist/services/*.cjs"
+    },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "import": "./dist/utils/*.js",
+      "require": "./dist/utils/*.cjs"
+    },
+    "./webhooks/*": {
+      "types": "./dist/webhooks/*.d.ts",
+      "import": "./dist/webhooks/*.js",
+      "require": "./dist/webhooks/*.cjs"
+    },
+    "./routes/*": {
+      "types": "./dist/routes/*.d.ts",
+      "import": "./dist/routes/*.js",
+      "require": "./dist/routes/*.cjs"
     }
   },
   "scripts": {

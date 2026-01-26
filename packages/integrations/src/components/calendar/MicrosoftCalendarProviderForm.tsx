@@ -16,7 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
-import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '@alga-psa/integrations/actions';
+import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '../../actions/calendarActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';

@@ -9,7 +9,7 @@ import React, { useState, useEffect, useId } from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
-import { getScheduleEntrySyncStatus } from '@alga-psa/integrations/actions';
+import { getScheduleEntrySyncStatus } from '../../actions/calendarActions';
 import { CalendarSyncStatus } from '@alga-psa/types';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 

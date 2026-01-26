@@ -6,8 +6,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { LOCALE_CONFIG, type SupportedLocale } from './config';
+import { Checkbox } from '../../components/Checkbox';
 
 interface ClientPortalLanguageConfigProps {
   /** Current tenant ID */

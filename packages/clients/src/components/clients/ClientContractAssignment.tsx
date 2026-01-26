@@ -31,8 +31,8 @@ import {
   updateClientContract,
   deactivateClientContract,
   applyContractToClient
-} from '@alga-psa/clients/actions';
-import { getClientById } from '@alga-psa/clients/actions';
+} from '../../actions';
+import { getClientById } from '../../actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';

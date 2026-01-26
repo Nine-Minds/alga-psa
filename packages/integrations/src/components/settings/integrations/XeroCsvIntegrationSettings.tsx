@@ -4,7 +4,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { FileSpreadsheet, FileText, ExternalLink, Info, Download, Upload } from 'lucide-react';
-import { XeroCsvMappingManager } from '@alga-psa/integrations/components/csv/XeroCsvMappingManager';
+import { XeroCsvMappingManager } from '../../csv/XeroCsvMappingManager';
 import { XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -13,8 +13,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getXeroCsvSettings,
   updateXeroCsvSettings,
-  XeroCsvSettings as XeroCsvSettingsType
-} from '@alga-psa/integrations/actions';
+  type XeroCsvSettings as XeroCsvSettingsType
+} from '../../../actions/integrations/xeroCsvActions';
 
 /**
  * Xero CSV Integration Settings Component

@@ -16,9 +16,10 @@ import {
   getLatestWorkflowRunAction,
   listWorkflowSchemaRefsAction,
   listWorkflowDefinitionVersionsAction,
-  startWorkflowRunAction
-} from '@alga-psa/workflows/actions';
-import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
+  startWorkflowRunAction,
+  getEventCatalogEntries,
+  getEventCatalogEntryByEventType
+} from '../../../actions';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import {
   filterEventCatalogEntries,

@@ -18,12 +18,12 @@ import { toast } from 'react-hot-toast';
 import {
   getEventCatalogEntries,
   getEventCategories
-} from '@alga-psa/workflows/actions';
+} from '../../actions';
 import {
   getWorkflowEventAttachmentsForEventType,
   deleteWorkflowEventAttachment,
   updateWorkflowEventAttachment
-} from '@alga-psa/workflows/actions/workflow-event-attachment-actions';
+} from '../../actions/workflow-event-attachment-actions';
 import {
   IEventCatalogEntry,
   IWorkflowEventAttachment

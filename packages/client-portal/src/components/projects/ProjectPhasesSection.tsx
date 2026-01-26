@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getClientProjectPhases } from '@alga-psa/client-portal/actions';
+import { getClientProjectPhases } from '../../actions';
 import { format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 

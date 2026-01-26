@@ -13,7 +13,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CheckCircle, AlertCircle, XCircle, Clock, Copy } from 'lucide-react';
 import type { EmailProvider } from '../types';
-import { runMicrosoft365Diagnostics } from '@alga-psa/integrations/actions';
+import { runMicrosoft365Diagnostics } from '../../../actions/email-actions/emailProviderActions';
 import type { Microsoft365DiagnosticsReport, Microsoft365DiagnosticsStep } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 
 function statusIcon(status: Microsoft365DiagnosticsStep['status']) {

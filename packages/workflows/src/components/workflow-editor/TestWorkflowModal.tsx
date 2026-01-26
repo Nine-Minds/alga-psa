@@ -7,9 +7,9 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
+import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '../../actions';
 import { IEventCatalogEntry } from '@alga-psa/shared/workflow';
-import *  as workflowEditorActions from '@alga-psa/workflows/actions/workflow-editor-actions';
+import *  as workflowEditorActions from '../../actions/workflow-editor-actions';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // JSON Editor component

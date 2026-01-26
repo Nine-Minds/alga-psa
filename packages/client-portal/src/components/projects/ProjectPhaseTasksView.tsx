@@ -5,7 +5,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getClientProjectPhases,
   getClientProjectTasks
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import { format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import TaskDocumentUpload from './TaskDocumentUpload';

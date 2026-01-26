@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { GoogleCalendarProviderForm } from './GoogleCalendarProviderForm';
 import { MicrosoftCalendarProviderForm } from './MicrosoftCalendarProviderForm';
-import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from '@alga-psa/integrations/actions';
+import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from '../../actions/calendarActions';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Badge } from '@alga-psa/ui/components/Badge';

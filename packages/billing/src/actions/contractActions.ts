@@ -1,7 +1,7 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
-import Contract from '@alga-psa/billing/models/contract';
+import Contract from '../models/contract';
 import ContractTemplateModel from '../models/contractTemplate';
 import {
   IContract,

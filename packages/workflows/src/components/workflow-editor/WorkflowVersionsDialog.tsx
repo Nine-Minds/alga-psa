@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@alga-psa/ui/components/Button";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { History, Check, AlertCircle } from "lucide-react";
-import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "@alga-psa/workflows/actions/workflow-editor-actions";
+import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "../../actions/workflow-editor-actions";
 import { toast } from "react-hot-toast";
 
 interface WorkflowVersionsDialogProps {

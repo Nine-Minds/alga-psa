@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { ITimeEntry, ITimeSheetView, IUserWithRoles } from '@alga-psa/types';
-import { saveTimeEntry, fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
+import { saveTimeEntry, fetchOrCreateTimeSheet } from '../../../../actions/timeEntryActions';
 import { TimeSheet } from './TimeSheet';
 
 interface TimeSheetClientProps {

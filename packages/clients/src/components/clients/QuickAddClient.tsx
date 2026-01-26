@@ -19,8 +19,8 @@ import {
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { createClient, createClientLocation, getAllCountries, ICountry } from '@alga-psa/clients/actions';
-import { createClientContact } from '@alga-psa/clients/actions';
+import { createClient, createClientLocation, getAllCountries, ICountry } from '../../actions';
+import { createClientContact } from '../../actions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';

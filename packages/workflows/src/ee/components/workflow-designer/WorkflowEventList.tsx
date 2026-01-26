@@ -14,7 +14,7 @@ import {
   getWorkflowEventAction,
   listWorkflowEventSummaryAction,
   listWorkflowEventsAction
-} from '@alga-psa/workflows/actions';
+} from '../../../actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type WorkflowEventRecord = {

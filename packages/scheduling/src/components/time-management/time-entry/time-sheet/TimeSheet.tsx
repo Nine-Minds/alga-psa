@@ -15,7 +15,7 @@ import { IExtendedWorkItem } from '@alga-psa/types';
 import TimeEntryDialog from './TimeEntryDialog';
 import { AddWorkItemDialog } from './AddWorkItemDialog';
 import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from '../../../../actions/timeEntryActions';
-import { updateScheduleEntry } from '@alga-psa/scheduling/actions';
+import { updateScheduleEntry } from '../../../../actions/scheduleActions';
 import { toast } from 'react-hot-toast';
 import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '../../../../actions/timeSheetActions';
 import { useDrawer } from "@alga-psa/ui";

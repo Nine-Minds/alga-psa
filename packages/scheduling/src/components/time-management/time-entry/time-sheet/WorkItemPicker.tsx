@@ -8,7 +8,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from '@alga-psa/types';
 import { ITimePeriodView } from '@alga-psa/types';
-import { searchPickerWorkItems, createWorkItem } from '@alga-psa/scheduling/actions';
+import { searchPickerWorkItems, createWorkItem } from '../../../../actions/workItemActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';

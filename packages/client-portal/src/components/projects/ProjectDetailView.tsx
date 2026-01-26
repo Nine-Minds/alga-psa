@@ -13,7 +13,7 @@ import {
   getClientProjectPhases,
   getClientProjectTasks,
   getClientProjectStatuses
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import ClientKanbanBoard from './ClientKanbanBoard';
 import ClientTaskListView from './ClientTaskListView';
 import { LayoutGrid, List } from 'lucide-react';

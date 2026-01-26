@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
 import TimePeriodForm from './TimePeriodForm';
-import { getTimePeriodSettings, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { getTimePeriodSettings, fetchAllTimePeriods } from '../../../actions/timePeriodsActions';
 import { MoreVertical } from 'lucide-react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';

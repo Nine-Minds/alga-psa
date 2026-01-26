@@ -17,9 +17,9 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Eye, EyeOff } from 'lucide-react';
 import type { EmailProvider } from './types';
-import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions';
+import { createEmailProvider, updateEmailProvider } from '../../actions/email-actions/emailProviderActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
+import { getInboundTicketDefaults } from '../../actions/email-actions/inboundTicketDefaultsActions';
 
 const imapProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

@@ -6,7 +6,7 @@ import { ActivityFilters, ScheduleActivity, ActivityType } from '@alga-psa/types
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ScheduleCard } from './ActivityCard';
-import { fetchScheduleActivities } from '@alga-psa/workflows/actions';
+import { fetchScheduleActivities } from '../../actions';
 import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
 import { FilterIcon, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';

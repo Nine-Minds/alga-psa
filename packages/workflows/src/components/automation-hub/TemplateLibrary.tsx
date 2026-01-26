@@ -5,7 +5,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { LayoutTemplate, Search, Filter } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getAllTemplates, TemplateData } from '@alga-psa/workflows/actions';
+import { getAllTemplates, TemplateData } from '../../actions';
 import TemplatePreview from '../template-library/TemplatePreview';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { toast } from 'react-hot-toast';

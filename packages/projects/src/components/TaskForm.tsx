@@ -8,7 +8,7 @@ import { ITag } from '@alga-psa/types';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { getServices } from '../actions/serviceCatalogActions';
 import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,

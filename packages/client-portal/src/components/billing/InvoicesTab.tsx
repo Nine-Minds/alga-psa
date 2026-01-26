@@ -11,7 +11,7 @@ import {
   getClientInvoices,
   downloadClientInvoicePdf,
   sendClientInvoiceEmail,
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import ClientInvoicePreview from './ClientInvoicePreview';
 import {
   DropdownMenu,

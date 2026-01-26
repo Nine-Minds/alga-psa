@@ -22,7 +22,7 @@ import {
   getClientUsersForClient
 } from '@alga-psa/users/actions';
 import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
-import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
+import { createClientUser, getClientPortalRoles, getClientUserRoles } from '../../actions';
 import type { IUser, IPermission } from '@alga-psa/types';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "@alga-psa/ui";

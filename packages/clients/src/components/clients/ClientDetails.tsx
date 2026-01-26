@@ -27,7 +27,7 @@ import {
   deactivateClientContacts,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
-} from '@alga-psa/clients/actions';
+} from '../../actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';

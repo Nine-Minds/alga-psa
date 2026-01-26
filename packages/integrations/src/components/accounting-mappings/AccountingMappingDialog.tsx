@@ -6,7 +6,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
+import type { ExternalEntityMapping } from '../../actions/externalMappingActions';
 import type {
   AccountingMappingContext,
   AccountingMappingEntityOption,

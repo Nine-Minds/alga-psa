@@ -27,7 +27,7 @@ import {
   addClientTaxRate,
   removeClientTaxRate,
   updateDefaultClientTaxRate,
-} from '@alga-psa/clients/actions';
+} from '../../actions';
 import {
   getContractLinesAsync,
   getServiceCategoriesAsync,

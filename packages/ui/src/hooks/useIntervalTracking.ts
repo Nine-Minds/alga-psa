@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { IntervalTrackingService } from '@alga-psa/ui/services';
+import { IntervalTrackingService } from '../services';
 
 export function useIntervalTracking(userId?: string) {
   const [intervalCount, setIntervalCount] = useState(0);

@@ -1,4 +1,4 @@
-import type { ExternalEntityMapping, CreateMappingData, UpdateMappingData } from '@alga-psa/integrations/actions';
+import type { ExternalEntityMapping, CreateMappingData, UpdateMappingData } from '../../actions/externalMappingActions';
 
 export type AccountingMappingEntityOption = {
   id: string;

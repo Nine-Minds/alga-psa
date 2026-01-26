@@ -11,7 +11,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from '@alga-psa/types';
-import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from '@alga-psa/clients/actions';
+import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from '../../actions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { parseCSV, unparseCSV, validateCSVHeaders } from '@alga-psa/core';

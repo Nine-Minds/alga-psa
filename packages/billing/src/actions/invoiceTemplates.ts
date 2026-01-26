@@ -9,7 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'node:util';
 import { createTenantKnex } from '@alga-psa/db';
-import Invoice from '@alga-psa/billing/models/invoice'; // Assuming Invoice model has template methods
+import Invoice from '../models/invoice'; // Assuming Invoice model has template methods
 import {
     IInvoiceTemplate,
     ICustomField,

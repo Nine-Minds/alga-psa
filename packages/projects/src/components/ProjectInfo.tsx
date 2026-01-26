@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { IClient, IProject, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
-import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
+import { calculateProjectCompletion } from '../lib/projectUtils';
 import { Edit2, Save } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';

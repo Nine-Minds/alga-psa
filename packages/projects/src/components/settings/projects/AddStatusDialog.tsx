@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import {
   getTenantProjectStatuses,
   addStatusToProject
-} from '@alga-psa/projects/actions/projectTaskStatusActions';
+} from '../../../actions/projectTaskStatusActions';
 import type { IStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 

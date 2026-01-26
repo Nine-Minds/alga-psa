@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { IContact } from '@alga-psa/types';
-import { getContactsByClient } from '@alga-psa/clients/actions';
+import { getContactsByClient } from '../../actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';

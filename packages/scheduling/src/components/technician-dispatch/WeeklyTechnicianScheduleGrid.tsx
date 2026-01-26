@@ -10,7 +10,7 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { IScheduleEntry } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { CalendarStyleProvider } from '@alga-psa/scheduling/components/schedule/CalendarStyleProvider';
+import { CalendarStyleProvider } from '../schedule/CalendarStyleProvider';
 import { isWorkingHour } from './utils';
 
 const localizer = momentLocalizer(moment);

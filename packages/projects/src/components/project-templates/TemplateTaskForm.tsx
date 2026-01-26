@@ -24,7 +24,7 @@ import { DependencyType } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { ITaskType } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
-import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { getServices } from '../../actions/serviceCatalogActions';
 
 /**
  * Local checklist item - unified type for both new and existing items.

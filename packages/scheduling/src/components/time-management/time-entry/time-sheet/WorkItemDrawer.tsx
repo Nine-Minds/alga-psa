@@ -4,7 +4,7 @@ import React from 'react';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
-import { getWorkItemById } from '@alga-psa/scheduling/actions';
+import { getWorkItemById } from '../../../../actions/workItemActions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
 import { toast } from 'react-hot-toast';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';

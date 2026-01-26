@@ -5,7 +5,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
-import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
+import ScheduleEntry from '../models/scheduleEntry';
 import User from '@alga-psa/db/models/user';
 
 export interface BaseSearchOptions {

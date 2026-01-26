@@ -21,7 +21,7 @@ import {
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
-import Invoice from '@alga-psa/billing/models/invoice';
+import Invoice from '../models/invoice';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -48,7 +48,7 @@ import {
   computePurchaseOrderOverage,
   getClientContractPurchaseOrderContext,
   getPurchaseOrderConsumedCents
-} from '@alga-psa/billing/services/purchaseOrderService';
+} from '../services/purchaseOrderService';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 

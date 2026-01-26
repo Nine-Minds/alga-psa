@@ -28,10 +28,10 @@ import {
   deleteAvailabilityException,
   IAvailabilitySetting,
   IAvailabilityException
-} from '@alga-psa/scheduling/actions';
+} from '../../actions/availabilitySettingsActions';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getServices } from '@alga-psa/scheduling/actions';
+import { getServices } from '../../actions/serviceCatalogActions';
 import { IService } from '@alga-psa/types';
 import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';

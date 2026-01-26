@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';
-import { getClientInvoiceById, getClientInvoiceTemplates } from '@alga-psa/client-portal/actions';
+import { getClientInvoiceById, getClientInvoiceTemplates } from '../../actions';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { IInvoiceTemplate } from '@alga-psa/types';

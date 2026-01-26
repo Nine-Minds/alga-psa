@@ -1,4 +1,4 @@
-import { getSlaTarget } from '@alga-psa/tickets/lib/itilUtils';
+import { getSlaTarget } from './itilUtils';
 
 type IsoString = string;
 

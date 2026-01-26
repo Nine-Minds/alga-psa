@@ -12,7 +12,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { IClient } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';
-import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from '@alga-psa/clients/actions';
+import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from '../../actions';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 

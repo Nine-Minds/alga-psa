@@ -45,12 +45,12 @@ import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
-import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
+import WorkflowListV2 from '../../../components/automation-hub/WorkflowList';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
-import { getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
-import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@alga-psa/workflows/actions';
+import { getEventCatalogEntryByEventType } from '../../../actions';
+import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '../../../actions';
 import {
   createWorkflowDefinitionAction,
   getWorkflowSchemaAction,
@@ -64,7 +64,7 @@ import {
   publishWorkflowDefinitionAction,
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
-} from '@alga-psa/workflows/actions';
+} from '../../../actions';
 
 import type {
   WorkflowDefinition,

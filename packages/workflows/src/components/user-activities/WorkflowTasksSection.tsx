@@ -6,7 +6,7 @@ import { WorkflowTaskActivity, ActivityType, ActivityFilters } from '@alga-psa/t
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { WorkflowTaskCard } from './ActivityCard';
-import { fetchDashboardWorkflowTasks } from '@alga-psa/workflows/actions';
+import { fetchDashboardWorkflowTasks } from '../../actions';
 import { WorkflowTaskListDrawer } from './WorkflowTaskListDrawer';
 import { useDrawer } from '@alga-psa/ui';
 import { WorkflowTasksSectionFiltersDialog } from './filters/WorkflowTasksSectionFiltersDialog';

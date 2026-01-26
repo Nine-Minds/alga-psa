@@ -11,7 +11,7 @@ import {
   exportClientsToXeroCsv,
   previewXeroCsvClientImport,
   executeXeroCsvClientImport
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/xeroCsvActions';
 import type { ClientImportPreviewResult, ClientImportResult } from '../../../services/xeroCsvClientSyncService';
 
 type ImportStep = 'idle' | 'uploading' | 'preview' | 'importing' | 'complete';

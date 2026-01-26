@@ -9,7 +9,7 @@ import type {
   IClientContractLine
 } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
-import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
+import type { ClientBucketUsageResult } from '../../actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

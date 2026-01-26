@@ -15,7 +15,7 @@ import { getTenantProjectStatuses } from '../../actions/projectTaskStatusActions
 import { getTaskTypes } from '../../actions/projectTaskActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers } from '@alga-psa/users/actions';
-import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { getServices } from '../../actions/serviceCatalogActions';
 import { IUserWithRoles } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';

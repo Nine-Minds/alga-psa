@@ -35,7 +35,7 @@ import {
 } from '../schemas/ticket.schema';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
-import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { calculateItilPriority } from '../lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';

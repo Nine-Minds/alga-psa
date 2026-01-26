@@ -8,7 +8,7 @@ import {
   getProjectStatusMappings,
   deleteProjectStatusMapping,
   reorderProjectStatuses
-} from '@alga-psa/projects/actions/projectTaskStatusActions';
+} from '../../../actions/projectTaskStatusActions';
 import type { IProjectStatusMapping } from '@alga-psa/types';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 

@@ -28,7 +28,7 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClient } from '@alga-psa/types';
-import { getNextBillingDate } from '@alga-psa/billing/actions/billingAndTax'; // Removed getClientTaxRate
+import { getNextBillingDate } from '../../actions/billingAndTax'; // Removed getClientTaxRate
 import { toPlainDate, toISODate, getCurrencySymbol } from '@alga-psa/core';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 // Removed TaxService import as it's no longer directly used here

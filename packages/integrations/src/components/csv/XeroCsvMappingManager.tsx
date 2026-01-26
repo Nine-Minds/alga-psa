@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { AccountingMappingManager } from '@alga-psa/integrations/components';
-import type { AccountingMappingContext } from '@alga-psa/integrations/components';
+import { AccountingMappingManager } from '../accounting-mappings';
+import type { AccountingMappingContext } from '../accounting-mappings/types';
 import { createXeroCsvMappingModules } from './xeroCsvMappingModules';
 
 export function XeroCsvMappingManager() {

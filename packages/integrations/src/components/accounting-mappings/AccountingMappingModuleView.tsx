@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
+import type { ExternalEntityMapping } from '../../actions/externalMappingActions';
 import {
   AccountingMappingContext,
   AccountingMappingModule,

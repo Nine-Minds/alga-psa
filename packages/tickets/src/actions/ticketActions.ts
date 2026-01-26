@@ -39,7 +39,7 @@ import {
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
-import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { calculateItilPriority } from '../lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';

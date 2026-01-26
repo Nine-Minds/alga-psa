@@ -7,7 +7,7 @@ import {
   getClientContractLine,
   getClientInvoices,
   getCurrentUsage
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import {
   getClientHoursByService,
   getClientBucketUsage,
@@ -16,7 +16,7 @@ import {
   ClientHoursByServiceResult,
   ClientBucketUsageResult,
   ClientUsageMetricResult
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import { format, subDays } from 'date-fns';
 import {
   IClientContractLine,

@@ -8,7 +8,7 @@ import AvailabilitySettings from './AvailabilitySettings';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
-import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
+import { getAppointmentRequests } from '../../actions/appointmentRequestManagementActions';
 import { getCurrentUserPermissions, getCurrentUser } from '@alga-psa/users/actions';
 import { getTeams } from '@alga-psa/teams/actions';
 

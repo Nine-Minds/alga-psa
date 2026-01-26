@@ -3,10 +3,45 @@
  *
  * Scheduling module for Alga PSA.
  * Provides time management, schedule booking, and technician dispatch.
+ *
+ * Main entry point exports buildable code only.
+ * For runtime code, use:
+ * - '@alga-psa/scheduling/actions' for server actions
+ * - '@alga-psa/scheduling/components' for React components
  */
 
 // Models
-export { ScheduleEntry } from './models';
+export { default as ScheduleEntry } from './models/scheduleEntry';
+export { TimePeriod } from './models/timePeriod';
+export { TimePeriodSettings } from './models/timePeriodSettings';
+
+// Lib utilities
+export {
+  getUtcDatesOverlappedByInterval,
+  getOverlapHoursForUtcDate,
+  didCrossThreshold,
+  utcStartOfDayIso,
+} from './lib/capacityThresholdMath';
+export { maybePublishCapacityThresholdReached } from './lib/capacityThresholdWorkflowEvents';
+export { TimePeriodSuggester } from './lib/timePeriodSuggester';
+export type { TimePeriodSettings as TimePeriodSettingsType } from './lib/timePeriodSuggester';
+
+// Schemas
+export * from './schemas/appointmentRequestSchemas';
+export * from './schemas/appointmentSchemas';
+export * from './schemas/timeSheet.schemas';
+export { fetchTimeEntriesParamsSchema, saveTimeEntryParamsSchema, addWorkItemParamsSchema, submitTimeSheetParamsSchema, fetchOrCreateTimeSheetParamsSchema, fetchTimePeriodsParamsSchema } from './actions/timeEntrySchemas';
+export type { FetchTimeEntriesParams, SaveTimeEntryParams, AddWorkItemParams, SubmitTimeSheetParams, FetchOrCreateTimeSheetParams, FetchTimePeriodsParams } from './actions/timeEntrySchemas';
+
+// Services
+export {
+  findOrCreateCurrentBucketUsageRecord,
+  updateBucketUsageMinutes,
+  reconcileBucketUsageRecord,
+} from './services/bucketUsageService';
+
+// Utils
+export { generateICS, generateICSBuffer, generateICSFilename, type ICSEventData } from './utils/icsGenerator';
 
 // Re-export scheduling types from @alga-psa/types
 export type {
@@ -25,13 +60,3 @@ export type {
 
 // Re-export enums
 export { IEditScope, Views } from '@alga-psa/types';
-
-// Utils
-export { generateICS, type ICSEventData } from './utils/icsGenerator';
-
-// Note: This module contains:
-// - Schedule Entry management (migrated)
-// - Time entry management (pending migration)
-// - Schedule booking (pending migration)
-// - Technician dispatch (pending migration)
-// - 32 time-management + schedule + 13 technician-dispatch components (pending migration)

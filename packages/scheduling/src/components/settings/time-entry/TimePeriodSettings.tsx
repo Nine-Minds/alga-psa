@@ -8,7 +8,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert'
 import { ITimePeriodSettings } from '@alga-psa/types';
-import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '@alga-psa/scheduling/actions';
+import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '../../../actions/time-period-settings-actions';
 import { ISO8601String } from '@alga-psa/types';
 import { formatISO, parseISO } from 'date-fns';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';

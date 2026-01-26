@@ -20,7 +20,7 @@ import {
   listWorkflowRunSummaryAction,
   listWorkflowRunsAction,
   resumeWorkflowRunAction
-} from '@alga-psa/workflows/actions';
+} from '../../../actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type WorkflowDefinitionSummary = {

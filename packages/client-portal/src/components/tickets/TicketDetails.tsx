@@ -15,7 +15,7 @@ import {
   updateClientTicketComment,
   deleteClientTicketComment,
   updateTicketStatus
-} from '@alga-psa/client-portal/actions';
+} from '../../actions';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import { ITicketWithDetails, TicketResponseState } from '@alga-psa/types';

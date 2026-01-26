@@ -8,7 +8,7 @@ import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, C
 import {
   previewXeroCsvTaxImport,
   executeXeroCsvTaxImport
-} from '@alga-psa/integrations/actions';
+} from '../../actions/integrations/xeroCsvActions';
 import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
 
 interface XeroCsvTaxImportPanelProps {

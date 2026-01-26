@@ -10,7 +10,7 @@ import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
-import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { IProjectPhase } from '@alga-psa/types';

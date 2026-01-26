@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Switch } from '@alga-psa/ui/components/Switch';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
-import { Badge } from '@alga-psa/ui/components/Badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
+import { Switch } from '../Switch';
+import { Label } from '../Label';
+import { Button } from '../Button';
+import { Alert, AlertDescription } from '../Alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../Tabs';
+import { Badge } from '../Badge';
 import { useFeatureFlags } from '../../hooks/useFeatureFlag';
 import { Shield, Zap, Users, FlaskRoundIcon as Flask, Settings, TrendingUp } from 'lucide-react';
 

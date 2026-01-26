@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { format } from 'date-fns';
-import { getClientTickets, updateTicketStatus } from '@alga-psa/client-portal/actions';
+import { getClientTickets, updateTicketStatus } from '../../actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions';

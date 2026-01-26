@@ -3,7 +3,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Button } from '@alga-psa/ui/components/Button';
+import { Button } from '../Button';
 
 interface WizardProgressProps {
   steps: string[];

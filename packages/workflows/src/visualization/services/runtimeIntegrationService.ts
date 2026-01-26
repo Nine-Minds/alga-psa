@@ -1,4 +1,4 @@
-import { getWorkflowExecutionStatus } from '@alga-psa/workflows/actions/workflow-visualization-actions';
+import { getWorkflowExecutionStatus } from '../../actions/workflow-visualization-actions';
 import {
   FlowGraph,
   FlowNode,
