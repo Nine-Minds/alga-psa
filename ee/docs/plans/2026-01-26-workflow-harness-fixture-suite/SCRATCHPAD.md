@@ -22,3 +22,4 @@
 - F018: Implemented `--json` output (adds a machine-readable JSON line after PASS/FAIL).
 - F019: Added fixture scaffolder `tools/workflow-harness/scaffold.cjs` (creates `bundle.json` + `test.cjs` in `ee/test-data/workflow-harness/<name>`).
 - F020: Documented fixture naming scheme + category prefixes in `ee/test-data/workflow-harness/README.md`.
+- F021: Harness always runs registered cleanup hooks after each fixture (on pass or fail), and records cleanup errors into artifacts.

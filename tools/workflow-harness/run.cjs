@@ -203,11 +203,33 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
     state.triggerStartedAt = new Date().toISOString();
     ctx.triggerStartedAt = state.triggerStartedAt;
 
-    const result = await expect.withTimeout(
-      Promise.resolve().then(() => runTest(ctx)),
-      timeoutMs,
-      `Global timeout exceeded (${timeoutMs}ms)`
-    );
+    let result;
+    let testError;
+    try {
+      result = await expect.withTimeout(
+        Promise.resolve().then(() => runTest(ctx)),
+        timeoutMs,
+        `Global timeout exceeded (${timeoutMs}ms)`
+      );
+    } catch (err) {
+      testError = err;
+    }
+
+    let cleanupError;
+    try {
+      await ctx.runCleanup();
+    } catch (err) {
+      cleanupError = err;
+    }
+
+    if (testError && cleanupError) {
+      const combined = new Error('Fixture failed and cleanup failed');
+      combined.cause = testError;
+      combined.cleanup = cleanupError;
+      throw combined;
+    }
+    if (testError) throw testError;
+    if (cleanupError) throw cleanupError;
 
     return { result, state };
   } catch (err) {
@@ -272,7 +294,9 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
       exportedWorkflowBundle: exported,
       stepSummary: Array.isArray(state.steps) ? summarizeSteps(state.steps) : null
     });
-    writer.writeText('failure.error.txt', err?.stack ?? err?.message ?? String(err));
+    const extra =
+      err?.cleanup ? `\n\n--- cleanup error ---\n${err.cleanup?.stack ?? err.cleanup?.message ?? String(err.cleanup)}` : '';
+    writer.writeText('failure.error.txt', `${err?.stack ?? err?.message ?? String(err)}${extra}`);
 
     // eslint-disable-next-line no-param-reassign
     err.artifactsDir = writer.root;
