@@ -2,6 +2,14 @@
 /* eslint-disable no-console */
 
 const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+
+const { createTestContext } = require('./lib/context.cjs');
+const { createHttpClient } = require('./lib/http.cjs');
+const { createDbClient } = require('./lib/db.cjs');
+const { importWorkflowBundleV1, exportWorkflowBundleV1 } = require('./lib/workflow.cjs');
+const { waitForRun, getRunSteps, summarizeSteps, getRunLogs } = require('./lib/runs.cjs');
 
 function usage() {
   console.error(`
@@ -79,6 +87,86 @@ function validateFixtureDir(testDir) {
   return { bundlePath, testPath };
 }
 
+function fixtureIdFromDir(testDir) {
+  const normalized = testDir.replace(/\/$/, '');
+  return path.basename(normalized);
+}
+
+function getDefaultArtifactsDir() {
+  return process.env.TMPDIR || os.tmpdir();
+}
+
+function sanitizeSingleLine(value) {
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500);
+}
+
+async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, cookie, force, timeoutMs, debug, artifactsDir, pgUrl }) {
+  const http = createHttpClient({ baseUrl, tenantId, cookie, debug });
+  const db = await createDbClient({ connectionString: pgUrl, debug });
+
+  let bundle;
+  try {
+    bundle = JSON.parse(fs.readFileSync(bundlePath, 'utf8'));
+  } catch (err) {
+    throw new Error(`Failed to parse bundle JSON: ${bundlePath}\n${err?.message ?? String(err)}`);
+  }
+
+  const importSummary = await importWorkflowBundleV1({ http, bundle, force });
+  const workflowKey =
+    Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0].key === 'string'
+      ? bundle.workflows[0].key
+      : null;
+  const workflowId =
+    workflowKey && Array.isArray(importSummary?.createdWorkflows)
+      ? importSummary.createdWorkflows.find((w) => w.key === workflowKey)?.workflowId ?? importSummary.createdWorkflows[0]?.workflowId ?? null
+      : importSummary?.createdWorkflows?.[0]?.workflowId ?? null;
+
+  if (!workflowId) {
+    throw new Error('Workflow import did not return a workflowId (createdWorkflows missing?).');
+  }
+
+  // eslint-disable-next-line global-require, import/no-dynamic-require
+  const runTest = require(testPath);
+  if (typeof runTest !== 'function') {
+    throw new Error(`Fixture test.cjs must export an async function. Got: ${typeof runTest}`);
+  }
+
+  const ctx = createTestContext(
+    { baseUrl, tenantId, timeoutMs, debug, artifactsDir },
+    {}
+  );
+
+  ctx.http = http;
+  ctx.db = db;
+  ctx.fixture = { id: fixtureIdFromDir(testDir), dir: testDir };
+  ctx.workflow = {
+    id: workflowId,
+    key: workflowKey,
+    importSummary,
+    export: () => exportWorkflowBundleV1({ http, workflowId })
+  };
+  ctx.waitForRun = async (opts = {}) =>
+    waitForRun({
+      db,
+      workflowId,
+      tenantId,
+      startedAfter: opts.startedAfter ?? ctx.triggerStartedAt ?? new Date(0).toISOString(),
+      timeoutMs: opts.timeoutMs ?? timeoutMs
+    });
+  ctx.getRunSteps = async (runId) => getRunSteps({ db, runId });
+  ctx.getRunLogs = async (runId, limit) => getRunLogs({ db, runId, limit });
+  ctx.summarizeSteps = summarizeSteps;
+
+  ctx.triggerStartedAt = new Date().toISOString();
+  const result = await runTest(ctx);
+
+  await db.close();
+  return { result, importSummary, workflowId, workflowKey };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -92,6 +180,9 @@ async function main() {
   const cookie = args.cookie ?? (args['cookie-file'] ? readCookieFromFile(args['cookie-file']) : undefined);
   const force = !!args.force;
   const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : 60_000;
+  const debug = !!args.debug;
+  const artifactsDir = args['artifacts-dir'] ?? getDefaultArtifactsDir();
+  const pgUrl = args['pg-url'] ?? undefined;
 
   if (!testDir) throw new Error('Missing --test');
   if (!baseUrl) throw new Error('Missing --base-url');
@@ -100,11 +191,31 @@ async function main() {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
 
   const fixture = validateFixtureDir(testDir);
+  const testId = fixtureIdFromDir(testDir);
+  const startedAtMs = Date.now();
 
-  // Implementation is added incrementally by plan items (see ee/docs/plans/2026-01-26-workflow-harness-fixture-suite).
-  console.error('Workflow harness core runtime not yet wired; CLI parsing is ready.');
-  console.error(JSON.stringify({ testDir, ...fixture, baseUrl, tenant, force, timeoutMs }, null, 2));
-  process.exit(2);
+  try {
+    await runFixture({
+      testDir,
+      ...fixture,
+      baseUrl,
+      tenantId: tenant,
+      cookie,
+      force,
+      timeoutMs,
+      debug,
+      artifactsDir,
+      pgUrl
+    });
+    const durationMs = Date.now() - startedAtMs;
+    console.log(`PASS ${testId} ${durationMs}`);
+    process.exit(0);
+  } catch (err) {
+    const durationMs = Date.now() - startedAtMs;
+    const reason = sanitizeSingleLine(err?.message ?? String(err));
+    console.log(`FAIL ${testId} ${durationMs} ${reason}`);
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

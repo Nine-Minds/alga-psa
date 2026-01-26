@@ -9,7 +9,7 @@
   { "id": "F008", "description": "Add workflow export helper (for debug artifacts and optional assertions)", "implemented": true },
   { "id": "F009", "description": "Implement waitForRun helper (poll workflow_runs for imported workflow after trigger time)", "implemented": true },
   { "id": "F010", "description": "Implement helper to fetch workflow_run_steps and summarize step statuses", "implemented": true },
-  { "id": "F011", "description": "Standardize pass/fail output format and exit codes", "implemented": false },
+  { "id": "F011", "description": "Standardize pass/fail output format and exit codes", "implemented": true },
   { "id": "F012", "description": "Write failure artifacts (run details, steps, errors, server/worker log snippets)", "implemented": false },
   { "id": "F013", "description": "Add fixture root ee/test-data/workflow-harness with README and conventions", "implemented": false },
   { "id": "F014", "description": "Add a golden path fixture: ticket-created-hello (import → create ticket → assert run SUCCEEDED)", "implemented": false },

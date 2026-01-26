@@ -12,3 +12,4 @@
 - F008: Added `tools/workflow-harness/lib/workflow.cjs#exportWorkflowBundleV1` (wraps `/api/workflow-definitions/:id/export`).
 - F009: Added `tools/workflow-harness/lib/runs.cjs#waitForRun` (polls `workflow_runs` by workflowId + tenantId after trigger time).
 - F010: Added `tools/workflow-harness/lib/runs.cjs#getRunSteps` + `summarizeSteps` (+ `getRunLogs` for artifacts).
+- F011: Wired `tools/workflow-harness/run.cjs` to execute one fixture and emit single-line `PASS/FAIL <testId> <durationMs>` with exit codes.
