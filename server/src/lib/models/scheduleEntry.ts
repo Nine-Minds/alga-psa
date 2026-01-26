@@ -5,6 +5,7 @@ import { generateOccurrences } from '../utils/recurrenceUtils';
 import { Knex } from 'knex';
 import { publishEvent, publishWorkflowEvent } from '../eventBus/publishers';
 import { buildProjectTaskAssignedPayload } from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+import { IHoliday } from '@alga-psa/sla';
 
 interface CreateScheduleEntryOptions {
   assignedUserIds: string[];  // Make required since it's the only way to assign users now
@@ -1022,16 +1023,18 @@ class ScheduleEntry {
   }
 
   /**
-   * Gets recurring entries within a date range by calculating occurrences from the recurrence pattern
+   * Gets recurring entries within a date range by calculating occurrences from the recurrence pattern.
+   * Excludes occurrences that fall on tenant holidays (unified holidays table).
    */
   private static async getRecurringEntriesWithAssignments(
     db: Knex,
     entries: IScheduleEntry[],
     start: Date,
-    end: Date
+    end: Date,
+    holidays: IHoliday[]
   ): Promise<IScheduleEntry[]> {
     const result: IScheduleEntry[] = [];
-    
+
     // Get assigned user IDs for all master entries
     const entryIds = entries.map((e): string => e.entry_id);
     if (!entries[0]?.tenant) {
@@ -1050,11 +1053,11 @@ class ScheduleEntry {
           const pattern = JSON.parse(entry.recurrence_pattern) as IRecurrencePattern;
           // Skip if pattern is empty
           if (!pattern || Object.keys(pattern).length === 0) continue;
-          
+
           // Convert date strings to Date objects and normalize times
           pattern.startDate = new Date(pattern.startDate);
           pattern.startDate.setHours(0, 0, 0, 0);
-          
+
           if (pattern.endDate) {
             pattern.endDate = new Date(pattern.endDate);
             // Skip if the pattern has ended before our range starts
@@ -1067,10 +1070,11 @@ class ScheduleEntry {
         }
 
         // Calculate occurrences within the range, but only up to endDate if it exists
-        const effectiveEnd = entry.recurrence_pattern.endDate && entry.recurrence_pattern.endDate < end 
-          ? entry.recurrence_pattern.endDate 
+        // Holidays are automatically excluded via the unified holidays table
+        const effectiveEnd = entry.recurrence_pattern.endDate && entry.recurrence_pattern.endDate < end
+          ? entry.recurrence_pattern.endDate
           : end;
-        const occurrences = generateOccurrences(entry, start, effectiveEnd);
+        const occurrences = generateOccurrences(entry, start, effectiveEnd, { holidays });
 
         // Create virtual entries for each occurrence
         const duration = new Date(entry.scheduled_end).getTime() - new Date(entry.scheduled_start).getTime();
@@ -1112,7 +1116,22 @@ class ScheduleEntry {
     if (!tenant) {
       throw new Error('Tenant is required');
     }
-    
+
+    // Load holidays for the tenant (unified holidays table - shared with SLA system)
+    // Include global holidays (schedule_id IS NULL) that apply to all schedules
+    const startDateStr = start.toISOString().split('T')[0];
+    const endDateStr = end.toISOString().split('T')[0];
+    const holidays = await db('holidays')
+      .where('tenant', tenant)
+      .whereNull('schedule_id') // Only global holidays (not schedule-specific SLA holidays)
+      .where(function() {
+        // Include holidays in date range (for non-recurring)
+        this.whereBetween('holiday_date', [startDateStr, endDateStr])
+          // Or recurring holidays (check any year)
+          .orWhere('is_recurring', true);
+      })
+      .select('*') as IHoliday[];
+
     // Get master recurring entries that might have occurrences in the range
     const masterEntries = await db('schedule_entries')
       .where('schedule_entries.tenant', tenant)
@@ -1134,7 +1153,8 @@ class ScheduleEntry {
     if (masterEntries.length === 0) return [];
 
     // Only return virtual instances - master entries are already included in getAll()
-    const virtualEntries = await this.getRecurringEntriesWithAssignments(db, masterEntries, start, end);
+    // Holidays are passed through to filter out occurrences on holiday dates
+    const virtualEntries = await this.getRecurringEntriesWithAssignments(db, masterEntries, start, end, holidays);
 
     return virtualEntries;
   }
