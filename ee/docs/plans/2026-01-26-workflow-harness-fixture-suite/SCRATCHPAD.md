@@ -48,6 +48,8 @@
   - `ee/test-data/workflow-harness/schema-invalid-event-payload/` (submitting an event with invalid payload fails with 400 + Zod issues)
 - F042: Added runtime-behavior fixture:
   - `ee/test-data/workflow-harness/runtime-paused-no-run/` (workflow imported with `isPaused=true`; submitting `TICKET_CREATED` should not create a run; fixture asserts `waitForRun` times out)
+- F043: Added negative fixture:
+  - `ee/test-data/workflow-harness/ticket-created-assign-invalid-fails/` (expected `FAILED` run due to `tickets.assign` with invalid user id; fixture asserts error contains "User not found")
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.
