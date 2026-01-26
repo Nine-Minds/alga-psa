@@ -11,3 +11,10 @@ Each fixture is a folder containing:
 - Prefer `--force` imports so fixtures are re-runnable.
 - Tests should register cleanup via `ctx.onCleanup(fn)` when they create domain records.
 
+## Naming scheme
+
+Use a consistent, grep-friendly naming scheme:
+- `<domain>-<event>-<behavior>` (examples: `ticket-created-hello`, `project-created-kickoff-tasks`, `invoice-overdue-reminder`)
+
+Recommended domains:
+- `ticket-*`, `project-*`, `invoice-*`, `payment-*`, `contract-*`, `appointment-*`, `schedule-*`, `company-*`, `time-*`

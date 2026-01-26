@@ -21,3 +21,4 @@
 - F017: Enabled `--debug` verbose logging (import summary + workflow id/key + HTTP/DB debug logs).
 - F018: Implemented `--json` output (adds a machine-readable JSON line after PASS/FAIL).
 - F019: Added fixture scaffolder `tools/workflow-harness/scaffold.cjs` (creates `bundle.json` + `test.cjs` in `ee/test-data/workflow-harness/<name>`).
+- F020: Documented fixture naming scheme + category prefixes in `ee/test-data/workflow-harness/README.md`.
