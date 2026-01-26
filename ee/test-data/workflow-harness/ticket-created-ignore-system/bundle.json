@@ -1,0 +1,125 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-ignore-system",
+      "metadata": {
+        "name": "Fixture: Ticket Created → Ignore System",
+        "description": "If created by a system user, return early and do nothing.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": ["control.if", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f107",
+          "version": 1,
+          "name": "Fixture: Ticket Created → Ignore System",
+          "description": "Return early for system-created tickets.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+          "steps": [
+            { "id": "state-ignore-system", "type": "state.set", "config": { "state": "IGNORE_SYSTEM" } },
+            {
+              "id": "if-system",
+              "type": "control.if",
+              "condition": { "$expr": "payload.createdByUserId == '00000000-0000-0000-0000-000000000000'" },
+              "then": [
+                {
+                  "id": "assign-skipped",
+                  "type": "transform.assign",
+                  "config": {
+                    "assign": {
+                      "vars.skipped": { "$expr": "true" },
+                      "vars.marker": { "$expr": "'[fixture ticket-created-ignore-system]'" }
+                    }
+                  }
+                },
+                { "id": "return-system", "type": "control.return" }
+              ],
+              "else": [
+                {
+                  "id": "assign-not-skipped",
+                  "type": "transform.assign",
+                  "config": {
+                    "assign": {
+                      "vars.skipped": { "$expr": "false" },
+                      "vars.marker": { "$expr": "'[fixture ticket-created-ignore-system]'" }
+                    }
+                  }
+                },
+                { "id": "return-non-system", "type": "control.return" }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f107",
+            "version": 1,
+            "name": "Fixture: Ticket Created → Ignore System",
+            "description": "Return early for system-created tickets.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+            "steps": [
+              { "id": "state-ignore-system", "type": "state.set", "config": { "state": "IGNORE_SYSTEM" } },
+              {
+                "id": "if-system",
+                "type": "control.if",
+                "condition": { "$expr": "payload.createdByUserId == '00000000-0000-0000-0000-000000000000'" },
+                "then": [
+                  {
+                    "id": "assign-skipped",
+                    "type": "transform.assign",
+                    "config": {
+                      "assign": {
+                        "vars.skipped": { "$expr": "true" },
+                        "vars.marker": { "$expr": "'[fixture ticket-created-ignore-system]'" }
+                      }
+                    }
+                  },
+                  { "id": "return-system", "type": "control.return" }
+                ],
+                "else": [
+                  {
+                    "id": "assign-not-skipped",
+                    "type": "transform.assign",
+                    "config": {
+                      "assign": {
+                        "vars.skipped": { "$expr": "false" },
+                        "vars.marker": { "$expr": "'[fixture ticket-created-ignore-system]'" }
+                      }
+                    }
+                  },
+                  { "id": "return-non-system", "type": "control.return" }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

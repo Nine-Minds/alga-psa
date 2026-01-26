@@ -723,3 +723,61 @@ test('T106: ticket-created-notify-multiple fixture loads and executes via harnes
   assert.equal(requests[1].opts.method, 'DELETE');
   assert.equal(requests[1].opts.headers['x-api-key'], 'api-key');
 });
+
+test('T107: ticket-created-ignore-system fixture loads and executes via harness', async () => {
+  const fixtureDir = path.resolve(process.cwd(), 'ee/test-data/workflow-harness/ticket-created-ignore-system');
+  const bundlePath = path.join(fixtureDir, 'bundle.json');
+  const testPath = path.join(fixtureDir, 'test.cjs');
+
+  const requests = [];
+  const harness = loadHarnessWithStubs({
+    http: {
+      createHttpClient: () => ({
+        request: async (p, opts) => {
+          requests.push({ path: p, opts });
+          return { json: {} };
+        }
+      })
+    },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.ticket-created-ignore-system', workflowId: 'wf-107' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-107', status: 'SUCCEEDED' }),
+      getRunSteps: async () => [
+        { step_id: 's1', run_id: 'run-107', step_path: '/0', definition_step_id: 'state-ignore-system', status: 'SUCCEEDED', attempt: 1 },
+        { step_id: 's2', run_id: 'run-107', step_path: '/1/then/1', definition_step_id: 'return-system', status: 'SUCCEEDED', attempt: 1 }
+      ],
+      getRunLogs: async () => [],
+      summarizeSteps: () => ({ counts: {}, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    await runFixture({
+      testDir: fixtureDir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+  } finally {
+    harness.restore();
+  }
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].path, '/api/workflow/events');
+  assert.equal(requests[0].opts.method, 'POST');
+  assert.equal(requests[0].opts.json.eventName, 'TICKET_CREATED');
+  assert.equal(requests[0].opts.json.payloadSchemaRef, 'payload.TicketCreated.v1');
+  assert.equal(requests[0].opts.json.payload.createdByUserId, '00000000-0000-0000-0000-000000000000');
+});
