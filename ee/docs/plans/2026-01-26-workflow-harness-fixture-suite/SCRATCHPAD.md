@@ -41,6 +41,8 @@
 - F035: Added initial integration-trigger fixture set:
   - `ee/test-data/workflow-harness/integration-webhook-received-notify/` (submit `INTEGRATION_WEBHOOK_RECEIVED` via `/api/workflow/events`, assert workflow sends internal notification)
   - `ee/test-data/workflow-harness/integration-sync-failed-notify/` (submit `INTEGRATION_SYNC_FAILED` via `/api/workflow/events`, assert workflow sends internal notification)
+- F040: Added initial node-type coverage fixture:
+  - `ee/test-data/workflow-harness/ticket-created-assign-trycatch/` (covers `control.tryCatch` + error capture, and asserts both notification + comment side effects)
 
 ## Tests
 - T001: Added Node test `tools/workflow-harness/tests/args-errors.test.cjs` validating the CLI errors clearly when `--test` is omitted.

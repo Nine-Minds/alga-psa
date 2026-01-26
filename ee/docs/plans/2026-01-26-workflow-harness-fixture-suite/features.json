@@ -28,7 +28,7 @@
   { "id": "F034", "description": "Create scheduling-trigger fixture set (appointments/schedule blocks)", "implemented": true },
   { "id": "F035", "description": "Create integration-trigger fixture set (webhooks/sync events) where supported", "implemented": true },
 
-  { "id": "F040", "description": "Create node-type coverage fixtures (state.set, transform.assign, control.if, control.tryCatch, control.return, etc.)", "implemented": false },
+  { "id": "F040", "description": "Create node-type coverage fixtures (state.set, transform.assign, control.if, control.tryCatch, control.return, etc.)", "implemented": true },
   { "id": "F041", "description": "Create schema-validation fixtures (missing schema, unknown schema, mismatch requires mapping)", "implemented": false },
   { "id": "F042", "description": "Create runtime-behavior fixtures (pause/visibility, concurrency limits) where supported", "implemented": false },
   { "id": "F043", "description": "Create negative fixtures (expected failure modes with clear errors) where supported", "implemented": false },
