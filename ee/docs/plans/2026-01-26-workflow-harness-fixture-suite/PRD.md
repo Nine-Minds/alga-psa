@@ -136,9 +136,230 @@ Preferred run correlation:
 3. **Fixture root:** `ee/test-data/workflow-harness/` (separate from workflow bundles).
 4. **Cleanup model:** each test must register cleanup actions; harness runs cleanup after the test (on pass or fail) to reduce cross-test contamination.
 5. **Artifacts default:** write artifacts under `$TMPDIR` by default (override via `--artifacts-dir`).
+6. **Dynamic feature discovery:** During implementation, if new harness features, helpers, or fixture patterns are discovered to be **necessary to implement the PRD's scope**, they should be added to `features.json` and `tests.json` and iterated on. The `features.json` and `tests.json` files are **living documents** that evolve as the work progresses. This allows for discovering unanticipated infrastructure needs without narrowing or shortcutting the scope. Only add features that directly enable delivery of the PRD's requirements (harness + ~150–200 fixtures); do not add gold-plating, speculative features, or convenience enhancements.
+
+7. **Missing workflow actions:** If during fixture implementation a **business-relevant workflow action is identified as clearly necessary** but does not exist in the runtime, it should be implemented as a new action in the workflow registry. These new actions:
+   - Must be clearly documented in `features.json` and added to the fixture's implementation notes
+   - Should follow the **V2 Modern Action Registry pattern** (`shared/workflow/runtime/actions/businessOperations/`)
+   - Must include strict Zod input/output schemas, permission checks, and audit logging per existing patterns
+   - Must be properly registered in `registerBusinessOperationsActionsV2()`
+   - Are considered necessary infrastructure (not scope creep) if they enable multiple fixtures to test business workflows
+   - Should be clearly justified in the implementation notes: why the action is necessary, which fixtures depend on it, what business workflow it enables
+
+See section 8 below for guidance on identifying and implementing missing actions.
 
 ### 9.2 Open Questions (need answers)
 1. None currently (update as scope evolves).
+
+## 8) Workflow Actions: Architecture & Implementation Guide
+
+### 8.1 What Are Workflow Actions?
+
+Workflow actions are **discrete business operations** that workflows invoke asynchronously. They are:
+- **The implementation layer** between workflow logic and application services (tickets, projects, billing, etc.)
+- **Versioned** to allow evolution without breaking existing workflows
+- **Idempotent** to support safe retry semantics
+- **Strongly typed** using Zod schemas for input/output validation
+- **Database-aware** with transaction support to prevent cross-shard FK timing issues
+- **Auditable** with complete tracking of execution, parameters, results, and errors
+- **Permission-checked** to enforce MSP portal access control
+
+### 8.2 Action Registry Architecture
+
+Alga-PSA uses **two action registries**:
+
+1. **Legacy V1 Registry** (`shared/workflow/core/actionRegistry.ts`): Simple actions with loose typing
+   - Used for utilities, email processing, role/user lookups
+   - Parameters: simple type definitions (string, object, boolean)
+   - Execution context lacks request tracing
+
+2. **Modern V2 Registry** (`shared/workflow/runtime/registries/actionRegistry.ts`): Modern business operations (recommended)
+   - Used for core business operations (tickets, projects, contacts, etc.)
+   - Parameters: strict Zod schemas with validation
+   - Execution context includes run tracing, step paths, and logging
+   - **New actions should use V2 registry**
+
+### 8.3 Existing Action Categories
+
+The following action namespaces are already implemented and available for fixtures to use:
+
+**Tickets** (`tickets.create`, `tickets.find`, `tickets.assign`, `tickets.update_fields`, `tickets.add_comment`, `tickets.close`, `tickets.link_entities`, `tickets.add_attachment`)
+
+**Projects** (`projects.create`, `projects.find`, `projects.update_fields`, `projects.add_comment`)
+
+**Contacts** (`contacts.create`, `contacts.find`, `contacts.update`)
+
+**Clients** (`clients.create`, `clients.find`, `clients.update`)
+
+**Scheduling** (`scheduling.assign_user`, `scheduling.create_schedule_block`)
+
+**Notifications** (`notifications.send`, `notifications.find`)
+
+**CRM** (`crm.add_note`, `crm.link_entity`)
+
+**Email** (`email.send`)
+
+**And more** — see `shared/workflow/runtime/actions/businessOperations/` for the complete list.
+
+### 8.4 Identifying Missing Actions
+
+When implementing a fixture, check if the required action exists:
+
+1. **Search the action registry:**
+   ```bash
+   grep -r "registry.register({.*id:.*'domain\\.operation'" \
+     shared/workflow/runtime/actions/businessOperations/
+   ```
+
+2. **Check if similar action exists:**
+   - Is there a `tickets.create`? Can it be extended or does a new variant exist?
+   - Is there a `projects.find`? Can it be used as-is?
+
+3. **Look at the existing fixture suite:**
+   - Which actions are already referenced in existing fixtures?
+   - Are there patterns or utilities you can reuse?
+
+If an action doesn't exist and is necessary, document it in `features.json` and implement it per section 8.5.
+
+### 8.5 Implementing Missing Actions (V2 Registry Pattern)
+
+If you identify a missing action that's necessary for business-relevant fixtures:
+
+**Step 1: Create or extend the action module**
+```
+shared/workflow/runtime/actions/businessOperations/<domain>.ts
+```
+
+**Step 2: Define the action with strict schemas**
+```typescript
+registry.register({
+  id: 'domain.operation',              // e.g., 'invoices.approve'
+  version: 1,                           // Semantic version for evolution
+
+  inputSchema: z.object({               // Strict input validation
+    required_param: z.string().describe('Description'),
+    optional_param: z.number().optional(),
+    nested: z.object({ /* ... */ })
+  }),
+
+  outputSchema: z.object({              // What the caller receives
+    result_id: uuidSchema,
+    created_at: isoDateTimeSchema,
+    status: z.enum(['CREATED', 'PENDING'])
+  }),
+
+  sideEffectful: true,                  // Does it modify state?
+  idempotency: { mode: 'engineProvided' },  // How deduplication works
+
+  ui: {
+    label: 'User-friendly action name',
+    category: 'Business Operations',
+    description: 'What this action does and why it exists'
+  },
+
+  handler: async (input, ctx) =>
+    withTenantTransaction(ctx, async (tx) => {
+      // 1. Permission check (if write operation)
+      await requirePermission(ctx, tx, { resource: 'domain', action: 'operation' });
+
+      // 2. Business logic
+      const result = await SomeModel.performOperation(input, tx.trx);
+
+      // 3. Audit logging
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:domain.operation',
+        changedData: { /* what changed */ },
+        details: { action_id: 'domain.operation', action_version: 1, /* ... */ }
+      });
+
+      // 4. Return validated result
+      return { result_id: result.id, created_at: result.created_at, status: 'CREATED' };
+    })
+});
+```
+
+**Step 3: Register the action module**
+```typescript
+// In shared/workflow/runtime/actions/businessOperations/<domain>.ts
+export function register<Domain>Actions(): void {
+  const registry = getActionRegistryV2();
+  registry.register({ id: 'domain.operation', /* ... */ });
+  // Register other domain actions...
+}
+```
+
+**Step 4: Call registration on startup**
+```typescript
+// In shared/workflow/runtime/actions/registerBusinessOperationsActions.ts
+import { register<Domain>Actions } from './businessOperations/<domain>';
+
+export function registerBusinessOperationsActionsV2(): void {
+  registerTicketActions();
+  register<Domain>Actions();     // Add new module
+  // ... other registrations
+}
+```
+
+**Step 5: Document in features.json**
+```json
+{
+  "id": "F999",
+  "description": "Implement domain.operation action for [business purpose]",
+  "implemented": true,
+  "prdRefs": ["8.5"]
+}
+```
+
+### 8.6 Key Implementation Patterns
+
+**Always use transaction-wrapped handlers:**
+```typescript
+handler: async (input, ctx) =>
+  withTenantTransaction(ctx, async (tx) => {
+    // tx = { tenantId, actorUserId, trx (Knex transaction) }
+    // Use tx.trx for all database access
+  })
+```
+
+**Always check permissions for write operations:**
+```typescript
+await requirePermission(ctx, tx, {
+  resource: 'tickets',
+  action: 'create'
+});
+```
+
+**Always audit state changes:**
+```typescript
+await writeRunAudit(ctx, tx, {
+  operation: 'workflow_action:tickets.create',
+  changedData: { ticket_id, ticket_number },
+  details: { action_id: 'tickets.create', action_version: 1 }
+});
+```
+
+**Always use proper error handling:**
+```typescript
+import { throwActionError } from './shared';
+
+throwActionError(ctx, {
+  category: 'ActionError',
+  code: 'NOT_FOUND',
+  message: 'Ticket not found',
+  details: { ticket_id: input.ticket_id }
+});
+```
+
+**All actions are idempotent:** The same action called twice with the same `idempotencyKey` returns the cached result instead of executing again. This is handled automatically by the framework.
+
+### 8.7 Gotchas & Important Notes
+
+- **Database connections:** Always use `context.knex` or `tx.trx` to prevent Citus cross-shard FK timing issues
+- **Transaction scope:** Never nest transactions; the framework handles wrapping
+- **Permissions:** Different resources/actions have different permission requirements; check existing patterns
+- **Error categories:** Use `throwActionError()` not `throw new Error()` for proper error classification
+- **Action discovery:** Actions are only discovered from the registry at runtime; must be registered before workflow execution
+- **Side-effect safety:** All side-effectful actions must be idempotent; no external state assumptions
 
 ## 10) Definition of Done
 - A harness exists (`tools/workflow-harness/`) that can run a single fixture end-to-end and report pass/fail.
