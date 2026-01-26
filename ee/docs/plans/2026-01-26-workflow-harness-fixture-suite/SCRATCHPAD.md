@@ -685,3 +685,4 @@ When implementing a new action:
 - Added `tools/workflow-harness/tests/fixture-existing.test.cjs` to cover non-scaffolded fixtures referenced by the plan (`T210`, `T219`, `T230`, `T237`, `T240`).
 - Marked `T116` implemented (validated via `node --test tools/workflow-harness/tests/fixture-catalog.test.cjs`).
 - Marked \ implemented (covered by fixture harness stub tests).
+- Marked \ implemented (covered by fixture harness stub tests).
