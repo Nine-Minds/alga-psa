@@ -1,20 +1,16 @@
-import fs from 'fs';
-import path from 'path';
 // NOTE: This repo has multiple Ajv versions in the dependency tree. Importing from `ajv`
 // can resolve to Ajv v6 under `server/node_modules`, which is incompatible with `ajv-formats` (Ajv v8).
 // Importing from `ajv/dist/2020` ensures we use the workspace-root Ajv v8 build consistently.
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { WorkflowBundleImportError } from './workflowBundleImportErrors';
+import schemaJson from '../../../../../ee/docs/schemas/workflow-bundle.v1.schema.json';
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: unknown[] };
 let cachedValidate: ValidateFn | null = null;
 
 const getValidator = (): ValidateFn => {
   if (cachedValidate) return cachedValidate;
-
-  const schemaPath = path.join(process.cwd(), 'ee', 'docs', 'schemas', 'workflow-bundle.v1.schema.json');
-  const schemaJson = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 
   const ajv = new Ajv({ allErrors: true, strict: false });
   addFormats(ajv);
