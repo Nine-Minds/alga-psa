@@ -35,6 +35,8 @@ import { auditLog } from 'server/src/lib/logging/auditLog';
 import { analytics } from 'server/src/lib/analytics/server';
 import { EventCatalogModel } from 'server/src/models/eventCatalog';
 import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
+import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
 import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
@@ -905,6 +907,20 @@ export const listWorkflowDefinitionVersionsAction = withAuth(async (user, { tena
   return { versions: rows };
 });
 
+export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = WorkflowIdInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'admin', knex);
+  return exportWorkflowBundleV1ForWorkflowId(knex, parsed.workflowId);
+});
+
+export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'admin', knex);
+  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force });
+});
+
 export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = CreateWorkflowDefinitionInput.parse(input);
@@ -931,6 +947,7 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
 
   const record = await WorkflowDefinitionModelV2.create(knex, {
     workflow_id: workflowId,
+    key: parsed.key?.trim() ?? null,
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
@@ -1068,6 +1085,7 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
   }
 
   const updated = await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
+    ...(parsed.key ? { key: parsed.key.trim() } : {}),
     is_visible: parsed.isVisible ?? current.is_visible ?? true,
     is_paused: parsed.isPaused ?? current.is_paused ?? false,
     concurrency_limit: parsed.concurrencyLimit ?? current.concurrency_limit ?? null,
@@ -1083,6 +1101,7 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
     tableName: 'workflow_definitions',
     recordId: parsed.workflowId,
     changedData: {
+      key: parsed.key,
       isVisible: parsed.isVisible,
       isPaused: parsed.isPaused,
       concurrencyLimit: parsed.concurrencyLimit,

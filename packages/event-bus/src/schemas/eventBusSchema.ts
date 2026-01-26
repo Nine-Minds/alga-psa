@@ -10,6 +10,19 @@ export const EventTypeEnum = z.enum([
   'TICKET_COMMENT_ADDED',
   'TICKET_COMMENT_UPDATED',
   'TICKET_DELETED',
+  'TICKET_RESPONSE_STATE_CHANGED',
+  'TICKET_STATUS_CHANGED',
+  'TICKET_PRIORITY_CHANGED',
+  'TICKET_UNASSIGNED',
+  'TICKET_REOPENED',
+  'TICKET_ESCALATED',
+  'TICKET_QUEUE_CHANGED',
+  'TICKET_MESSAGE_ADDED',
+  'TICKET_CUSTOMER_REPLIED',
+  'TICKET_INTERNAL_NOTE_ADDED',
+  'TICKET_SLA_STAGE_ENTERED',
+  'TICKET_SLA_STAGE_MET',
+  'TICKET_SLA_STAGE_BREACHED',
   'PROJECT_CREATED',
   'PROJECT_UPDATED',
   'PROJECT_CLOSED',
@@ -35,6 +48,10 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_CONFLICT_DETECTED',
   'MESSAGE_SENT',
   'USER_MENTIONED_IN_DOCUMENT',
+  'APPOINTMENT_REQUEST_CREATED',
+  'APPOINTMENT_REQUEST_APPROVED',
+  'APPOINTMENT_REQUEST_DECLINED',
+  'APPOINTMENT_REQUEST_CANCELLED',
   'RMM_DEVICE_CREATED',
   'RMM_DEVICE_UPDATED',
   'RMM_DEVICE_DELETED',
@@ -53,6 +70,11 @@ export type EventType = z.infer<typeof EventTypeEnum>;
 // Base payload schema with tenant information
 export const BasePayloadSchema = z.object({
   tenantId: z.string(),
+  occurredAt: z.string().optional(),
+  actorType: z.enum(['USER', 'CONTACT', 'SYSTEM']).optional(),
+  actorUserId: z.string().uuid().optional(),
+  actorContactId: z.string().uuid().optional(),
+  idempotencyKey: z.string().optional(),
 });
 
 // Base event schema
@@ -66,7 +88,7 @@ export const BaseEventSchema = z.object({
 // Ticket event payload schema
 export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
-  userId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
   changes: z.record(z.unknown()).optional(),
   comment: z.object({
     id: z.string().uuid(),
@@ -74,6 +96,107 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
     author: z.string(),
     isInternal: z.boolean().optional(),
   }).optional(),
+});
+
+export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  previousResponseState: z.string().optional(),
+  newResponseState: z.string().optional(),
+});
+
+export const TicketStatusChangedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  previousStatusId: z.string().min(1),
+  newStatusId: z.string().min(1),
+  changedAt: z.string().optional(),
+});
+
+export const TicketPriorityChangedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  previousPriorityId: z.string().min(1),
+  newPriorityId: z.string().min(1),
+  changedAt: z.string().optional(),
+});
+
+export const TicketUnassignedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  previousAssigneeId: z.string().uuid(),
+  previousAssigneeType: z.enum(['user', 'team']),
+  newAssigneeId: z.string().uuid().optional(),
+  newAssigneeType: z.enum(['user', 'team']).optional(),
+  unassignedAt: z.string().optional(),
+});
+
+export const TicketReopenedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  previousStatusId: z.string().min(1),
+  newStatusId: z.string().min(1),
+  reopenedAt: z.string().optional(),
+});
+
+export const TicketEscalatedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  fromQueueId: z.string().uuid().optional(),
+  toQueueId: z.string().uuid().optional(),
+  escalatedAt: z.string().optional(),
+});
+
+export const TicketQueueChangedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  previousBoardId: z.string().min(1),
+  newBoardId: z.string().min(1),
+  changedAt: z.string().optional(),
+});
+
+export const TicketMessageAddedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  messageId: z.string().min(1),
+  visibility: z.enum(['public', 'internal']),
+  authorId: z.string().min(1),
+  authorType: z.enum(['user', 'contact']),
+  channel: z.enum(['email', 'portal', 'ui', 'api']),
+  createdAt: z.string().optional(),
+  attachmentsCount: z.number().int().nonnegative().optional(),
+});
+
+export const TicketCustomerRepliedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  messageId: z.string().min(1),
+  contactId: z.string().uuid(),
+  channel: z.enum(['email', 'portal', 'ui', 'api']),
+  receivedAt: z.string().optional(),
+  attachmentsCount: z.number().int().nonnegative().optional(),
+});
+
+export const TicketInternalNoteAddedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  noteId: z.string().min(1),
+  createdAt: z.string().optional(),
+});
+
+export const TicketSlaStageEnteredPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  slaPolicyId: z.string().min(1),
+  stage: z.literal('resolution'),
+  enteredAt: z.string().optional(),
+  targetAt: z.string().optional(),
+});
+
+export const TicketSlaStageMetPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  slaPolicyId: z.string().min(1),
+  stage: z.literal('resolution'),
+  metAt: z.string().optional(),
+  targetAt: z.string().optional(),
+});
+
+export const TicketSlaStageBreachedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  slaPolicyId: z.string().min(1),
+  stage: z.literal('resolution'),
+  breachedAt: z.string().optional(),
+  targetAt: z.string().optional(),
+  overdueBySeconds: z.number().int().nonnegative().optional(),
 });
 
 // Ticket additional agent event payload schema
@@ -269,6 +392,13 @@ export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
   changes: z.record(z.unknown()).optional(),
 });
 
+export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
+  requestId: z.string().uuid(),
+  ticketId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+});
+
 // Message sent event payload schema
 export const MessageSentPayloadSchema = BasePayloadSchema.extend({
   messageId: z.string().uuid().optional(),
@@ -350,6 +480,19 @@ export const EventPayloadSchemas = {
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
   TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
+  TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchema,
+  TICKET_STATUS_CHANGED: TicketStatusChangedPayloadSchema,
+  TICKET_PRIORITY_CHANGED: TicketPriorityChangedPayloadSchema,
+  TICKET_UNASSIGNED: TicketUnassignedPayloadSchema,
+  TICKET_REOPENED: TicketReopenedPayloadSchema,
+  TICKET_ESCALATED: TicketEscalatedPayloadSchema,
+  TICKET_QUEUE_CHANGED: TicketQueueChangedPayloadSchema,
+  TICKET_MESSAGE_ADDED: TicketMessageAddedPayloadSchema,
+  TICKET_CUSTOMER_REPLIED: TicketCustomerRepliedPayloadSchema,
+  TICKET_INTERNAL_NOTE_ADDED: TicketInternalNoteAddedPayloadSchema,
+  TICKET_SLA_STAGE_ENTERED: TicketSlaStageEnteredPayloadSchema,
+  TICKET_SLA_STAGE_MET: TicketSlaStageMetPayloadSchema,
+  TICKET_SLA_STAGE_BREACHED: TicketSlaStageBreachedPayloadSchema,
   PROJECT_CREATED: ProjectEventPayloadSchema,
   PROJECT_UPDATED: ProjectEventPayloadSchema,
   PROJECT_CLOSED: ProjectClosedPayloadSchema,
@@ -375,6 +518,10 @@ export const EventPayloadSchemas = {
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
   MESSAGE_SENT: MessageSentPayloadSchema,
   USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
+  APPOINTMENT_REQUEST_CREATED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_REQUEST_APPROVED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_REQUEST_DECLINED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_REQUEST_CANCELLED: AppointmentRequestEventPayloadSchema,
   RMM_DEVICE_CREATED: RmmDeviceEventPayloadSchema,
   RMM_DEVICE_UPDATED: RmmDeviceEventPayloadSchema,
   RMM_DEVICE_DELETED: RmmDeviceEventPayloadSchema,
@@ -410,6 +557,7 @@ export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type TicketCommentUpdatedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_UPDATED>;
+export type TicketResponseStateChangedEvent = z.infer<typeof EventSchemas.TICKET_RESPONSE_STATE_CHANGED>;
 export type ProjectCreatedEvent = z.infer<typeof EventSchemas.PROJECT_CREATED>;
 export type ProjectUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_UPDATED>;
 export type ProjectClosedEvent = z.infer<typeof EventSchemas.PROJECT_CLOSED>;
@@ -448,62 +596,32 @@ export type RmmSyncFailedEvent = z.infer<typeof EventSchemas.RMM_SYNC_FAILED>;
 export type RmmWebhookReceivedEvent = z.infer<typeof EventSchemas.RMM_WEBHOOK_RECEIVED>;
 
 export type Event =
-  | TicketCreatedEvent
-  | TicketUpdatedEvent
-  | TicketClosedEvent
-  | TicketDeletedEvent
-  | TicketAssignedEvent
-  | TicketAdditionalAgentAssignedEvent
-  | TicketCommentAddedEvent
-  | TicketCommentUpdatedEvent
-  | ProjectCreatedEvent
-  | ProjectUpdatedEvent
-  | ProjectClosedEvent
-  | ProjectAssignedEvent
-  | ProjectTaskAssignedEvent
-  | ProjectTaskAdditionalAgentAssignedEvent
-  | TaskCommentAddedEvent
-  | TaskCommentUpdatedEvent
-  | TimeEntrySubmittedEvent
-  | TimeEntryApprovedEvent
-  | InvoiceGeneratedEvent
-  | InvoiceFinalizedEvent
-  | CustomEvent
-  | InboundEmailReceivedEvent
-  | AccountingExportCompletedEvent
-  | AccountingExportFailedEvent
-  | ScheduleEntryCreatedEvent
-  | ScheduleEntryUpdatedEvent
-  | ScheduleEntryDeletedEvent
-  | CalendarSyncStartedEvent
-  | CalendarSyncCompletedEvent
-  | CalendarSyncFailedEvent
-  | CalendarConflictDetectedEvent
-  | MessageSentEvent
-  | UserMentionedInDocumentEvent
-  | RmmDeviceCreatedEvent
-  | RmmDeviceUpdatedEvent
-  | RmmDeviceDeletedEvent
-  | RmmDeviceOnlineEvent
-  | RmmDeviceOfflineEvent
-  | RmmAlertTriggeredEvent
-  | RmmAlertResolvedEvent
-  | RmmSyncStartedEvent
-  | RmmSyncCompletedEvent
-  | RmmSyncFailedEvent
-  | RmmWebhookReceivedEvent;
+  {
+    [K in keyof typeof EventSchemas]: z.infer<(typeof EventSchemas)[K]>;
+  }[keyof typeof EventSchemas];
+
+export type WorkflowPublishHooks = {
+  executionId?: string;
+  eventName?: string;
+  fromState?: string;
+  toState?: string;
+};
 
 /**
  * Convert an event bus event to a workflow event
  */
-export function convertToWorkflowEvent(event: Event): any {
+export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHooks): any {
+  const payload = (event as any).payload as Record<string, unknown> | undefined;
   return {
     event_id: event.id,
-    event_name: event.payload?.eventName || event.eventType,
+    execution_id: hooks?.executionId,
+    event_name: hooks?.eventName ?? (payload as any)?.eventName ?? event.eventType,
     event_type: event.eventType,
-    tenant: event.payload?.tenantId || '',
+    tenant: (payload as any)?.tenantId || '',
     timestamp: event.timestamp,
-    user_id: event.payload?.userId,
-    payload: event.payload
+    from_state: hooks?.fromState,
+    to_state: hooks?.toState,
+    user_id: (payload as any)?.actorUserId ?? (payload as any)?.userId,
+    payload
   };
 }

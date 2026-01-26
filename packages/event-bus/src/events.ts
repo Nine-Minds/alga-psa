@@ -1,1 +1,1 @@
-export * from '@alga-psa/event-schemas';
+export * from './schemas/eventBusSchema';
