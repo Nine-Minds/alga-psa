@@ -49,6 +49,74 @@ async function listRecentRuns({ db, workflowId, tenantId, limit = 5 }) {
   );
 }
 
+async function getRunSteps({ db, runId }) {
+  if (!db) throw new Error('getRunSteps requires db');
+  if (!runId) throw new Error('getRunSteps requires runId');
+  return db.query(
+    `
+      select
+        step_id,
+        run_id,
+        step_path,
+        definition_step_id,
+        status,
+        attempt,
+        duration_ms,
+        error_json,
+        started_at,
+        completed_at
+      from workflow_run_steps
+      where run_id = $1
+      order by started_at asc, step_path asc
+    `,
+    [runId]
+  );
+}
+
+async function getRunLogs({ db, runId, limit = 200 }) {
+  if (!db) throw new Error('getRunLogs requires db');
+  if (!runId) throw new Error('getRunLogs requires runId');
+  return db.query(
+    `
+      select
+        log_id,
+        run_id,
+        step_id,
+        step_path,
+        level,
+        message,
+        context_json,
+        correlation_key,
+        event_name,
+        source,
+        created_at
+      from workflow_run_logs
+      where run_id = $1
+      order by created_at desc
+      limit $2
+    `,
+    [runId, limit]
+  );
+}
+
+function summarizeSteps(steps) {
+  const counts = {};
+  const failed = [];
+  for (const s of steps) {
+    const status = String(s.status || 'UNKNOWN');
+    counts[status] = (counts[status] || 0) + 1;
+    if (status === 'FAILED') {
+      failed.push({
+        stepPath: s.step_path,
+        definitionStepId: s.definition_step_id,
+        attempt: s.attempt,
+        error: s.error_json ?? null
+      });
+    }
+  }
+  return { counts, failed };
+}
+
 async function waitForRun({
   db,
   workflowId,
@@ -89,6 +157,8 @@ async function waitForRun({
 
 module.exports = {
   waitForRun,
-  listRecentRuns
+  listRecentRuns,
+  getRunSteps,
+  getRunLogs,
+  summarizeSteps
 };
-

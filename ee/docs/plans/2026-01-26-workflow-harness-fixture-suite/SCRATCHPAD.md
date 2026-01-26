@@ -11,3 +11,4 @@
 - F007: Added `tools/workflow-harness/lib/workflow.cjs#importWorkflowBundleV1` (wraps `/api/workflow-definitions/import` with `?force=true`).
 - F008: Added `tools/workflow-harness/lib/workflow.cjs#exportWorkflowBundleV1` (wraps `/api/workflow-definitions/:id/export`).
 - F009: Added `tools/workflow-harness/lib/runs.cjs#waitForRun` (polls `workflow_runs` by workflowId + tenantId after trigger time).
+- F010: Added `tools/workflow-harness/lib/runs.cjs#getRunSteps` + `summarizeSteps` (+ `getRunLogs` for artifacts).
