@@ -392,8 +392,17 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err?.stack ?? err?.message ?? String(err));
-  usage();
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err?.stack ?? err?.message ?? String(err));
+    usage();
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  parseArgs,
+  validateFixtureDir,
+  runFixture,
+  usage
+};

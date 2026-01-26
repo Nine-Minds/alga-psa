@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "description": "Harness: fails with clear error when --test is missing", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T001", "description": "Harness: fails with clear error when --test is missing", "implemented": true, "featureIds": ["F002"] },
   { "id": "T002", "description": "Harness: fails with clear error when bundle.json is missing", "implemented": false, "featureIds": ["F003"] },
   { "id": "T003", "description": "Harness: fails with clear error when test.cjs is missing", "implemented": false, "featureIds": ["F003"] },
   { "id": "T004", "description": "Harness: imports bundle with --force and reports workflow id/key used", "implemented": false, "featureIds": ["F007", "F015"] },
