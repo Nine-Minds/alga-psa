@@ -4,6 +4,7 @@
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { WorkflowBundleImportError } from './workflowBundleImportErrors';
+import draft7MetaSchema from 'ajv/dist/refs/json-schema-draft-07.json';
 import schemaJson from '../../../../../ee/docs/schemas/workflow-bundle.v1.schema.json';
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: unknown[] };
@@ -13,6 +14,9 @@ const getValidator = (): ValidateFn => {
   if (cachedValidate) return cachedValidate;
 
   const ajv = new Ajv({ allErrors: true, strict: false });
+  // Our bundle schema declares `$schema: draft-07`. Ajv 2020 doesn't include the draft-07 meta schema by default.
+  // Add it explicitly so Ajv can resolve the `$schema` reference during compilation.
+  ajv.addMetaSchema(draft7MetaSchema);
   addFormats(ajv);
   cachedValidate = ajv.compile(schemaJson) as ValidateFn;
   return cachedValidate;
