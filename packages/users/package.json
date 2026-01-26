@@ -17,9 +17,8 @@
       "require": "./dist/lib/*.cjs"
     },
     "./services/*": {
-      "types": "./dist/services/*.d.ts",
-      "import": "./dist/services/*.js",
-      "require": "./dist/services/*.cjs"
+      "types": "./src/services/*.ts",
+      "import": "./src/services/*.ts"
     },
     "./actions": {
       "types": "./src/actions/index.ts",

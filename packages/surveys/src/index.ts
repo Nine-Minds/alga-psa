@@ -1,9 +1,13 @@
 /**
  * @alga-psa/surveys
  *
- * Survey management module for Alga PSA.
- * Provides survey creation, distribution, and response collection.
+ * Main entry point exports buildable models/services code only.
+ * For runtime code, use:
+ * - '@alga-psa/surveys/actions' for server actions
+ * - '@alga-psa/surveys/components' for React components
  */
 
-export * from './actions';
-export * from './components';
+// Buildable exports
+export * from './models';
+export * from './services/SurveyAnalyticsService';
+export * from './services/SurveyDashboardService';

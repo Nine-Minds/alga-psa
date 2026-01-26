@@ -1,6 +1,6 @@
 'use server';
 
-import { uploadEntityImage, deleteEntityImage, EntityType } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage, type EntityType } from '@alga-psa/documents/lib/entityImageService';
 import { getConnection } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';

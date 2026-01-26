@@ -1,13 +1,12 @@
 // Main reports module exports
 
-// Core functionality
+// Core functionality (buildable)
 export * from './core';
 
-// Query builders
+// Query builders (buildable)
 export * from './builders';
 
-// Report definitions
+// Report definitions (buildable)
 export * from './definitions';
 
-// Server actions
-export * from './actions';
+// Note: Server actions are exported separately via '@alga-psa/reporting/actions'

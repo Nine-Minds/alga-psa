@@ -7,9 +7,8 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, ListOptions, withTransaction } from '@alga-psa/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from '@alga-psa/types';
-import { ListOptions } from '../controllers/types';
 import { 
   CreateUserData, 
   UpdateUserData, 

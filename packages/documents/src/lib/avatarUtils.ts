@@ -1,5 +1,5 @@
 import { createTenantKnex } from '@alga-psa/db';
-import { getImageUrlInternal } from '@alga-psa/documents/actions/documentActions';
+import { getImageUrlInternal } from '../actions/documentActions';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 

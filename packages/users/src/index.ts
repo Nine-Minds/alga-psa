@@ -10,9 +10,9 @@
  * - '@alga-psa/users/hooks' for React hooks
  */
 
-// Buildable exports (lib and services)
+// Buildable exports (lib only)
+// Note: UserService is runtime-only due to missing schemas/userSchemas
 export * from './lib/avatarUtils';
 export * from './lib/permissions';
 export * from './lib/rateLimiting';
 export * from './lib/roleActions';
-export * from './services/UserService';

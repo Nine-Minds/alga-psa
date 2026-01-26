@@ -2,65 +2,83 @@
   "name": "@alga-psa/documents",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./actions": {
-      "import": "./src/actions/index.ts",
-      "types": "./src/actions/index.ts"
-    },
-    "./actions/*": {
-      "import": "./src/actions/*.ts",
-      "types": "./src/actions/*.ts"
-    },
-    "./components": {
-      "import": "./src/components/index.ts",
-      "types": "./src/components/index.ts"
-    },
-    "./components/*": {
-      "import": "./src/components/*.tsx",
-      "types": "./src/components/*.tsx"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./handlers": {
-      "import": "./src/handlers/index.ts",
-      "types": "./src/handlers/index.ts"
+      "types": "./dist/handlers/index.d.ts",
+      "import": "./dist/handlers/index.js",
+      "require": "./dist/handlers/index.cjs"
     },
     "./handlers/*": {
-      "import": "./src/handlers/*.ts",
-      "types": "./src/handlers/*.ts"
+      "types": "./dist/handlers/*.d.ts",
+      "import": "./dist/handlers/*.js",
+      "require": "./dist/handlers/*.cjs"
     },
     "./lib/avatarUtils": {
-      "import": "./src/lib/avatarUtils.ts",
-      "types": "./src/lib/avatarUtils.ts"
-    },
-    "./lib/blocknoteUtils": {
-      "import": "./src/lib/blocknoteUtils.ts",
-      "types": "./src/lib/blocknoteUtils.ts"
-    },
-    "./lib/documentUtils": {
-      "import": "./src/lib/documentUtils.ts",
-      "types": "./src/lib/documentUtils.ts"
+      "types": "./src/lib/avatarUtils.ts",
+      "import": "./src/lib/avatarUtils.ts"
     },
     "./lib/entityImageService": {
-      "import": "./src/lib/entityImageService.ts",
-      "types": "./src/lib/entityImageService.ts"
+      "types": "./src/lib/entityImageService.ts",
+      "import": "./src/lib/entityImageService.ts"
     },
-    "./storage/StorageService": {
-      "import": "./src/storage/StorageService.ts",
-      "types": "./src/storage/StorageService.ts"
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "require": "./dist/lib/*.cjs"
     },
     "./models": {
-      "import": "./src/models/index.ts",
-      "types": "./src/models/index.ts"
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js",
+      "require": "./dist/models/index.cjs"
     },
     "./models/*": {
-      "import": "./src/models/*.ts",
-      "types": "./src/models/*.ts"
+      "types": "./dist/models/*.d.ts",
+      "import": "./dist/models/*.js",
+      "require": "./dist/models/*.cjs"
+    },
+    "./storage/*": {
+      "types": "./dist/storage/*.d.ts",
+      "import": "./dist/storage/*.js",
+      "require": "./dist/storage/*.cjs"
+    },
+    "./cache/*": {
+      "types": "./dist/cache/*.d.ts",
+      "import": "./dist/cache/*.js",
+      "require": "./dist/cache/*.cjs"
+    },
+    "./config/*": {
+      "types": "./dist/config/*.d.ts",
+      "import": "./dist/config/*.js",
+      "require": "./dist/config/*.cjs"
+    },
+    "./types/*": {
+      "types": "./dist/types/*.d.ts",
+      "import": "./dist/types/*.js",
+      "require": "./dist/types/*.cjs"
+    },
+    "./actions": {
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "types": "./src/actions/*.ts",
+      "import": "./src/actions/*.ts"
+    },
+    "./components": {
+      "types": "./src/components/index.ts",
+      "import": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
     }
   },
   "scripts": {

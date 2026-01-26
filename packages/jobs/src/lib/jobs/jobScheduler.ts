@@ -22,7 +22,7 @@ export interface JobState {
   queued: number;
 }
 
-export interface JobData {
+export interface PgBossJobData {
   job_id: string;
   name: string;
   data: Record<string, unknown>;

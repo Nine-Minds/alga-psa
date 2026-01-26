@@ -8,7 +8,7 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
 import { getSession } from '@alga-psa/auth';
-import { getUserAvatarUrl } from '@alga-psa/documents';
+import { getUserAvatarUrl } from '@alga-psa/documents/lib/avatarUtils';
 
 /**
  * Get the current user from the session.

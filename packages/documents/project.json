@@ -6,8 +6,21 @@
   "tags": ["scope:documents", "type:vertical"],
   "targets": {
     "build": {
-      "executor": "nx:noop",
-      "dependsOn": []
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsup",
+        "cwd": "{projectRoot}"
+      },
+      "inputs": ["production", "^production"],
+      "dependsOn": ["@alga-psa/core:build", "@alga-psa/db:build", "@alga-psa/types:build", "@alga-psa/validation:build"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
     },
     "test": {
       "executor": "@nx/vite:test",

@@ -6,7 +6,31 @@
   "tags": ["scope:onboarding", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsup",
+        "cwd": "{projectRoot}"
+      },
+      "inputs": ["production", "^production"],
+      "dependsOn": [
+        "@alga-psa/analytics:build",
+        "@alga-psa/core:build",
+        "@alga-psa/db:build",
+        "@alga-psa/licensing:build",
+        "@alga-psa/reference-data:build",
+        "@alga-psa/tenancy:build",
+        "@alga-psa/types:build",
+        "@alga-psa/users:build",
+        "@alga-psa/validation:build"
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
     },
     "test": {
       "executor": "@nx/vite:test",

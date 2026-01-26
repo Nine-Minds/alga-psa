@@ -2,24 +2,32 @@
   "name": "@alga-psa/surveys",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js",
+      "require": "./dist/models/index.cjs"
+    },
+    "./services/*": {
+      "types": "./dist/services/*.d.ts",
+      "import": "./dist/services/*.js",
+      "require": "./dist/services/*.cjs"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "types": "./src/components/index.ts",
+      "import": "./src/components/index.ts"
     }
   },
   "scripts": {

@@ -2,7 +2,7 @@
 // TODO: DocumentAssociation model method signature changes
 import type { IUser, IDocument, IDocumentAssociation } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
-import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
+import DocumentAssociation from '../models/documentAssociation';
 import { createTenantKnex } from '@alga-psa/db';
 
 /**

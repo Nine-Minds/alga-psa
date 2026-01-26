@@ -2,14 +2,14 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: {
-    // Buildable lib/services code only
-    // Actions, components, and hooks are runtime (Next.js transpiled)
+    // Buildable lib code only
+    // Actions, components, hooks, and services with missing deps are runtime (Next.js transpiled)
     'index': 'src/index.ts',
     'lib/avatarUtils': 'src/lib/avatarUtils.ts',
     'lib/permissions': 'src/lib/permissions.ts',
     'lib/rateLimiting': 'src/lib/rateLimiting.ts',
     'lib/roleActions': 'src/lib/roleActions.ts',
-    'services/UserService': 'src/services/UserService.ts',
+    // Note: UserService is runtime-only due to missing schemas/userSchemas
   },
   format: ['esm', 'cjs'],
   dts: true,

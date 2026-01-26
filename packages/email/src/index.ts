@@ -1,17 +1,16 @@
 /**
- * Email Services Export
- * 
- * This module provides two distinct email services:
- * 
- * 1. SystemEmailService - For platform/system emails using environment variables
- * 2. TenantEmailService - For tenant-specific business emails using database settings
+ * @alga-psa/email
+ *
+ * Main entry point exports buildable lib/services code only.
+ * For runtime code, use:
+ * - '@alga-psa/email/actions' for server actions (send* functions)
  */
 
-// System email exports
+// System email exports (buildable)
 export { SystemEmailService, getSystemEmailService } from './system/SystemEmailService';
 export * from './system/types';
 
-// Tenant email exports
+// Tenant email exports (buildable)
 export { TenantEmailService } from './TenantEmailService';
 export { DelayedEmailQueue } from './DelayedEmailQueue';
 export type {
@@ -30,9 +29,9 @@ export type {
   BucketConfigGetter
 } from './TokenBucketRateLimiter';
 export * from './templateProcessors';
-export type { 
+export type {
   SendEmailParams as TenantEmailParams,
-  EmailSettingsValidation 
+  EmailSettingsValidation
 } from './TenantEmailService';
 
 // Re-export common types for convenience
@@ -47,15 +46,19 @@ export type {
   EmailSendResult
 } from './BaseEmailService';
 
-// Individual email sending functions
-export { sendPasswordResetEmail } from './sendPasswordResetEmail';
-export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
-export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
-export { sendVerificationEmail } from './sendVerificationEmail';
-export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
-
-// System email provider factory
+// System email provider factory (buildable)
 export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
 
-// Tenant email provider manager
+// Tenant email provider manager (buildable)
 export { EmailProviderManager } from './providers/EmailProviderManager';
+
+// Locale and features (buildable)
+export {
+  resolveEmailLocale,
+  getTenantDefaultLocale,
+  resolveEmailLocalesForRecipients,
+  getUserInfoForEmail,
+  type EmailRecipient
+} from './emailLocaleResolver';
+export { isEnterprise, getFeatureImplementation } from './features';
+export { LOCALE_CONFIG, isSupportedLocale, type SupportedLocale } from './lib/localeConfig';

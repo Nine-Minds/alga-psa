@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { revalidatePath } from 'next/cache';
 import { getUserRolesWithPermissions, getUserClientId } from '@alga-psa/users/actions';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents/lib/entityImageService';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
 import {

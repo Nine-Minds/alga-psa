@@ -2,12 +2,11 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: {
-    // Buildable lib code only
+    // Buildable lib/models code only
     // Actions, components, and hooks are runtime (Next.js transpiled)
     'index': 'src/index.ts',
-    'lib/index': 'src/lib/index.ts',
-    'lib/stepDefinitions': 'src/lib/stepDefinitions.ts',
-    'lib/deriveParentStepFromSubsteps': 'src/lib/deriveParentStepFromSubsteps.ts',
+    'models/index': 'src/models/index.ts',
+    'lib/schemas/asset.schema': 'src/lib/schemas/asset.schema.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
@@ -17,15 +16,9 @@ export default defineConfig({
   clean: true,
   outDir: 'dist',
   external: [
-    '@alga-psa/analytics',
     '@alga-psa/core',
     '@alga-psa/db',
-    '@alga-psa/licensing',
-    '@alga-psa/reference-data',
-    '@alga-psa/tenancy',
     '@alga-psa/types',
-    '@alga-psa/ui',
-    '@alga-psa/users',
     '@alga-psa/validation',
     'knex',
     'uuid',
@@ -34,4 +27,3 @@ export default defineConfig({
     'react-dom',
   ],
 });
-

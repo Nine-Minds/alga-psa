@@ -1,6 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '../storage/StorageService';
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
 import { join } from 'path';

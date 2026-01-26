@@ -6,7 +6,7 @@ import { BlockNoteDocumentHandler } from './BlockNoteDocumentHandler';
 import { PDFDocumentHandler } from './PDFDocumentHandler';
 import { ImageDocumentHandler } from './ImageDocumentHandler';
 import { OfficeDocumentHandler } from './OfficeDocumentHandler';
-import { VideoDocumentHandler } from '@alga-psa/documents/handlers/VideoDocumentHandler';
+import { VideoDocumentHandler } from './VideoDocumentHandler';
 import { GenericFileDocumentHandler } from './GenericFileDocumentHandler';
 
 /**

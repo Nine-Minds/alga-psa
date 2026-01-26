@@ -1,9 +1,13 @@
 /**
  * @alga-psa/assets
  *
- * Asset management module for Alga PSA.
- * Provides asset tracking, inventory, and device management.
+ * Main entry point exports buildable lib/models code only.
+ * For runtime code, use:
+ * - '@alga-psa/assets/actions' for server actions
+ * - '@alga-psa/assets/components' for React components
+ * - '@alga-psa/assets/hooks' for React hooks
  */
 
-export * from './actions';
-export * from './components';
+// Buildable exports
+export * from './models';
+export * from './lib/schemas/asset.schema';
