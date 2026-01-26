@@ -31,3 +31,4 @@
 - T004: Added stubbed runner test `tools/workflow-harness/tests/runner-stubbed.test.cjs` validating `--force` is passed to import and ctx exposes workflow id/key.
 - T005: Added stubbed runner test ensuring thrown errors are surfaced and `failure.*` artifacts include stack trace.
 - T006: Added stubbed runner test ensuring wait timeouts include diagnostics (`err.details`) and are captured into failure artifacts.
+- T007: Added stubbed runner test ensuring successful runs capture `run` + `steps` into the result state for summaries/JSON output.

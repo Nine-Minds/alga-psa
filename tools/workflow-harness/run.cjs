@@ -231,6 +231,19 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
     if (testError) throw testError;
     if (cleanupError) throw cleanupError;
 
+    if (db && state.run?.run_id && !Array.isArray(state.steps)) {
+      try {
+        state.steps = await getRunSteps({ db, runId: state.run.run_id });
+      } catch {
+        // best-effort
+      }
+      try {
+        state.logs = await getRunLogs({ db, runId: state.run.run_id, limit: 200 });
+      } catch {
+        // best-effort
+      }
+    }
+
     return { result, state };
   } catch (err) {
     const runId = state.run?.run_id ?? state.run?.runId ?? null;

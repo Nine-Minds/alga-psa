@@ -194,6 +194,64 @@ test('T006: waitForRun timeout produces helpful diagnostic in artifacts', async 
   }
 });
 
+test('T007: captures run and step status summary on success', async () => {
+  const { dir, bundlePath, testPath } = writeFixture({
+    name: 't007',
+    bundle: {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [{ key: 'fixture.t007', metadata: {}, dependencies: { actions: [], nodeTypes: [], schemaRefs: [] }, draft: { draftVersion: 1, definition: {} }, publishedVersions: [] }]
+    },
+    testSource: `
+      module.exports = async (ctx) => {
+        const run = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt, timeoutMs: 5 });
+        ctx.expect.equal(run.status, 'SUCCEEDED', 'run status');
+      };
+    `
+  });
+
+  const steps = [
+    { step_id: 's1', run_id: 'run-007', step_path: '/0', definition_step_id: 'a', status: 'SUCCEEDED', attempt: 1 }
+  ];
+
+  const harness = loadHarnessWithStubs({
+    http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
+    db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
+    workflow: {
+      importWorkflowBundleV1: async () => ({ createdWorkflows: [{ key: 'fixture.t007', workflowId: 'wf-007' }] }),
+      exportWorkflowBundleV1: async () => ({})
+    },
+    runs: {
+      waitForRun: async () => ({ run_id: 'run-007', status: 'SUCCEEDED' }),
+      getRunSteps: async () => steps,
+      getRunLogs: async () => [],
+      summarizeSteps: (s) => ({ counts: { SUCCEEDED: s.length }, failed: [] })
+    }
+  });
+
+  try {
+    const { runFixture } = harness.mod;
+    const res = await runFixture({
+      testDir: dir,
+      bundlePath,
+      testPath,
+      baseUrl: 'http://localhost:3010',
+      tenantId: 'tenant',
+      cookie: 'cookie',
+      force: true,
+      timeoutMs: 1000,
+      debug: false,
+      artifactsDir: os.tmpdir(),
+      pgUrl: 'postgres://unused'
+    });
+    assert.deepEqual(res.state.run, { run_id: 'run-007', status: 'SUCCEEDED' });
+    assert.deepEqual(res.state.steps, steps);
+  } finally {
+    harness.restore();
+  }
+});
+
   const harness = loadHarnessWithStubs({
     http: { createHttpClient: () => ({ request: async () => ({ json: {} }) }) },
     db: { createDbClient: async () => ({ query: async () => [], close: async () => {} }) },
