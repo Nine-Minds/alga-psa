@@ -320,11 +320,12 @@ export const getImportReferenceData = withAuth(async (
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, statusMappings] = await Promise.all([
-      // Users (exclude inactive - only show active users for assignment)
+      // Users (only active internal/MSP agents - exclude client portal users)
       trx('users')
-        .select('user_id', 'first_name', 'last_name')
+        .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive', 'tenant')
         .where('tenant', tenant)
         .where('is_inactive', false)
+        .where('user_type', 'internal')
         .orderBy(['first_name', 'last_name']),
 
       // Priorities for project_task
@@ -551,7 +552,7 @@ export const validatePhaseTaskImportData = withAuth(async (
 
   // Fetch lookup data
   const [users, priorities, servicesResponse] = await Promise.all([
-    getAllUsersBasic(true),
+    getAllUsersBasic(true, 'internal'), // Only fetch active internal/MSP agents
     getAllPriorities('project_task'),
     getServices(1, 999),
   ]);

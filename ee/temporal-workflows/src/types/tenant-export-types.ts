@@ -11,8 +11,6 @@ export interface ExportTenantDataInput {
   tenantId: string;
   requestedBy: string;
   reason?: string;
-  /** URL expiration in seconds (default: 1 hour = 3600) */
-  urlExpiresIn?: number;
   /** Optional export ID - if not provided, one will be generated */
   exportId?: string;
 }
@@ -20,12 +18,10 @@ export interface ExportTenantDataInput {
 export interface ExportTenantDataResult {
   success: boolean;
   exportId?: string;
+  /** S3 bucket where the export is stored */
+  bucket?: string;
   /** S3 key where the export is stored (permanent) */
   s3Key?: string;
-  /** Presigned download URL (time-limited) */
-  downloadUrl?: string;
-  /** When the download URL expires */
-  urlExpiresAt?: ISO8601String;
   fileSizeBytes?: number;
   tableCount?: number;
   recordCount?: number;
@@ -90,8 +86,6 @@ export interface TenantExportWorkflowInput {
   tenantId: string;
   requestedBy: string;
   reason?: string;
-  /** URL expiration in seconds (default: 1 hour = 3600) */
-  urlExpiresIn?: number;
 }
 
 export interface TenantExportWorkflowState {
@@ -104,12 +98,10 @@ export interface TenantExportWorkflowState {
   progress?: number;
   /** Current table being exported */
   currentTable?: string;
+  /** S3 bucket where export is stored */
+  bucket?: string;
   /** S3 key where export is stored */
   s3Key?: string;
-  /** Presigned download URL */
-  downloadUrl?: string;
-  /** When download URL expires */
-  urlExpiresAt?: ISO8601String;
   /** File size in bytes */
   fileSizeBytes?: number;
   /** Number of tables exported */
@@ -130,9 +122,10 @@ export interface TenantExportWorkflowResult {
   tenantId: string;
   tenantName?: string;
   status: TenantExportStatus;
+  /** S3 bucket where export is stored */
+  bucket?: string;
+  /** S3 key where export is stored */
   s3Key?: string;
-  downloadUrl?: string;
-  urlExpiresAt?: ISO8601String;
   fileSizeBytes?: number;
   tableCount?: number;
   recordCount?: number;

@@ -8,6 +8,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import type { IUser } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -996,17 +998,19 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           />
                           <span className="text-sm">Map to existing user:</span>
                         </label>
-                        <CustomSelect
-                          options={availableUsers.map(user => ({
-                            value: user.user_id,
-                            label: `${user.first_name} ${user.last_name}`.trim() || 'Unnamed User',
-                          }))}
+                        <UserPicker
+                          id={`agent-mapping-${agentInfo.agentName}`}
+                          users={availableUsers as IUser[]}
                           value={resolution?.mappedUserId || ''}
                           onValueChange={(value) =>
                             handleAgentResolutionChange(agentInfo.agentName, 'map_to_existing', value)
                           }
                           disabled={resolution?.action !== 'map_to_existing'}
-                          className="w-48"
+                          placeholder="Select user..."
+                          labelStyle="none"
+                          buttonWidth="fit"
+                          size="sm"
+                          className="min-w-[200px]"
                         />
                       </div>
                     </div>

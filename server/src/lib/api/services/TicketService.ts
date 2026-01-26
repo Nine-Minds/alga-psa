@@ -176,6 +176,17 @@ export class TicketService extends BaseService<ITicket> {
         this.on('t.client_id', '=', 'comp.client_id')
             .andOn('t.tenant', '=', 'comp.tenant');
       })
+      .leftJoin('client_locations as cl', function() {
+        this.on('t.tenant', '=', 'cl.tenant')
+            .andOn('t.client_id', '=', 'cl.client_id')
+            .andOn(function() {
+              this.on('t.location_id', '=', 'cl.location_id')
+                  .orOn(function() {
+                    this.onNull('t.location_id')
+                        .andOn('cl.is_default', '=', knex.raw('true'));
+                  });
+            });
+      })
       .leftJoin('contacts as cont', function() {
         this.on('t.contact_name_id', '=', 'cont.contact_name_id')
             .andOn('t.tenant', '=', 'cont.tenant');
@@ -199,8 +210,8 @@ export class TicketService extends BaseService<ITicket> {
       .select(
         't.*',
         'comp.client_name',
-        'comp.email as client_email',
-        'comp.phone_no as client_phone',
+        'cl.email as client_email',
+        'cl.phone as client_phone',
         'cont.full_name as contact_name',
         'cont.email as contact_email',
         'cont.phone_number as contact_phone',

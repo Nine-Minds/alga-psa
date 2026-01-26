@@ -37,10 +37,13 @@ export type TenantDeletionStatus =
 
 export type TenantDeletionStep =
   | 'initializing'
+  | 'validating_tenant'
+  | 'exporting_data'
   | 'getting_tenant_info'
   | 'deactivating_users'
   | 'canceling_stripe_subscription'
   | 'tagging_client'
+  | 'deactivating_master_client'
   | 'collecting_stats'
   | 'recording_pending_deletion'
   | 'awaiting_confirmation'
@@ -64,6 +67,11 @@ export interface TenantDeletionWorkflowState {
   rollbackReason?: string;
   rolledBackBy?: string;
   error?: string;
+  /** Export information (populated during export step) */
+  exportId?: string;
+  exportBucket?: string;
+  exportS3Key?: string;
+  exportFileSizeBytes?: number;
 }
 
 // ============================================
@@ -116,6 +124,20 @@ export interface TagClientResult {
   tagId?: string;
 }
 
+export interface DeactivateMasterClientResult {
+  clientId?: string;
+  clientDeactivated: boolean;
+  contactsDeactivated: number;
+}
+
+export interface ValidateTenantDeletionResult {
+  valid: boolean;
+  tenantExists: boolean;
+  isMasterTenant: boolean;
+  managementTenantId: string | null;
+  error?: string;
+}
+
 export interface RecordPendingDeletionInput {
   deletionId: string;
   tenantId: string;
@@ -125,6 +147,11 @@ export interface RecordPendingDeletionInput {
   workflowId: string;
   workflowRunId: string;
   stats: TenantStats;
+  /** Export information (if data was exported before deletion) */
+  exportId?: string;
+  exportBucket?: string;
+  exportS3Key?: string;
+  exportFileSizeBytes?: number;
 }
 
 export interface UpdateDeletionStatusInput {

@@ -43,6 +43,10 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 
+// Auto-scroll configuration for drag operations
+const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
+const MAX_SCROLL_SPEED = 20; // Maximum scroll speed in pixels per frame
+
 interface ProjectDetailProps {
   project: IProject;
   phases: IProjectPhase[];
@@ -53,6 +57,8 @@ interface ProjectDetailProps {
   assignedUser?: IUserWithRoles;
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
+  initialPhaseId?: string | null;
+  onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
 export default function ProjectDetail({
@@ -64,7 +70,9 @@ export default function ProjectDetail({
   contact,
   assignedUser,
   onTagsUpdate,
-  initialTaskId
+  initialTaskId,
+  initialPhaseId,
+  onUrlUpdate
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
 
@@ -159,25 +167,38 @@ export default function ProjectDetail({
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
   
-  // Auto-select the first phase when the project has phases (but not when opening a specific task)
+  // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
     // Don't auto-select if we have an initialTaskId - that case is handled separately
     if (initialTaskId) return;
 
     // Only auto-select if we have phases but none is selected yet
     if (projectPhases.length > 0 && !selectedPhase) {
-      // Sort phases by order_key to get the first one
+      // Sort phases by order_key
       const sortedPhases = [...projectPhases].sort((a, b) => {
         const aKey = a.order_key || 'zzz';
         const bKey = b.order_key || 'zzz';
         return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
       });
 
-      const firstPhase = sortedPhases[0];
-      setSelectedPhase(firstPhase);
-      setCurrentPhase(firstPhase);
+      // If we have an initialPhaseId from URL, use that phase
+      let phaseToSelect = sortedPhases[0];
+      if (initialPhaseId) {
+        const phaseFromUrl = projectPhases.find(p => p.phase_id === initialPhaseId);
+        if (phaseFromUrl) {
+          phaseToSelect = phaseFromUrl;
+        }
+      }
+
+      setSelectedPhase(phaseToSelect);
+      setCurrentPhase(phaseToSelect);
+
+      // Update URL if we selected a phase and no phaseId was in the URL
+      if (!initialPhaseId && onUrlUpdate) {
+        onUrlUpdate(phaseToSelect.phase_id, null);
+      }
     }
-  }, [projectPhases, initialTaskId]); // Intentionally exclude selectedPhase to avoid re-triggering
+  }, [projectPhases, initialTaskId, initialPhaseId]); // Intentionally exclude selectedPhase to avoid re-triggering
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -263,16 +284,22 @@ export default function ProjectDetail({
     fetchTaskCounts();
   }, [project.project_id]);
 
-  const [scrollInterval, setScrollInterval] = useState<NodeJS.Timeout | null>(null);
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
+  const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
+    horizontal: 0,
+    vertical: 0,
+    column: null
+  });
 
   useEffect(() => {
     return () => {
-      if (scrollInterval) {
-        clearInterval(scrollInterval);
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
       }
     };
-  }, [scrollInterval]);
+  }, []);
 
   // Lazy load list view data when switching to list mode
   const loadListViewData = useCallback(async () => {
@@ -586,6 +613,11 @@ export default function ProjectDetail({
           setSelectedPhase(taskPhase);
           setCurrentPhase(taskPhase);
         }
+
+        // Update URL to include phaseId if it wasn't already there
+        if (onUrlUpdate && !initialPhaseId) {
+          onUrlUpdate(taskPhase.phase_id, initialTaskId);
+        }
       } catch (error) {
         console.error('Error loading task from notification:', error);
         toast.error('Failed to load task');
@@ -593,7 +625,7 @@ export default function ProjectDetail({
     };
 
     loadTaskAndSelectPhase();
-  }, [initialTaskId, projectPhases]);
+  }, [initialTaskId, projectPhases, initialPhaseId, onUrlUpdate]);
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
@@ -657,10 +689,12 @@ export default function ProjectDetail({
     document.body.classList.remove('dragging-task');
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
-    
-    if (scrollInterval) {
-      clearInterval(scrollInterval);
-      setScrollInterval(null);
+
+    // Reset scroll speeds and clear interval
+    scrollSpeedsRef.current = { horizontal: 0, vertical: 0, column: null };
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
     }
   };
 
@@ -751,42 +785,91 @@ export default function ProjectDetail({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    
-    const mouseY = e.clientY;
-    const viewportHeight = window.innerHeight;
-    const topThreshold = viewportHeight * 0.3; // Start scrolling at top 30%
-    const bottomThreshold = viewportHeight * 0.7; // Start scrolling at bottom 30%
-    const edgeThreshold = 100; // Pixels from very edge for max speed
-    const maxScrollSpeed = 25;
 
-    if (scrollInterval) {
-      clearInterval(scrollInterval);
-      setScrollInterval(null);
+    // kanbanBoardRef points to .kanbanContainer which is the horizontal scroll container
+    const kanbanContainer = kanbanBoardRef.current;
+    if (!kanbanContainer) return;
+
+    const containerRect = kanbanContainer.getBoundingClientRect();
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // Check if mouse is within the container bounds
+    if (mouseX < containerRect.left || mouseX > containerRect.right ||
+        mouseY < containerRect.top || mouseY > containerRect.bottom) {
+      // Stop scrolling if outside bounds
+      scrollSpeedsRef.current = { horizontal: 0, vertical: 0, column: null };
+      return;
     }
 
-    // Calculate scroll speed based on distance from edges
-    if (mouseY < topThreshold) {
-      const distance = Math.max(mouseY - edgeThreshold, 0);
-      const speed = Math.min(maxScrollSpeed, maxScrollSpeed * (1 - distance / (topThreshold - edgeThreshold)));
-      
-      const newInterval = setInterval(() => {
-        window.scrollBy({
-          top: -speed,
-          behavior: 'auto' // Use auto for smoother continuous scrolling
-        });
-      }, 16); // 60fps
-      setScrollInterval(newInterval);
-    } else if (mouseY > bottomThreshold) {
-      const distance = Math.max((viewportHeight - mouseY) - edgeThreshold, 0);
-      const speed = Math.min(maxScrollSpeed, maxScrollSpeed * (1 - distance / (viewportHeight - bottomThreshold - edgeThreshold)));
-      
-      const newInterval = setInterval(() => {
-        window.scrollBy({
-          top: speed,
-          behavior: 'auto' // Use auto for smoother continuous scrolling
-        });
-      }, 16); // 60fps
-      setScrollInterval(newInterval);
+    // Calculate horizontal scroll (for kanban container)
+    let horizontalScrollSpeed = 0;
+    const leftEdge = containerRect.left + SCROLL_THRESHOLD;
+    const rightEdge = containerRect.right - SCROLL_THRESHOLD;
+
+    if (mouseX < leftEdge) {
+      // Near left edge - scroll left
+      const distance = leftEdge - mouseX;
+      horizontalScrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+    } else if (mouseX > rightEdge) {
+      // Near right edge - scroll right
+      const distance = mouseX - rightEdge;
+      horizontalScrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+    }
+
+    // Find the column being dragged over and calculate vertical scroll
+    let verticalScrollSpeed = 0;
+    let targetColumn: HTMLElement | null = null;
+
+    // Find the kanban tasks containers using data attribute (more reliable than CSS classes)
+    const columns = kanbanContainer.querySelectorAll('[data-kanban-column-tasks="true"]');
+    columns.forEach((column) => {
+      const columnRect = column.getBoundingClientRect();
+      if (mouseX >= columnRect.left && mouseX <= columnRect.right &&
+          mouseY >= columnRect.top && mouseY <= columnRect.bottom) {
+        targetColumn = column as HTMLElement;
+
+        const topEdge = columnRect.top + SCROLL_THRESHOLD;
+        const bottomEdge = columnRect.bottom - SCROLL_THRESHOLD;
+
+        if (mouseY < topEdge) {
+          // Near top edge - scroll up
+          const distance = topEdge - mouseY;
+          verticalScrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        } else if (mouseY > bottomEdge) {
+          // Near bottom edge - scroll down
+          const distance = mouseY - bottomEdge;
+          verticalScrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        }
+      }
+    });
+
+    // Update scroll speeds in ref (the interval reads from this)
+    scrollSpeedsRef.current = {
+      horizontal: horizontalScrollSpeed,
+      vertical: verticalScrollSpeed,
+      column: targetColumn
+    };
+
+    // Start interval if not already running and we need to scroll
+    if (!scrollIntervalRef.current && (horizontalScrollSpeed !== 0 || verticalScrollSpeed !== 0)) {
+      scrollIntervalRef.current = setInterval(() => {
+        const { horizontal, vertical, column } = scrollSpeedsRef.current;
+        const container = kanbanBoardRef.current;
+
+        if (container && horizontal !== 0) {
+          container.scrollLeft += horizontal;
+        }
+        if (column && vertical !== 0) {
+          column.scrollTop += vertical;
+        }
+
+        // Stop interval if both speeds are 0
+        if (horizontal === 0 && vertical === 0 && scrollIntervalRef.current) {
+          clearInterval(scrollIntervalRef.current);
+          scrollIntervalRef.current = null;
+        }
+      }, 16); // ~60fps
     }
   };
 
@@ -1042,14 +1125,22 @@ export default function ProjectDetail({
     setDefaultStatus(null);
     setIsAddingTask(false);
     setSelectedTask(null);
-  }, []);
+    // Update URL to remove taskId while keeping phaseId
+    if (onUrlUpdate && selectedPhase) {
+      onUrlUpdate(selectedPhase.phase_id, null);
+    }
+  }, [onUrlUpdate, selectedPhase]);
 
   const handlePhaseAdded = useCallback((newPhase: IProjectPhase) => {
     setProjectPhases((prevPhases) => [...prevPhases, newPhase]);
     setSelectedPhase(newPhase);
     setCurrentPhase(newPhase);
+    // Update URL with new phase
+    if (onUrlUpdate) {
+      onUrlUpdate(newPhase.phase_id, null);
+    }
     toast.success('New phase added successfully!');
-  }, []);
+  }, [onUrlUpdate]);
 
   const handleAddCard = useCallback((status: ProjectStatus) => {
     if (!selectedPhase) {
@@ -1143,11 +1234,16 @@ export default function ProjectDetail({
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
     console.log('Using cached project tree data for edit task dialog');
-    
+
     setSelectedTask(task);
-    setCurrentPhase(phases.find(phase => phase.phase_id === task.phase_id) || null);
+    const taskPhase = phases.find(phase => phase.phase_id === task.phase_id) || null;
+    setCurrentPhase(taskPhase);
     setShowQuickAdd(true);
-  }, [phases]);
+    // Update URL with task and phase
+    if (onUrlUpdate && taskPhase) {
+      onUrlUpdate(taskPhase.phase_id, task.task_id);
+    }
+  }, [phases, onUrlUpdate]);
 
   const handleAssigneeChange = async (taskId: string, newAssigneeId: string | null, newTaskName?: string) => {
     try {
@@ -1283,6 +1379,10 @@ export default function ProjectDetail({
   const handlePhaseSelect = (phase: IProjectPhase) => {
     setSelectedPhase(phase);
     setCurrentPhase(phase);
+    // Update URL with new phase selection
+    if (onUrlUpdate) {
+      onUrlUpdate(phase.phase_id, null);
+    }
   };
 
   const handleDeletePhaseClick = (phase: IProjectPhase) => {
@@ -1697,7 +1797,7 @@ export default function ProjectDetail({
             />
           </div>
           )}
-          <div className={styles.kanbanContainer}>
+          <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
             {renderContent()}
           </div>
         </div>

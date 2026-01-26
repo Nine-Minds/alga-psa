@@ -335,7 +335,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           </span>
         </div>
       </div>
-      <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef}>
+      <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef} data-kanban-column-tasks="true">
         {sortedTasks.map((task): React.JSX.Element => {
           const taskType = taskTypes.find(t => t.type_key === task.task_type_key);
           return (
