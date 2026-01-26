@@ -41,14 +41,29 @@ export class EventCatalogModel extends BaseModel {
     eventId: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knexOrTrx('event_catalog')
+    const tenantEntry = await knexOrTrx('event_catalog')
       .where({
         event_id: eventId,
         tenant: tenantId
       })
       .first();
-    
-    return entry || null;
+
+    if (tenantEntry) {
+      return tenantEntry;
+    }
+
+    const systemEntry = await knexOrTrx('system_event_catalog')
+      .where({ event_id: eventId })
+      .first();
+
+    if (!systemEntry) {
+      return null;
+    }
+
+    return {
+      ...systemEntry,
+      tenant: tenantId
+    } as IEventCatalogEntry;
   }
 
   /**

@@ -113,7 +113,10 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
         <CardDescription>Enable or disable experimental features for your tenant.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Alert variant="warning">
+        <Alert
+          variant="warning"
+          className="text-[rgba(255,174,0,1)] [&>svg]:text-[rgba(255,174,0,1)]"
+        >
           <AlertTitle>Experimental</AlertTitle>
           <AlertDescription>Experimental features may change or be removed without notice.</AlertDescription>
         </Alert>

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getTenantSettings } from '@alga-psa/tenancy/actions';
+import { getTenantSettingsByTenantId } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from '@alga-psa/db';
 import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 import { withTransaction } from '@alga-psa/db';
@@ -42,7 +42,7 @@ export async function getOrCreateInstanceId(): Promise<string> {
     }
 
     // Get from tenant settings
-    const settings = await getTenantSettings();
+    const settings = await getTenantSettingsByTenantId(tenant);
     const analyticsSettings = settings?.settings?.analytics as AnalyticsSettings | undefined;
 
     if (analyticsSettings?.instance_id) {
@@ -74,8 +74,10 @@ export async function getOrCreateInstanceId(): Promise<string> {
  */
 export async function getAnalyticsSettings(): Promise<AnalyticsSettings | null> {
   try {
-    const settings = await getTenantSettings();
-    return settings?.settings?.analytics as AnalyticsSettings || null;
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) return null;
+    const settings = await getTenantSettingsByTenantId(tenant);
+    return (settings?.settings?.analytics as AnalyticsSettings) || null;
   } catch (error) {
     console.error('Error getting analytics settings:', error);
     return null;

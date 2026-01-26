@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 
 export type WorkflowDefinitionRecord = {
   workflow_id: string;
+  key?: string | null;
   name: string;
   description?: string | null;
   payload_schema_ref: string;

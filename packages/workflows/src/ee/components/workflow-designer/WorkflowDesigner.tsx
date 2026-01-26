@@ -38,7 +38,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { analytics } from '@alga-psa/analytics';
+import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';

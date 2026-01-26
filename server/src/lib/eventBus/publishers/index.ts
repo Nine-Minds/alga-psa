@@ -2,8 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { Event } from '../events';
 import { getEventBus } from '../index';
 import { getEmailEventChannel } from '../../notifications/emailChannel';
-import { buildWorkflowPayload, type WorkflowEventPublishContext } from '@shared/workflow/streams/workflowEventPublishHelpers';
-import type { WorkflowPublishHooks } from '@shared/workflow/streams/eventBusSchema';
+import { buildWorkflowPayload, type WorkflowEventPublishContext, type WorkflowPublishHooks } from '@alga-psa/event-schemas';
 
 export interface PublishOptions {
   channel?: string;
@@ -109,4 +108,4 @@ export async function publishWorkflowEvent(params: {
   );
 }
 
-export type { WorkflowActor, WorkflowEventPublishContext } from '@shared/workflow/streams/workflowEventPublishHelpers';
+export type { WorkflowActor, WorkflowEventPublishContext } from '@alga-psa/event-schemas';

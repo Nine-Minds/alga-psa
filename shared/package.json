@@ -46,6 +46,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/email": "*",
     "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/types": "*",
     "@js-temporal/polyfill": "^0.4.4",
     "ajv": "^8.12.0",

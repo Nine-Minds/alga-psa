@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 
 export interface CleanupAiSessionKeysJobData {
+  tenantId: string;
   trigger?: 'cron' | 'manual';
   [key: string]: unknown;
 }

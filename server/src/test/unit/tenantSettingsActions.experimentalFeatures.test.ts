@@ -21,6 +21,13 @@ vi.mock('next/headers.js', () => ({
   headers: async () => new Headers(),
 }));
 
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => async (...args: any[]) =>
+    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+  withOptionalAuth: (fn: any) => async (...args: any[]) =>
+    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   getTenantContext: () => mockTenantContext,
   createTenantKnex: createTenantKnexMock,
@@ -34,7 +41,7 @@ vi.mock('@alga-psa/users/actions', () => ({
 describe('tenantSettingsActions.getExperimentalFeatures', () => {
   beforeEach(() => {
     mockTenantContext = null;
-    allowTenantKnex = false;
+    allowTenantKnex = true;
     tenantSettingsRow = null;
 
     getCurrentUserMock.mockReset();
@@ -83,10 +90,10 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     );
 
     await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false });
+    expect(createTenantKnexMock).toHaveBeenCalled();
   });
 
   it('returns saved experimental features from tenant_settings', async () => {
-    mockTenantContext = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = {
       settings: {
@@ -107,7 +114,6 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
 
 describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   beforeEach(() => {
-    mockTenantContext = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = null;
 
@@ -126,6 +132,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
 
     getCurrentUserMock.mockResolvedValue({
       id: 'user-test',
+      tenant: 'tenant-test',
       roles: [],
     } as any);
     getCurrentUserPermissionsMock.mockResolvedValue(['settings:update']);
@@ -260,7 +267,6 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
 
 describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
   beforeEach(() => {
-    mockTenantContext = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = null;
 

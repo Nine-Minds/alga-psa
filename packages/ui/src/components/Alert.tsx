@@ -15,7 +15,7 @@ const alertVariants = cva(
         success:
           "border-green-500/50 text-green-800 dark:text-green-400 dark:border-green-500 [&>svg]:text-green-600 bg-green-50 dark:bg-green-500/10",
         warning:
-          "border-l-4 border-l-amber-500 border-y-0 border-r-0 text-amber-800 dark:text-amber-300 dark:border-l-amber-400 [&>svg]:text-amber-600 bg-amber-50 dark:bg-amber-500/10",
+          "border-l-4 border-l-[rgba(255,174,0,1)] border-y-0 border-r-0 text-[rgba(255,174,0,1)] dark:text-[rgba(255,174,0,1)] dark:border-l-[rgba(255,174,0,1)] [&>svg]:text-[rgba(255,174,0,1)] bg-amber-50 dark:bg-amber-500/10",
         info:
           "border-l-4 border-l-primary-500 border-y-0 border-r-0 text-primary-800 dark:text-primary-800 dark:border-l-primary-400 [&>svg]:text-primary-600 bg-primary-50 dark:bg-primary-500/10",
       },

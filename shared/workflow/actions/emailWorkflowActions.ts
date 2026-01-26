@@ -6,6 +6,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 
 // =============================================================================
@@ -670,8 +671,6 @@ export async function createCommentFromEmail(
 
   if (commentData.inboundReplyEvent) {
     try {
-      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
-
       const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
       const to = commentData.inboundReplyEvent.to?.length
         ? commentData.inboundReplyEvent.to

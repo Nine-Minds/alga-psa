@@ -16,7 +16,10 @@ const optionalNonNegativeInt = z.preprocess(
   z.number().int().nonnegative()
 ).optional();
 
+const workflowKey = z.string().min(1).regex(/^[a-z0-9][a-z0-9._-]*$/);
+
 export const CreateWorkflowDefinitionInput = z.object({
+  key: workflowKey.optional(),
   definition: workflowDefinitionSchema,
   payloadSchemaMode: z.enum(['inferred', 'pinned']).optional(),
   pinnedPayloadSchemaRef: z.string().min(1).optional()
@@ -31,6 +34,7 @@ export const UpdateWorkflowDefinitionInput = z.object({
 
 export const UpdateWorkflowDefinitionMetadataInput = z.object({
   workflowId: z.string().min(1),
+  key: workflowKey.optional(),
   isVisible: z.boolean().optional(),
   isPaused: z.boolean().optional(),
   concurrencyLimit: optionalNonNegativeInt.optional(),

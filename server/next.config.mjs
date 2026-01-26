@@ -167,6 +167,9 @@ const nextConfig = {
 	      '@alga-psa/auth': '../packages/auth/src',
 	      '@alga-psa/auth/': '../packages/auth/src/',
 	      '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
+	      '@alga-psa/auth/session-bridge': '../packages/auth/src/lib/session-bridge.ts',
+	      '@alga-psa/auth/withAuth': '../packages/auth/src/lib/withAuth.ts',
+	      '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
 	      '@alga-psa/scheduling': '../packages/scheduling/src',
 	      '@alga-psa/scheduling/': '../packages/scheduling/src/',
 	      '@alga-psa/tags': '../packages/tags/src',
@@ -177,16 +180,18 @@ const nextConfig = {
 	      '@alga-psa/teams/': '../packages/teams/src/',
 	      '@alga-psa/tenancy': '../packages/tenancy/src',
 	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
-	      // DB package (use precompiled output so Turbopack ESM resolution works)
-	      '@alga-psa/db': '../packages/db/dist/index.js',
-	      '@alga-psa/db/admin': '../packages/db/dist/lib/admin.js',
-	      '@alga-psa/db/admin.js': '../packages/db/dist/lib/admin.js',
-      '@alga-psa/db/connection': '../packages/db/dist/lib/connection.js',
-      '@alga-psa/db/connection.js': '../packages/db/dist/lib/connection.js',
-      '@alga-psa/db/tenant': '../packages/db/dist/lib/tenant.js',
-      '@alga-psa/db/tenant.js': '../packages/db/dist/lib/tenant.js',
-      '@alga-psa/db/models': '../packages/db/dist/models/index.js',
-      '@alga-psa/db/models/': '../packages/db/dist/models/',
+	      '@alga-psa/event-schemas': '../packages/event-schemas/src',
+	      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+	      // DB package (use source files for Turbopack dev/HMR)
+	      '@alga-psa/db': '../packages/db/src/index.ts',
+	      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
+	      '@alga-psa/db/connection': '../packages/db/src/lib/connection.ts',
+	      '@alga-psa/db/tenant': '../packages/db/src/lib/tenant.ts',
+	      '@alga-psa/db/models': '../packages/db/src/models/index.ts',
+	      '@alga-psa/db/models/user': '../packages/db/src/models/user.ts',
+	      '@alga-psa/db/models/userPreferences': '../packages/db/src/models/userPreferences.ts',
+	      '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
+	      '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
       '@/empty': isEE ? '../ee/server/src' : './src/empty',
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
@@ -226,6 +231,11 @@ const nextConfig = {
       'knex/lib/dialects/oracledb': emptyShim,
       'knex/lib/dialects/oracledb/index.js': emptyShim,
       'knex/lib/dialects/oracledb/utils.js': emptyShim,
+
+      // Ensure Yjs resolves to a single ESM entrypoint to avoid "Yjs was already imported" warnings
+      // caused by mixing CJS + ESM Yjs bundles in the same runtime.
+      'yjs': '../node_modules/yjs/dist/yjs.mjs',
+      'yjs/dist/yjs.cjs': '../node_modules/yjs/dist/yjs.mjs',
 
       // Product feature aliasing - point stable import paths to OSS or EE implementations
       '@product/extensions/entry': isEE
@@ -279,11 +289,6 @@ const nextConfig = {
         : '../packages/product-extension-actions/oss/entry',
     },
   },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
   reactStrictMode: false, // Disabled to prevent double rendering in development
 	  transpilePackages: [
 	    '@blocknote/core',
@@ -301,6 +306,7 @@ const nextConfig = {
 	    '@alga-psa/tenancy',
 	    '@alga-psa/integrations',
 	    '@alga-psa/client-portal',
+	    '@alga-psa/event-schemas',
 	    // Product feature packages (only those needed in this app)
 	    '@product/extensions',
     '@product/settings-extensions',
@@ -366,6 +372,7 @@ const nextConfig = {
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
@@ -771,7 +778,7 @@ const nextConfig = {
       bodySizeLimit: serverActionsBodyLimit,
     },
     // Increase middleware body size limit for extension installs
-    middlewareClientMaxBodySize: '100mb',
+    proxyClientMaxBodySize: '100mb',
   },
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {

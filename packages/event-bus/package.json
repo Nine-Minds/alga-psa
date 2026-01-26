@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@alga-psa/core": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/types": "*",
     "redis": "^4.7.0",
     "uuid": "^10.0.0",

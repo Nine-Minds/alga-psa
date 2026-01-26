@@ -59,3 +59,7 @@ temp_wasm_compile
 **/.nx
 .next
 **/.next
+
+# BUT allow server/.next for Docker builds (needed by EE Dockerfile)
+!server/.next
+!server/.next/**

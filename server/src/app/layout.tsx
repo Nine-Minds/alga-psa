@@ -24,8 +24,15 @@ export const dynamic = 'force-dynamic';
 //export const revalidate = false;
 
 export async function generateMetadata(): Promise<Metadata> {
-  // App initialization is now handled by instrumentation.ts
+  const headersList = await headers();
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:3010';
+  const proto =
+    headersList.get('x-forwarded-proto') ||
+    (host.includes('localhost') ? 'http' : 'https');
+  const metadataBase = new URL(`${proto}://${host}`);
+
   return {
+    metadataBase,
     title: "MSP Application",
     keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
     authors: [{ name: "Nine Minds" }],

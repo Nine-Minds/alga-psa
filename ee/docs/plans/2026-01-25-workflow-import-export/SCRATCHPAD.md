@@ -1,0 +1,73 @@
+# Scratchpad — Workflow Import/Export (2026-01-25)
+
+## Context
+- Workflow Runtime V2 stores:
+  - `workflow_definitions` (draft + metadata)
+  - `workflow_definition_versions` (published immutable versions)
+- Existing test helpers exist under `server/src/test/helpers/workflowRuntimeV2TestHelpers.ts`.
+
+## Decisions (draft)
+- Use a JSON **bundle** format with explicit `format` + `formatVersion`.
+- V1 accepts exactly one version and rejects others (no migration/back-compat).
+- “Full fidelity” targets workflow behavior + operational settings, not audit timestamps.
+- Bundle requires a stable portable `key` per workflow (distinct from DB ids).
+- Import always regenerates `workflow_id`.
+- Import is create-only by default; `--force` / `force=true` overwrites by deleting the existing workflow (matched by key) and recreating it from the bundle.
+- V1 is API-only plus a CLI wrapper in `tools/` (no UI).
+
+## Proposed docs locations
+- `ee/docs/schemas/workflow-bundle.v1.schema.json`
+- `ee/docs/guides/workflows/workflow-import-export.md`
+
+## Open Questions to resolve
+1. Do we need additional explicit validation beyond DB constraints for specific reference types (if constraints are insufficient)?
+
+## Notes / references
+- Workflow Runtime V2 PRD: `ee/docs/plans/2025-12-21-workflow-overhaul.md`
+- Persistence models:
+  - `shared/workflow/persistence/workflowDefinitionModelV2.ts`
+  - `shared/workflow/persistence/workflowDefinitionVersionModelV2.ts`
+
+## Work log
+- 2026-01-25: Added v1 bundle header constants/types in `shared/workflow/bundle/workflowBundleV1.ts` (`format`, `formatVersion`, `exportedAt`) to centralize the accepted format/version.
+- 2026-01-25: Defined v1 bundle TypeScript shape (workflow metadata + draft + published versions) in `shared/workflow/bundle/workflowBundleV1.ts` as the shared contract for exporter/importer/tests.
+- 2026-01-25: Standardized portable workflow identifier as `workflows[].key` with a basic validation pattern in `shared/workflow/bundle/workflowBundleV1.ts`.
+- 2026-01-25: Added canonical JSON rules implementation in `shared/workflow/bundle/canonicalJson.ts` (recursive key sort, 2-space indent, trailing newline) for stable bundle bytes.
+- 2026-01-25: Added JSON Schema `ee/docs/schemas/workflow-bundle.v1.schema.json` (draft-07) as the machine-checkable contract for v1 bundles.
+- 2026-01-25: Added human-readable format spec at `ee/docs/guides/workflows/workflow-import-export.md` (header, key semantics, canonical JSON, import policies).
+- 2026-01-25: Added `workflow_definitions.key` (nullable, unique) via `server/migrations/20260125120000_add_workflow_definition_key.cjs` to support portable bundle identity and create/overwrite semantics. Backfills the seeded email workflow to `system.email-processing`.
+- 2026-01-25: Implemented single-workflow exporter `server/src/lib/workflow/bundle/exportWorkflowBundleV1.ts` (loads workflow_definitions + workflow_definition_versions into the v1 bundle shape).
+- 2026-01-25: Extended exporter to support multi-workflow bundles via `exportWorkflowBundleV1ForWorkflowIds` (bulk-load definitions + versions; workflows sorted by key).
+- 2026-01-25: Exporter intentionally omits instance-specific audit/actor fields (timestamps, *_by, version_id) by projecting only the portable subset into the bundle.
+- 2026-01-25: Exporter includes operational settings in `metadata` (isPaused/isVisible/concurrency/retention/auto-pause thresholds) for behavioral fidelity.
+- 2026-01-25: Added dependency summary collection (`shared/workflow/bundle/dependencySummaryV1.ts`) and included `dependencies` in bundle exports (actions/node types/schema refs) to support structured missing-dependency errors on import.
+- 2026-01-25: Added import-time header validation for v1 bundles in `server/src/lib/workflow/bundle/validateWorkflowBundleHeaderV1.ts` (rejects unsupported formatVersion with a structured error).
+- 2026-01-25: Added Ajv-based bundle schema validation using `ee/docs/schemas/workflow-bundle.v1.schema.json` via `server/src/lib/workflow/bundle/validateWorkflowBundleSchemaV1.ts`.
+- 2026-01-25: Added dependency validation helper `server/src/lib/workflow/bundle/validateWorkflowBundleDependenciesV1.ts` that checks bundle-declared actions/nodeTypes/schemaRefs against runtime registries and throws structured missing-dependency errors.
+- 2026-01-25: Implemented bundle importer core in `server/src/lib/workflow/bundle/importWorkflowBundleV1.ts` using a single `knex.transaction(...)` for all writes (rolls back on any error).
+- 2026-01-25: Importer creates `workflow_definitions` from bundle workflows (metadata + draft), regenerating `workflow_id` and rewriting workflow definition JSON `id` fields to match.
+- 2026-01-25: Importer creates `workflow_definition_versions` for each `publishedVersions[]` entry, inserting immutable definition_json + payload schema snapshots.
+- 2026-01-25: Importer default policy is create-only: conflicts on existing `workflow_definitions.key` throw `WORKFLOW_KEY_CONFLICT` unless `force` is enabled.
+- 2026-01-25: Importer supports `force` overwrite: delete existing workflow by key (cascades versions/runs) and recreate from bundle with a regenerated `workflow_id`.
+- 2026-01-25: Importer returns a summary object (created workflows, deleted workflows, created published versions) from `importWorkflowBundleV1`.
+- 2026-01-25: Added HTTP export endpoint `server/src/app/api/workflow-definitions/[workflowId]/export/route.ts` returning canonical bundle JSON for a single workflow.
+- 2026-01-25: Added HTTP import endpoint `server/src/app/api/workflow-definitions/import/route.ts` (POST bundle JSON; supports `?force=true`; returns import summary). Updated API error handling to include structured `details` when present.
+- 2026-01-25: Import/export endpoints are admin-gated via `requireWorkflowPermission(user, 'admin', knex)` in the underlying server actions.
+- 2026-01-25: Added a minimal API-wrapping CLI at `tools/workflow-bundle-cli/workflow-bundle.js` (ESM; supports `export` and `import` with optional `--cookie` + `--tenant` headers).
+- 2026-01-25: Added a representative fixture bundle `server/src/test/fixtures/workflow-bundles/email-processing.v1.json` (control flow + action.call usage) for import/export tests.
+- 2026-01-25: Canonicalization utility `shared/workflow/bundle/canonicalJson.ts` is used by the export endpoint to emit stable bundle bytes and will be used in round-trip tests.
+- 2026-01-25: Added integration test `server/src/test/integration/workflowBundleV1.importExport.integration.test.ts` covering unsupported formatVersion rejection (T001).
+- 2026-01-25: Extended bundle integration tests for schema validation failures (T002).
+- 2026-01-25: Added missing dependency validation coverage for actions/node types/schema refs (T003).
+- 2026-01-25: Added canonical export formatting test via HTTP export route (T010).
+- 2026-01-25: Added audit-field exclusion assertion for exported bundles (T011).
+- 2026-01-25: Added import-to-empty-DB integration coverage (creates definitions + versions; rewrites workflow ids) (T020).
+- 2026-01-25: Added create-only conflict test (duplicate key without force) (T021).
+- 2026-01-25: Added force overwrite import test (delete+recreate with regenerated workflow_id) (T022).
+- 2026-01-25: Added transactional rollback coverage (unique constraint failure does not persist partial workflow rows) (T023).
+- 2026-01-25: Added export→import→export round-trip test with canonical normalization (exportedAt + workflowId placeholder) (T030).
+- 2026-01-25: Added end-to-end execution test for imported workflows (imports bundle then runs the published version to SUCCEEDED) (T031).
+- 2026-01-25: Added explicit HTTP export endpoint smoke test asserting bundle header + workflow key (T040).
+- 2026-01-25: Added HTTP import endpoint test (POST bundle JSON returns summary and persists workflow row) (T041).
+- 2026-01-25: Refactored `tools/workflow-bundle-cli/workflow-bundle.js` to expose `runWorkflowBundleCli` for unit testing; added CLI export test (T050).
+- 2026-01-25: Added CLI import test covering `--force` query parameter wiring (T051).

@@ -1,9 +1,8 @@
 'use server';
 
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
-import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import { getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getTenantForCurrentRequest } from '../../server';
 import { createTenantKnex } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 
@@ -38,55 +37,55 @@ function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
   };
 }
 
-export async function getTenantSettings(): Promise<TenantSettings | null> {
-  try {
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      // Tenant resolution can be temporarily unavailable during SSR (e.g. before middleware
-      // applies, or in certain testing/dev flows). Callers like MspLayout already treat
-      // missing settings as "no onboarding data", so returning null is the safest behavior.
-      return null;
-    }
+const getTenantSettingsForTenant = async (tenant: string): Promise<TenantSettings | null> => {
+  const { knex } = await createTenantKnex(tenant);
+  const settings = await knex
+    .select('*')
+    .from('tenant_settings')
+    .where({ tenant })
+    .first();
 
-    const { knex } = await createTenantKnex(tenant);
-    const settings = await knex
-      .select('*')
-      .from('tenant_settings')
-      .where({ tenant })
-      .first();
+  return settings || null;
+};
 
-    return settings || null;
-  } catch (error) {
-    console.error('Error getting tenant settings:', error);
-    return null;
+export const getTenantSettings = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<TenantSettings | null> => {
+  return getTenantSettingsForTenant(tenant);
+});
+
+export async function getTenantSettingsByTenantId(tenantId: string): Promise<TenantSettings | null> {
+  if (!tenantId) {
+    throw new Error('tenantId is required');
   }
+  return getTenantSettingsForTenant(tenantId);
 }
 
-export async function getExperimentalFeatures(): Promise<ExperimentalFeatures> {
-  try {
-    const settings = await getTenantSettings();
-    return normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
-  } catch (error) {
-    console.error('Error getting experimental features:', error);
-    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
-  }
-}
+const getExperimentalFeaturesForTenant = async (tenant: string): Promise<ExperimentalFeatures> => {
+  const settings = await getTenantSettingsForTenant(tenant);
+  return normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
+};
 
-export async function updateExperimentalFeatures(
+export const getExperimentalFeatures = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<ExperimentalFeatures> => {
+  return getExperimentalFeaturesForTenant(tenant);
+});
+
+export const updateExperimentalFeatures = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   features: Partial<ExperimentalFeatures>
-): Promise<void> {
+): Promise<void> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated');
-    }
-
     const permissions = await getCurrentUserPermissions();
     if (!permissions.includes('settings:update')) {
       throw new Error('Permission denied: Cannot update settings');
     }
 
-    const current = await getExperimentalFeatures();
+    const current = await getExperimentalFeaturesForTenant(tenant);
     const merged: ExperimentalFeatures = {
       ...current,
       ...features,
@@ -99,19 +98,16 @@ export async function updateExperimentalFeatures(
     console.error('Error updating experimental features:', error);
     throw error;
   }
-}
+});
 
-export async function isExperimentalFeatureEnabled(
+export const isExperimentalFeatureEnabled = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   featureKey: string
-): Promise<boolean> {
-  try {
-    const features = await getExperimentalFeatures();
-    return (features as unknown as Record<string, unknown>)[featureKey] === true;
-  } catch (error) {
-    console.error('Error checking experimental feature:', error);
-    return false;
-  }
-}
+): Promise<boolean> => {
+  const features = await getExperimentalFeaturesForTenant(tenant);
+  return (features as unknown as Record<string, unknown>)[featureKey] === true;
+});
 
 export const updateTenantOnboardingStatus = withAuth(async (
   _user: IUserWithRoles,
@@ -242,77 +238,107 @@ export const clearTenantOnboardingData = withAuth(async (
   }
 });
 
-export async function updateTenantSettings(
-  settings: Record<string, any>
-): Promise<void> {
-  try {
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      throw new Error('No tenant found');
+const normalizeSettingsRecord = (value: unknown): Record<string, any> => {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, any>) : {};
+    } catch {
+      return {};
     }
+  }
+  return typeof value === 'object' ? (value as Record<string, any>) : {};
+};
 
-    // Get existing settings to merge
-    const existingSettings = await getTenantSettings();
-    const currentSettings = existingSettings?.settings || {};
+const getCurrentTenantSettingsJson = async (tenant: string): Promise<Record<string, any>> => {
+  const { knex } = await createTenantKnex(tenant);
+  const row = await knex
+    .select('settings')
+    .from('tenant_settings')
+    .where({ tenant })
+    .first();
+  return normalizeSettingsRecord(row?.settings);
+};
 
+const upsertTenantSettingsJson = async (tenant: string, updatedSettings: Record<string, any>): Promise<void> => {
+  const { knex } = await createTenantKnex(tenant);
+  const now = new Date();
+
+  await knex('tenant_settings')
+    .insert({
+      tenant,
+      settings: JSON.stringify(updatedSettings),
+      updated_at: now,
+    })
+    .onConflict('tenant')
+    .merge({
+      settings: JSON.stringify(updatedSettings),
+      updated_at: now,
+    });
+};
+
+const updateTenantSettingsInternal = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  settings: Record<string, any>
+): Promise<void> => {
+  try {
+    const currentSettings = await getCurrentTenantSettingsJson(tenant);
     const updatedSettings = {
       ...currentSettings,
-      ...settings
+      ...settings,
     };
 
-    const { knex } = await createTenantKnex(tenant);
-    
-    // Use a literal timestamp for Citus compatibility
-    const now = new Date();
-    
-    await knex('tenant_settings')
-      .insert({
-        tenant,
-        settings: JSON.stringify(updatedSettings),
-        updated_at: now,
-      })
-      .onConflict('tenant')
-      .merge({
-        settings: JSON.stringify(updatedSettings),
-        updated_at: now,
-      });
-
+    await upsertTenantSettingsJson(tenant, updatedSettings);
   } catch (error) {
     console.error('Error updating tenant settings:', error);
     throw error;
   }
-}
+});
 
-export async function getTenantAnalyticsSettings(): Promise<any> {
-  try {
-    const settings = await getTenantSettings();
-    return settings?.settings?.analytics || null;
-  } catch (error) {
-    console.error('Error getting tenant analytics settings:', error);
-    return null;
-  }
-}
-
-export async function updateTenantAnalyticsSettings(
+const updateTenantAnalyticsSettingsInternal = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   analyticsSettings: Record<string, any>
-): Promise<void> {
+): Promise<void> => {
   try {
-    const existingSettings = await getTenantSettings();
-    const currentSettings = existingSettings?.settings || {};
-
-    await updateTenantSettings({
+    const currentSettings = await getCurrentTenantSettingsJson(tenant);
+    const currentAnalytics = normalizeSettingsRecord(currentSettings.analytics);
+    const updatedSettings = {
       ...currentSettings,
       analytics: {
-        ...currentSettings.analytics,
+        ...currentAnalytics,
         ...analyticsSettings,
-        last_updated_at: new Date().toISOString()
-      }
-    });
+        last_updated_at: new Date().toISOString(),
+      },
+    };
 
+    await upsertTenantSettingsJson(tenant, updatedSettings);
   } catch (error) {
     console.error('Error updating tenant analytics settings:', error);
     throw error;
   }
+});
+
+export async function updateTenantSettings(
+  settings: Record<string, any>
+): Promise<void> {
+  return updateTenantSettingsInternal(settings);
+}
+
+export const getTenantAnalyticsSettings = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<any> => {
+  const settings = await getTenantSettingsForTenant(tenant);
+  return settings?.settings?.analytics || null;
+});
+
+export async function updateTenantAnalyticsSettings(
+  analyticsSettings: Record<string, any>
+): Promise<void> {
+  return updateTenantAnalyticsSettingsInternal(analyticsSettings);
 }
 
 export async function initializeTenantSettings(tenantId: string): Promise<void> {

@@ -11,7 +11,7 @@ import {
 import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
-import { UnsavedChangesProvider } from 'server/src/contexts/UnsavedChangesContext';
+import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 
 interface TicketDetailsContainerProps {
   ticketData: {

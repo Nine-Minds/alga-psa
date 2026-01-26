@@ -184,7 +184,7 @@ export const listEventCatalogOptionsV2Action = withAuth(async (user, { tenant },
   await requireWorkflowPermission(user, 'read', knex);
   if (!tenant) return { events: [] as WorkflowEventCatalogOptionV2[] };
 
-  const all = await EventCatalogModel.getAll(knex, tenant, {});
+  const all = await EventCatalogModel.getAll(knex, tenant, { limit: parsed.limit, offset: 0 });
   const schemaRegistry = getSchemaRegistry();
 
   const searchLower = parsed.search?.trim().toLowerCase() ?? '';
@@ -252,7 +252,7 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
   }
 
   // Load catalog entries (system + tenant) in one shot via model (handles system fallback).
-  const all = await EventCatalogModel.getAll(knex, tenant, {});
+  const all = await EventCatalogModel.getAll(knex, tenant, { limit: 2000, offset: 0 });
   const schemaRegistry = getSchemaRegistry();
 
   const searchLower = parsed.search?.trim().toLowerCase() ?? '';

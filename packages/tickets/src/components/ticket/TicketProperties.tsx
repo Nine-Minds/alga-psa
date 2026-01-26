@@ -29,7 +29,7 @@ import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import TicketMaterialsCard from './TicketMaterialsCard';
-import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 
 interface TicketPropertiesProps {
   id?: string;

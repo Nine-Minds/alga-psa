@@ -363,31 +363,36 @@ const renderStatusBadge = (status: string) => {
     {
       title: 'Actions',
       dataIndex: 'contract_id',
-      render: (value, record) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="contract-actions-menu"
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <span className="sr-only">Open menu</span>
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id="edit-contract-menu-item"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (record.contract_id) {
+      render: (value, record) => {
+        const isDraft = record.status === 'draft';
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="contract-actions-menu"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <span className="sr-only">Open menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id={isDraft ? 'resume-contract-menu-item' : 'edit-contract-menu-item'}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (!record.contract_id) return;
+                  if (isDraft) {
+                    void handleResumeDraft(record.contract_id);
+                    return;
+                  }
                   navigateToContract(record.contract_id, record.client_contract_id);
-                }
-              }}
-            >
-              Edit
-            </DropdownMenuItem>
+                }}
+              >
+                {isDraft ? 'Resume' : 'Edit'}
+              </DropdownMenuItem>
             {record.status === 'active' && (
               <DropdownMenuItem
                 id="terminate-contract-menu-item"
@@ -442,9 +447,10 @@ const renderStatusBadge = (status: string) => {
             >
               Delete
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 

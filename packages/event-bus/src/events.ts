@@ -1,1 +1,1 @@
-export * from '@shared/workflow/streams/eventBusSchema';
+export * from './schemas/eventBusSchema';

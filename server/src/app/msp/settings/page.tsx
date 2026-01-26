@@ -1,10 +1,11 @@
 import SettingsPage from '@/components/settings/SettingsPage';
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const tab = typeof searchParams?.tab === 'string' ? searchParams.tab : undefined;
+  const resolvedSearchParams = await searchParams;
+  const tab = typeof resolvedSearchParams?.tab === 'string' ? resolvedSearchParams.tab : undefined;
   return <SettingsPage initialTabParam={tab} />;
 }

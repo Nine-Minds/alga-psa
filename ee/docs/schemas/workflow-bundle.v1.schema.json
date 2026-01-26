@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://alga.example.com/schemas/workflow-bundle.v1.schema.json",
+  "title": "Alga Workflow Bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion", "exportedAt", "workflows"],
+  "properties": {
+    "format": { "type": "string", "const": "alga-psa.workflow-bundle" },
+    "formatVersion": { "type": "integer", "const": 1 },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "workflows": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/workflow" },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "metadata", "dependencies", "draft", "publishedVersions"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "metadata": { "$ref": "#/definitions/metadata" },
+        "dependencies": { "$ref": "#/definitions/dependencies" },
+        "draft": { "$ref": "#/definitions/draft" },
+        "publishedVersions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/publishedVersion" }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actions", "nodeTypes", "schemaRefs"],
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/actionRef" },
+          "uniqueItems": true,
+          "default": []
+        },
+        "nodeTypes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        },
+        "schemaRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "actionRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "version"],
+      "properties": {
+        "actionId": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "payloadSchemaRef",
+        "payloadSchemaMode",
+        "pinnedPayloadSchemaRef",
+        "trigger",
+        "isSystem",
+        "isVisible",
+        "isPaused",
+        "concurrencyLimit",
+        "autoPauseOnFailure",
+        "failureRateThreshold",
+        "failureRateMinRuns",
+        "retentionPolicyOverride"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": ["string", "null"] },
+        "payloadSchemaRef": { "type": "string", "minLength": 1 },
+        "payloadSchemaMode": { "type": ["string", "null"] },
+        "pinnedPayloadSchemaRef": { "type": ["string", "null"] },
+        "trigger": { "type": ["object", "null"], "additionalProperties": true },
+        "isSystem": { "type": "boolean" },
+        "isVisible": { "type": "boolean" },
+        "isPaused": { "type": "boolean" },
+        "concurrencyLimit": { "type": ["integer", "null"] },
+        "autoPauseOnFailure": { "type": "boolean" },
+        "failureRateThreshold": { "type": ["number", "string", "null"] },
+        "failureRateMinRuns": { "type": ["integer", "null"] },
+        "retentionPolicyOverride": { "type": ["object", "null"], "additionalProperties": true }
+      }
+    },
+    "draft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["draftVersion", "definition"],
+      "properties": {
+        "draftVersion": { "type": "integer" },
+        "definition": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "publishedVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "definition", "payloadSchemaJson"],
+      "properties": {
+        "version": { "type": "integer" },
+        "definition": { "type": "object", "additionalProperties": true },
+        "payloadSchemaJson": { "type": ["object", "null"], "additionalProperties": true }
+      }
+    }
+  }
+}
