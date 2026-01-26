@@ -1,0 +1,118 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T14:33:54.030Z",
+  "workflows": [
+    {
+      "key": "fixture.appointment-assigned-notify-email",
+      "metadata": {
+        "name": "Fixture: Appointment Assigned Notify Email",
+        "description": "Scaffolded catalog fixture for APPOINTMENT_ASSIGNED.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "APPOINTMENT_ASSIGNED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": [
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "9b6966df-3aaf-af2b-36d6-1171f4e15dec",
+          "version": 1,
+          "name": "Fixture: Appointment Assigned Notify Email",
+          "description": "Scaffolded catalog fixture for APPOINTMENT_ASSIGNED.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "APPOINTMENT_ASSIGNED"
+          },
+          "steps": [
+            {
+              "id": "ready",
+              "type": "state.set",
+              "config": {
+                "state": "READY"
+              }
+            },
+            {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture appointment-assigned-notify-email]'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "9b6966df-3aaf-af2b-36d6-1171f4e15dec",
+            "version": 1,
+            "name": "Fixture: Appointment Assigned Notify Email",
+            "description": "Scaffolded catalog fixture for APPOINTMENT_ASSIGNED.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "APPOINTMENT_ASSIGNED"
+            },
+            "steps": [
+              {
+                "id": "ready",
+                "type": "state.set",
+                "config": {
+                  "state": "READY"
+                }
+              },
+              {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture appointment-assigned-notify-email]'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

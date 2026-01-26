@@ -1,0 +1,118 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T14:33:54.038Z",
+  "workflows": [
+    {
+      "key": "fixture.time-entry-approved-email",
+      "metadata": {
+        "name": "Fixture: Time Entry Approved Email",
+        "description": "Scaffolded catalog fixture for TIME_ENTRY_APPROVED.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TIME_ENTRY_APPROVED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": [
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "96555dfe-e2dc-ac03-c820-7f99fcdb1a35",
+          "version": 1,
+          "name": "Fixture: Time Entry Approved Email",
+          "description": "Scaffolded catalog fixture for TIME_ENTRY_APPROVED.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TIME_ENTRY_APPROVED"
+          },
+          "steps": [
+            {
+              "id": "ready",
+              "type": "state.set",
+              "config": {
+                "state": "READY"
+              }
+            },
+            {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture time-entry-approved-email]'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "96555dfe-e2dc-ac03-c820-7f99fcdb1a35",
+            "version": 1,
+            "name": "Fixture: Time Entry Approved Email",
+            "description": "Scaffolded catalog fixture for TIME_ENTRY_APPROVED.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TIME_ENTRY_APPROVED"
+            },
+            "steps": [
+              {
+                "id": "ready",
+                "type": "state.set",
+                "config": {
+                  "state": "READY"
+                }
+              },
+              {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture time-entry-approved-email]'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

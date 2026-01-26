@@ -1,0 +1,118 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T14:33:54.037Z",
+  "workflows": [
+    {
+      "key": "fixture.company-updated-domain-change",
+      "metadata": {
+        "name": "Fixture: Company Updated Domain Change",
+        "description": "Scaffolded catalog fixture for COMPANY_UPDATED.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "COMPANY_UPDATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": [
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "128effed-00e3-8150-8ae6-196a1db5c3a0",
+          "version": 1,
+          "name": "Fixture: Company Updated Domain Change",
+          "description": "Scaffolded catalog fixture for COMPANY_UPDATED.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "COMPANY_UPDATED"
+          },
+          "steps": [
+            {
+              "id": "ready",
+              "type": "state.set",
+              "config": {
+                "state": "READY"
+              }
+            },
+            {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture company-updated-domain-change]'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "128effed-00e3-8150-8ae6-196a1db5c3a0",
+            "version": 1,
+            "name": "Fixture: Company Updated Domain Change",
+            "description": "Scaffolded catalog fixture for COMPANY_UPDATED.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "COMPANY_UPDATED"
+            },
+            "steps": [
+              {
+                "id": "ready",
+                "type": "state.set",
+                "config": {
+                  "state": "READY"
+                }
+              },
+              {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture company-updated-domain-change]'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

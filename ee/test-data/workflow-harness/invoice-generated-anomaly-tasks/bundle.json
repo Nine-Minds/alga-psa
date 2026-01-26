@@ -1,0 +1,118 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T14:33:54.036Z",
+  "workflows": [
+    {
+      "key": "fixture.invoice-generated-anomaly-tasks",
+      "metadata": {
+        "name": "Fixture: Invoice Generated Anomaly Tasks",
+        "description": "Scaffolded catalog fixture for INVOICE_GENERATED.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "INVOICE_GENERATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": [
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "d35d3485-7e5f-3d51-a5f9-b27e47caf87b",
+          "version": 1,
+          "name": "Fixture: Invoice Generated Anomaly Tasks",
+          "description": "Scaffolded catalog fixture for INVOICE_GENERATED.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "INVOICE_GENERATED"
+          },
+          "steps": [
+            {
+              "id": "ready",
+              "type": "state.set",
+              "config": {
+                "state": "READY"
+              }
+            },
+            {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture invoice-generated-anomaly-tasks]'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "d35d3485-7e5f-3d51-a5f9-b27e47caf87b",
+            "version": 1,
+            "name": "Fixture: Invoice Generated Anomaly Tasks",
+            "description": "Scaffolded catalog fixture for INVOICE_GENERATED.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "INVOICE_GENERATED"
+            },
+            "steps": [
+              {
+                "id": "ready",
+                "type": "state.set",
+                "config": {
+                  "state": "READY"
+                }
+              },
+              {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture invoice-generated-anomaly-tasks]'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

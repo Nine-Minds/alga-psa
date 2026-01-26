@@ -33,5 +33,5 @@
   { "id": "F042", "description": "Create runtime-behavior fixtures (pause/visibility, concurrency limits) where supported", "implemented": true },
   { "id": "F043", "description": "Create negative fixtures (expected failure modes with clear errors) where supported", "implemented": true },
 
-  { "id": "F050", "description": "Scale fixture suite to ~150–200 cases with broad coverage", "implemented": false }
+  { "id": "F050", "description": "Scale fixture suite to ~150–200 cases with broad coverage", "implemented": true }
 ]

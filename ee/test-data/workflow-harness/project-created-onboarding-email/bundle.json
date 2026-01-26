@@ -1,0 +1,118 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T14:33:54.023Z",
+  "workflows": [
+    {
+      "key": "fixture.project-created-onboarding-email",
+      "metadata": {
+        "name": "Fixture: Project Created Onboarding Email",
+        "description": "Scaffolded catalog fixture for PROJECT_CREATED.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [],
+        "nodeTypes": [
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "41a69b61-f365-c744-d114-5f24dfe8a2ed",
+          "version": 1,
+          "name": "Fixture: Project Created Onboarding Email",
+          "description": "Scaffolded catalog fixture for PROJECT_CREATED.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_CREATED"
+          },
+          "steps": [
+            {
+              "id": "ready",
+              "type": "state.set",
+              "config": {
+                "state": "READY"
+              }
+            },
+            {
+              "id": "assign-marker",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-created-onboarding-email]'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "41a69b61-f365-c744-d114-5f24dfe8a2ed",
+            "version": 1,
+            "name": "Fixture: Project Created Onboarding Email",
+            "description": "Scaffolded catalog fixture for PROJECT_CREATED.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_CREATED"
+            },
+            "steps": [
+              {
+                "id": "ready",
+                "type": "state.set",
+                "config": {
+                  "state": "READY"
+                }
+              },
+              {
+                "id": "assign-marker",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-created-onboarding-email]'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

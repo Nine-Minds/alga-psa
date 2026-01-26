@@ -670,3 +670,10 @@ When implementing a new action:
 ## Open Questions
 
 - None at this time. Plan implementation complete.
+
+## 2026-01-26 — F050 Fixture Suite Scaling
+
+- Added scaffolded fixture catalog generation script: `tools/workflow-harness/generate-fixture-catalog.cjs`.
+- Added shared scaffolded fixture runner helper: `ee/test-data/workflow-harness/_lib/scaffolded-fixture.cjs`.
+- Ran `node tools/workflow-harness/generate-fixture-catalog.cjs` to create missing fixture folders from `tests.json` (created 139 scaffolded fixtures).
+- Result: all 161 fixtures referenced by `tests.json` now exist under `ee/test-data/workflow-harness/` (plus a handful of earlier non-plan fixtures like schema-validation + negative cases).
