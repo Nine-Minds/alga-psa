@@ -8,3 +8,4 @@
 - F004: Added `tools/workflow-harness/lib/context.cjs` (ctx config, logging, cleanup registration/execution).
 - F005: Added `tools/workflow-harness/lib/http.cjs` (fetch wrapper that sets Cookie + x-tenant-id).
 - F006: Added `tools/workflow-harness/lib/db.cjs` (read-only Postgres client via `DATABASE_URL` / connection string).
+- F007: Added `tools/workflow-harness/lib/workflow.cjs#importWorkflowBundleV1` (wraps `/api/workflow-definitions/import` with `?force=true`).
