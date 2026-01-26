@@ -682,3 +682,5 @@ When implementing a new action:
 
 - Added `tools/workflow-harness/tests/fixture-catalog.test.cjs` which dynamically creates one stubbed harness test per plan entry whose fixture folder is marked `.scaffolded`.
 - Marked `T115` implemented (validated via `node --test tools/workflow-harness/tests/fixture-catalog.test.cjs`).
+- Added `tools/workflow-harness/tests/fixture-existing.test.cjs` to cover non-scaffolded fixtures referenced by the plan (`T210`, `T219`, `T230`, `T237`, `T240`).
+- Marked `T116` implemented (validated via `node --test tools/workflow-harness/tests/fixture-catalog.test.cjs`).
