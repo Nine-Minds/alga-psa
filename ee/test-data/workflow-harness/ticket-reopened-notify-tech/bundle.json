@@ -46,9 +46,9 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture ticket-reopened-notify-tech]'" },
-                  "vars.comment": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" },
-                  "vars.title": { "$expr": "vars.marker & ' Ticket reopened'" },
-                  "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                  "vars.comment": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" },
+                  "vars.title": { "$expr": "'[fixture ticket-reopened-notify-tech] Ticket reopened'" },
+                  "vars.body": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" }
                 }
               }
             },
@@ -73,7 +73,7 @@
                 "actionId": "notifications.send_in_app",
                 "version": 1,
                 "inputMapping": {
-                  "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                  "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
                   "title": { "$expr": "vars.title" },
                   "body": { "$expr": "vars.body" },
                   "severity": "info",
@@ -103,9 +103,9 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture ticket-reopened-notify-tech]'" },
-                    "vars.comment": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" },
-                    "vars.title": { "$expr": "vars.marker & ' Ticket reopened'" },
-                    "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                    "vars.comment": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" },
+                    "vars.title": { "$expr": "'[fixture ticket-reopened-notify-tech] Ticket reopened'" },
+                    "vars.body": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" }
                   }
                 }
               },
@@ -130,7 +130,7 @@
                   "actionId": "notifications.send_in_app",
                   "version": 1,
                   "inputMapping": {
-                    "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                    "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
                     "title": { "$expr": "vars.title" },
                     "body": { "$expr": "vars.body" },
                     "severity": "info",
@@ -147,4 +147,3 @@
     }
   ]
 }
-

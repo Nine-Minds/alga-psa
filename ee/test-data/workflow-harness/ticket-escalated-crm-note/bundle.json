@@ -46,9 +46,9 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture ticket-escalated-crm-note]'" },
-                  "vars.note": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" },
-                  "vars.title": { "$expr": "vars.marker & ' Ticket escalated'" },
-                  "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                  "vars.note": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" },
+                  "vars.title": { "$expr": "'[fixture ticket-escalated-crm-note] Ticket escalated'" },
+                  "vars.body": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" }
                 }
               }
             },
@@ -59,7 +59,7 @@
                 "actionId": "crm.create_activity_note",
                 "version": 1,
                 "inputMapping": {
-                  "target": { "$expr": "{\\\"type\\\": \\\"client\\\", \\\"id\\\": payload.fixtureClientId}" },
+                  "target": { "$expr": "{\"type\": \"client\", \"id\": payload.fixtureClientId}" },
                   "body": { "$expr": "vars.note" },
                   "visibility": "internal"
                 }
@@ -72,7 +72,7 @@
                 "actionId": "notifications.send_in_app",
                 "version": 1,
                 "inputMapping": {
-                  "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                  "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
                   "title": { "$expr": "vars.title" },
                   "body": { "$expr": "vars.body" },
                   "severity": "warning",
@@ -102,9 +102,9 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture ticket-escalated-crm-note]'" },
-                    "vars.note": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" },
-                    "vars.title": { "$expr": "vars.marker & ' Ticket escalated'" },
-                    "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                    "vars.note": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" },
+                    "vars.title": { "$expr": "'[fixture ticket-escalated-crm-note] Ticket escalated'" },
+                    "vars.body": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" }
                   }
                 }
               },
@@ -115,7 +115,7 @@
                   "actionId": "crm.create_activity_note",
                   "version": 1,
                   "inputMapping": {
-                    "target": { "$expr": "{\\\"type\\\": \\\"client\\\", \\\"id\\\": payload.fixtureClientId}" },
+                    "target": { "$expr": "{\"type\": \"client\", \"id\": payload.fixtureClientId}" },
                     "body": { "$expr": "vars.note" },
                     "visibility": "internal"
                   }
@@ -128,7 +128,7 @@
                   "actionId": "notifications.send_in_app",
                   "version": 1,
                   "inputMapping": {
-                    "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                    "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
                     "title": { "$expr": "vars.title" },
                     "body": { "$expr": "vars.body" },
                     "severity": "warning",
@@ -145,4 +145,3 @@
     }
   ]
 }
-

@@ -62,7 +62,7 @@
                   "vars.marker": { "$expr": "'[fixture ticket-created-outage-escalate]'" },
                   "vars.isOutage": { "$expr": "vars.lookup.ticket.attributes.fixture_is_outage" },
                   "vars.notifyUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id" },
-                  "vars.title": { "$expr": "vars.marker & ' Outage escalation'" },
+                  "vars.title": { "$expr": "'[fixture ticket-created-outage-escalate] Outage escalation'" },
                   "vars.body": { "$expr": "'ticketId=' & payload.ticketId" }
                 }
               }
@@ -140,7 +140,7 @@
                     "vars.marker": { "$expr": "'[fixture ticket-created-outage-escalate]'" },
                     "vars.isOutage": { "$expr": "vars.lookup.ticket.attributes.fixture_is_outage" },
                     "vars.notifyUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id" },
-                    "vars.title": { "$expr": "vars.marker & ' Outage escalation'" },
+                    "vars.title": { "$expr": "'[fixture ticket-created-outage-escalate] Outage escalation'" },
                     "vars.body": { "$expr": "'ticketId=' & payload.ticketId" }
                   }
                 }
@@ -190,4 +190,3 @@
     }
   ]
 }
-

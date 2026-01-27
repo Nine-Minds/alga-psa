@@ -10,6 +10,21 @@ async function pickOne(ctx, { label, sql, params }) {
   return rows[0];
 }
 
+async function deleteTicketWithDbFallback(ctx, { tenantId, ticketId, apiKey }) {
+  try {
+    await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': apiKey }
+    });
+    return;
+  } catch {
+    // Fall back to DB cleanup for common FK constraints.
+  }
+
+  await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+  await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+}
+
 module.exports = async function run(ctx) {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -66,10 +81,19 @@ module.exports = async function run(ctx) {
   if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
 
   ctx.onCleanup(async () => {
-    await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': apiKey }
-    });
+    await deleteTicketWithDbFallback(ctx, { tenantId, ticketId, apiKey });
+  });
+
+  ctx.onCleanup(async () => {
+    await ctx.dbWrite.query(
+      `
+        delete from internal_notifications
+        where tenant = $1
+          and user_id = $2
+          and message like $3
+      `,
+      [tenantId, notifyUser.user_id, `%${ticketId}%`]
+    );
   });
 
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });

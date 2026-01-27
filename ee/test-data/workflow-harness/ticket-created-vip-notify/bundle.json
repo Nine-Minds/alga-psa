@@ -61,7 +61,7 @@
                   "vars.fixtureIsVip": { "$expr": "vars.lookup.ticket.attributes.fixture_is_vip" },
                   "vars.fixtureNotifyUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id" },
                   "vars.marker": { "$expr": "'[fixture ticket-created-vip-notify]'" },
-                  "vars.title": { "$expr": "vars.marker & ' VIP ticket created'" },
+                  "vars.title": { "$expr": "'[fixture ticket-created-vip-notify] VIP ticket created'" },
                   "vars.body": { "$expr": "'ticketId=' & payload.ticketId" }
                 }
               }
@@ -126,7 +126,7 @@
                     "vars.fixtureIsVip": { "$expr": "vars.lookup.ticket.attributes.fixture_is_vip" },
                     "vars.fixtureNotifyUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id" },
                     "vars.marker": { "$expr": "'[fixture ticket-created-vip-notify]'" },
-                    "vars.title": { "$expr": "vars.marker & ' VIP ticket created'" },
+                    "vars.title": { "$expr": "'[fixture ticket-created-vip-notify] VIP ticket created'" },
                     "vars.body": { "$expr": "'ticketId=' & payload.ticketId" }
                   }
                 }
@@ -163,4 +163,3 @@
     }
   ]
 }
-

@@ -60,7 +60,7 @@
                 "assign": {
                   "vars.projectId": { "$expr": "vars.lookup.ticket.attributes.fixture_project_id" },
                   "vars.marker": { "$expr": "'[fixture ticket-created-create-project-task]'" },
-                  "vars.taskTitle": { "$expr": "vars.marker & ' Follow-up for ticketId=' & payload.ticketId" }
+                  "vars.taskTitle": { "$expr": "'[fixture ticket-created-create-project-task] Follow-up for ticketId=' & payload.ticketId" }
                 }
               }
             },
@@ -112,7 +112,7 @@
                   "assign": {
                     "vars.projectId": { "$expr": "vars.lookup.ticket.attributes.fixture_project_id" },
                     "vars.marker": { "$expr": "'[fixture ticket-created-create-project-task]'" },
-                    "vars.taskTitle": { "$expr": "vars.marker & ' Follow-up for ticketId=' & payload.ticketId" }
+                    "vars.taskTitle": { "$expr": "'[fixture ticket-created-create-project-task] Follow-up for ticketId=' & payload.ticketId" }
                   }
                 }
               },
@@ -137,4 +137,3 @@
     }
   ]
 }
-

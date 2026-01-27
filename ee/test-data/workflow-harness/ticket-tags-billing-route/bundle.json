@@ -46,15 +46,15 @@
               "config": {
                 "assign": {
                   "vars.marker": { "$expr": "'[fixture ticket-tags-billing-route]'" },
-                  "vars.title": { "$expr": "vars.marker & ' Billing tag added'" },
-                  "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                  "vars.title": { "$expr": "'[fixture ticket-tags-billing-route] Billing tag added'" },
+                  "vars.body": { "$expr": "'[fixture ticket-tags-billing-route] ticketId=' & payload.ticketId" }
                 }
               }
             },
             {
               "id": "if-billing-tag",
               "type": "control.if",
-              "condition": { "$expr": "payload.addedTagIds[$ = payload.fixtureBillingTagId] != null" },
+              "condition": { "$expr": "payload.addedTagIds[0] = payload.fixtureBillingTagId" },
               "then": [
                 {
                   "id": "route-to-billing",
@@ -64,7 +64,7 @@
                     "version": 1,
                     "inputMapping": {
                       "ticket_id": { "$expr": "payload.ticketId" },
-                      "patch": { "$expr": "{\\\"status_id\\\": payload.fixtureBillingStatusId}" },
+                      "patch": { "$expr": "{\"status_id\": payload.fixtureBillingStatusId}" },
                       "idempotency_key": { "$expr": "'fixture.ticket-tags-billing-route:update:' & payload.ticketId" }
                     }
                   }
@@ -76,7 +76,7 @@
                     "actionId": "notifications.send_in_app",
                     "version": 1,
                     "inputMapping": {
-                      "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                      "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
                       "title": { "$expr": "vars.title" },
                       "body": { "$expr": "vars.body" },
                       "severity": "info",
@@ -109,15 +109,15 @@
                 "config": {
                   "assign": {
                     "vars.marker": { "$expr": "'[fixture ticket-tags-billing-route]'" },
-                    "vars.title": { "$expr": "vars.marker & ' Billing tag added'" },
-                    "vars.body": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                    "vars.title": { "$expr": "'[fixture ticket-tags-billing-route] Billing tag added'" },
+                    "vars.body": { "$expr": "'[fixture ticket-tags-billing-route] ticketId=' & payload.ticketId" }
                   }
                 }
               },
               {
                 "id": "if-billing-tag",
                 "type": "control.if",
-                "condition": { "$expr": "payload.addedTagIds[$ = payload.fixtureBillingTagId] != null" },
+                "condition": { "$expr": "payload.addedTagIds[0] = payload.fixtureBillingTagId" },
                 "then": [
                   {
                     "id": "route-to-billing",
@@ -127,7 +127,7 @@
                       "version": 1,
                       "inputMapping": {
                         "ticket_id": { "$expr": "payload.ticketId" },
-                        "patch": { "$expr": "{\\\"status_id\\\": payload.fixtureBillingStatusId}" },
+                        "patch": { "$expr": "{\"status_id\": payload.fixtureBillingStatusId}" },
                         "idempotency_key": { "$expr": "'fixture.ticket-tags-billing-route:update:' & payload.ticketId" }
                       }
                     }
@@ -139,7 +139,7 @@
                       "actionId": "notifications.send_in_app",
                       "version": 1,
                       "inputMapping": {
-                        "recipients": { "$expr": "{\\\"user_ids\\\": [payload.fixtureNotifyUserId]}" },
+                        "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
                         "title": { "$expr": "vars.title" },
                         "body": { "$expr": "vars.body" },
                         "severity": "info",
@@ -159,4 +159,3 @@
     }
   ]
 }
-
