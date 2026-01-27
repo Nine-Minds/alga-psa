@@ -32,6 +32,7 @@ interface StatusColumnProps {
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
   searchQuery?: string;
+  searchCaseSensitive?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -69,6 +70,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   animatingTasks,
   avatarUrls = {},
   searchQuery = '',
+  searchCaseSensitive = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -357,6 +359,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               documentCount={taskDocumentCounts[task.task_id]}
               isAnimating={animatingTasks.has(task.task_id)}
               searchQuery={searchQuery}
+              searchCaseSensitive={searchCaseSensitive}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
               onDragStart={onDragStart}

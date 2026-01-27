@@ -35,6 +35,7 @@ interface TaskCardProps {
   documentCount?: number;
   isAnimating?: boolean;
   searchQuery?: string;
+  searchCaseSensitive?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -49,10 +50,11 @@ interface TaskCardProps {
 }
 
 // Helper function to highlight matching text in search results
-const highlightSearchMatch = (text: string, query: string): React.ReactNode => {
+const highlightSearchMatch = (text: string, query: string, caseSensitive: boolean = false): React.ReactNode => {
   if (!query.trim()) return text;
 
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const flags = caseSensitive ? 'g' : 'gi';
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, flags);
   const parts = text.split(regex);
 
   return parts.map((part, index) =>
@@ -88,6 +90,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   documentCount: providedDocumentCount,
   isAnimating = false,
   searchQuery = '',
+  searchCaseSensitive = false,
   onTaskSelected,
   onAssigneeChange,
   onDragStart,
@@ -313,7 +316,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
         <div className="font-semibold text-lg flex-1">
-          {highlightSearchMatch(task.task_name, searchQuery)}
+          {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive)}
         </div>
         {priority && (
           <div className="flex items-center gap-1">
@@ -332,7 +335,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ref={descriptionRef}
             className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {highlightSearchMatch(task.description, searchQuery)}
+            {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <button

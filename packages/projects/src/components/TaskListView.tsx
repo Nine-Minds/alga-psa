@@ -71,6 +71,8 @@ interface TaskListViewProps {
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
   searchQuery?: string;
+  searchWholeWord?: boolean;
+  searchCaseSensitive?: boolean;
 }
 
 interface PhaseGroup {
@@ -101,7 +103,9 @@ export default function TaskListView({
   users,
   selectedPriorityFilter = 'all',
   selectedTaskTags = [],
-  searchQuery = ''
+  searchQuery = '',
+  searchWholeWord = false,
+  searchCaseSensitive = false
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
@@ -172,11 +176,22 @@ export default function TaskListView({
 
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(task =>
-        task.task_name.toLowerCase().includes(query) ||
-        (task.description?.toLowerCase().includes(query) ?? false)
-      );
+      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+      filtered = filtered.filter(task => {
+        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const taskDescription = searchCaseSensitive
+          ? (task.description ?? '')
+          : (task.description?.toLowerCase() ?? '');
+
+        if (searchWholeWord) {
+          // Use word boundary regex for whole word matching
+          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+        } else {
+          return taskName.includes(query) || taskDescription.includes(query);
+        }
+      });
     }
 
     // Apply priority filter
@@ -194,7 +209,7 @@ export default function TaskListView({
     }
 
     return filtered;
-  }, [tasks, searchQuery, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {

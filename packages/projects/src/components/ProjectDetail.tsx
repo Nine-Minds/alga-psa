@@ -252,6 +252,8 @@ export default function ProjectDetail({
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchWholeWord, setSearchWholeWord] = useState<boolean>(false);
+  const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
   const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
@@ -262,11 +264,22 @@ export default function ProjectDetail({
 
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      tasks = tasks.filter(task =>
-        task.task_name.toLowerCase().includes(query) ||
-        (task.description?.toLowerCase().includes(query) ?? false)
-      );
+      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+      tasks = tasks.filter(task => {
+        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const taskDescription = searchCaseSensitive
+          ? (task.description ?? '')
+          : (task.description?.toLowerCase() ?? '');
+
+        if (searchWholeWord) {
+          // Use word boundary regex for whole word matching
+          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+        } else {
+          return taskName.includes(query) || taskDescription.includes(query);
+        }
+      });
     }
 
     // Apply priority filter
@@ -284,7 +297,7 @@ export default function ProjectDetail({
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -1569,17 +1582,43 @@ export default function ProjectDetail({
 
             {/* Bottom row: Search + Filters */}
             <div className="flex items-center gap-4">
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  id="task-search-list"
-                  type="text"
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                />
+              {/* Search Input with Options */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    id="task-search-list"
+                    type="text"
+                    placeholder="Search tasks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchWholeWord(!searchWholeWord)}
+                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                    searchWholeWord
+                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Whole word"
+                >
+                  Word
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
+                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                    searchCaseSensitive
+                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Case sensitive"
+                >
+                  Aa
+                </button>
               </div>
 
               {/* Tag Filter */}
@@ -1647,6 +1686,8 @@ export default function ProjectDetail({
             selectedPriorityFilter={selectedPriorityFilter}
             selectedTaskTags={selectedTaskTags}
             searchQuery={searchQuery}
+            searchWholeWord={searchWholeWord}
+            searchCaseSensitive={searchCaseSensitive}
           />
         </div>
       );
@@ -1694,17 +1735,43 @@ export default function ProjectDetail({
           {/* Bottom row: Search + Filters + Completion */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  id="task-search-kanban"
-                  type="text"
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                />
+              {/* Search Input with Options */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    id="task-search-kanban"
+                    type="text"
+                    placeholder="Search tasks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchWholeWord(!searchWholeWord)}
+                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                    searchWholeWord
+                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Whole word"
+                >
+                  Word
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
+                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                    searchCaseSensitive
+                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Case sensitive"
+                >
+                  Aa
+                </button>
               </div>
 
               {/* Tag Filter */}
@@ -1776,6 +1843,7 @@ export default function ProjectDetail({
               animatingTasks={animatingTasks}
               avatarUrls={avatarUrls}
               searchQuery={searchQuery}
+              searchCaseSensitive={searchCaseSensitive}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onAddCard={handleAddCard}
