@@ -1,7 +1,7 @@
 // server/src/components/interactions/QuickAddInteraction.tsx
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -82,8 +82,44 @@ export function QuickAddInteraction({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [endTimeError, setEndTimeError] = useState('');
-  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const isEditMode = !!editingInteraction;
+
+  // Handle wheel events for scrolling inside the dialog
+  const handleWheel = useCallback((e: WheelEvent) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Check if we can scroll
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const maxScroll = scrollHeight - clientHeight;
+
+    if (maxScroll <= 0) return; // Nothing to scroll
+
+    // Calculate new scroll position
+    const newScrollTop = Math.max(0, Math.min(maxScroll, scrollTop + e.deltaY));
+
+    if (newScrollTop !== scrollTop) {
+      container.scrollTop = newScrollTop;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, []);
+
+  // Attach wheel listener when dialog is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [isOpen, handleWheel]);
 
   // UI Reflection System Integration
   const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -556,6 +592,10 @@ export function QuickAddInteraction({
         disableFocusTrap
       >
         <DialogContent>
+          <div
+            ref={scrollContainerRef}
+            className="max-h-[calc(90vh-10rem)] overflow-y-auto pr-2"
+          >
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive">
@@ -774,6 +814,7 @@ export function QuickAddInteraction({
                 </Button>
               </div>
             </form>
+          </div>
           </DialogContent>
       </Dialog>
     </ReflectionContainer>
