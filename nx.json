@@ -13,7 +13,10 @@
   },
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "!{projectRoot}/dist/**", "sharedGlobals"],
-    "sharedGlobals": [],
+    "sharedGlobals": [
+      { "env": "EDITION" },
+      { "env": "NEXT_PUBLIC_EDITION" }
+    ],
     "production": [
       "default",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
