@@ -456,25 +456,28 @@ const ClientPortalSettings = () => {
                           : t('ui.preview.previewClientDashboard', 'Preview Client Dashboard')}
                       </Button>
                       {!hasCustomDomain ? (
-                        <Tooltip content={customDomainRequiredMessage}>
-                          <span className="inline-block">
+                        <>
+                          <Tooltip content={customDomainRequiredMessage}>
                             <Button
                               id="preview-signin"
                               type="button"
                               variant="outline"
                               size="sm"
                               className="cursor-not-allowed opacity-50"
-                              onClick={(e) => e.preventDefault()}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
                               aria-disabled="true"
                               aria-describedby="preview-signin-requires-domain"
                             >
                               {t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
                             </Button>
-                            <span id="preview-signin-requires-domain" className="sr-only">
-                              {customDomainRequiredMessage}
-                            </span>
+                          </Tooltip>
+                          <span id="preview-signin-requires-domain" className="sr-only">
+                            {customDomainRequiredMessage}
                           </span>
-                        </Tooltip>
+                        </>
                       ) : (
                         <Button
                           id="preview-signin"
