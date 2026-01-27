@@ -48,7 +48,7 @@ const ClientPortalSettings = () => {
   const customDomainRequiredMessage = t('ui.preview.customDomainRequired', 'Must have custom domain set up');
   const handleSignInPreviewClick = useCallback(() => {
     setPreviewMode((current) => (current === 'signin' ? null : 'signin'));
-  }, []);
+  }, [setPreviewMode]);
 
   // Check if custom domain is configured
   useEffect(() => {
