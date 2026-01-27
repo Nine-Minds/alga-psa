@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T20:01:23.268Z",
+  "workflows": [
+    {
+      "key": "fixture.schedule-entry-deleted-update-ticket",
+      "metadata": {
+        "name": "Fixture: Schedule Entry Deleted Notify",
+        "description": "Send an in-app notification when the event fires (SCHEDULE_ENTRY_DELETED).",
+        "payloadSchemaRef": "payload.ScheduleEntryDeleted.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ScheduleEntryDeleted.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "SCHEDULE_ENTRY_DELETED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ScheduleEntryDeleted.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "1f961a8b-2ec7-c27d-6c3f-5743011447fb",
+          "version": 1,
+          "name": "Fixture: Schedule Entry Deleted Notify",
+          "description": "Send an in-app notification when the event fires (SCHEDULE_ENTRY_DELETED).",
+          "payloadSchemaRef": "payload.ScheduleEntryDeleted.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "SCHEDULE_ENTRY_DELETED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture schedule-entry-deleted-update-ticket]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture schedule-entry-deleted-update-ticket] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture schedule-entry-deleted-update-ticket] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.entryId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture schedule-entry-deleted-update-ticket]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "1f961a8b-2ec7-c27d-6c3f-5743011447fb",
+            "version": 1,
+            "name": "Fixture: Schedule Entry Deleted Notify",
+            "description": "Send an in-app notification when the event fires (SCHEDULE_ENTRY_DELETED).",
+            "payloadSchemaRef": "payload.ScheduleEntryDeleted.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "SCHEDULE_ENTRY_DELETED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture schedule-entry-deleted-update-ticket]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture schedule-entry-deleted-update-ticket] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture schedule-entry-deleted-update-ticket] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.entryId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture schedule-entry-deleted-update-ticket]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
