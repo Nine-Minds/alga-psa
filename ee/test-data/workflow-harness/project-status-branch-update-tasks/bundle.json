@@ -1,0 +1,256 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:56:14.252Z",
+  "workflows": [
+    {
+      "key": "fixture.project-status-branch-update-tasks",
+      "metadata": {
+        "name": "Fixture: Project Status Multi Branch",
+        "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (PROJECT_STATUS_CHANGED).",
+        "payloadSchemaRef": "payload.ProjectStatusChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectStatusChanged.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_STATUS_CHANGED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectStatusChanged.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "76f0a6f1-dc8b-0d45-0329-9546cf4d4fa3",
+          "version": 1,
+          "name": "Fixture: Project Status Multi Branch",
+          "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (PROJECT_STATUS_CHANGED).",
+          "payloadSchemaRef": "payload.ProjectStatusChanged.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_STATUS_CHANGED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-status-branch-update-tasks]'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-status-branch-update-tasks] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-branch-a",
+              "type": "control.if",
+              "condition": {
+                "$expr": "payload.fixtureVariant = 'A'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.projectId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture project-status-branch-update-tasks]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-a",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "if-branch-b",
+                  "type": "control.if",
+                  "condition": {
+                    "$expr": "payload.fixtureVariant = 'B'"
+                  },
+                  "then": [
+                    {
+                      "id": "notify",
+                      "type": "action.call",
+                      "config": {
+                        "actionId": "projects.create_task",
+                        "version": 1,
+                        "inputMapping": {
+                          "project_id": {
+                            "$expr": "payload.projectId"
+                          },
+                          "title": {
+                            "$expr": "(vars.marker ? vars.marker : '[fixture project-status-branch-update-tasks]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "return-b",
+                      "type": "control.return"
+                    }
+                  ],
+                  "else": [
+                    {
+                      "id": "return-default",
+                      "type": "control.return"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "76f0a6f1-dc8b-0d45-0329-9546cf4d4fa3",
+            "version": 1,
+            "name": "Fixture: Project Status Multi Branch",
+            "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (PROJECT_STATUS_CHANGED).",
+            "payloadSchemaRef": "payload.ProjectStatusChanged.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_STATUS_CHANGED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-status-branch-update-tasks]'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-status-branch-update-tasks] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-branch-a",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "payload.fixtureVariant = 'A'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.projectId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture project-status-branch-update-tasks]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-a",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "if-branch-b",
+                    "type": "control.if",
+                    "condition": {
+                      "$expr": "payload.fixtureVariant = 'B'"
+                    },
+                    "then": [
+                      {
+                        "id": "notify",
+                        "type": "action.call",
+                        "config": {
+                          "actionId": "projects.create_task",
+                          "version": 1,
+                          "inputMapping": {
+                            "project_id": {
+                              "$expr": "payload.projectId"
+                            },
+                            "title": {
+                              "$expr": "(vars.marker ? vars.marker : '[fixture project-status-branch-update-tasks]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "return-b",
+                        "type": "control.return"
+                      }
+                    ],
+                    "else": [
+                      {
+                        "id": "return-default",
+                        "type": "control.return"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
