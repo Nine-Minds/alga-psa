@@ -2,42 +2,35 @@
 
 ## Status
 
-- **In progress**: Ticket domain counterparts (60/70 complete; 82 remaining overall)
+- **In progress**: Project domain counterparts (0/28 complete; 71 remaining overall)
 
-## Summary by Domain
+## Summary by Domain (needed-biz-tests.json)
 
-| Domain | Total | Biz-Relevant | Notification-Only | To Create |
-|--------|-------|--------------|-------------------|-----------|
-| ticket | 88 | 16 | 70 | 70 |
-| project | 29 | 1 | 28 | 28 |
-| invoice | 12 | 1 | 11 | 11 |
-| payment | 4 | 0 | 4 | 4 |
-| appointment | 10 | 1 | 9 | 9 |
-| contract | 5 | 1 | 4 | 4 |
-| schedule | 5 | 1 | 4 | 4 |
-| technician | 4 | 0 | 4 | 4 |
-| email | 2 | 1 | 1 | 1 |
-| company | 2 | 0 | 2 | 2 |
-| integration | 2 | 0 | 2 | 2 |
-| task | 2 | 0 | 2 | 2 |
-| time | 2 | 0 | 2 | 2 |
-| capacity | 1 | 0 | 1 | 1 |
-| **Total** | **168** | **22** | **142** | **142** |
-
-(Plus 3 harness tests that don't need counterparts)
+| Domain | To Create |
+|--------|-----------|
+| ticket | 71 |
+| project | 28 |
+| invoice | 10 |
+| appointment | 9 |
+| payment | 4 |
+| contract | 4 |
+| schedule | 4 |
+| technician | 4 |
+| other | 8 |
+| **Total** | **142** |
 
 ## Progress Tracker
 
 ### Phase 1: High-Value Domains
 
-#### Ticket Domain (70 fixtures)
+#### Ticket Domain (71 fixtures)
 - [x] Batch 1: ticket-approval-* through ticket-created-assign-contact-owner
 - [x] Batch 2: ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email
 - [x] Batch 3: ticket-created-client-missing-create-note through ticket-created-email-with-retry
 - [x] Batch 4: ticket-created-error-creates-comment through ticket-created-log-initial-time
 - [x] Batch 5: ticket-created-missing-fields-comment through ticket-created-set-custom-fields
 - [x] Batch 6: ticket-created-set-sla-fields through ticket-merged-add-comment
-- [ ] Batch 7: ticket-response-* through ticket-updated-*
+- [x] Batch 7: ticket-message-added-send-response through ticket-updated-status-add-comment
 - Completed commits:
   - Batch 1 (commit f230b76e4): 10 fixtures (ticket-approval-* through ticket-created-assign-contact-owner)
   - Batch 2 (commit 761473599): 10 fixtures (ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email)
@@ -45,6 +38,7 @@
   - Batch 4 (commit 36f8787d7): 10 fixtures (ticket-created-error-creates-comment through ticket-created-log-initial-time)
   - Batch 5 (commit 5052a466e): 10 fixtures (ticket-created-missing-fields-comment through ticket-created-set-custom-fields)
   - Batch 6 (commit eb184c5b8): 10 fixtures (ticket-created-set-sla-fields through ticket-merged-add-comment)
+  - Batch 7 (commit 7cce41cb4): 11 fixtures (ticket-message-added-send-response through ticket-updated-status-add-comment)
 
 #### Project Domain (28 fixtures)
 - [ ] Batch 1: project-approval-* through project-created-*
