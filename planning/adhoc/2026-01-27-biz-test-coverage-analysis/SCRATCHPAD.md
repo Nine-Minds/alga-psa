@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Ready to start**: 142 notification-only fixtures need business-relevant counterparts
+- **In progress**: Ticket domain counterparts (50/70 complete; 92 remaining overall)
 
 ## Summary by Domain
 
@@ -35,7 +35,7 @@
 - [x] Batch 2: ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email
 - [x] Batch 3: ticket-created-client-missing-create-note through ticket-created-email-with-retry
 - [x] Batch 4: ticket-created-error-creates-comment through ticket-created-log-initial-time
-- [ ] Batch 5: ticket-created-missing-fields-comment through ticket-created-set-custom-fields
+- [x] Batch 5: ticket-created-missing-fields-comment through ticket-created-set-custom-fields
 - [ ] Batch 6: ticket-created-two-* through ticket-reopened-*
 - [ ] Batch 7: ticket-response-* through ticket-updated-*
 - Completed commits:
@@ -43,6 +43,7 @@
   - Batch 2 (commit 761473599): 10 fixtures (ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email)
   - Batch 3 (commit 2862304a7): 10 fixtures (ticket-created-client-missing-create-note through ticket-created-email-with-retry)
   - Batch 4 (commit 36f8787d7): 10 fixtures (ticket-created-error-creates-comment through ticket-created-log-initial-time)
+  - Batch 5 (commit 5052a466e): 10 fixtures (ticket-created-missing-fields-comment through ticket-created-set-custom-fields)
 
 #### Project Domain (28 fixtures)
 - [ ] Batch 1: project-approval-* through project-created-*
@@ -80,6 +81,7 @@
   - All other domains (project/invoice/appointment/etc): replace `notifications.send_in_app` → `projects.create_task` and assert DB `project_tasks`.
   - Shared runner: `ee/test-data/workflow-harness/_lib/biz-fixture.cjs`
     - Uses `workflow_runs.input_json->>'fixtureNotifyUserId'` (and optionally `fixtureDedupeKey`) to wait for the correct run when domain APIs emit their own events (e.g., creating a ticket can also emit `TICKET_CREATED`).
+    - Reuses an existing ticket/project and cleans up only marker-matched rows (comments/tasks) to avoid FK cleanup races when domain APIs emit real events that trigger workflows.
   - Generator: `tools/workflow-harness/generate-biz-counterparts.cjs`
 - Local harness env (this worktree):
   - Server: http://localhost:3010 (docker `prep_1_0_server_ee`)
@@ -157,4 +159,5 @@ grep -rh '"actionId"' ee/test-data/workflow-harness/*/bundle.json | \
 - `tickets.add_comment` requires `comment:manage` permission
 - `email.send` requires `email:process` permission and tenant_email_settings
 - Cleanup should use HTTP delete with DB fallback for FK constraint issues
+- Some fixtures reference `tickets.find(...).attributes.*`; ensure JSONata assigns default JSON-serializable values if fixture attributes aren't present.
 - JSONata escaping: use `\"` not `\\\"` inside expressions
