@@ -442,26 +442,40 @@ const ClientPortalSettings = () => {
                 >
                   {previewMode === 'dashboard' ? 'Hide Client Dashboard' : 'Preview Client Dashboard'}
                 </Button>
-                <Tooltip content={!hasCustomDomain ? 'Must have custom domain set up' : undefined}>
-                  <Button
-                    id="preview-signin"
-                    type="button"
-                    variant={previewMode === 'signin' ? 'default' : 'outline'}
-                    size="sm"
-                    className={!hasCustomDomain ? 'cursor-not-allowed opacity-50' : ''}
-                    onClick={(e) => {
-                      if (!hasCustomDomain) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        return;
-                      }
-                      setPreviewMode(previewMode === 'signin' ? null : 'signin');
-                    }}
-                    aria-disabled={!hasCustomDomain || undefined}
-                  >
-                    {previewMode === 'signin' ? 'Hide Sign-in Page' : 'Preview Sign-in Page'}
-                  </Button>
-                </Tooltip>
+                {(() => {
+                  const disabledMessage = 'Must have custom domain set up';
+                  const signInButton = (
+                    <Button
+                      id="preview-signin"
+                      type="button"
+                      variant={previewMode === 'signin' ? 'default' : 'outline'}
+                      size="sm"
+                      className={!hasCustomDomain ? 'cursor-not-allowed opacity-50' : ''}
+                      onClick={(e) => {
+                        if (!hasCustomDomain) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          return;
+                        }
+                        setPreviewMode(previewMode === 'signin' ? null : 'signin');
+                      }}
+                      aria-disabled={!hasCustomDomain || undefined}
+                      aria-describedby={!hasCustomDomain ? 'preview-signin-disabled-reason' : undefined}
+                    >
+                      {previewMode === 'signin' ? 'Hide Sign-in Page' : 'Preview Sign-in Page'}
+                    </Button>
+                  );
+                  return !hasCustomDomain ? (
+                    <>
+                      <Tooltip content={disabledMessage}>{signInButton}</Tooltip>
+                      <span id="preview-signin-disabled-reason" className="sr-only">
+                        {disabledMessage}
+                      </span>
+                    </>
+                  ) : (
+                    signInButton
+                  );
+                })()}
               </div>
 
               {/* Dashboard Preview */}
