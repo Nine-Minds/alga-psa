@@ -150,6 +150,9 @@ const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
 const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
+    // Propagate edition to client-side code
+    // When EDITION=ee, set NEXT_PUBLIC_EDITION=enterprise for client components
+    NEXT_PUBLIC_EDITION: isEE ? 'enterprise' : (process.env.NEXT_PUBLIC_EDITION || 'community'),
   },
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
@@ -342,7 +345,7 @@ const nextConfig = {
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
-    const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
     console.log('[next.config] edition', isEE ? 'enterprise' : 'community', {
       cwd: process.cwd(),
       dirname: __dirname,
