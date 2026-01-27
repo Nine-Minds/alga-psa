@@ -233,7 +233,7 @@ spec:
           - name: STORAGE_LOCAL_MAX_FILE_SIZE
             value: "{{ .Values.config.storage.providers.local.max_file_size | default 104857600 }}"
           - name: STORAGE_LOCAL_ALLOWED_MIME_TYPES
-            value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+            value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "*/*" }}"
           - name: STORAGE_LOCAL_RETENTION_DAYS
             value: "{{ .Values.config.storage.providers.local.retention_days | default "30" }}"
           {{- end }}
@@ -267,7 +267,7 @@ spec:
           - name: STORAGE_S3_MAX_FILE_SIZE
             value: "{{ .Values.config.storage.providers.s3.max_file_size | default "104857600" }}"
           - name: STORAGE_S3_ALLOWED_MIME_TYPES
-            value: "{{ join "," .Values.config.storage.providers.s3.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+            value: "{{ join "," .Values.config.storage.providers.s3.allowed_mime_types | default "*/*" }}"
           - name: STORAGE_S3_RETENTION_DAYS
             value: "{{ .Values.config.storage.providers.s3.retention_days | default "30" }}"
           {{- end }}

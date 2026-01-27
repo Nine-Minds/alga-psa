@@ -61,7 +61,7 @@ const dbSchema = z.object({
 const storageSchema = z.object({
   STORAGE_LOCAL_BASE_PATH: z.string().default('/tmp/storage'),
   STORAGE_LOCAL_MAX_FILE_SIZE: z.preprocess(coerceNumber, z.number().int().positive()).default(104857600),
-  STORAGE_LOCAL_ALLOWED_MIME_TYPES: z.string().default('image/*,application/pdf,text/plain,application/zip,video/*'),
+  STORAGE_LOCAL_ALLOWED_MIME_TYPES: z.string().default('*/*'),
   STORAGE_LOCAL_RETENTION_DAYS: z.preprocess(coerceNumber, z.number().int().positive()).default(30),
 });
 
