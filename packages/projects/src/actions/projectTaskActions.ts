@@ -61,7 +61,7 @@ async function resolveProjectStatusInfo(
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
       trx.raw(
-        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id) as status_name'
+        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'
       ),
       trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
     )
@@ -565,6 +565,7 @@ export const getTasksForPhase = withAuth(async (
     ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
     taskResources: { [taskId: string]: any[] };
     taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
+    checklistItems: { [taskId: string]: ITaskChecklistItem[] };
 }> => {
     try {
         const {knex: db} = await createTenantKnex();
@@ -585,9 +586,15 @@ export const getTasksForPhase = withAuth(async (
 
             // Get all related data in parallel
             const taskIds = tasks.map(t => t.task_id);
-            const [ticketLinksArray, taskResourcesArray, predecessorsArray, successorsArray] = await Promise.all([
+            const [ticketLinksArray, taskResourcesArray, checklistItemsArray, predecessorsArray, successorsArray] = await Promise.all([
                 taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds) : [],
                 taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds) : [],
+                taskIds.length > 0
+                    ? trx('task_checklist_items')
+                        .whereIn('task_id', taskIds)
+                        .andWhere('tenant', tenant)
+                        .orderBy('order_number')
+                    : [],
                 // Fetch dependencies where task is the successor (predecessors of task)
                 taskIds.length > 0
                     ? trx('project_task_dependencies as ptd')
@@ -615,6 +622,7 @@ export const getTasksForPhase = withAuth(async (
             // Convert arrays to maps
             const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
             const taskResources: { [taskId: string]: any[] } = {};
+            const checklistItems: { [taskId: string]: ITaskChecklistItem[] } = {};
             const taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } } = {};
 
             for (const link of ticketLinksArray) {
@@ -632,6 +640,15 @@ export const getTasksForPhase = withAuth(async (
                         taskResources[resource.task_id] = [];
                     }
                     taskResources[resource.task_id].push(resource);
+                }
+            }
+
+            for (const item of checklistItemsArray) {
+                if (item.task_id) {
+                    if (!checklistItems[item.task_id]) {
+                        checklistItems[item.task_id] = [];
+                    }
+                    checklistItems[item.task_id].push(item);
                 }
             }
 
@@ -669,7 +686,7 @@ export const getTasksForPhase = withAuth(async (
                 });
             }
 
-            return { tasks, ticketLinks, taskResources, taskDependencies };
+            return { tasks, ticketLinks, taskResources, taskDependencies, checklistItems };
         });
     } catch (error) {
         console.error('Error getting tasks for phase:', error);
