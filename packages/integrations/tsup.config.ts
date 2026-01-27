@@ -69,7 +69,7 @@ export default defineConfig({
     'routes/api/integrations/xero/connect': 'src/routes/api/integrations/xero/connect.ts',
   },
   format: ['esm', 'cjs'],
-  dts: true,
+  dts: false, // Disabled due to memory issues - types resolved from source via package.json exports
   bundle: true,
   splitting: true,
   sourcemap: false,

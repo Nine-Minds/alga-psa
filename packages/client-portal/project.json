@@ -6,7 +6,13 @@
   "tags": ["scope:client-portal", "type:vertical"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsup",
+        "cwd": "packages/client-portal"
+      },
+      "dependsOn": ["^build"]
     },
     "test": {
       "executor": "@nx/vite:test",

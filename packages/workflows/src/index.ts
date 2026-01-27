@@ -31,5 +31,6 @@ export * from './visualization/types/astTypes';
 // Visualization AST utilities (buildable)
 export * from './visualization/ast';
 
-// Schemas (buildable - pure Zod schemas)
-export * from './actions/workflow-runtime-v2-schemas';
+// NOTE: workflow-runtime-v2-schemas is NOT exported from main entry
+// because it imports @shared/workflow/runtime which has server-only dependencies.
+// Import it directly: '@alga-psa/workflows/actions/workflow-runtime-v2-schemas'

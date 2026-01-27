@@ -6,7 +6,13 @@
   "tags": ["scope:billing", "type:vertical"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsup",
+        "cwd": "packages/billing"
+      },
+      "dependsOn": ["^build"]
     },
     "test": {
       "executor": "@nx/vite:test",

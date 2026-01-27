@@ -91,7 +91,7 @@ export default defineConfig({
     'lib/invoice-renderer/wasm-executor': 'src/lib/invoice-renderer/wasm-executor.ts',
   },
   format: ['esm', 'cjs'],
-  dts: true,
+  dts: false,
   bundle: true,
   splitting: true,
   sourcemap: false,

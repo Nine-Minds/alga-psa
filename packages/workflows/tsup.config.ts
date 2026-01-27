@@ -37,7 +37,7 @@ export default defineConfig({
     'actions/workflow-runtime-v2-schemas': 'src/actions/workflow-runtime-v2-schemas.ts',
   },
   format: ['esm', 'cjs'],
-  dts: true,
+  dts: false,
   bundle: true,
   splitting: true,
   sourcemap: false,

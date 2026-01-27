@@ -28,7 +28,23 @@ export type { TimePeriodSettings as TimePeriodSettingsType } from './lib/timePer
 
 // Schemas
 export * from './schemas/appointmentRequestSchemas';
-export * from './schemas/appointmentSchemas';
+// Note: appointmentSchemas has overlapping exports with appointmentRequestSchemas
+// Only export unique items from appointmentSchemas to avoid conflicts
+export {
+  availabilitySettingTypeSchema,
+  createAppointmentRequestSchema,
+  type CreateAppointmentRequestInput,
+  updateAppointmentRequestSchema,
+  type UpdateAppointmentRequestInput,
+  createPublicAppointmentRequestSchema,
+  type CreatePublicAppointmentRequestInput,
+  cancelAppointmentRequestSchema,
+  type CancelAppointmentRequestInput,
+  availabilitySettingSchema,
+  type AvailabilitySettingInput,
+  availabilityExceptionSchema,
+  type AvailabilityExceptionInput,
+} from './schemas/appointmentSchemas';
 export * from './schemas/timeSheet.schemas';
 export { fetchTimeEntriesParamsSchema, saveTimeEntryParamsSchema, addWorkItemParamsSchema, submitTimeSheetParamsSchema, fetchOrCreateTimeSheetParamsSchema, fetchTimePeriodsParamsSchema } from './actions/timeEntrySchemas';
 export type { FetchTimeEntriesParams, SaveTimeEntryParams, AddWorkItemParams, SubmitTimeSheetParams, FetchOrCreateTimeSheetParams, FetchTimePeriodsParams } from './actions/timeEntrySchemas';
