@@ -183,7 +183,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     (searchParams.get('trigger') as TriggerFilter) || 'all'
   );
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const pageSize = 20;
   const [sortBy, setSortBy] = useState<string>('updated_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -844,7 +844,6 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
               currentPage={currentPage}
               onPageChange={setCurrentPage}
               pageSize={pageSize}
-              totalItems={filteredWorkflows.length}
               onRowClick={handleRowClick}
               manualSorting={false}
               initialSorting={[{ id: sortBy, desc: sortDirection === 'desc' }]}
