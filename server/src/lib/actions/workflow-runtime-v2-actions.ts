@@ -1200,7 +1200,16 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     await requireWorkflowPermission(user, 'admin', knex);
   }
 
-  const definition = { ...(parsed.definition as any ?? workflow.draft_definition), id: parsed.workflowId };
+  const maxVersionRow = await knex('workflow_definition_versions')
+    .where({ workflow_id: parsed.workflowId })
+    .max('version as max_version')
+    .first() as { max_version: number | string | null } | undefined;
+  const maxPublishedVersion = maxVersionRow?.max_version == null ? null : Number(maxVersionRow.max_version);
+  const expectedNextVersion = (maxPublishedVersion ?? 0) + 1;
+  const requestedVersion = parsed.version;
+  const versionToPublish = requestedVersion < expectedNextVersion ? expectedNextVersion : requestedVersion;
+
+  const definition = { ...(parsed.definition as any ?? workflow.draft_definition), id: parsed.workflowId, version: versionToPublish };
   if (!definition) {
     return throwHttpError(400, 'No definition to publish');
   }
@@ -1253,21 +1262,36 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     return { ok: false, errors: validation.errors, warnings: validation.warnings };
   }
 
-  const record = await WorkflowDefinitionVersionModelV2.create(knex, {
-    workflow_id: parsed.workflowId,
-    version: parsed.version,
-    definition_json: definition,
-    payload_schema_json: payloadSchemaJson as Record<string, unknown> | null,
-    validation_status: validation.status,
-    validation_errors: validation.errors,
-    validation_warnings: validation.warnings,
-    validated_at: new Date().toISOString(),
-    published_by: user.user_id,
-    published_at: new Date().toISOString()
-  });
+  let record: WorkflowDefinitionVersionRecord;
+  try {
+    record = await WorkflowDefinitionVersionModelV2.create(knex, {
+      workflow_id: parsed.workflowId,
+      version: versionToPublish,
+      definition_json: definition,
+      payload_schema_json: payloadSchemaJson as Record<string, unknown> | null,
+      validation_status: validation.status,
+      validation_errors: validation.errors,
+      validation_warnings: validation.warnings,
+      validated_at: new Date().toISOString(),
+      published_by: user.user_id,
+      published_at: new Date().toISOString()
+    });
+  } catch (err: any) {
+    if (err?.code === '23505' && err?.constraint === 'workflow_definition_versions_workflow_version_unique') {
+      return throwHttpError(409, `Workflow version ${versionToPublish} already exists. Refresh and retry.`);
+    }
+    throw err;
+  }
 
+  const nextDraftVersion = versionToPublish + 1;
+  const nextDraftDefinition = { ...definition, version: nextDraftVersion };
   await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
     status: 'published',
+    draft_definition: nextDraftDefinition,
+    draft_version: nextDraftVersion,
+    name: definition.name,
+    description: definition.description ?? null,
+    trigger: definition.trigger ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
     payload_schema_provenance: payloadSchemaProvenance,
     validation_status: validation.status,

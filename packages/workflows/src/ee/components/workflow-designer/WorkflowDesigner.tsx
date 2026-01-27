@@ -2384,6 +2384,10 @@ const WorkflowDesigner: React.FC = () => {
         });
       } catch {}
       toast.success('Workflow published');
+      if (typeof (data as any)?.publishedVersion === 'number') {
+        const nextDraftVersion = ((data as any).publishedVersion as number) + 1;
+        setActiveDefinition((prev) => (prev ? { ...prev, version: nextDraftVersion } : prev));
+      }
       void loadDefinitions();
     } catch (error) {
       toast.error('Failed to publish workflow');
