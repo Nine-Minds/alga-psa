@@ -1,0 +1,169 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T20:02:01.366Z",
+  "workflows": [
+    {
+      "key": "fixture.email-provider-connected-create-task",
+      "metadata": {
+        "name": "Fixture: Email Provider Connected → Notify",
+        "description": "Simulate a provider connection event and send an in-app notification.",
+        "payloadSchemaRef": "payload.EmailProviderConnected.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.EmailProviderConnected.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "EMAIL_PROVIDER_CONNECTED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.EmailProviderConnected.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f410",
+          "version": 1,
+          "name": "Fixture: Email Provider Connected → Notify",
+          "description": "Simulate a provider connection event and send an in-app notification.",
+          "payloadSchemaRef": "payload.EmailProviderConnected.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "EMAIL_PROVIDER_CONNECTED"
+          },
+          "steps": [
+            {
+              "id": "state-provider",
+              "type": "state.set",
+              "config": {
+                "state": "EMAIL_PROVIDER"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture email-provider-connected-create-task]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture email-provider-connected-create-task] Provider connected'"
+                  },
+                  "vars.body": {
+                    "$expr": "'providerId=' & payload.providerId & ' mailbox=' & payload.mailbox"
+                  }
+                }
+              }
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "projects.create_task",
+                "version": 1,
+                "inputMapping": {
+                  "project_id": {
+                    "$expr": "payload.providerId"
+                  },
+                  "title": {
+                    "$expr": "(vars.marker ? vars.marker : '[fixture email-provider-connected-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f410",
+            "version": 1,
+            "name": "Fixture: Email Provider Connected → Notify",
+            "description": "Simulate a provider connection event and send an in-app notification.",
+            "payloadSchemaRef": "payload.EmailProviderConnected.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "EMAIL_PROVIDER_CONNECTED"
+            },
+            "steps": [
+              {
+                "id": "state-provider",
+                "type": "state.set",
+                "config": {
+                  "state": "EMAIL_PROVIDER"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture email-provider-connected-create-task]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture email-provider-connected-create-task] Provider connected'"
+                    },
+                    "vars.body": {
+                      "$expr": "'providerId=' & payload.providerId & ' mailbox=' & payload.mailbox"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "notify",
+                "type": "action.call",
+                "config": {
+                  "actionId": "projects.create_task",
+                  "version": 1,
+                  "inputMapping": {
+                    "project_id": {
+                      "$expr": "payload.providerId"
+                    },
+                    "title": {
+                      "$expr": "(vars.marker ? vars.marker : '[fixture email-provider-connected-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

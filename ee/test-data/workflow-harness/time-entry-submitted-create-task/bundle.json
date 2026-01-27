@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T20:02:01.370Z",
+  "workflows": [
+    {
+      "key": "fixture.time-entry-submitted-create-task",
+      "metadata": {
+        "name": "Fixture: Time Entry Submitted Notify",
+        "description": "Send an in-app notification when the event fires (TIME_ENTRY_SUBMITTED).",
+        "payloadSchemaRef": "payload.TimeEntrySubmitted.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TimeEntrySubmitted.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TIME_ENTRY_SUBMITTED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TimeEntrySubmitted.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "ce8feb8f-7a84-f6fe-b21b-e6dfccace5ed",
+          "version": 1,
+          "name": "Fixture: Time Entry Submitted Notify",
+          "description": "Send an in-app notification when the event fires (TIME_ENTRY_SUBMITTED).",
+          "payloadSchemaRef": "payload.TimeEntrySubmitted.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TIME_ENTRY_SUBMITTED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture time-entry-submitted-create-task]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture time-entry-submitted-create-task] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture time-entry-submitted-create-task] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.timeEntryId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture time-entry-submitted-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "ce8feb8f-7a84-f6fe-b21b-e6dfccace5ed",
+            "version": 1,
+            "name": "Fixture: Time Entry Submitted Notify",
+            "description": "Send an in-app notification when the event fires (TIME_ENTRY_SUBMITTED).",
+            "payloadSchemaRef": "payload.TimeEntrySubmitted.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TIME_ENTRY_SUBMITTED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture time-entry-submitted-create-task]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture time-entry-submitted-create-task] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture time-entry-submitted-create-task] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.timeEntryId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture time-entry-submitted-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
