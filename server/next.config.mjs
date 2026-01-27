@@ -709,16 +709,29 @@ const nextConfig = {
       } else {
         const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
         const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
+        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
+        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         config.plugins = config.plugins || [];
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
           try {
             const req = resource.request || '';
+            // Replace src/empty paths
             if (ceEmptyRegex.test(req)) {
               const rel = req.substring(ceEmptyPrefix.length);
               const mapped = path.join(eeSrcRoot, rel);
               if (process.env.LOG_MODULE_RESOLUTION === '1') {
-                console.log('[replace:EE]', { from: req, to: mapped });
+                console.log('[replace:EE:empty]', { from: req, to: mapped });
+              }
+              resource.request = mapped;
+            }
+            // Replace packages/ee/src paths (CE stubs from workspace packages)
+            else if (cePackagesEeRegex.test(req)) {
+              const rel = req.substring(cePackagesEePrefix.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE:packages]', { from: req, to: mapped });
               }
               resource.request = mapped;
             }
