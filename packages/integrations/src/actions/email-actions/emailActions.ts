@@ -3,6 +3,7 @@
 import { findContactByEmailAddress, createOrFindContactByEmail } from '@alga-psa/clients/actions';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -157,11 +158,12 @@ export async function createOrFindContact(input: CreateOrFindContactInput): Prom
  * Find existing ticket by email thread information
  * This action searches for tickets that were created from emails in the same conversation thread
  */
-export async function findTicketByEmailThread(input: FindTicketByEmailThreadInput): Promise<FindTicketByEmailThreadOutput | null> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const findTicketByEmailThread = withAuth(async (
+  _user,
+  { tenant },
+  input: FindTicketByEmailThreadInput
+): Promise<FindTicketByEmailThreadOutput | null> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     // Strategy 1: Search by thread ID if available
@@ -192,7 +194,7 @@ export async function findTicketByEmailThread(input: FindTicketByEmailThreadInpu
     
     return null;
   });
-}
+});
 
 // =============================================================================
 // EMAIL ATTACHMENT ACTIONS  
@@ -202,11 +204,12 @@ export async function findTicketByEmailThread(input: FindTicketByEmailThreadInpu
  * Process email attachment and associate with ticket
  * This action handles downloading, storing, and linking email attachments to tickets
  */
-export async function processEmailAttachment(input: ProcessEmailAttachmentInput): Promise<ProcessEmailAttachmentOutput> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const processEmailAttachment = withAuth(async (
+  _user,
+  { tenant },
+  input: ProcessEmailAttachmentInput
+): Promise<ProcessEmailAttachmentOutput> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const documentId = uuidv4();
@@ -247,7 +250,7 @@ export async function processEmailAttachment(input: ProcessEmailAttachmentInput)
       contentType: input.attachmentData.contentType
     };
   });
-}
+});
 
 // =============================================================================
 // EMAIL CLIENT ASSOCIATION ACTIONS
@@ -257,11 +260,12 @@ export async function processEmailAttachment(input: ProcessEmailAttachmentInput)
  * Save email-to-client association
  * This action saves the mapping between an email address and client for future automatic matching
  */
-export async function saveEmailClientAssociation(input: SaveEmailClientAssociationInput): Promise<SaveEmailClientAssociationOutput> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const saveEmailClientAssociation = withAuth(async (
+  _user,
+  { tenant },
+  input: SaveEmailClientAssociationInput
+): Promise<SaveEmailClientAssociationOutput> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const associationId = uuidv4();
@@ -313,7 +317,7 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
       };
     }
   });
-}
+});
 
 // =============================================================================
 // EMAIL WORKFLOW WRAPPER FUNCTIONS
@@ -326,19 +330,20 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
 /**
  * Create comment from email data - wrapper for email workflows
  */
-export async function createCommentFromEmail(commentData: {
-  ticket_id: string;
-  content: string;
-  format?: string;
-  source?: string;
-  author_type?: string;
-  author_id?: string;
-  metadata?: any;
-}): Promise<string> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
+export const createCommentFromEmail = withAuth(async (
+  _user,
+  { tenant },
+  commentData: {
+    ticket_id: string;
+    content: string;
+    format?: string;
+    source?: string;
+    author_type?: string;
+    author_id?: string;
+    metadata?: any;
   }
+): Promise<string> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const [comment] = await trx('comments')
@@ -357,20 +362,21 @@ export async function createCommentFromEmail(commentData: {
 
     return comment.comment_id;
   });
-}
+});
 
 /**
  * Create client from email data - wrapper for email workflows
  */
-export async function createClientFromEmail(clientData: {
-  client_name: string;
-  email?: string;
-  source?: string;
-}): Promise<{ client_id: string; client_name: string }> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
+export const createClientFromEmail = withAuth(async (
+  _user,
+  { tenant },
+  clientData: {
+    client_name: string;
+    email?: string;
+    source?: string;
   }
+): Promise<{ client_id: string; client_name: string }> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const [client] = await trx('clients')
@@ -389,16 +395,17 @@ export async function createClientFromEmail(clientData: {
       client_name: client.client_name
     };
   });
-}
+});
 
 /**
  * Get client by ID - wrapper for email workflows
  */
-export async function getClientByIdForEmail(clientId: string): Promise<{ client_id: string; client_name: string } | null> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getClientByIdForEmail = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<{ client_id: string; client_name: string } | null> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const client = await trx('clients')
@@ -408,20 +415,21 @@ export async function getClientByIdForEmail(clientId: string): Promise<{ client_
 
     return client || null;
   });
-}
+});
 
 /**
  * Create board from email data - wrapper for email workflows
  */
-export async function createBoardFromEmail(boardData: {
-  board_name: string;
-  description?: string;
-  is_default?: boolean;
-}): Promise<{ board_id: string; board_name: string }> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
+export const createBoardFromEmail = withAuth(async (
+  _user,
+  { tenant },
+  boardData: {
+    board_name: string;
+    description?: string;
+    is_default?: boolean;
   }
+): Promise<{ board_id: string; board_name: string }> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const [board] = await trx('boards')
@@ -441,7 +449,7 @@ export async function createBoardFromEmail(boardData: {
       board_name: board.board_name
     };
   });
-}
+});
 
 // =============================================================================
 // HELPER FUNCTIONS

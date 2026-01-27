@@ -420,9 +420,9 @@ export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.
   }
 }
 
-export async function getAllRoles(): Promise<IRole[]> {
+export const getAllRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const roles = await trx('roles')
         .where({ tenant: tenant || undefined })
@@ -433,19 +433,19 @@ export async function getAllRoles(): Promise<IRole[]> {
     logger.error('Failed to fetch all roles:', error);
     throw new Error('Failed to fetch all roles');
   }
-}
+});
 
 /**
  * Get MSP roles only (roles with msp flag = true)
  */
-export async function getMSPRoles(): Promise<IRole[]> {
+export const getMSPRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const roles = await trx('roles')
-        .where({ 
-          tenant: tenant || undefined,
-          msp: true 
+        .where({
+          tenant,
+          msp: true
         })
         .select('*');
       return roles;
@@ -454,19 +454,19 @@ export async function getMSPRoles(): Promise<IRole[]> {
     logger.error('Failed to fetch MSP roles:', error);
     throw new Error('Failed to fetch MSP roles');
   }
-}
+});
 
 /**
  * Get Client Portal roles only (roles with client flag = true)
  */
-export async function getClientPortalRoles(): Promise<IRole[]> {
+export const getClientPortalRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const roles = await trx('roles')
-        .where({ 
-          tenant: tenant || undefined,
-          client: true 
+        .where({
+          tenant,
+          client: true
         })
         .select('*');
       return roles;
@@ -475,7 +475,7 @@ export async function getClientPortalRoles(): Promise<IRole[]> {
     logger.error('Failed to fetch client portal roles:', error);
     throw new Error('Failed to fetch client portal roles');
   }
-}
+});
 
 export const getUserRolesWithPermissions = withAuth(async (
   currentUser,

@@ -16,19 +16,22 @@ import {
 
 /**
  * Get all workflow triggers for a tenant
- * 
+ *
  * @param params Parameters for the action
  * @returns Array of workflow triggers
  */
-export async function getWorkflowTriggers(params: {
-  tenant: string;
-  eventType?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<IWorkflowTrigger[]> {
-  const { tenant, eventType, limit, offset } = params;
+export const getWorkflowTriggers = withAuth(async (
+  _user,
+  { tenant },
+  params: {
+    eventType?: string;
+    limit?: number;
+    offset?: number;
+  } = {}
+): Promise<IWorkflowTrigger[]> => {
+  const { eventType, limit, offset } = params;
 
-  const { knex } = await createTenantKnex(tenant);
+  const { knex } = await createTenantKnex();
 
   // Get all workflow triggers
   const triggers = await withTransaction(knex, async (trx) => {
@@ -40,21 +43,20 @@ export async function getWorkflowTriggers(params: {
   });
 
   return triggers;
-}
+});
 
 /**
  * Get a workflow trigger by ID
- * 
+ *
  * @param params Parameters for the action
  * @returns The workflow trigger or null if not found
  */
-export async function getWorkflowTriggerById(params: {
-  triggerId: string;
-  tenant: string;
-}): Promise<IWorkflowTrigger | null> {
-  const { triggerId, tenant } = params;
-
-  const { knex } = await createTenantKnex(tenant);
+export const getWorkflowTriggerById = withAuth(async (
+  _user,
+  { tenant },
+  triggerId: string
+): Promise<IWorkflowTrigger | null> => {
+  const { knex } = await createTenantKnex();
 
   // Get the workflow trigger
   const trigger = await withTransaction(knex, async (trx) => {
@@ -62,46 +64,49 @@ export async function getWorkflowTriggerById(params: {
   });
 
   return trigger;
-}
+});
 
 /**
  * Create a new workflow trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns The created workflow trigger
  */
-export async function createWorkflowTrigger(params: ICreateWorkflowTrigger): Promise<IWorkflowTrigger> {
-  const { knex } = await createTenantKnex(params.tenant);
+export const createWorkflowTrigger = withAuth(async (
+  _user,
+  { tenant },
+  params: Omit<ICreateWorkflowTrigger, 'tenant'>
+): Promise<IWorkflowTrigger> => {
+  const { knex } = await createTenantKnex();
 
   // Verify that the event type exists in the event catalog
   const trigger = await withTransaction(knex, async (trx) => {
-    const eventCatalogEntry = await EventCatalogModel.getByEventType(trx, params.event_type, params.tenant);
+    const eventCatalogEntry = await EventCatalogModel.getByEventType(trx, params.event_type, tenant);
 
     if (!eventCatalogEntry) {
       throw new Error(`Event type "${params.event_type}" not found in the event catalog`);
     }
 
     // Create the workflow trigger
-    return await WorkflowTriggerModel.create(trx, params);
+    return await WorkflowTriggerModel.create(trx, { ...params, tenant });
   });
 
   return trigger;
-}
+});
 
 /**
  * Update a workflow trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns The updated workflow trigger
  */
-export async function updateWorkflowTrigger(params: {
-  triggerId: string;
-  tenant: string;
-  data: IUpdateWorkflowTrigger;
-}): Promise<IWorkflowTrigger | null> {
-  const { triggerId, tenant, data } = params;
-
-  const { knex } = await createTenantKnex(tenant);
+export const updateWorkflowTrigger = withAuth(async (
+  _user,
+  { tenant },
+  triggerId: string,
+  data: IUpdateWorkflowTrigger
+): Promise<IWorkflowTrigger | null> => {
+  const { knex } = await createTenantKnex();
 
   // Get the workflow trigger
   const updatedTrigger = await withTransaction(knex, async (trx) => {
@@ -125,21 +130,20 @@ export async function updateWorkflowTrigger(params: {
   });
 
   return updatedTrigger;
-}
+});
 
 /**
  * Delete a workflow trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns True if the trigger was deleted, false otherwise
  */
-export async function deleteWorkflowTrigger(params: {
-  triggerId: string;
-  tenant: string;
-}): Promise<boolean> {
-  const { triggerId, tenant } = params;
-
-  const { knex } = await createTenantKnex(tenant);
+export const deleteWorkflowTrigger = withAuth(async (
+  _user,
+  { tenant },
+  triggerId: string
+): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
 
   // Get the workflow trigger
   const result = await withTransaction(knex, async (trx) => {
@@ -157,7 +161,7 @@ export async function deleteWorkflowTrigger(params: {
   });
 
   return result;
-}
+});
 
 /**
  * Get all event mappings for a trigger
@@ -165,9 +169,13 @@ export async function deleteWorkflowTrigger(params: {
  * @param params Parameters for the action
  * @returns Array of workflow event mappings
  */
-export const getWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
-  triggerId: string;
-}): Promise<IWorkflowEventMapping[]> => {
+export const getWorkflowEventMappings = withAuth(async (
+  _user,
+  _ctx,
+  params: {
+    triggerId: string;
+  }
+): Promise<IWorkflowEventMapping[]> => {
   const { triggerId } = params;
 
   const { knex } = await createTenantKnex();
@@ -186,7 +194,11 @@ export const getWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
  * @param params Parameters for the action
  * @returns The created workflow event mapping
  */
-export const createWorkflowEventMapping = withAuth(async (_user, _ctx, params: ICreateWorkflowEventMapping): Promise<IWorkflowEventMapping> => {
+export const createWorkflowEventMapping = withAuth(async (
+  _user,
+  _ctx,
+  params: ICreateWorkflowEventMapping
+): Promise<IWorkflowEventMapping> => {
   const { knex } = await createTenantKnex();
 
   // Create the workflow event mapping
@@ -203,9 +215,13 @@ export const createWorkflowEventMapping = withAuth(async (_user, _ctx, params: I
  * @param params Parameters for the action
  * @returns Array of created workflow event mappings
  */
-export const createWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
-  mappings: ICreateWorkflowEventMapping[];
-}): Promise<IWorkflowEventMapping[]> => {
+export const createWorkflowEventMappings = withAuth(async (
+  _user,
+  _ctx,
+  params: {
+    mappings: ICreateWorkflowEventMapping[];
+  }
+): Promise<IWorkflowEventMapping[]> => {
   const { mappings } = params;
 
   if (mappings.length === 0) {
@@ -228,9 +244,13 @@ export const createWorkflowEventMappings = withAuth(async (_user, _ctx, params: 
  * @param params Parameters for the action
  * @returns True if the mapping was deleted, false otherwise
  */
-export const deleteWorkflowEventMapping = withAuth(async (_user, _ctx, params: {
-  mappingId: string;
-}): Promise<boolean> => {
+export const deleteWorkflowEventMapping = withAuth(async (
+  _user,
+  _ctx,
+  params: {
+    mappingId: string;
+  }
+): Promise<boolean> => {
   const { mappingId } = params;
 
   const { knex } = await createTenantKnex();
@@ -249,9 +269,13 @@ export const deleteWorkflowEventMapping = withAuth(async (_user, _ctx, params: {
  * @param params Parameters for the action
  * @returns Number of mappings deleted
  */
-export const deleteAllWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
-  triggerId: string;
-}): Promise<number> => {
+export const deleteAllWorkflowEventMappings = withAuth(async (
+  _user,
+  _ctx,
+  params: {
+    triggerId: string;
+  }
+): Promise<number> => {
   const { triggerId } = params;
 
   const { knex } = await createTenantKnex();

@@ -4,10 +4,13 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import ClientContractLine from '../models/clientContractLine';
 import { IClientContractLine } from '@alga-psa/types';
+import { withAuth } from '@alga-psa/auth';
 
-export async function createClientContractLine(
+export const createClientContractLine = withAuth(async (
+  _user,
+  { tenant },
   billingData: Omit<IClientContractLine, 'client_contract_line_id'>
-): Promise<IClientContractLine> {
+): Promise<IClientContractLine> => {
   try {
     if (!billingData.service_category) {
       throw new Error('Service category is required for contract lines');
@@ -33,12 +36,14 @@ export async function createClientContractLine(
     console.error('Error creating client billing:', error);
     throw error;
   }
-}
+});
 
-export async function updateClientContractLine(
+export const updateClientContractLine = withAuth(async (
+  _user,
+  { tenant },
   billingId: string,
   billingData: Partial<IClientContractLine>
-): Promise<IClientContractLine> {
+): Promise<IClientContractLine> => {
   try {
     const existingBilling = await ClientContractLine.get(billingId);
     if (!existingBilling) {
@@ -66,9 +71,13 @@ export async function updateClientContractLine(
     console.error('Error updating client billing:', error);
     throw error;
   }
-}
+});
 
-export async function getClientContractLine(clientId: string): Promise<IClientContractLine[]> {
+export const getClientContractLine = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientContractLine[]> => {
   try {
     const billings = await ClientContractLine.getByClientId(clientId);
     return billings;
@@ -76,15 +85,17 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
     console.error('Error fetching client billing:', error);
     throw new Error('Failed to fetch client contract lines');
   }
-}
+});
 
-export async function getOverlappingBillings(
+export const getOverlappingBillings = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   serviceCategory: string,
   startDate: Date,
   endDate: Date | null,
   excludeBillingId?: string
-): Promise<IClientContractLine[]> {
+): Promise<IClientContractLine[]> => {
   try {
     const overlappingBillings = await ClientContractLine.checkOverlappingBilling(
       clientId,
@@ -98,4 +109,4 @@ export async function getOverlappingBillings(
     console.error('Error checking for overlapping billings:', error);
     throw new Error('Failed to check for overlapping contract lines');
   }
-}
+});
