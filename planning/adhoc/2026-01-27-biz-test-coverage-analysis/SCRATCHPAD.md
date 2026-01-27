@@ -2,7 +2,7 @@
 
 ## Status
 
-- **In progress**: Appointment domain counterparts (0/9 complete; 33 remaining overall)
+- **In progress**: Payment/Contract/Schedule/Technician/Other (0/24 complete; 24 remaining overall)
 
 ## Summary by Domain (needed-biz-tests.json)
 
@@ -53,7 +53,7 @@
 - [x] Batch 1: All invoice-* (commit fbf3534e8)
 
 #### Appointment Domain (9 fixtures)
-- [ ] Batch 1: All appointment-*
+- [x] Batch 1: All appointment-* (commit bce5c865f)
 
 ### Phase 2: Remaining Domains
 
