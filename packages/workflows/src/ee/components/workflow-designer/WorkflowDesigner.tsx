@@ -1632,6 +1632,10 @@ const WorkflowDesigner: React.FC = () => {
 
     const params = new URLSearchParams(searchParamsString);
     params.set('tab', tabValue);
+    if (tabValue === 'workflows') {
+      params.delete('workflowId');
+      params.delete('new');
+    }
     const nextParamsString = params.toString();
     if (nextParamsString !== searchParamsString) {
       router.replace(`/msp/workflows?${nextParamsString}`);
