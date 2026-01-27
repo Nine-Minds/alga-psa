@@ -2,7 +2,7 @@
 
 ## Status
 
-- **In progress**: Payment/Contract/Schedule/Technician/Other (0/24 complete; 24 remaining overall)
+- **Complete**: All notification-only fixtures have business counterparts (144/144)
 
 ## Summary by Domain (needed-biz-tests.json)
 
@@ -16,8 +16,8 @@
 | contract | 4 |
 | schedule | 4 |
 | technician | 4 |
-| other | 8 |
-| **Total** | **142** |
+| other | 10 |
+| **Total** | **144** |
 
 ## Progress Tracker
 
@@ -57,16 +57,11 @@
 
 ### Phase 2: Remaining Domains
 
-- [ ] payment-* (4)
-- [ ] contract-* (4)
-- [ ] schedule-* (4)
-- [ ] technician-* (4)
-- [ ] company-* (2)
-- [ ] integration-* (2)
-- [ ] task-* (2)
-- [ ] time-* (2)
-- [ ] email-* (1)
-- [ ] capacity-* (1)
+- [x] payment-* (4) (commit c6c209ebb)
+- [x] contract-* (4) (commit 5e9291fdf)
+- [x] schedule-* (4) (commit a5e2b109d)
+- [x] technician-* (4) (commit cbfd38642)
+- [x] other (10) (commit 622fa750a)
 
 ## Notes / Decisions
 

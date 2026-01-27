@@ -1,6 +1,6 @@
 {
   "description": "Complete list of notification-only fixtures that need business-relevant counterparts",
-  "total": 142,
+  "total": 144,
   "criteria": "Each fixture currently only calls notifications.send_in_app. Needs a counterpart that exercises real domain-modifying actions.",
   "suggestedActions": {
     "ticketDomain": ["tickets.create", "tickets.update", "tickets.assign", "tickets.add_comment", "tickets.update_fields"],

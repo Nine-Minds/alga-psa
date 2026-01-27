@@ -8,7 +8,7 @@ Create a 1:1 business-relevant counterpart for every notification-only fixture. 
 
 - **171 total fixtures** in workflow-harness
 - **24 business-relevant** (14%) - already call domain-modifying actions
-- **142 notification-only** (83%) - need business counterparts
+- **144 notification-only** - need business counterparts
 - **2 scaffold** (1%) - minimal harness tests (ticket-created-hello, ticket-created-ignore-system)
 - **3 harness tests** (2%) - runtime/schema validation tests
 
@@ -27,9 +27,9 @@ Process fixtures **domain by domain**, alphabetically within each domain.
 
 ### Phase 1: High-Value Domains First
 
-1. **ticket** (70 needed) - highest impact, most complex business logic
+1. **ticket** (71 needed) - highest impact, most complex business logic
 2. **project** (28 needed) - task management, status workflows
-3. **invoice** (11 needed) - billing automation
+3. **invoice** (10 needed) - billing automation
 4. **appointment** (9 needed) - field service scheduling
 
 ### Phase 2: Remaining Domains
@@ -163,15 +163,15 @@ Mark the fixture as done in `SCRATCHPAD.md` and proceed to next.
 
 ## Batching Strategy
 
-Given 142 fixtures to create, batch by domain:
+Given 144 fixtures to create, batch by domain:
 
 | Domain | Count | Estimated Batches |
 |--------|-------|-------------------|
-| ticket | 70 | 7 batches of 10 |
+| ticket | 71 | 7 batches of 10 |
 | project | 28 | 3 batches of ~10 |
-| invoice | 11 | 2 batches |
+| invoice | 10 | 1 batch |
 | appointment | 9 | 1 batch |
-| others | 24 | 3 batches |
+| others | 26 | 3 batches |
 
 **Total: ~16 commit batches**
 
@@ -183,7 +183,7 @@ Given 142 fixtures to create, batch by domain:
 
 ## Definition of Done
 
-- [ ] All 142 notification-only fixtures have business-relevant counterparts
+- [ ] All 144 notification-only fixtures have business-relevant counterparts
 - [ ] Each counterpart passes with `--force --debug`
 - [ ] Each counterpart asserts a real database change (not just run SUCCEEDED)
 - [ ] All fixtures committed with descriptive messages
