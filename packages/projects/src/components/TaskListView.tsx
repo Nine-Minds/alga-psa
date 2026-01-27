@@ -15,33 +15,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
-
-// Helper function to highlight matching text in search results
-const highlightSearchMatch = (
-  text: string,
-  query: string,
-  caseSensitive: boolean = false,
-  wholeWord: boolean = false
-): React.ReactNode => {
-  if (!query.trim()) return text;
-
-  const flags = caseSensitive ? 'g' : 'gi';
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = wholeWord ? `\\b(${escapedQuery})\\b` : `(${escapedQuery})`;
-  const regex = new RegExp(pattern, flags);
-  const parts = text.split(regex);
-
-  return parts.map((part, index) =>
-    regex.test(part) ? (
-      <mark
-        key={index}
-        className="bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))] rounded px-0.5"
-      >
-        {part}
-      </mark>
-    ) : part
-  );
-};
+import { highlightSearchMatch } from '../lib/searchUtils';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling

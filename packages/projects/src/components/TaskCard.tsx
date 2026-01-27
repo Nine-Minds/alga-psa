@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@alga-psa/ui/components/DropdownMenu";
 import styles from './ProjectDetail.module.css';
+import { highlightSearchMatch } from '../lib/searchUtils';
 
 interface TaskCardProps {
   task: IProjectTask;
@@ -49,33 +50,6 @@ interface TaskCardProps {
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   avatarUrls?: Record<string, string | null>;
 }
-
-// Helper function to highlight matching text in search results
-const highlightSearchMatch = (
-  text: string,
-  query: string,
-  caseSensitive: boolean = false,
-  wholeWord: boolean = false
-): React.ReactNode => {
-  if (!query.trim()) return text;
-
-  const flags = caseSensitive ? 'g' : 'gi';
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = wholeWord ? `\\b(${escapedQuery})\\b` : `(${escapedQuery})`;
-  const regex = new RegExp(pattern, flags);
-  const parts = text.split(regex);
-
-  return parts.map((part, index) =>
-    regex.test(part) ? (
-      <mark
-        key={index}
-        className="bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))] rounded px-0.5"
-      >
-        {part}
-      </mark>
-    ) : part
-  );
-};
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
   task: CheckSquare,
