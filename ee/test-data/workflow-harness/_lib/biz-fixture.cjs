@@ -6,6 +6,57 @@ function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
 }
 
+function ticketIdExprForEvent(eventName) {
+  if (eventName === 'TICKET_MERGED') return 'payload.sourceTicketId';
+  if (eventName === 'TICKET_SPLIT') return 'payload.originalTicketId';
+  return 'payload.ticketId';
+}
+
+function projectIdExprForEvent(eventName) {
+  if (String(eventName || '').startsWith('PROJECT_')) return 'payload.projectId';
+  if (eventName === 'TASK_COMMENT_ADDED' || eventName === 'TASK_COMMENT_UPDATED') return 'payload.projectId';
+  if (String(eventName || '').startsWith('INVOICE_')) return 'payload.invoiceId';
+  if (String(eventName || '').startsWith('PAYMENT_')) return 'payload.paymentId';
+  if (String(eventName || '').startsWith('CONTRACT_')) return 'payload.contractId';
+  if (String(eventName || '').startsWith('COMPANY_')) return 'payload.companyId';
+  if (String(eventName || '').startsWith('APPOINTMENT_')) return 'payload.appointmentId';
+  if (String(eventName || '').startsWith('TECHNICIAN_')) return 'payload.appointmentId';
+  if (String(eventName || '').startsWith('TIME_ENTRY_')) return 'payload.timeEntryId';
+  if (String(eventName || '').startsWith('SCHEDULE_BLOCK_')) return 'payload.scheduleBlockId';
+  if (String(eventName || '').startsWith('SCHEDULE_ENTRY_')) return 'payload.entryId';
+  if (eventName === 'CAPACITY_THRESHOLD_REACHED') return 'payload.teamId';
+  if (String(eventName || '').startsWith('INTEGRATION_')) return 'payload.integrationId';
+  if (eventName === 'EMAIL_PROVIDER_CONNECTED') return 'payload.providerId';
+  return 'payload.projectId';
+}
+
+function ensureCallWorkflowInputMapping(callStep, { kind, eventName }) {
+  if (!callStep || typeof callStep !== 'object') throw new Error('ensureCallWorkflowInputMapping requires a call step object');
+
+  const inputMapping =
+    callStep.inputMapping && typeof callStep.inputMapping === 'object' && !Array.isArray(callStep.inputMapping) ? callStep.inputMapping : {};
+  // eslint-disable-next-line no-param-reassign
+  callStep.inputMapping = inputMapping;
+
+  if (kind === 'ticket_comment') {
+    const idExpr = ticketIdExprForEvent(eventName);
+    const match = /^payload\\.(\\w+)$/.exec(idExpr);
+    const field = match ? match[1] : 'ticketId';
+    inputMapping[field] = { $expr: idExpr };
+    return;
+  }
+
+  if (kind === 'project_task') {
+    const idExpr = projectIdExprForEvent(eventName);
+    const match = /^payload\\.(\\w+)$/.exec(idExpr);
+    const field = match ? match[1] : 'projectId';
+    inputMapping[field] = { $expr: idExpr };
+    return;
+  }
+
+  throw new Error(`Unknown callWorkflow kind: ${kind}`);
+}
+
 async function assertRunSucceeded(ctx, runRow) {
   if (runRow.status === 'SUCCEEDED') return;
   const steps = await ctx.getRunSteps(runRow.run_id);
@@ -345,6 +396,7 @@ async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRe
 
   callStep.workflowId = childWorkflowId;
   callStep.workflowVersion = childVersion;
+  ensureCallWorkflowInputMapping(callStep, { kind, eventName });
 
   await updateDraft(ctx, { workflowId: parentWorkflowId, definition: parentDraft });
 
@@ -433,4 +485,3 @@ module.exports = {
   runProjectTaskFixture,
   runCallWorkflowBizFixture
 };
-
