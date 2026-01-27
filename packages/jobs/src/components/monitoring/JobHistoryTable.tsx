@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { JobData } from '@alga-psa/jobs/lib/jobs/jobScheduler';
+import { JobData } from '@alga-psa/jobs/lib/jobService';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import JobDetailsDrawer from './JobDetailsDrawer';

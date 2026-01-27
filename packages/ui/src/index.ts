@@ -36,3 +36,22 @@ export const getUniqueTagTexts = (tags: ITag[]): string[] => {
   tags.forEach(tag => uniqueTags.add(tag.tag_text));
   return Array.from(uniqueTags).sort();
 };
+
+// === Runtime exports (re-exported for backward compatibility) ===
+// These are React components/hooks that require 'use client'
+// Prefer importing from specific subpaths for better tree-shaking
+
+// Context - Drawer
+export { DrawerProvider, useDrawer } from './context/DrawerContext';
+
+// Context - Unsaved Changes
+export { UnsavedChangesProvider, useUnsavedChanges, useRegisterUnsavedChanges } from './context/UnsavedChangesContext';
+
+// Hooks - Toast
+export { useToast } from './hooks/use-toast';
+
+// Lib - Error handling
+export { handleError } from './lib/errorHandling';
+
+// Lib - Date locale
+export { getDateFnsLocale } from './lib/dateFnsLocale';

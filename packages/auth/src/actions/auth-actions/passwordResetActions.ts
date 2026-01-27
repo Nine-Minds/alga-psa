@@ -29,7 +29,7 @@ const sendPasswordResetEmailAsync = async (params: {
   supportEmail: string;
   clientName: string;
 }) => {
-  const { sendPasswordResetEmail } = await import('@alga-psa/email');
+  const { sendPasswordResetEmail } = await import('@alga-psa/email/actions');
   return sendPasswordResetEmail(params);
 };
 

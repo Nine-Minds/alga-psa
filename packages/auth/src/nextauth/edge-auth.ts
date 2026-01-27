@@ -23,6 +23,7 @@ const getEdgeAuth = (): ReturnType<typeof NextAuth> => {
   }
 
   cachedEdgeAuth = NextAuth({
+    // @ts-ignore trustHost exists in NextAuth v5 but types differ across build contexts
     trustHost: true,
     session: {
       strategy: 'jwt',

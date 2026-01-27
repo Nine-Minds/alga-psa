@@ -10,8 +10,9 @@
  * - '@alga-psa/workflows/visualization/hooks' for visualization hooks
  */
 
-// Models (buildable)
-export * from './models';
+// NOTE: Models are NOT exported from main entry because they import @alga-psa/db
+// which has server-only dependencies (fs, knex, async_hooks).
+// Import models directly: '@alga-psa/workflows/models'
 
 // Config (buildable)
 export { workflowConfig } from './config/workflowConfig';

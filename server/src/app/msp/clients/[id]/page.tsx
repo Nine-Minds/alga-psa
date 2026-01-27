@@ -2,7 +2,7 @@ import { getDocumentByClientId } from '@alga-psa/documents/actions/documentActio
 import { getContactsByClient } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
 import { notFound } from 'next/navigation';
-import { ClientDetails } from '@alga-psa/clients';
+import { ClientDetails } from '@alga-psa/clients/components';
 import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {

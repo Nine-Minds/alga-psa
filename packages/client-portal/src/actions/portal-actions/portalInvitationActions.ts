@@ -3,8 +3,9 @@
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
-import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
-import { UserService } from '@alga-psa/users';
+import { getSystemEmailService, TenantEmailService } from '@alga-psa/email';
+import { sendPortalInvitationEmail } from '@alga-psa/email/actions';
+import { UserService } from '@alga-psa/users/services/UserService';
 import { runAsSystem, createSystemContext } from '@alga-psa/db';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';

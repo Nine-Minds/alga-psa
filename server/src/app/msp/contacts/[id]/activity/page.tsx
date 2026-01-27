@@ -1,5 +1,5 @@
 // server/src/app/msp/contacts/[id]/activity/page.tsx
-import { InteractionsFeed } from '@alga-psa/clients';
+import { InteractionsFeed } from '@alga-psa/clients/components';
 import { getInteractionsForEntity } from '@alga-psa/clients/actions';
 import ContactModel from 'server/src/lib/models/contact';
 import { getConnection } from 'server/src/lib/db/db';

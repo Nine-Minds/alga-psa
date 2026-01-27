@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
-import { UserService, UserActivityFilter } from '@alga-psa/users';
+import { UserService, UserActivityFilter } from '@alga-psa/users/services/UserService';
 import { 
   createUserSchema,
   updateUserSchema,

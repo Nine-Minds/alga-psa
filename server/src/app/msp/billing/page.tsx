@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BillingDashboard } from '@alga-psa/billing';
+import { BillingDashboard } from '@alga-psa/billing/components';
 import { getServices } from '@alga-psa/billing/actions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser } from '@alga-psa/users/actions';

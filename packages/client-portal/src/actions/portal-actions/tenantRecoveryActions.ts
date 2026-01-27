@@ -5,7 +5,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { IUser } from '@alga-psa/types';
 import { getPortalDomain } from '../../models/PortalDomainModel';
 import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions/tenant-actions';
-import { sendTenantRecoveryEmail } from '@alga-psa/email';
+import { sendTenantRecoveryEmail } from '@alga-psa/email/actions';
 
 export interface TenantLoginInfo {
   tenantId: string;

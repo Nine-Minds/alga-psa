@@ -344,7 +344,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
             resolvedMimeType = downloaded.contentType || resolvedMimeType;
             resolvedFileName = downloaded.fileName || resolvedFileName;
           } else if (providerRow.provider_type === 'google') {
-            const { GmailAdapter } = await import('@alga-psa/integrations');
+            const { GmailAdapter } = await import('@alga-psa/integrations/services/email/providers');
             const providerConfig = await buildGoogleProviderConfig(knex, tenant, providerRow);
             const adapter = new GmailAdapter(providerConfig);
             await adapter.connect();

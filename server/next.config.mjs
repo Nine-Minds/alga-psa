@@ -163,16 +163,28 @@ const nextConfig = {
 
       // Pre-built packages - point to /dist for compiled JS
       '@alga-psa/auth': '../packages/auth/dist',
-      '@alga-psa/ui': '../packages/ui/dist',
+      '@alga-psa/ui': '../packages/ui/src',
       '@alga-psa/clients': '../packages/clients/dist',
+      // Clients runtime subpaths
+      '@alga-psa/clients/actions': '../packages/clients/src/actions',
+      '@alga-psa/clients/components': '../packages/clients/src/components',
       '@alga-psa/scheduling': '../packages/scheduling/dist',
+      // Scheduling runtime subpaths
+      '@alga-psa/scheduling/actions': '../packages/scheduling/src/actions',
+      '@alga-psa/scheduling/components': '../packages/scheduling/src/components',
       '@alga-psa/users': '../packages/users/dist',
+      // Users runtime subpaths
+      '@alga-psa/users/actions': '../packages/users/src/actions',
+      '@alga-psa/users/components': '../packages/users/src/components',
+      '@alga-psa/users/services': '../packages/users/src/services',
       '@alga-psa/teams': '../packages/teams/dist',
       '@alga-psa/tags': '../packages/tags/dist',
       '@alga-psa/tenancy': '../packages/tenancy/dist',
       '@alga-psa/event-schemas': '../packages/event-schemas/dist',
       '@alga-psa/event-bus': '../packages/event-bus/dist',
       '@alga-psa/email': '../packages/email/dist',
+      // Email runtime subpaths
+      '@alga-psa/email/actions': '../packages/email/src/actions',
       '@alga-psa/documents': '../packages/documents/dist',
       '@alga-psa/reference-data': '../packages/reference-data/dist',
       '@alga-psa/notifications': '../packages/notifications/dist',
@@ -186,11 +198,39 @@ const nextConfig = {
       '@alga-psa/licensing': '../packages/licensing/dist',
       '@alga-psa/portal-shared': '../packages/portal-shared/dist',
       '@alga-psa/tickets': '../packages/tickets/dist',
+      // Tickets runtime subpaths
+      '@alga-psa/tickets/actions': '../packages/tickets/src/actions',
+      '@alga-psa/tickets/components': '../packages/tickets/src/components',
       '@alga-psa/projects': '../packages/projects/dist',
+      // Projects runtime subpaths
+      '@alga-psa/projects/actions': '../packages/projects/src/actions',
+      '@alga-psa/projects/components': '../packages/projects/src/components',
       '@alga-psa/billing': '../packages/billing/dist',
+      // Billing runtime subpaths
+      '@alga-psa/billing/actions': '../packages/billing/src/actions',
+      '@alga-psa/billing/components': '../packages/billing/src/components',
+      '@alga-psa/billing/models': '../packages/billing/src/models',
+      '@alga-psa/billing/services': '../packages/billing/src/services',
       '@alga-psa/workflows': '../packages/workflows/dist',
+      // Workflows runtime subpaths (Next.js transpiled, point to src)
+      '@alga-psa/workflows/actions': '../packages/workflows/src/actions',
+      '@alga-psa/workflows/components': '../packages/workflows/src/components',
+      '@alga-psa/workflows/hooks': '../packages/workflows/src/hooks',
+      '@alga-psa/workflows/visualization/hooks': '../packages/workflows/src/visualization/hooks',
+      '@alga-psa/workflows/visualization/services': '../packages/workflows/src/visualization/services',
+      '@alga-psa/workflows/ee': '../packages/workflows/src/ee',
+      '@alga-psa/workflows/oss': '../packages/workflows/src/oss',
       '@alga-psa/integrations': '../packages/integrations/dist',
+      // Integrations runtime subpaths
+      '@alga-psa/integrations/actions': '../packages/integrations/src/actions',
+      '@alga-psa/integrations/components': '../packages/integrations/src/components',
+      '@alga-psa/integrations/lib': '../packages/integrations/src/lib',
+      '@alga-psa/integrations/routes': '../packages/integrations/src/routes',
+      '@alga-psa/integrations/webhooks': '../packages/integrations/src/webhooks',
       '@alga-psa/client-portal': '../packages/client-portal/dist',
+      // Client-portal runtime subpaths
+      '@alga-psa/client-portal/actions': '../packages/client-portal/src/actions',
+      '@alga-psa/client-portal/components': '../packages/client-portal/src/components',
       // DB package - keep pointing to source for HMR in dev
       '@alga-psa/db': '../packages/db/src/index.ts',
       '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
@@ -369,17 +409,37 @@ const nextConfig = {
 
       // Pre-built packages - point to /dist for compiled JS
       // Runtime subpaths (actions, components, hooks) resolve via package.json exports to /src
+
+      // tsc-built packages (output to dist/packages/<name>/src)
+      '@alga-psa/core': path.join(__dirname, '../dist/packages/core/src'),
+      '@alga-psa/types': path.join(__dirname, '../dist/packages/types/src'),
+      '@alga-psa/validation': path.join(__dirname, '../dist/packages/validation/src'),
+      '@alga-psa/db': path.join(__dirname, '../dist/packages/db/src'),
+
+      // tsup-built packages (output to packages/<name>/dist)
       '@alga-psa/auth': path.join(__dirname, '../packages/auth/dist'),
-      '@alga-psa/ui': path.join(__dirname, '../packages/ui/dist'),
+      '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
       '@alga-psa/clients': path.join(__dirname, '../packages/clients/dist'),
+      // Clients runtime subpaths
+      '@alga-psa/clients/actions': path.join(__dirname, '../packages/clients/src/actions'),
+      '@alga-psa/clients/components': path.join(__dirname, '../packages/clients/src/components'),
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/dist'),
+      // Scheduling runtime subpaths
+      '@alga-psa/scheduling/actions': path.join(__dirname, '../packages/scheduling/src/actions'),
+      '@alga-psa/scheduling/components': path.join(__dirname, '../packages/scheduling/src/components'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/dist'),
+      // Users runtime subpaths
+      '@alga-psa/users/actions': path.join(__dirname, '../packages/users/src/actions'),
+      '@alga-psa/users/components': path.join(__dirname, '../packages/users/src/components'),
+      '@alga-psa/users/services': path.join(__dirname, '../packages/users/src/services'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/dist'),
       '@alga-psa/tags': path.join(__dirname, '../packages/tags/dist'),
       '@alga-psa/tenancy': path.join(__dirname, '../packages/tenancy/dist'),
       '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/dist'),
       '@alga-psa/event-bus': path.join(__dirname, '../packages/event-bus/dist'),
       '@alga-psa/email': path.join(__dirname, '../packages/email/dist'),
+      // Email runtime subpaths
+      '@alga-psa/email/actions': path.join(__dirname, '../packages/email/src/actions'),
       '@alga-psa/documents': path.join(__dirname, '../packages/documents/dist'),
       '@alga-psa/reference-data': path.join(__dirname, '../packages/reference-data/dist'),
       '@alga-psa/notifications': path.join(__dirname, '../packages/notifications/dist'),
@@ -393,11 +453,39 @@ const nextConfig = {
       '@alga-psa/licensing': path.join(__dirname, '../packages/licensing/dist'),
       '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/dist'),
       '@alga-psa/tickets': path.join(__dirname, '../packages/tickets/dist'),
+      // Tickets runtime subpaths
+      '@alga-psa/tickets/actions': path.join(__dirname, '../packages/tickets/src/actions'),
+      '@alga-psa/tickets/components': path.join(__dirname, '../packages/tickets/src/components'),
       '@alga-psa/projects': path.join(__dirname, '../packages/projects/dist'),
+      // Projects runtime subpaths
+      '@alga-psa/projects/actions': path.join(__dirname, '../packages/projects/src/actions'),
+      '@alga-psa/projects/components': path.join(__dirname, '../packages/projects/src/components'),
       '@alga-psa/billing': path.join(__dirname, '../packages/billing/dist'),
+      // Billing runtime subpaths
+      '@alga-psa/billing/actions': path.join(__dirname, '../packages/billing/src/actions'),
+      '@alga-psa/billing/components': path.join(__dirname, '../packages/billing/src/components'),
+      '@alga-psa/billing/models': path.join(__dirname, '../packages/billing/src/models'),
+      '@alga-psa/billing/services': path.join(__dirname, '../packages/billing/src/services'),
       '@alga-psa/workflows': path.join(__dirname, '../packages/workflows/dist'),
+      // Workflows runtime subpaths (Next.js transpiled, point to src)
+      '@alga-psa/workflows/actions': path.join(__dirname, '../packages/workflows/src/actions'),
+      '@alga-psa/workflows/components': path.join(__dirname, '../packages/workflows/src/components'),
+      '@alga-psa/workflows/hooks': path.join(__dirname, '../packages/workflows/src/hooks'),
+      '@alga-psa/workflows/visualization/hooks': path.join(__dirname, '../packages/workflows/src/visualization/hooks'),
+      '@alga-psa/workflows/visualization/services': path.join(__dirname, '../packages/workflows/src/visualization/services'),
+      '@alga-psa/workflows/ee': path.join(__dirname, '../packages/workflows/src/ee'),
+      '@alga-psa/workflows/oss': path.join(__dirname, '../packages/workflows/src/oss'),
       '@alga-psa/integrations': path.join(__dirname, '../packages/integrations/dist'),
+      // Integrations runtime subpaths
+      '@alga-psa/integrations/actions': path.join(__dirname, '../packages/integrations/src/actions'),
+      '@alga-psa/integrations/components': path.join(__dirname, '../packages/integrations/src/components'),
+      '@alga-psa/integrations/lib': path.join(__dirname, '../packages/integrations/src/lib'),
+      '@alga-psa/integrations/routes': path.join(__dirname, '../packages/integrations/src/routes'),
+      '@alga-psa/integrations/webhooks': path.join(__dirname, '../packages/integrations/src/webhooks'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/dist'),
+      // Client-portal runtime subpaths
+      '@alga-psa/client-portal/actions': path.join(__dirname, '../packages/client-portal/src/actions'),
+      '@alga-psa/client-portal/components': path.join(__dirname, '../packages/client-portal/src/components'),
 
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
