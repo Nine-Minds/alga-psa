@@ -120,6 +120,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
 
+  // Auto-expand description when search matches in description but would be hidden
+  useEffect(() => {
+    if (!searchQuery.trim() || !task.description) {
+      setIsDescriptionExpanded(false);
+      return;
+    }
+
+    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+    const description = searchCaseSensitive ? task.description : task.description.toLowerCase();
+    const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+
+    // If search matches in description but not in name, auto-expand
+    const matchesDescription = description.includes(query);
+    const matchesName = taskName.includes(query);
+
+    if (matchesDescription && !matchesName) {
+      setIsDescriptionExpanded(true);
+    } else if (!matchesDescription) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [searchQuery, searchCaseSensitive, task.description, task.task_name]);
+
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {
     if (providedDocumentCount !== undefined) {

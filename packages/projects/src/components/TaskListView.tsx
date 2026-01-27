@@ -16,6 +16,26 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
+// Helper function to highlight matching text in search results
+const highlightSearchMatch = (text: string, query: string, caseSensitive: boolean = false): React.ReactNode => {
+  if (!query.trim()) return text;
+
+  const flags = caseSensitive ? 'g' : 'gi';
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, flags);
+  const parts = text.split(regex);
+
+  return parts.map((part, index) =>
+    regex.test(part) ? (
+      <mark
+        key={index}
+        className="bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))] rounded px-0.5"
+      >
+        {part}
+      </mark>
+    ) : part
+  );
+};
+
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
 const MAX_SCROLL_SPEED = 15; // Maximum scroll speed in pixels per frame
@@ -109,7 +129,45 @@ export default function TaskListView({
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+  const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+
+  // Auto-expand titles and descriptions when search matches
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setExpandedTitles(new Set());
+      setExpandedDescriptions(new Set());
+      return;
+    }
+
+    const newExpandedTitles = new Set<string>();
+    const newExpandedDescriptions = new Set<string>();
+    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+
+    tasks.forEach(task => {
+      const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+      const description = task.description
+        ? (searchCaseSensitive ? task.description : task.description.toLowerCase())
+        : '';
+
+      const matchesName = taskName.includes(query);
+      const matchesDescription = description.includes(query);
+
+      // Auto-expand title if it matches and is long enough to be truncated
+      if (matchesName && task.task_name.length > 50) {
+        newExpandedTitles.add(task.task_id);
+      }
+
+      // Auto-expand description if it matches but name doesn't
+      if (matchesDescription && !matchesName) {
+        newExpandedDescriptions.add(task.task_id);
+      }
+    });
+
+    setExpandedTitles(newExpandedTitles);
+    setExpandedDescriptions(newExpandedDescriptions);
+  }, [searchQuery, searchCaseSensitive, tasks]);
 
   // Fetch avatar URLs for assignees and additional agents
   useEffect(() => {
@@ -850,18 +908,65 @@ export default function TaskListView({
                                 {/* Task Name */}
                                 <td className="py-3 px-6">
                                   <div className="min-w-0">
-                                    <button
-                                      type="button"
-                                      className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline cursor-pointer truncate text-left max-w-full block"
-                                      onClick={() => onTaskClick(task)}
-                                      title={task.task_name}
-                                    >
-                                      {task.task_name}
-                                    </button>
+                                    <div>
+                                      <button
+                                        type="button"
+                                        className={`text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline cursor-pointer text-left max-w-full block ${!expandedTitles.has(task.task_id) ? 'truncate' : ''}`}
+                                        onClick={() => onTaskClick(task)}
+                                        title={!expandedTitles.has(task.task_id) ? task.task_name : undefined}
+                                      >
+                                        {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive)}
+                                      </button>
+                                      {task.task_name.length > 50 && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setExpandedTitles(prev => {
+                                              const newSet = new Set(prev);
+                                              if (newSet.has(task.task_id)) {
+                                                newSet.delete(task.task_id);
+                                              } else {
+                                                newSet.add(task.task_id);
+                                              }
+                                              return newSet;
+                                            });
+                                          }}
+                                          className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                        >
+                                          {expandedTitles.has(task.task_id) ? 'See less' : 'See more'}
+                                        </button>
+                                      )}
+                                    </div>
                                     {task.description && (
-                                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1" title={task.description}>
-                                        {task.description}
-                                      </p>
+                                      <div className="mt-0.5">
+                                        <p
+                                          className={`text-xs text-gray-500 ${!expandedDescriptions.has(task.task_id) ? 'line-clamp-1' : ''}`}
+                                          title={!expandedDescriptions.has(task.task_id) ? task.description : undefined}
+                                        >
+                                          {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive)}
+                                        </p>
+                                        {task.description.length > 80 && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setExpandedDescriptions(prev => {
+                                                const newSet = new Set(prev);
+                                                if (newSet.has(task.task_id)) {
+                                                  newSet.delete(task.task_id);
+                                                } else {
+                                                  newSet.add(task.task_id);
+                                                }
+                                                return newSet;
+                                              });
+                                            }}
+                                            className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                          >
+                                            {expandedDescriptions.has(task.task_id) ? 'See less' : 'See more'}
+                                          </button>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 </td>
