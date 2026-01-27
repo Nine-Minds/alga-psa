@@ -7,6 +7,7 @@ import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getTenantLocaleSettingsAction,
   updateTenantDefaultLocaleAction,
@@ -28,6 +29,7 @@ import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
 
 const ClientPortalSettings = () => {
+  const { t } = useTranslation('common');
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
@@ -430,9 +432,8 @@ const ClientPortalSettings = () => {
             </div>
 
             {/* Preview Selection Buttons */}
-            {/* TODO: i18n - Flag for future translation (common namespace): "Preview", "Hide", "Client Dashboard", "Sign-in Page", "Must have custom domain set up" */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">{t('settings.clientPortal.preview.title', 'Preview')}</h4>
               <div className="flex gap-2 mb-3">
                 {(() => {
                   const isDashboardPreview = previewMode === 'dashboard';
@@ -447,19 +448,21 @@ const ClientPortalSettings = () => {
                         size="sm"
                         onClick={() => setPreviewMode(isDashboardPreview ? null : 'dashboard')}
                       >
-                        {isDashboardPreview ? 'Hide' : 'Preview'} Client Dashboard
+                        {isDashboardPreview
+                          ? t('settings.clientPortal.preview.hideClientDashboard', 'Hide Client Dashboard')
+                          : t('settings.clientPortal.preview.previewClientDashboard', 'Preview Client Dashboard')}
                       </Button>
                       {!hasCustomDomain ? (
-                        <Tooltip content="Must have custom domain set up">
-                          <span className="inline-block cursor-not-allowed">
+                        <Tooltip content={t('settings.clientPortal.preview.customDomainRequired', 'Must have custom domain set up')}>
+                          <span className="inline-block w-full cursor-not-allowed">
                             <Button
-                              id="preview-signin"
+                              id="preview-signin-disabled"
                               type="button"
                               variant="outline"
                               size="sm"
                               disabled
                             >
-                              Preview Sign-in Page
+                              {t('settings.clientPortal.preview.previewSignInPage', 'Preview Sign-in Page')}
                             </Button>
                           </span>
                         </Tooltip>
@@ -471,7 +474,9 @@ const ClientPortalSettings = () => {
                           size="sm"
                           onClick={() => setPreviewMode(isSigninPreview ? null : 'signin')}
                         >
-                          {isSigninPreview ? 'Hide' : 'Preview'} Sign-in Page
+                          {isSigninPreview
+                            ? t('settings.clientPortal.preview.hideSignInPage', 'Hide Sign-in Page')
+                            : t('settings.clientPortal.preview.previewSignInPage', 'Preview Sign-in Page')}
                         </Button>
                       )}
                     </>
