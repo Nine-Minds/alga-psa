@@ -167,12 +167,7 @@ config:
         # Storage quotas and limits
         max_file_size: 104857600  # 100MB in bytes
         allowed_mime_types:
-          - 'image/*'
-          - 'application/pdf'
-          - 'text/plain'
-          - 'application/msword'
-          - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          - 'video/*'
+          - '*/*'  # Allow all file types
         retention_days: 30  # Number of days to retain files
       # S3 configuration (Enterprise Edition only)
       s3:
@@ -189,12 +184,7 @@ config:
         # Storage quotas and limits
         max_file_size: 524288000  # 500MB in bytes
         allowed_mime_types:
-          - 'image/*'
-          - 'application/pdf'
-          - 'text/plain'
-          - 'application/msword'
-          - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          - 'video/*'
+          - '*/*'  # Allow all file types
         retention_days: 30  # Number of days to retain files
     # Storage locations configuration
     locations:
@@ -204,12 +194,7 @@ config:
         provider: "local"  # References the provider config above
         max_file_size: 104857600  # 100MB in bytes
         allowed_mime_types:
-          - 'application/pdf'
-          - 'image/jpeg'
-          - 'image/png'
-          - 'application/msword'
-          - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          - 'video/*'
+          - '*/*'  # Allow all file types
       avatars:  # Location for user avatars
         name: "User Avatars"
         path: "/avatars"
