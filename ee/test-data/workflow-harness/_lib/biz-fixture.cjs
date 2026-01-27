@@ -173,6 +173,52 @@ async function cleanupTicket(ctx, { tenantId, apiKey, ticketId }) {
   await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
 }
 
+async function cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }) {
+  const noteLike = `%${marker}%`;
+  await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2 and note like $3`, [tenantId, ticketId, noteLike]);
+}
+
+async function cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }) {
+  const titleLike = `%${marker}%`;
+  const taskIds = await ctx.db.query(
+    `
+      select t.task_id
+      from project_tasks t
+      join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant
+      where p.tenant = $1
+        and p.project_id = $2
+        and t.task_name like $3
+    `,
+    [tenantId, projectId, titleLike]
+  );
+
+  const taskIdList = taskIds.map((r) => r.task_id);
+  if (!taskIdList.length) return;
+
+  await ctx.dbWrite.query(`delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+  await ctx.dbWrite.query(`delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+}
+
+async function getOrCreateTicketId(ctx, { tenantId, apiKey }) {
+  const rows = await ctx.db.query(`select ticket_id from tickets where tenant = $1 order by entered_at desc limit 1`, [tenantId]);
+  if (rows.length) return rows[0].ticket_id;
+  if (!apiKey) throw new Error('No tickets exist; missing API key for fallback ticket creation.');
+  return createTicket(ctx, { tenantId, apiKey });
+}
+
+async function getOrCreateProjectId(ctx, { tenantId, apiKey }) {
+  const phaseRows = await ctx.db.query(`select project_id from project_phases where tenant = $1 limit 1`, [tenantId]);
+  if (phaseRows.length) return phaseRows[0].project_id;
+  if (!apiKey) throw new Error('No projects exist; missing API key for fallback project creation.');
+
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+  return createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+}
+
 async function listTicketComments(ctx, { tenantId, ticketId, limit = 50 }) {
   return ctx.db.query(
     `
@@ -275,6 +321,23 @@ async function waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId, fixtu
   throw err;
 }
 
+async function withWorkflowPaused(ctx, workflowId, fn) {
+  const rows = await ctx.db.query(`select is_paused from workflow_definitions where workflow_id = $1`, [workflowId]);
+  const wasPaused = rows[0]?.is_paused ?? false;
+
+  if (!wasPaused) {
+    await ctx.dbWrite.query(`update workflow_definitions set is_paused = true where workflow_id = $1`, [workflowId]);
+  }
+
+  try {
+    return await fn();
+  } finally {
+    if (!wasPaused) {
+      await ctx.dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1`, [workflowId]);
+    }
+  }
+}
+
 async function runTicketCommentDefault(ctx, { fixtureName, eventName, schemaRef }) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
@@ -283,20 +346,22 @@ async function runTicketCommentDefault(ctx, { fixtureName, eventName, schemaRef 
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const ticketId = await createTicket(ctx, { tenantId, apiKey });
-  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+  const ticketId = await getOrCreateTicketId(ctx, { tenantId, apiKey });
+  await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker });
+  ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }));
 
   const correlationKey = ticketId;
+  const dedupeKey = randomUUID();
   const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
   const payload = {
     ...base,
     fixtureNotifyUserId: user.user_id,
-    fixtureDedupeKey: correlationKey
+    fixtureDedupeKey: dedupeKey
   };
 
   const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: correlationKey });
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
@@ -314,8 +379,9 @@ async function runTicketCommentIdempotent(ctx, { fixtureName, eventName, schemaR
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const ticketId = await createTicket(ctx, { tenantId, apiKey });
-  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+  const ticketId = await getOrCreateTicketId(ctx, { tenantId, apiKey });
+  await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker });
+  ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }));
 
   const correlationKey = ticketId;
   const dedupeKey = randomUUID();
@@ -351,8 +417,9 @@ async function runTicketCommentForEach(ctx, { fixtureName, eventName, schemaRef 
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const ticketId = await createTicket(ctx, { tenantId, apiKey });
-  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+  const ticketId = await getOrCreateTicketId(ctx, { tenantId, apiKey });
+  await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker });
+  ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }));
 
   const correlationKey = ticketId;
   const dedupeKey = randomUUID();
@@ -383,8 +450,9 @@ async function runTicketCommentTryCatch(ctx, { fixtureName, eventName, schemaRef
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const ticketId = await createTicket(ctx, { tenantId, apiKey });
-  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+  const ticketId = await getOrCreateTicketId(ctx, { tenantId, apiKey });
+  await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker });
+  ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }));
 
   const correlationKey = ticketId;
   const dedupeKey = randomUUID();
@@ -416,8 +484,9 @@ async function runTicketCommentMultiBranch(ctx, { fixtureName, eventName, schema
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const ticketId = await createTicket(ctx, { tenantId, apiKey });
-  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+  const ticketId = await getOrCreateTicketId(ctx, { tenantId, apiKey });
+  await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker });
+  ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }));
 
   const correlationKey = ticketId;
 
@@ -482,14 +551,9 @@ async function runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef })
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const client = await pickOne(ctx, {
-    label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
-  });
-
-  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
-  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+  const projectId = await getOrCreateProjectId(ctx, { tenantId, apiKey });
+  await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker });
+  ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }));
 
   let correlationKey = projectId;
   let payload;
@@ -540,10 +604,11 @@ async function runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef })
     }
   } else {
     const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+    const dedupeKey = randomUUID();
     payload = {
       ...base,
       fixtureNotifyUserId: user.user_id,
-      fixtureDedupeKey: correlationKey
+      fixtureDedupeKey: dedupeKey
     };
   }
 
@@ -572,14 +637,9 @@ async function runProjectTaskIdempotent(ctx, { fixtureName, eventName, schemaRef
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const client = await pickOne(ctx, {
-    label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
-  });
-
-  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
-  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+  const projectId = await getOrCreateProjectId(ctx, { tenantId, apiKey });
+  await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker });
+  ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }));
 
   const correlationKey = projectId;
   const dedupeKey = randomUUID();
@@ -619,14 +679,9 @@ async function runProjectTaskForEach(ctx, { fixtureName, eventName, schemaRef })
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const client = await pickOne(ctx, {
-    label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
-  });
-
-  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
-  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+  const projectId = await getOrCreateProjectId(ctx, { tenantId, apiKey });
+  await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker });
+  ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }));
 
   const correlationKey = projectId;
   const dedupeKey = randomUUID();
@@ -661,14 +716,9 @@ async function runProjectTaskTryCatch(ctx, { fixtureName, eventName, schemaRef }
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const client = await pickOne(ctx, {
-    label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
-  });
-
-  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
-  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+  const projectId = await getOrCreateProjectId(ctx, { tenantId, apiKey });
+  await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker });
+  ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }));
 
   const correlationKey = projectId;
   const dedupeKey = randomUUID();
@@ -704,14 +754,9 @@ async function runProjectTaskMultiBranch(ctx, { fixtureName, eventName, schemaRe
   const marker = `[fixture ${fixtureName}]`;
   const user = await pickUser(ctx, { tenantId });
 
-  const client = await pickOne(ctx, {
-    label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
-  });
-
-  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
-  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+  const projectId = await getOrCreateProjectId(ctx, { tenantId, apiKey });
+  await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker });
+  ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }));
 
   const correlationKey = projectId;
 
@@ -834,25 +879,29 @@ async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRe
     if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
 
     const user = await pickUser(ctx, { tenantId });
-    const ticketId = await createTicket(ctx, { tenantId, apiKey });
-    ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+    const ticketId = await getOrCreateTicketId(ctx, { tenantId, apiKey });
+    await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker });
+    await cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker: childMarker });
+    ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }));
+    ctx.onCleanup(() => cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker: childMarker }));
 
     const correlationKey = ticketId;
+    const dedupeKey = randomUUID();
     const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
     const payload = {
       ...base,
       fixtureNotifyUserId: user.user_id,
-      fixtureDedupeKey: correlationKey
+      fixtureDedupeKey: dedupeKey
     };
 
     const startedAfter = new Date().toISOString();
     await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: correlationKey });
+    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
     await assertRunSucceeded(ctx, runRow);
 
     const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
-    const hasParent = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker));
-    const hasChild = comments.some((c) => typeof c.note === 'string' && c.note.includes(childMarker));
+    const hasParent = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
+    const hasChild = comments.some((c) => typeof c.note === 'string' && c.note.includes(childMarker) && c.note.includes(dedupeKey));
     if (!hasParent || !hasChild) {
       throw new Error(`Expected both parent + child comments for "${marker}" on ticket ${ticketId}.`);
     }
@@ -864,25 +913,24 @@ async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRe
     if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
 
     const user = await pickUser(ctx, { tenantId });
-    const client = await pickOne(ctx, {
-      label: 'a client',
-      sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-      params: [tenantId]
-    });
-    const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
-    ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+    const projectId = await getOrCreateProjectId(ctx, { tenantId, apiKey });
+    await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker });
+    await cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker: childMarker });
+    ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }));
+    ctx.onCleanup(() => cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker: childMarker }));
 
     const correlationKey = projectId;
+    const dedupeKey = randomUUID();
     const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
     const payload = {
       ...base,
       fixtureNotifyUserId: user.user_id,
-      fixtureDedupeKey: correlationKey
+      fixtureDedupeKey: dedupeKey
     };
 
     const startedAfter = new Date().toISOString();
     await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: correlationKey });
+    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
     await assertRunSucceeded(ctx, runRow);
 
     const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
