@@ -2,7 +2,7 @@
 
 ## Status
 
-- **In progress**: Project domain counterparts (0/28 complete; 71 remaining overall)
+- **In progress**: Invoice domain counterparts (0/10 complete; 43 remaining overall)
 
 ## Summary by Domain (needed-biz-tests.json)
 
@@ -41,9 +41,13 @@
   - Batch 7 (commit 7cce41cb4): 11 fixtures (ticket-message-added-send-response through ticket-updated-status-add-comment)
 
 #### Project Domain (28 fixtures)
-- [ ] Batch 1: project-approval-* through project-created-*
-- [ ] Batch 2: project-status-* through project-task-*
-- [ ] Batch 3: project-updated-*
+- [x] Batch 1: project-approval-* through project-created-create-ticket
+- [x] Batch 2: project-created-* through project-task-completed-callworkflow-next
+- [x] Batch 3: project-task-* through project-updated-send-email
+- Completed commits:
+  - Batch 1 (commit 9f1f7a68f): 10 fixtures
+  - Batch 2 (commit afc446abd): 10 fixtures
+  - Batch 3 (commit a801edcf5): 8 fixtures
 
 #### Invoice Domain (11 fixtures)
 - [ ] Batch 1: All invoice-*
