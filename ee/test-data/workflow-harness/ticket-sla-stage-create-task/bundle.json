@@ -1,0 +1,202 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:09:36.208Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-sla-stage-create-task",
+      "metadata": {
+        "name": "Fixture: Ticket Sla Stage Entered Task",
+        "description": "Send an in-app notification when the event fires (TICKET_SLA_STAGE_ENTERED).",
+        "payloadSchemaRef": "payload.TicketSlaStageEntered.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketSlaStageEntered.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_SLA_STAGE_ENTERED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketSlaStageEntered.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "a7716fdc-a6a8-6e2a-928d-e30bd55f836e",
+          "version": 1,
+          "name": "Fixture: Ticket Sla Stage Entered Task",
+          "description": "Send an in-app notification when the event fires (TICKET_SLA_STAGE_ENTERED).",
+          "payloadSchemaRef": "payload.TicketSlaStageEntered.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_SLA_STAGE_ENTERED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-sla-stage-create-task]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-sla-stage-create-task] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-sla-stage-create-task] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-sla-stage-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "a7716fdc-a6a8-6e2a-928d-e30bd55f836e",
+            "version": 1,
+            "name": "Fixture: Ticket Sla Stage Entered Task",
+            "description": "Send an in-app notification when the event fires (TICKET_SLA_STAGE_ENTERED).",
+            "payloadSchemaRef": "payload.TicketSlaStageEntered.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_SLA_STAGE_ENTERED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-sla-stage-create-task]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-sla-stage-create-task] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-sla-stage-create-task] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-sla-stage-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
