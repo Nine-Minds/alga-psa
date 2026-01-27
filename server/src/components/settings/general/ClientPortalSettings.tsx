@@ -1,13 +1,12 @@
 'use client';
 
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getTenantLocaleSettingsAction,
   updateTenantDefaultLocaleAction,
@@ -29,7 +28,6 @@ import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
 
 const ClientPortalSettings = () => {
-  const { t } = useTranslation('common');
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
@@ -45,10 +43,6 @@ const ClientPortalSettings = () => {
   const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
   const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
-  const customDomainRequiredMessage = t('ui.preview.customDomainRequired', 'Must have custom domain set up');
-  const handleSignInPreviewClick = useCallback(() => {
-    setPreviewMode((current) => (current === 'signin' ? null : 'signin'));
-  }, [setPreviewMode]);
 
   // Check if custom domain is configured
   useEffect(() => {
@@ -437,63 +431,37 @@ const ClientPortalSettings = () => {
 
             {/* Preview Selection Buttons */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">{t('ui.preview.title', 'Preview')}</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
               <div className="flex gap-2 mb-3">
-                {(() => {
-                  const isDashboardPreview = previewMode === 'dashboard';
-                  const isSigninPreview = previewMode === 'signin';
-                  return (
-                    <>
-                      <Button
-                        id="preview-dashboard"
-                        type="button"
-                        variant={isDashboardPreview ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPreviewMode(isDashboardPreview ? null : 'dashboard')}
-                      >
-                        {isDashboardPreview
-                          ? t('ui.preview.hideClientDashboard', 'Hide Client Dashboard')
-                          : t('ui.preview.previewClientDashboard', 'Preview Client Dashboard')}
-                      </Button>
-                      {!hasCustomDomain ? (
-                        <>
-                          <Tooltip content={customDomainRequiredMessage}>
-                            <Button
-                              id="preview-signin"
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="cursor-not-allowed opacity-50"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
-                              aria-disabled="true"
-                              aria-describedby="preview-signin-requires-domain"
-                            >
-                              {t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
-                            </Button>
-                          </Tooltip>
-                          <span id="preview-signin-requires-domain" className="sr-only">
-                            {customDomainRequiredMessage}
-                          </span>
-                        </>
-                      ) : (
-                        <Button
-                          id="preview-signin"
-                          type="button"
-                          variant={isSigninPreview ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={handleSignInPreviewClick}
-                        >
-                          {isSigninPreview
-                            ? t('ui.preview.hideSignInPage', 'Hide Sign-in Page')
-                            : t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
-                        </Button>
-                      )}
-                    </>
-                  );
-                })()}
+                <Button
+                  id="preview-dashboard"
+                  type="button"
+                  variant={previewMode === 'dashboard' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPreviewMode(previewMode === 'dashboard' ? null : 'dashboard')}
+                >
+                  {previewMode === 'dashboard' ? 'Hide Client Dashboard' : 'Preview Client Dashboard'}
+                </Button>
+                <Tooltip content={!hasCustomDomain ? 'Must have custom domain set up' : undefined}>
+                  <Button
+                    id="preview-signin"
+                    type="button"
+                    variant={previewMode === 'signin' ? 'default' : 'outline'}
+                    size="sm"
+                    className={!hasCustomDomain ? 'cursor-not-allowed opacity-50' : ''}
+                    onClick={(e) => {
+                      if (!hasCustomDomain) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                      setPreviewMode(previewMode === 'signin' ? null : 'signin');
+                    }}
+                    aria-disabled={!hasCustomDomain || undefined}
+                  >
+                    {previewMode === 'signin' ? 'Hide Sign-in Page' : 'Preview Sign-in Page'}
+                  </Button>
+                </Tooltip>
               </div>
 
               {/* Dashboard Preview */}
