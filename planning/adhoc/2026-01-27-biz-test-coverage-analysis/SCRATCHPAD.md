@@ -38,6 +38,8 @@
 - [ ] Batch 5: ticket-created-onerror-* through ticket-created-state-*
 - [ ] Batch 6: ticket-created-two-* through ticket-reopened-*
 - [ ] Batch 7: ticket-response-* through ticket-updated-*
+  - Completed commits:
+    - Batch 1 (commit f230b76e4): 10 fixtures (ticket-approval-* through ticket-created-assign-contact-owner)
 
 #### Project Domain (28 fixtures)
 - [ ] Batch 1: project-approval-* through project-created-*
