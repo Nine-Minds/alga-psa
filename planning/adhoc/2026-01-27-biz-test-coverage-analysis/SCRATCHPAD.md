@@ -31,15 +31,16 @@
 ### Phase 1: High-Value Domains
 
 #### Ticket Domain (70 fixtures)
-- [ ] Batch 1: ticket-approval-* through ticket-created-attach-*
-- [ ] Batch 2: ticket-created-call-* through ticket-created-create-*
+- [x] Batch 1: ticket-approval-* through ticket-created-assign-contact-owner
+- [x] Batch 2: ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email
 - [ ] Batch 3: ticket-created-dotted-* through ticket-created-foreach-*
 - [ ] Batch 4: ticket-created-hardware-* through ticket-created-notify-*
 - [ ] Batch 5: ticket-created-onerror-* through ticket-created-state-*
 - [ ] Batch 6: ticket-created-two-* through ticket-reopened-*
 - [ ] Batch 7: ticket-response-* through ticket-updated-*
-  - Completed commits:
-    - Batch 1 (commit f230b76e4): 10 fixtures (ticket-approval-* through ticket-created-assign-contact-owner)
+- Completed commits:
+  - Batch 1 (commit f230b76e4): 10 fixtures (ticket-approval-* through ticket-created-assign-contact-owner)
+  - Batch 2 (commit 761473599): 10 fixtures (ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email)
 
 #### Project Domain (28 fixtures)
 - [ ] Batch 1: project-approval-* through project-created-*
@@ -76,6 +77,7 @@
   - Ticket domain counterparts: replace `notifications.send_in_app` → `tickets.add_comment` and assert DB `comments`.
   - All other domains (project/invoice/appointment/etc): replace `notifications.send_in_app` → `projects.create_task` and assert DB `project_tasks`.
   - Shared runner: `ee/test-data/workflow-harness/_lib/biz-fixture.cjs`
+    - Uses `workflow_runs.input_json->>'fixtureNotifyUserId'` (and optionally `fixtureDedupeKey`) to wait for the correct run when domain APIs emit their own events (e.g., creating a ticket can also emit `TICKET_CREATED`).
   - Generator: `tools/workflow-harness/generate-biz-counterparts.cjs`
 - Local harness env (this worktree):
   - Server: http://localhost:3010 (docker `prep_1_0_server_ee`)
