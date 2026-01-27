@@ -70,6 +70,7 @@ interface TaskListViewProps {
   // Filter props
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
+  searchQuery?: string;
 }
 
 interface PhaseGroup {
@@ -99,7 +100,8 @@ export default function TaskListView({
   onAssigneeChange,
   users,
   selectedPriorityFilter = 'all',
-  selectedTaskTags = []
+  selectedTaskTags = [],
+  searchQuery = ''
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
@@ -164,9 +166,18 @@ export default function TaskListView({
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedRef = useRef<number>(0);
 
-  // Filter tasks based on priority and tags
+  // Filter tasks based on search, priority and tags
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(task =>
+        task.task_name.toLowerCase().includes(query) ||
+        (task.description?.toLowerCase().includes(query) ?? false)
+      );
+    }
 
     // Apply priority filter
     if (selectedPriorityFilter !== 'all') {
@@ -183,7 +194,7 @@ export default function TaskListView({
     }
 
     return filtered;
-  }, [tasks, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [tasks, searchQuery, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {

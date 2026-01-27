@@ -34,7 +34,7 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -251,6 +251,7 @@ export default function ProjectDetail({
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
   const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
@@ -258,12 +259,21 @@ export default function ProjectDetail({
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
     let tasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
-    
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      tasks = tasks.filter(task =>
+        task.task_name.toLowerCase().includes(query) ||
+        (task.description?.toLowerCase().includes(query) ?? false)
+      );
+    }
+
     // Apply priority filter
     if (selectedPriorityFilter !== 'all') {
       tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
     }
-    
+
     // Apply tag filter
     if (selectedTaskTags.length > 0) {
       tasks = tasks.filter(task => {
@@ -272,9 +282,9 @@ export default function ProjectDetail({
         return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
       });
     }
-    
+
     return tasks;
-  }, [projectTasks, selectedPhase, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [projectTasks, selectedPhase, searchQuery, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -1543,50 +1553,64 @@ export default function ProjectDetail({
 
       return (
         <div className="flex flex-col h-full">
-          <div className="mb-4">
-            <div className="flex justify-end items-center gap-4">
-                {/* Tag Filter */}
-                <TagFilter
-                  tags={allTaskTags}
-                  selectedTags={selectedTaskTags}
-                  onToggleTag={(tag) => {
-                    setSelectedTaskTags(prev =>
-                      prev.includes(tag)
-                        ? prev.filter(t => t !== tag)
-                        : [...prev, tag]
-                    );
-                  }}
-                  onClearTags={() => setSelectedTaskTags([])}
-                />
+          <div className="mb-4 space-y-3">
+            {/* Top row: Title + View Switcher */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Task List</h2>
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={setViewMode}
+                options={[
+                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                  { value: 'list', label: 'List', icon: List }
+                ]}
+              />
+            </div>
 
-                {/* Priority Filter */}
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
-                  <CustomSelect
-                    value={selectedPriorityFilter}
-                    onValueChange={setSelectedPriorityFilter}
-                    options={[
-                      { value: 'all', label: 'All Priorities' },
-                      ...priorities.map(p => ({
-                        value: p.priority_id,
-                        label: p.priority_name,
-                        color: p.color
-                      }))
-                    ]}
-                    className="w-48"
-                    placeholder="Select priority"
-                  />
-                </div>
-
-                {/* View Switcher - rightmost */}
-                <ViewSwitcher
-                  currentView={viewMode}
-                  onChange={setViewMode}
-                  options={[
-                    { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                    { value: 'list', label: 'List', icon: List }
-                  ]}
+            {/* Bottom row: Search + Filters */}
+            <div className="flex items-center gap-4">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="task-search-list"
+                  type="text"
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
+              </div>
+
+              {/* Tag Filter */}
+              <TagFilter
+                tags={allTaskTags}
+                selectedTags={selectedTaskTags}
+                onToggleTag={(tag) => {
+                  setSelectedTaskTags(prev =>
+                    prev.includes(tag)
+                      ? prev.filter(t => t !== tag)
+                      : [...prev, tag]
+                  );
+                }}
+                onClearTags={() => setSelectedTaskTags([])}
+              />
+
+              {/* Priority Filter */}
+              <CustomSelect
+                value={selectedPriorityFilter}
+                onValueChange={setSelectedPriorityFilter}
+                options={[
+                  { value: 'all', label: 'All Priorities' },
+                  ...priorities.map(p => ({
+                    value: p.priority_id,
+                    label: p.priority_name,
+                    color: p.color
+                  }))
+                ]}
+                className="w-40"
+                placeholder="Priority"
+              />
             </div>
           </div>
           <TaskListView
@@ -1622,6 +1646,7 @@ export default function ProjectDetail({
             users={users}
             selectedPriorityFilter={selectedPriorityFilter}
             selectedTaskTags={selectedTaskTags}
+            searchQuery={searchQuery}
           />
         </div>
       );
@@ -1647,18 +1672,41 @@ export default function ProjectDetail({
 
     return (
       <div className="flex flex-col h-full">
-        <div className="mb-4">
-          <div className="flex justify-between items-center gap-4">
-            {/* Section 1: Kanban Board Title */}
+        <div className="mb-4 space-y-3">
+          {/* Top row: Title + View Switcher */}
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold mb-1">Kanban Board: {selectedPhase.phase_name}</h2>
+              <h2 className="text-xl font-bold">Kanban Board: {selectedPhase.phase_name}</h2>
               {selectedPhase.description && (
-                <p className="text-sm text-gray-600">{selectedPhase.description}</p>
+                <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
               )}
             </div>
-            
-            {/* Section 2: Tag Filter, Priority Filter, Donut Chart and ViewSwitcher (rightmost) */}
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={setViewMode}
+              options={[
+                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                { value: 'list', label: 'List', icon: List }
+              ]}
+            />
+          </div>
+
+          {/* Bottom row: Search + Filters + Completion */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="task-search-kanban"
+                  type="text"
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+
               {/* Tag Filter */}
               <TagFilter
                 tags={allTaskTags}
@@ -1674,44 +1722,31 @@ export default function ProjectDetail({
               />
 
               {/* Priority Filter */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
-                <CustomSelect
-                  value={selectedPriorityFilter}
-                  onValueChange={setSelectedPriorityFilter}
-                  options={[
-                    { value: 'all', label: 'All Priorities' },
-                    ...priorities.map(p => ({
-                      value: p.priority_id,
-                      label: p.priority_name,
-                      color: p.color
-                    }))
-                  ]}
-                  className="w-48"
-                  placeholder="Select priority"
-                />
-              </div>
-
-              {/* Donut Chart */}
-              <div className="flex items-center justify-end space-x-2">
-                <DonutChart
-                  percentage={completionPercentage}
-                  tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
-                />
-                <span className="text-sm font-semibold text-gray-600">
-                  {completedTasksCount} / {filteredTasks.length} Done
-                </span>
-              </div>
-
-              {/* View Switcher - rightmost */}
-              <ViewSwitcher
-                currentView={viewMode}
-                onChange={setViewMode}
+              <CustomSelect
+                value={selectedPriorityFilter}
+                onValueChange={setSelectedPriorityFilter}
                 options={[
-                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                  { value: 'list', label: 'List', icon: List }
+                  { value: 'all', label: 'All Priorities' },
+                  ...priorities.map(p => ({
+                    value: p.priority_id,
+                    label: p.priority_name,
+                    color: p.color
+                  }))
                 ]}
+                className="w-40"
+                placeholder="Priority"
               />
+            </div>
+
+            {/* Completion Stats */}
+            <div className="flex items-center gap-2">
+              <DonutChart
+                percentage={completionPercentage}
+                tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
+              />
+              <span className="text-sm font-medium text-gray-600">
+                {completedTasksCount} / {filteredTasks.length} Done
+              </span>
             </div>
           </div>
         </div>
