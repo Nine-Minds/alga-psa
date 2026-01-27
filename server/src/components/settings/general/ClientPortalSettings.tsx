@@ -430,44 +430,53 @@ const ClientPortalSettings = () => {
             </div>
 
             {/* Preview Selection Buttons */}
+            {/* TODO: i18n - Flag for future translation (common namespace): "Preview", "Hide", "Client Dashboard", "Sign-in Page", "Must have custom domain set up" */}
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
               <div className="flex gap-2 mb-3">
-                <Button
-                  id="preview-dashboard"
-                  type="button"
-                  variant={previewMode === 'dashboard' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPreviewMode(previewMode === 'dashboard' ? null : 'dashboard')}
-                >
-                  {previewMode === 'dashboard' ? 'Hide' : 'Preview'} Client Dashboard
-                </Button>
-                {!hasCustomDomain ? (
-                  <Tooltip content="Must have custom domain set up">
-                    <span className="inline-block">
+                {(() => {
+                  const isDashboardPreview = previewMode === 'dashboard';
+                  const isSigninPreview = previewMode === 'signin';
+
+                  return (
+                    <>
                       <Button
-                        id="preview-signin"
+                        id="preview-dashboard"
                         type="button"
-                        variant="outline"
+                        variant={isDashboardPreview ? 'default' : 'outline'}
                         size="sm"
-                        disabled
-                        className="pointer-events-none"
+                        onClick={() => setPreviewMode(isDashboardPreview ? null : 'dashboard')}
                       >
-                        Preview Sign-in Page
+                        {isDashboardPreview ? 'Hide' : 'Preview'} Client Dashboard
                       </Button>
-                    </span>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    id="preview-signin"
-                    type="button"
-                    variant={previewMode === 'signin' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
-                  >
-                    {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
-                  </Button>
-                )}
+                      {!hasCustomDomain ? (
+                        <Tooltip content="Must have custom domain set up">
+                          <span className="inline-block cursor-not-allowed">
+                            <Button
+                              id="preview-signin"
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled
+                            >
+                              Preview Sign-in Page
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          id="preview-signin"
+                          type="button"
+                          variant={isSigninPreview ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setPreviewMode(isSigninPreview ? null : 'signin')}
+                        >
+                          {isSigninPreview ? 'Hide' : 'Preview'} Sign-in Page
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Dashboard Preview */}
