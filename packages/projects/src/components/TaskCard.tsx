@@ -34,6 +34,7 @@ interface TaskCardProps {
   taskTags?: ITag[];
   documentCount?: number;
   isAnimating?: boolean;
+  searchQuery?: string;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -46,6 +47,25 @@ interface TaskCardProps {
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   avatarUrls?: Record<string, string | null>;
 }
+
+// Helper function to highlight matching text in search results
+const highlightSearchMatch = (text: string, query: string): React.ReactNode => {
+  if (!query.trim()) return text;
+
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+
+  return parts.map((part, index) =>
+    regex.test(part) ? (
+      <mark
+        key={index}
+        className="bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))] rounded px-0.5"
+      >
+        {part}
+      </mark>
+    ) : part
+  );
+};
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
   task: CheckSquare,
@@ -67,6 +87,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
   isAnimating = false,
+  searchQuery = '',
   onTaskSelected,
   onAssigneeChange,
   onDragStart,
@@ -292,7 +313,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
         <div className="font-semibold text-lg flex-1">
-          {task.task_name}
+          {highlightSearchMatch(task.task_name, searchQuery)}
         </div>
         {priority && (
           <div className="flex items-center gap-1">
@@ -311,7 +332,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ref={descriptionRef}
             className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {task.description}
+            {highlightSearchMatch(task.description, searchQuery)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <button

@@ -1772,9 +1772,10 @@ export default function ProjectDetail({
               taskTags={taskTags}
               taskDocumentCounts={taskDocumentCounts}
               allTaskTags={allTaskTags}
-              projectTreeData={projectTreeData} // Pass project tree data
+              projectTreeData={projectTreeData}
               animatingTasks={animatingTasks}
               avatarUrls={avatarUrls}
+              searchQuery={searchQuery}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onAddCard={handleAddCard}
