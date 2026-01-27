@@ -44,6 +44,50 @@
       "types": "./src/actions/*.ts",
       "import": "./src/actions/*.ts"
     },
+    "./actions/projectActions": {
+      "types": "./src/actions/projectActions.ts",
+      "import": "./src/actions/projectActions.ts"
+    },
+    "./actions/projectTaskActions": {
+      "types": "./src/actions/projectTaskActions.ts",
+      "import": "./src/actions/projectTaskActions.ts"
+    },
+    "./actions/projectTaskCommentActions": {
+      "types": "./src/actions/projectTaskCommentActions.ts",
+      "import": "./src/actions/projectTaskCommentActions.ts"
+    },
+    "./actions/projectTaskStatusActions": {
+      "types": "./src/actions/projectTaskStatusActions.ts",
+      "import": "./src/actions/projectTaskStatusActions.ts"
+    },
+    "./actions/projectTemplateActions": {
+      "types": "./src/actions/projectTemplateActions.ts",
+      "import": "./src/actions/projectTemplateActions.ts"
+    },
+    "./actions/projectTemplateWizardActions": {
+      "types": "./src/actions/projectTemplateWizardActions.ts",
+      "import": "./src/actions/projectTemplateWizardActions.ts"
+    },
+    "./actions/phaseTaskImportActions": {
+      "types": "./src/actions/phaseTaskImportActions.ts",
+      "import": "./src/actions/phaseTaskImportActions.ts"
+    },
+    "./actions/regenerateOrderKeys": {
+      "types": "./src/actions/regenerateOrderKeys.ts",
+      "import": "./src/actions/regenerateOrderKeys.ts"
+    },
+    "./actions/serviceCatalogActions": {
+      "types": "./src/actions/serviceCatalogActions.ts",
+      "import": "./src/actions/serviceCatalogActions.ts"
+    },
+    "./lib/projectUtils": {
+      "types": "./src/lib/projectUtils.ts",
+      "import": "./src/lib/projectUtils.ts"
+    },
+    "./lib/orderingService": {
+      "types": "./src/lib/orderingService.ts",
+      "import": "./src/lib/orderingService.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./src/components/index.ts"

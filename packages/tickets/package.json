@@ -43,9 +43,45 @@
       "types": "./src/actions/*.ts",
       "import": "./src/actions/*.ts"
     },
+    "./actions/board-actions": {
+      "types": "./src/actions/board-actions/index.ts",
+      "import": "./src/actions/board-actions/index.ts"
+    },
+    "./actions/board-actions/boardActions": {
+      "types": "./src/actions/board-actions/boardActions.ts",
+      "import": "./src/actions/board-actions/boardActions.ts"
+    },
+    "./actions/comment-actions": {
+      "types": "./src/actions/comment-actions/index.ts",
+      "import": "./src/actions/comment-actions/index.ts"
+    },
+    "./actions/comment-actions/commentActions": {
+      "types": "./src/actions/comment-actions/commentActions.ts",
+      "import": "./src/actions/comment-actions/commentActions.ts"
+    },
+    "./actions/ticket-number-actions": {
+      "types": "./src/actions/ticket-number-actions/index.ts",
+      "import": "./src/actions/ticket-number-actions/index.ts"
+    },
+    "./actions/ticket-number-actions/ticketNumberActions": {
+      "types": "./src/actions/ticket-number-actions/ticketNumberActions.ts",
+      "import": "./src/actions/ticket-number-actions/ticketNumberActions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
+    },
+    "./components/settings/*": {
+      "types": "./src/components/settings/*.tsx",
+      "import": "./src/components/settings/*.tsx"
+    },
+    "./components/ticket/*": {
+      "types": "./src/components/ticket/*.tsx",
+      "import": "./src/components/ticket/*.tsx"
     }
   },
   "scripts": {

@@ -35,6 +35,14 @@
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts"
     },
+    "./actions/notification-actions/notificationActions": {
+      "types": "./src/actions/notification-actions/notificationActions.ts",
+      "import": "./src/actions/notification-actions/notificationActions.ts"
+    },
+    "./actions/internal-notification-actions/internalNotificationActions": {
+      "types": "./src/actions/internal-notification-actions/internalNotificationActions.ts",
+      "import": "./src/actions/internal-notification-actions/internalNotificationActions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./src/components/index.ts"

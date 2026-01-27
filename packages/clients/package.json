@@ -31,6 +31,10 @@
       "import": "./dist/schemas/*.js",
       "require": "./dist/schemas/*.cjs"
     },
+    "./lib/billingHelpers": {
+      "types": "./src/lib/billingHelpers.ts",
+      "import": "./src/lib/billingHelpers.ts"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js",
@@ -39,6 +43,18 @@
     "./actions": {
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts"
+    },
+    "./actions/contact-actions": {
+      "types": "./src/actions/contact-actions/index.ts",
+      "import": "./src/actions/contact-actions/index.ts"
+    },
+    "./actions/contact-actions/contactActions": {
+      "types": "./src/actions/contact-actions/contactActions.tsx",
+      "import": "./src/actions/contact-actions/contactActions.tsx"
+    },
+    "./actions/contact-actions/contactNoteActions": {
+      "types": "./src/actions/contact-actions/contactNoteActions.ts",
+      "import": "./src/actions/contact-actions/contactNoteActions.ts"
     },
     "./actions/*": {
       "types": "./src/actions/*.ts",

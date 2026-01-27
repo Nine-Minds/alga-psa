@@ -21,6 +21,10 @@
       "import": "./dist/models/*.mjs",
       "require": "./dist/models/*.js"
     },
+    "./lib/contractLineDisambiguation": {
+      "types": "./src/lib/contractLineDisambiguation.ts",
+      "import": "./src/lib/contractLineDisambiguation.ts"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.mjs",
@@ -44,6 +48,74 @@
     "./actions": {
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts"
+    },
+    "./actions/appointmentHelpers": {
+      "types": "./src/actions/appointmentHelpers.ts",
+      "import": "./src/actions/appointmentHelpers.ts"
+    },
+    "./actions/appointmentRequestManagementActions": {
+      "types": "./src/actions/appointmentRequestManagementActions.ts",
+      "import": "./src/actions/appointmentRequestManagementActions.ts"
+    },
+    "./actions/availabilitySettingsActions": {
+      "types": "./src/actions/availabilitySettingsActions.ts",
+      "import": "./src/actions/availabilitySettingsActions.ts"
+    },
+    "./actions/scheduleActions": {
+      "types": "./src/actions/scheduleActions.ts",
+      "import": "./src/actions/scheduleActions.ts"
+    },
+    "./actions/serviceCatalogActions": {
+      "types": "./src/actions/serviceCatalogActions.ts",
+      "import": "./src/actions/serviceCatalogActions.ts"
+    },
+    "./actions/timeEntryCrudActions": {
+      "types": "./src/actions/timeEntryCrudActions.ts",
+      "import": "./src/actions/timeEntryCrudActions.ts"
+    },
+    "./actions/timeEntryActions": {
+      "types": "./src/actions/timeEntryActions.ts",
+      "import": "./src/actions/timeEntryActions.ts"
+    },
+    "./actions/timeEntryHelpers": {
+      "types": "./src/actions/timeEntryHelpers.ts",
+      "import": "./src/actions/timeEntryHelpers.ts"
+    },
+    "./actions/timeEntrySchemas": {
+      "types": "./src/actions/timeEntrySchemas.ts",
+      "import": "./src/actions/timeEntrySchemas.ts"
+    },
+    "./actions/timeEntryServices": {
+      "types": "./src/actions/timeEntryServices.ts",
+      "import": "./src/actions/timeEntryServices.ts"
+    },
+    "./actions/timeEntryWorkItemActions": {
+      "types": "./src/actions/timeEntryWorkItemActions.ts",
+      "import": "./src/actions/timeEntryWorkItemActions.ts"
+    },
+    "./actions/timePeriodsActions": {
+      "types": "./src/actions/timePeriodsActions.ts",
+      "import": "./src/actions/timePeriodsActions.ts"
+    },
+    "./actions/timeSheetActions": {
+      "types": "./src/actions/timeSheetActions.ts",
+      "import": "./src/actions/timeSheetActions.ts"
+    },
+    "./actions/timeSheetOperations": {
+      "types": "./src/actions/timeSheetOperations.ts",
+      "import": "./src/actions/timeSheetOperations.ts"
+    },
+    "./actions/workItemActions": {
+      "types": "./src/actions/workItemActions.ts",
+      "import": "./src/actions/workItemActions.ts"
+    },
+    "./actions/time-period-settings-actions": {
+      "types": "./src/actions/time-period-settings-actions/index.ts",
+      "import": "./src/actions/time-period-settings-actions/index.ts"
+    },
+    "./actions/time-period-settings-actions/timePeriodSettingsActions": {
+      "types": "./src/actions/time-period-settings-actions/timePeriodSettingsActions.ts",
+      "import": "./src/actions/time-period-settings-actions/timePeriodSettingsActions.ts"
     },
     "./actions/*": {
       "types": "./src/actions/*.ts",

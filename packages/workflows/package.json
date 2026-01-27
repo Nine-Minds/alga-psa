@@ -64,6 +64,94 @@
       "types": "./src/actions/*.ts",
       "import": "./src/actions/*.ts"
     },
+    "./actions/workflow-actions/*": {
+      "types": "./src/actions/workflow-actions/*.ts",
+      "import": "./src/actions/workflow-actions/*.ts"
+    },
+    "./actions/workflow-actions/formRegistryActions": {
+      "types": "./src/actions/workflow-actions/formRegistryActions.ts",
+      "import": "./src/actions/workflow-actions/formRegistryActions.ts"
+    },
+    "./actions/workflow-actions/initializeWorkflows": {
+      "types": "./src/actions/workflow-actions/initializeWorkflows.ts",
+      "import": "./src/actions/workflow-actions/initializeWorkflows.ts"
+    },
+    "./actions/workflow-actions/taskInboxActions": {
+      "types": "./src/actions/workflow-actions/taskInboxActions.ts",
+      "import": "./src/actions/workflow-actions/taskInboxActions.ts"
+    },
+    "./actions/workflow-actions/workflowActionRegistry": {
+      "types": "./src/actions/workflow-actions/workflowActionRegistry.ts",
+      "import": "./src/actions/workflow-actions/workflowActionRegistry.ts"
+    },
+    "./actions/activity-actions": {
+      "types": "./src/actions/activity-actions/index.ts",
+      "import": "./src/actions/activity-actions/index.ts"
+    },
+    "./actions/activity-actions/*": {
+      "types": "./src/actions/activity-actions/*.ts",
+      "import": "./src/actions/activity-actions/*.ts"
+    },
+    "./actions/activity-actions/activityAggregationActions": {
+      "types": "./src/actions/activity-actions/activityAggregationActions.ts",
+      "import": "./src/actions/activity-actions/activityAggregationActions.ts"
+    },
+    "./actions/activity-actions/activityServerActions": {
+      "types": "./src/actions/activity-actions/activityServerActions.ts",
+      "import": "./src/actions/activity-actions/activityServerActions.ts"
+    },
+    "./actions/activity-actions/activityStatusActions": {
+      "types": "./src/actions/activity-actions/activityStatusActions.ts",
+      "import": "./src/actions/activity-actions/activityStatusActions.ts"
+    },
+    "./actions/activity-actions/workflowTaskActions": {
+      "types": "./src/actions/activity-actions/workflowTaskActions.ts",
+      "import": "./src/actions/activity-actions/workflowTaskActions.ts"
+    },
+    "./actions/workflow-trigger-actions": {
+      "types": "./src/actions/workflow-trigger-actions.ts",
+      "import": "./src/actions/workflow-trigger-actions.ts"
+    },
+    "./actions/workflow-event-attachment-actions": {
+      "types": "./src/actions/workflow-event-attachment-actions.ts",
+      "import": "./src/actions/workflow-event-attachment-actions.ts"
+    },
+    "./actions/workflow-event-catalog-v2-actions": {
+      "types": "./src/actions/workflow-event-catalog-v2-actions.ts",
+      "import": "./src/actions/workflow-event-catalog-v2-actions.ts"
+    },
+    "./actions/workflow-editor-actions": {
+      "types": "./src/actions/workflow-editor-actions.ts",
+      "import": "./src/actions/workflow-editor-actions.ts"
+    },
+    "./actions/workflow-event-actions": {
+      "types": "./src/actions/workflow-event-actions.ts",
+      "import": "./src/actions/workflow-event-actions.ts"
+    },
+    "./actions/workflow-visualization-actions": {
+      "types": "./src/actions/workflow-visualization-actions.ts",
+      "import": "./src/actions/workflow-visualization-actions.ts"
+    },
+    "./actions/workflow-runtime-v2-actions": {
+      "types": "./src/actions/workflow-runtime-v2-actions.ts",
+      "import": "./src/actions/workflow-runtime-v2-actions.ts"
+    },
+    "./actions/workflow-runtime-actions": {
+      "types": "./src/actions/workflow-runtime-actions.ts",
+      "import": "./src/actions/workflow-runtime-actions.ts"
+    },
+    "./actions/event-catalog-actions": {
+      "types": "./src/actions/event-catalog-actions.ts",
+      "import": "./src/actions/event-catalog-actions.ts"
+    },
+    "./actions/template-library-actions": {
+      "types": "./src/actions/template-library-actions.ts",
+      "import": "./src/actions/template-library-actions.ts"
+    },
+    "./actions/workflow-actions": {
+      "types": "./src/actions/workflow-actions.ts",
+      "import": "./src/actions/workflow-actions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./src/components/index.ts"

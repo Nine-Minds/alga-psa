@@ -52,6 +52,7 @@ export default defineConfig({
     'zod-to-json-schema',
     'parsimmon',
     'ts-morph',
+    'typescript',
     'elkjs',
     'react',
     'react-dom',

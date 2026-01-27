@@ -18,6 +18,300 @@ const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
+// ============================================================================
+// SHARED ALIAS CONFIGURATION
+// Define aliases once, use for both Turbopack (relative paths) and Webpack (absolute paths)
+// ============================================================================
+
+// Pre-built packages - point to /dist for compiled JS
+const prebuiltPackageAliases = {
+  '@alga-psa/auth': '../packages/auth/dist',
+  '@alga-psa/ui': '../packages/ui/src',
+  '@alga-psa/clients': '../packages/clients/dist',
+  '@alga-psa/scheduling': '../packages/scheduling/dist',
+  '@alga-psa/users': '../packages/users/dist',
+  '@alga-psa/teams': '../packages/teams/dist',
+  '@alga-psa/tags': '../packages/tags/dist',
+  '@alga-psa/tenancy': '../packages/tenancy/dist',
+  '@alga-psa/event-schemas': '../packages/event-schemas/dist',
+  '@alga-psa/event-bus': '../packages/event-bus/dist',
+  '@alga-psa/email': '../packages/email/dist',
+  '@alga-psa/documents': '../packages/documents/dist',
+  '@alga-psa/reference-data': '../packages/reference-data/dist',
+  '@alga-psa/notifications': '../packages/notifications/dist',
+  '@alga-psa/reporting': '../packages/reporting/dist',
+  '@alga-psa/media': '../packages/media/dist',
+  '@alga-psa/assets': '../packages/assets/dist',
+  '@alga-psa/jobs': '../packages/jobs/dist',
+  '@alga-psa/surveys': '../packages/surveys/dist',
+  '@alga-psa/onboarding': '../packages/onboarding/dist',
+  '@alga-psa/analytics': '../packages/analytics/dist',
+  '@alga-psa/licensing': '../packages/licensing/dist',
+  '@alga-psa/portal-shared': '../packages/portal-shared/dist',
+  '@alga-psa/tickets': '../packages/tickets/dist',
+  '@alga-psa/projects': '../packages/projects/dist',
+  '@alga-psa/billing': '../packages/billing/dist',
+  '@alga-psa/workflows': '../packages/workflows/dist',
+  '@alga-psa/integrations': '../packages/integrations/dist',
+  '@alga-psa/client-portal': '../packages/client-portal/dist',
+};
+
+// Runtime subpaths - point to /src for Next.js transpilation (actions, components, hooks)
+const runtimeSubpathAliases = {
+  // Clients
+  '@alga-psa/clients/actions': '../packages/clients/src/actions',
+  '@alga-psa/clients/components': '../packages/clients/src/components',
+  '@alga-psa/clients/lib/billingHelpers': '../packages/clients/src/lib/billingHelpers.ts',
+  '@alga-psa/clients/actions/contact-actions': '../packages/clients/src/actions/contact-actions',
+  '@alga-psa/clients/actions/contact-actions/contactActions': '../packages/clients/src/actions/contact-actions/contactActions.tsx',
+  '@alga-psa/clients/actions/contact-actions/contactNoteActions': '../packages/clients/src/actions/contact-actions/contactNoteActions.ts',
+  // Scheduling
+  '@alga-psa/scheduling/actions': '../packages/scheduling/src/actions',
+  '@alga-psa/scheduling/components': '../packages/scheduling/src/components',
+  '@alga-psa/scheduling/lib/contractLineDisambiguation': '../packages/scheduling/src/lib/contractLineDisambiguation.ts',
+  '@alga-psa/scheduling/actions/appointmentHelpers': '../packages/scheduling/src/actions/appointmentHelpers.ts',
+  '@alga-psa/scheduling/actions/appointmentRequestManagementActions': '../packages/scheduling/src/actions/appointmentRequestManagementActions.ts',
+  '@alga-psa/scheduling/actions/availabilitySettingsActions': '../packages/scheduling/src/actions/availabilitySettingsActions.ts',
+  '@alga-psa/scheduling/actions/scheduleActions': '../packages/scheduling/src/actions/scheduleActions.ts',
+  '@alga-psa/scheduling/actions/serviceCatalogActions': '../packages/scheduling/src/actions/serviceCatalogActions.ts',
+  '@alga-psa/scheduling/actions/timeEntryCrudActions': '../packages/scheduling/src/actions/timeEntryCrudActions.ts',
+  '@alga-psa/scheduling/actions/timeEntryActions': '../packages/scheduling/src/actions/timeEntryActions.ts',
+  '@alga-psa/scheduling/actions/timeEntryHelpers': '../packages/scheduling/src/actions/timeEntryHelpers.ts',
+  '@alga-psa/scheduling/actions/timeEntrySchemas': '../packages/scheduling/src/actions/timeEntrySchemas.ts',
+  '@alga-psa/scheduling/actions/timeEntryServices': '../packages/scheduling/src/actions/timeEntryServices.ts',
+  '@alga-psa/scheduling/actions/timeEntryWorkItemActions': '../packages/scheduling/src/actions/timeEntryWorkItemActions.ts',
+  '@alga-psa/scheduling/actions/timePeriodsActions': '../packages/scheduling/src/actions/timePeriodsActions.ts',
+  '@alga-psa/scheduling/actions/timeSheetActions': '../packages/scheduling/src/actions/timeSheetActions.ts',
+  '@alga-psa/scheduling/actions/timeSheetOperations': '../packages/scheduling/src/actions/timeSheetOperations.ts',
+  '@alga-psa/scheduling/actions/workItemActions': '../packages/scheduling/src/actions/workItemActions.ts',
+  '@alga-psa/scheduling/actions/time-period-settings-actions': '../packages/scheduling/src/actions/time-period-settings-actions',
+  '@alga-psa/scheduling/actions/time-period-settings-actions/timePeriodSettingsActions': '../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions.ts',
+  // Users
+  '@alga-psa/users/actions': '../packages/users/src/actions',
+  '@alga-psa/users/components': '../packages/users/src/components',
+  '@alga-psa/users/services': '../packages/users/src/services',
+  // Email
+  '@alga-psa/email/actions': '../packages/email/src/actions',
+  // Tickets
+  '@alga-psa/tickets/actions': '../packages/tickets/src/actions',
+  '@alga-psa/tickets/components': '../packages/tickets/src/components',
+  '@alga-psa/tickets/actions/board-actions': '../packages/tickets/src/actions/board-actions',
+  '@alga-psa/tickets/actions/board-actions/boardActions': '../packages/tickets/src/actions/board-actions/boardActions.ts',
+  '@alga-psa/tickets/actions/comment-actions': '../packages/tickets/src/actions/comment-actions',
+  '@alga-psa/tickets/actions/comment-actions/commentActions': '../packages/tickets/src/actions/comment-actions/commentActions.ts',
+  '@alga-psa/tickets/actions/ticket-number-actions': '../packages/tickets/src/actions/ticket-number-actions',
+  '@alga-psa/tickets/actions/ticket-number-actions/ticketNumberActions': '../packages/tickets/src/actions/ticket-number-actions/ticketNumberActions.ts',
+  // Projects
+  '@alga-psa/projects/actions': '../packages/projects/src/actions',
+  '@alga-psa/projects/components': '../packages/projects/src/components',
+  '@alga-psa/projects/actions/projectActions': '../packages/projects/src/actions/projectActions.ts',
+  '@alga-psa/projects/actions/projectTaskActions': '../packages/projects/src/actions/projectTaskActions.ts',
+  '@alga-psa/projects/actions/projectTaskCommentActions': '../packages/projects/src/actions/projectTaskCommentActions.ts',
+  '@alga-psa/projects/actions/projectTaskStatusActions': '../packages/projects/src/actions/projectTaskStatusActions.ts',
+  '@alga-psa/projects/actions/projectTemplateActions': '../packages/projects/src/actions/projectTemplateActions.ts',
+  '@alga-psa/projects/actions/projectTemplateWizardActions': '../packages/projects/src/actions/projectTemplateWizardActions.ts',
+  '@alga-psa/projects/actions/phaseTaskImportActions': '../packages/projects/src/actions/phaseTaskImportActions.ts',
+  '@alga-psa/projects/actions/regenerateOrderKeys': '../packages/projects/src/actions/regenerateOrderKeys.ts',
+  '@alga-psa/projects/actions/serviceCatalogActions': '../packages/projects/src/actions/serviceCatalogActions.ts',
+  '@alga-psa/projects/lib/projectUtils': '../packages/projects/src/lib/projectUtils.ts',
+  '@alga-psa/projects/lib/orderingService': '../packages/projects/src/lib/orderingService.ts',
+  // Billing
+  '@alga-psa/billing/actions': '../packages/billing/src/actions',
+  '@alga-psa/billing/components': '../packages/billing/src/components',
+  '@alga-psa/billing/models': '../packages/billing/src/models',
+  '@alga-psa/billing/services': '../packages/billing/src/services',
+  // Workflows
+  '@alga-psa/workflows/actions': '../packages/workflows/src/actions',
+  '@alga-psa/workflows/components': '../packages/workflows/src/components',
+  '@alga-psa/workflows/hooks': '../packages/workflows/src/hooks',
+  '@alga-psa/workflows/visualization/hooks': '../packages/workflows/src/visualization/hooks',
+  '@alga-psa/workflows/visualization/services': '../packages/workflows/src/visualization/services',
+  '@alga-psa/workflows/ee': '../packages/workflows/src/ee',
+  '@alga-psa/workflows/oss': '../packages/workflows/src/oss',
+  '@alga-psa/workflows/actions/workflow-actions': '../packages/workflows/src/actions/workflow-actions.ts',
+  '@alga-psa/workflows/actions/workflow-actions/formRegistryActions': '../packages/workflows/src/actions/workflow-actions/formRegistryActions.ts',
+  '@alga-psa/workflows/actions/workflow-actions/initializeWorkflows': '../packages/workflows/src/actions/workflow-actions/initializeWorkflows.ts',
+  '@alga-psa/workflows/actions/workflow-actions/taskInboxActions': '../packages/workflows/src/actions/workflow-actions/taskInboxActions.ts',
+  '@alga-psa/workflows/actions/workflow-actions/workflowActionRegistry': '../packages/workflows/src/actions/workflow-actions/workflowActionRegistry.ts',
+  '@alga-psa/workflows/actions/activity-actions': '../packages/workflows/src/actions/activity-actions',
+  '@alga-psa/workflows/actions/activity-actions/activityAggregationActions': '../packages/workflows/src/actions/activity-actions/activityAggregationActions.ts',
+  '@alga-psa/workflows/actions/activity-actions/activityServerActions': '../packages/workflows/src/actions/activity-actions/activityServerActions.ts',
+  '@alga-psa/workflows/actions/activity-actions/activityStatusActions': '../packages/workflows/src/actions/activity-actions/activityStatusActions.ts',
+  '@alga-psa/workflows/actions/activity-actions/workflowTaskActions': '../packages/workflows/src/actions/activity-actions/workflowTaskActions.ts',
+  '@alga-psa/workflows/actions/workflow-trigger-actions': '../packages/workflows/src/actions/workflow-trigger-actions.ts',
+  '@alga-psa/workflows/actions/workflow-event-attachment-actions': '../packages/workflows/src/actions/workflow-event-attachment-actions.ts',
+  '@alga-psa/workflows/actions/workflow-event-catalog-v2-actions': '../packages/workflows/src/actions/workflow-event-catalog-v2-actions.ts',
+  '@alga-psa/workflows/actions/workflow-editor-actions': '../packages/workflows/src/actions/workflow-editor-actions.ts',
+  '@alga-psa/workflows/actions/workflow-event-actions': '../packages/workflows/src/actions/workflow-event-actions.ts',
+  '@alga-psa/workflows/actions/workflow-visualization-actions': '../packages/workflows/src/actions/workflow-visualization-actions.ts',
+  '@alga-psa/workflows/actions/workflow-runtime-v2-actions': '../packages/workflows/src/actions/workflow-runtime-v2-actions.ts',
+  '@alga-psa/workflows/actions/workflow-runtime-actions': '../packages/workflows/src/actions/workflow-runtime-actions.ts',
+  '@alga-psa/workflows/actions/event-catalog-actions': '../packages/workflows/src/actions/event-catalog-actions.ts',
+  '@alga-psa/workflows/actions/template-library-actions': '../packages/workflows/src/actions/template-library-actions.ts',
+  // Tags
+  '@alga-psa/tags/actions/tagActions': '../packages/tags/src/actions/tagActions.ts',
+  // Notifications
+  '@alga-psa/notifications/actions/notification-actions/notificationActions': '../packages/notifications/src/actions/notification-actions/notificationActions.ts',
+  '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions': '../packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts',
+  // Integrations
+  '@alga-psa/integrations/actions': '../packages/integrations/src/actions',
+  '@alga-psa/integrations/components': '../packages/integrations/src/components',
+  '@alga-psa/integrations/lib': '../packages/integrations/src/lib',
+  '@alga-psa/integrations/routes': '../packages/integrations/src/routes',
+  '@alga-psa/integrations/webhooks': '../packages/integrations/src/webhooks',
+  // Client-portal
+  '@alga-psa/client-portal/actions': '../packages/client-portal/src/actions',
+  '@alga-psa/client-portal/components': '../packages/client-portal/src/components',
+};
+
+// DB package aliases - keep pointing to source for HMR in dev
+const dbPackageAliases = {
+  '@alga-psa/db': '../packages/db/src/index.ts',
+  '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
+  '@alga-psa/db/connection': '../packages/db/src/lib/connection.ts',
+  '@alga-psa/db/tenant': '../packages/db/src/lib/tenant.ts',
+  '@alga-psa/db/models': '../packages/db/src/models/index.ts',
+  '@alga-psa/db/models/user': '../packages/db/src/models/user.ts',
+  '@alga-psa/db/models/userPreferences': '../packages/db/src/models/userPreferences.ts',
+  '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
+  '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
+};
+
+// Shim aliases for unused/optional dependencies
+const shimAliases = {
+  // Native DB drivers not used
+  'better-sqlite3': emptyShim,
+  'sqlite3': emptyShim,
+  'mysql': emptyShim,
+  'mysql2': emptyShim,
+  'oracledb': emptyShim,
+  'tedious': emptyShim,
+  // Node.js-only modules that shouldn't be bundled for client
+  'node-vault': emptyShim,
+  'postman-request': emptyShim,
+  // Optional ffmpeg dependencies
+  'ffmpeg-static': emptyShim,
+  'ffprobe-static': emptyShim,
+  'ffprobe-static/package.json': './src/empty/shims/ffprobe-package.json',
+  'ffmpeg-static/package.json': './src/empty/shims/ffprobe-package.json',
+  // sharp optional packages
+  '@img/sharp-libvips-dev/include': emptyShim,
+  '@img/sharp-libvips-dev/cplusplus': emptyShim,
+  '@img/sharp-wasm32/versions': emptyShim,
+  // Knex dialect modules we don't use
+  'knex/lib/dialects/sqlite3': emptyShim,
+  'knex/lib/dialects/sqlite3/index.js': emptyShim,
+  'knex/lib/dialects/mysql': emptyShim,
+  'knex/lib/dialects/mysql/index.js': emptyShim,
+  'knex/lib/dialects/mysql2': emptyShim,
+  'knex/lib/dialects/mysql2/index.js': emptyShim,
+  'knex/lib/dialects/mssql': emptyShim,
+  'knex/lib/dialects/mssql/index.js': emptyShim,
+  'knex/lib/dialects/oracledb': emptyShim,
+  'knex/lib/dialects/oracledb/index.js': emptyShim,
+  'knex/lib/dialects/oracledb/utils.js': emptyShim,
+};
+
+// Edition-dependent aliases (CE vs EE)
+const getEditionAliases = (isEE) => ({
+  '@/empty': isEE ? '../ee/server/src' : './src/empty',
+  '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
+  './src/empty': isEE ? '../ee/server/src' : './src/empty',
+  './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
+  '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
+  '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
+  'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
+  'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
+});
+
+// Product feature aliases (CE vs EE)
+const getProductFeatureAliases = (isEE) => ({
+  '@product/extensions/entry': isEE
+    ? '@product/extensions/ee/entry'
+    : '@product/extensions/oss/entry',
+  '@product/settings-extensions/entry': isEE
+    ? '@product/settings-extensions/ee/entry'
+    : '@product/settings-extensions/oss/entry',
+  '@product/chat/entry': isEE
+    ? '@product/chat/ee/entry'
+    : '@product/chat/oss/entry',
+  '@product/ext-proxy/handler': isEE
+    ? '@product/ext-proxy/ee/handler'
+    : '@product/ext-proxy/oss/handler',
+  '@alga-psa/integrations/email/providers/entry': isEE
+    ? '@alga-psa/integrations/email/providers/ee/entry'
+    : '@alga-psa/integrations/email/providers/oss/entry',
+  '@alga-psa/integrations/email/settings/entry': isEE
+    ? '@alga-psa/integrations/email/settings/ee/entry'
+    : '@alga-psa/integrations/email/settings/oss/entry',
+  '@alga-psa/integrations/email/domains/entry': isEE
+    ? '@alga-psa/integrations/email/domains/ee/entry'
+    : '@alga-psa/integrations/email/domains/oss/entry',
+  '@alga-psa/client-portal/domain-settings/entry': isEE
+    ? '@alga-psa/client-portal/domain-settings/ee/entry'
+    : '@alga-psa/client-portal/domain-settings/oss/entry',
+  '@alga-psa/workflows/entry': isEE
+    ? '../packages/workflows/src/ee/entry'
+    : '../packages/workflows/src/oss/entry',
+  '@product/billing/entry': isEE
+    ? '@product/billing/ee/entry'
+    : '@product/billing/oss/entry',
+  '@product/auth-ee/entry': isEE
+    ? '@product/auth-ee/ee/entry'
+    : '@product/auth-ee/oss/entry',
+  '@product/extension-actions': isEE
+    ? '@product/extension-actions/ee'
+    : '@product/extension-actions/oss',
+  '@product/extension-actions/entry': isEE
+    ? '@product/extension-actions/ee/entry'
+    : '@product/extension-actions/oss/entry',
+  '@product/extension-initialization/entry': isEE
+    ? '@product/extension-initialization/ee/entry'
+    : '@product/extension-initialization/oss/entry',
+  '@alga-psa/product-extension-initialization': isEE
+    ? '../ee/server/src/lib/extensions/initialize'
+    : '../packages/product-extension-initialization/oss/entry',
+  '@alga-psa/product-extension-actions': isEE
+    ? '../packages/product-extension-actions/ee/entry'
+    : '../packages/product-extension-actions/oss/entry',
+});
+
+// Build combined aliases for Turbopack (relative paths)
+const getTurbopackAliases = (isEE) => ({
+  // Fix for emoji-mart data loading in Turbopack
+  '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
+  // Base app alias
+  '@': './src',
+  'server/src': './src',
+  // Yjs ESM alignment
+  'yjs': '../node_modules/yjs/dist/yjs.mjs',
+  'yjs/dist/yjs.cjs': '../node_modules/yjs/dist/yjs.mjs',
+  // Merge all alias groups
+  ...prebuiltPackageAliases,
+  ...runtimeSubpathAliases,
+  ...dbPackageAliases,
+  ...shimAliases,
+  ...getEditionAliases(isEE),
+  ...getProductFeatureAliases(isEE),
+});
+
+// Transform relative paths to absolute paths for Webpack
+const toAbsolutePaths = (aliases, baseDir) => {
+  const result = {};
+  for (const [key, value] of Object.entries(aliases)) {
+    if (typeof value === 'string' && value.startsWith('.')) {
+      result[key] = path.join(baseDir, value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+
+// ============================================================================
+// END SHARED ALIAS CONFIGURATION
+// ============================================================================
+
 const appVersion = (() => {
   try {
     const pkgPath = path.join(__dirname, '../package.json');
@@ -152,191 +446,9 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
   },
   turbopack: {
-    root: path.resolve(__dirname, '..'),  // Point to the actual project root
-    // Alias optional DB drivers we don't use to an empty shim for Turbopack
-    resolveAlias: {
-      // Fix for emoji-mart data loading in Turbopack
-      '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
-      // Base app alias
-      '@': './src',
-      'server/src': './src', // Add explicit alias for server/src imports
-
-      // Pre-built packages - point to /dist for compiled JS
-      '@alga-psa/auth': '../packages/auth/dist',
-      '@alga-psa/ui': '../packages/ui/src',
-      '@alga-psa/clients': '../packages/clients/dist',
-      // Clients runtime subpaths
-      '@alga-psa/clients/actions': '../packages/clients/src/actions',
-      '@alga-psa/clients/components': '../packages/clients/src/components',
-      '@alga-psa/scheduling': '../packages/scheduling/dist',
-      // Scheduling runtime subpaths
-      '@alga-psa/scheduling/actions': '../packages/scheduling/src/actions',
-      '@alga-psa/scheduling/components': '../packages/scheduling/src/components',
-      '@alga-psa/users': '../packages/users/dist',
-      // Users runtime subpaths
-      '@alga-psa/users/actions': '../packages/users/src/actions',
-      '@alga-psa/users/components': '../packages/users/src/components',
-      '@alga-psa/users/services': '../packages/users/src/services',
-      '@alga-psa/teams': '../packages/teams/dist',
-      '@alga-psa/tags': '../packages/tags/dist',
-      '@alga-psa/tenancy': '../packages/tenancy/dist',
-      '@alga-psa/event-schemas': '../packages/event-schemas/dist',
-      '@alga-psa/event-bus': '../packages/event-bus/dist',
-      '@alga-psa/email': '../packages/email/dist',
-      // Email runtime subpaths
-      '@alga-psa/email/actions': '../packages/email/src/actions',
-      '@alga-psa/documents': '../packages/documents/dist',
-      '@alga-psa/reference-data': '../packages/reference-data/dist',
-      '@alga-psa/notifications': '../packages/notifications/dist',
-      '@alga-psa/reporting': '../packages/reporting/dist',
-      '@alga-psa/media': '../packages/media/dist',
-      '@alga-psa/assets': '../packages/assets/dist',
-      '@alga-psa/jobs': '../packages/jobs/dist',
-      '@alga-psa/surveys': '../packages/surveys/dist',
-      '@alga-psa/onboarding': '../packages/onboarding/dist',
-      '@alga-psa/analytics': '../packages/analytics/dist',
-      '@alga-psa/licensing': '../packages/licensing/dist',
-      '@alga-psa/portal-shared': '../packages/portal-shared/dist',
-      '@alga-psa/tickets': '../packages/tickets/dist',
-      // Tickets runtime subpaths
-      '@alga-psa/tickets/actions': '../packages/tickets/src/actions',
-      '@alga-psa/tickets/components': '../packages/tickets/src/components',
-      '@alga-psa/projects': '../packages/projects/dist',
-      // Projects runtime subpaths
-      '@alga-psa/projects/actions': '../packages/projects/src/actions',
-      '@alga-psa/projects/components': '../packages/projects/src/components',
-      '@alga-psa/billing': '../packages/billing/dist',
-      // Billing runtime subpaths
-      '@alga-psa/billing/actions': '../packages/billing/src/actions',
-      '@alga-psa/billing/components': '../packages/billing/src/components',
-      '@alga-psa/billing/models': '../packages/billing/src/models',
-      '@alga-psa/billing/services': '../packages/billing/src/services',
-      '@alga-psa/workflows': '../packages/workflows/dist',
-      // Workflows runtime subpaths (Next.js transpiled, point to src)
-      '@alga-psa/workflows/actions': '../packages/workflows/src/actions',
-      '@alga-psa/workflows/components': '../packages/workflows/src/components',
-      '@alga-psa/workflows/hooks': '../packages/workflows/src/hooks',
-      '@alga-psa/workflows/visualization/hooks': '../packages/workflows/src/visualization/hooks',
-      '@alga-psa/workflows/visualization/services': '../packages/workflows/src/visualization/services',
-      '@alga-psa/workflows/ee': '../packages/workflows/src/ee',
-      '@alga-psa/workflows/oss': '../packages/workflows/src/oss',
-      '@alga-psa/integrations': '../packages/integrations/dist',
-      // Integrations runtime subpaths
-      '@alga-psa/integrations/actions': '../packages/integrations/src/actions',
-      '@alga-psa/integrations/components': '../packages/integrations/src/components',
-      '@alga-psa/integrations/lib': '../packages/integrations/src/lib',
-      '@alga-psa/integrations/routes': '../packages/integrations/src/routes',
-      '@alga-psa/integrations/webhooks': '../packages/integrations/src/webhooks',
-      '@alga-psa/client-portal': '../packages/client-portal/dist',
-      // Client-portal runtime subpaths
-      '@alga-psa/client-portal/actions': '../packages/client-portal/src/actions',
-      '@alga-psa/client-portal/components': '../packages/client-portal/src/components',
-      // DB package - keep pointing to source for HMR in dev
-      '@alga-psa/db': '../packages/db/src/index.ts',
-      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
-      '@alga-psa/db/connection': '../packages/db/src/lib/connection.ts',
-      '@alga-psa/db/tenant': '../packages/db/src/lib/tenant.ts',
-      '@alga-psa/db/models': '../packages/db/src/models/index.ts',
-      '@alga-psa/db/models/user': '../packages/db/src/models/user.ts',
-      '@alga-psa/db/models/userPreferences': '../packages/db/src/models/userPreferences.ts',
-      '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
-      '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
-      '@/empty': isEE ? '../ee/server/src' : './src/empty',
-      '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
-      './src/empty': isEE ? '../ee/server/src' : './src/empty',
-      './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
-      '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
-      '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
-      'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
-      'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
-      // Native DB drivers not used
-      'better-sqlite3': emptyShim,
-      'sqlite3': emptyShim,
-      'mysql': emptyShim,
-      'mysql2': emptyShim,
-      'oracledb': emptyShim,
-      'tedious': emptyShim,
-      // Node.js-only modules that shouldn't be bundled for client
-      'node-vault': emptyShim,
-      'postman-request': emptyShim,
-      // Optional ffmpeg dependencies
-      'ffmpeg-static': emptyShim,
-      'ffprobe-static': emptyShim,
-      'ffprobe-static/package.json': './src/empty/shims/ffprobe-package.json',
-      'ffmpeg-static/package.json': './src/empty/shims/ffprobe-package.json',
-      // sharp tries to conditionally require these optional packages; webpack can't statically resolve them
-      '@img/sharp-libvips-dev/include': emptyShim,
-      '@img/sharp-libvips-dev/cplusplus': emptyShim,
-      '@img/sharp-wasm32/versions': emptyShim,
-      // Knex dialect modules we don't use; alias directly to avoid cascading requires
-      'knex/lib/dialects/sqlite3': emptyShim,
-      'knex/lib/dialects/sqlite3/index.js': emptyShim,
-      'knex/lib/dialects/mysql': emptyShim,
-      'knex/lib/dialects/mysql/index.js': emptyShim,
-      'knex/lib/dialects/mysql2': emptyShim,
-      'knex/lib/dialects/mysql2/index.js': emptyShim,
-      'knex/lib/dialects/mssql': emptyShim,
-      'knex/lib/dialects/mssql/index.js': emptyShim,
-      'knex/lib/dialects/oracledb': emptyShim,
-      'knex/lib/dialects/oracledb/index.js': emptyShim,
-      'knex/lib/dialects/oracledb/utils.js': emptyShim,
-
-      // Ensure Yjs resolves to a single ESM entrypoint to avoid "Yjs was already imported" warnings
-      // caused by mixing CJS + ESM Yjs bundles in the same runtime.
-      'yjs': '../node_modules/yjs/dist/yjs.mjs',
-      'yjs/dist/yjs.cjs': '../node_modules/yjs/dist/yjs.mjs',
-
-      // Product feature aliasing - point stable import paths to OSS or EE implementations
-      '@product/extensions/entry': isEE
-        ? '@product/extensions/ee/entry'
-        : '@product/extensions/oss/entry',
-      '@product/settings-extensions/entry': isEE
-        ? '@product/settings-extensions/ee/entry'
-        : '@product/settings-extensions/oss/entry',
-      '@product/chat/entry': isEE
-        ? '@product/chat/ee/entry'
-        : '@product/chat/oss/entry',
-      '@product/ext-proxy/handler': isEE
-        ? '@product/ext-proxy/ee/handler'
-        : '@product/ext-proxy/oss/handler',
-      '@alga-psa/integrations/email/providers/entry': isEE
-        ? '@alga-psa/integrations/email/providers/ee/entry'
-        : '@alga-psa/integrations/email/providers/oss/entry',
-      '@alga-psa/integrations/email/settings/entry': isEE
-        ? '@alga-psa/integrations/email/settings/ee/entry'
-        : '@alga-psa/integrations/email/settings/oss/entry',
-      '@alga-psa/integrations/email/domains/entry': isEE
-        ? '@alga-psa/integrations/email/domains/ee/entry'
-        : '@alga-psa/integrations/email/domains/oss/entry',
-      '@alga-psa/client-portal/domain-settings/entry': isEE
-        ? '@alga-psa/client-portal/domain-settings/ee/entry'
-        : '@alga-psa/client-portal/domain-settings/oss/entry',
-      '@alga-psa/workflows/entry': isEE
-        ? '../packages/workflows/src/ee/entry'
-        : '../packages/workflows/src/oss/entry',
-      '@product/billing/entry': isEE
-        ? '@product/billing/ee/entry'
-        : '@product/billing/oss/entry',
-      '@product/auth-ee/entry': isEE
-        ? '@product/auth-ee/ee/entry'
-        : '@product/auth-ee/oss/entry',
-      '@product/extension-actions': isEE
-        ? '@product/extension-actions/ee'
-        : '@product/extension-actions/oss',        
-      '@product/extension-actions/entry': isEE
-        ? '@product/extension-actions/ee/entry'
-        : '@product/extension-actions/oss/entry',
-      '@product/extension-initialization/entry': isEE
-        ? '@product/extension-initialization/ee/entry'
-        : '@product/extension-initialization/oss/entry',
-      // Map stable specifiers to relative sources so Turbopack can resolve them
-      '@alga-psa/product-extension-initialization': isEE
-        ? '../ee/server/src/lib/extensions/initialize'
-        : '../packages/product-extension-initialization/oss/entry',
-      '@alga-psa/product-extension-actions': isEE
-        ? '../packages/product-extension-actions/ee/entry'
-        : '../packages/product-extension-actions/oss/entry',
-    },
+    root: path.resolve(__dirname, '..'),
+    // Use shared alias configuration (relative paths for Turbopack)
+    resolveAlias: getTurbopackAliases(isEE),
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
   // Only transpile external packages and runtime-only code
@@ -382,7 +494,7 @@ const nextConfig = {
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
-    const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
     console.log('[next.config] edition', isEE ? 'enterprise' : 'community', {
       cwd: process.cwd(),
       dirname: __dirname,
@@ -398,119 +510,24 @@ const nextConfig = {
       '.jsx': ['.tsx', '.jsx'],
     };
 
+    // Use shared alias configuration, transformed to absolute paths for Webpack
+    const sharedAliases = toAbsolutePaths(getTurbopackAliases(isEE), __dirname);
+
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
-      '@': path.join(__dirname, 'src'),
-      'server/src': path.join(__dirname, 'src'), // Add explicit alias for server/src imports
-      // sharp tries to conditionally require these optional packages; webpack can't statically resolve them
-      '@img/sharp-libvips-dev/include': path.join(__dirname, 'src/empty/shims/empty.ts'),
-      '@img/sharp-libvips-dev/cplusplus': path.join(__dirname, 'src/empty/shims/empty.ts'),
-      '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
-
-      // Pre-built packages - point to /dist for compiled JS
-      // Runtime subpaths (actions, components, hooks) resolve via package.json exports to /src
-
-      // tsc-built packages (output to dist/packages/<name>/src)
+      ...sharedAliases,
+      // Webpack-specific overrides for tsc-built packages (output to dist/packages/<name>/src)
       '@alga-psa/core': path.join(__dirname, '../dist/packages/core/src'),
       '@alga-psa/types': path.join(__dirname, '../dist/packages/types/src'),
       '@alga-psa/validation': path.join(__dirname, '../dist/packages/validation/src'),
       '@alga-psa/db': path.join(__dirname, '../dist/packages/db/src'),
-
-      // tsup-built packages (output to packages/<name>/dist)
-      '@alga-psa/auth': path.join(__dirname, '../packages/auth/dist'),
-      '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
-      '@alga-psa/clients': path.join(__dirname, '../packages/clients/dist'),
-      // Clients runtime subpaths
-      '@alga-psa/clients/actions': path.join(__dirname, '../packages/clients/src/actions'),
-      '@alga-psa/clients/components': path.join(__dirname, '../packages/clients/src/components'),
-      '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/dist'),
-      // Scheduling runtime subpaths
-      '@alga-psa/scheduling/actions': path.join(__dirname, '../packages/scheduling/src/actions'),
-      '@alga-psa/scheduling/components': path.join(__dirname, '../packages/scheduling/src/components'),
-      '@alga-psa/users': path.join(__dirname, '../packages/users/dist'),
-      // Users runtime subpaths
-      '@alga-psa/users/actions': path.join(__dirname, '../packages/users/src/actions'),
-      '@alga-psa/users/components': path.join(__dirname, '../packages/users/src/components'),
-      '@alga-psa/users/services': path.join(__dirname, '../packages/users/src/services'),
-      '@alga-psa/teams': path.join(__dirname, '../packages/teams/dist'),
-      '@alga-psa/tags': path.join(__dirname, '../packages/tags/dist'),
-      '@alga-psa/tenancy': path.join(__dirname, '../packages/tenancy/dist'),
-      '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/dist'),
-      '@alga-psa/event-bus': path.join(__dirname, '../packages/event-bus/dist'),
-      '@alga-psa/email': path.join(__dirname, '../packages/email/dist'),
-      // Email runtime subpaths
-      '@alga-psa/email/actions': path.join(__dirname, '../packages/email/src/actions'),
-      '@alga-psa/documents': path.join(__dirname, '../packages/documents/dist'),
-      '@alga-psa/reference-data': path.join(__dirname, '../packages/reference-data/dist'),
-      '@alga-psa/notifications': path.join(__dirname, '../packages/notifications/dist'),
-      '@alga-psa/reporting': path.join(__dirname, '../packages/reporting/dist'),
-      '@alga-psa/media': path.join(__dirname, '../packages/media/dist'),
-      '@alga-psa/assets': path.join(__dirname, '../packages/assets/dist'),
-      '@alga-psa/jobs': path.join(__dirname, '../packages/jobs/dist'),
-      '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/dist'),
-      '@alga-psa/onboarding': path.join(__dirname, '../packages/onboarding/dist'),
-      '@alga-psa/analytics': path.join(__dirname, '../packages/analytics/dist'),
-      '@alga-psa/licensing': path.join(__dirname, '../packages/licensing/dist'),
-      '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/dist'),
-      '@alga-psa/tickets': path.join(__dirname, '../packages/tickets/dist'),
-      // Tickets runtime subpaths
-      '@alga-psa/tickets/actions': path.join(__dirname, '../packages/tickets/src/actions'),
-      '@alga-psa/tickets/components': path.join(__dirname, '../packages/tickets/src/components'),
-      '@alga-psa/projects': path.join(__dirname, '../packages/projects/dist'),
-      // Projects runtime subpaths
-      '@alga-psa/projects/actions': path.join(__dirname, '../packages/projects/src/actions'),
-      '@alga-psa/projects/components': path.join(__dirname, '../packages/projects/src/components'),
-      '@alga-psa/billing': path.join(__dirname, '../packages/billing/dist'),
-      // Billing runtime subpaths
-      '@alga-psa/billing/actions': path.join(__dirname, '../packages/billing/src/actions'),
-      '@alga-psa/billing/components': path.join(__dirname, '../packages/billing/src/components'),
-      '@alga-psa/billing/models': path.join(__dirname, '../packages/billing/src/models'),
-      '@alga-psa/billing/services': path.join(__dirname, '../packages/billing/src/services'),
-      '@alga-psa/workflows': path.join(__dirname, '../packages/workflows/dist'),
-      // Workflows runtime subpaths (Next.js transpiled, point to src)
-      '@alga-psa/workflows/actions': path.join(__dirname, '../packages/workflows/src/actions'),
-      '@alga-psa/workflows/components': path.join(__dirname, '../packages/workflows/src/components'),
-      '@alga-psa/workflows/hooks': path.join(__dirname, '../packages/workflows/src/hooks'),
-      '@alga-psa/workflows/visualization/hooks': path.join(__dirname, '../packages/workflows/src/visualization/hooks'),
-      '@alga-psa/workflows/visualization/services': path.join(__dirname, '../packages/workflows/src/visualization/services'),
-      '@alga-psa/workflows/ee': path.join(__dirname, '../packages/workflows/src/ee'),
-      '@alga-psa/workflows/oss': path.join(__dirname, '../packages/workflows/src/oss'),
-      '@alga-psa/integrations': path.join(__dirname, '../packages/integrations/dist'),
-      // Integrations runtime subpaths
-      '@alga-psa/integrations/actions': path.join(__dirname, '../packages/integrations/src/actions'),
-      '@alga-psa/integrations/components': path.join(__dirname, '../packages/integrations/src/components'),
-      '@alga-psa/integrations/lib': path.join(__dirname, '../packages/integrations/src/lib'),
-      '@alga-psa/integrations/routes': path.join(__dirname, '../packages/integrations/src/routes'),
-      '@alga-psa/integrations/webhooks': path.join(__dirname, '../packages/integrations/src/webhooks'),
-      '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/dist'),
-      // Client-portal runtime subpaths
-      '@alga-psa/client-portal/actions': path.join(__dirname, '../packages/client-portal/src/actions'),
-      '@alga-psa/client-portal/components': path.join(__dirname, '../packages/client-portal/src/components'),
-
-      '@ee': isEE
-        ? path.join(__dirname, '../ee/server/src')
-        : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
-      // Also map deep EE paths used without the @ee alias to CE stubs
-      // This ensures CE builds don't fail when code references ee/server/src directly
-      'ee/server/src': isEE
-        ? path.join(__dirname, '../ee/server/src')
-        : path.join(__dirname, 'src/empty'),
-
-      // Feature swap aliases for Webpack (point directly to ts/tsx files)
-      '@product/extensions/entry': (() => {
-        const eePath = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
-        const ossPath = path.join(__dirname, '../packages/product-extensions/oss/entry.tsx');
-        const selectedPath = isEE ? eePath : ossPath;
-        console.log(`[WEBPACK ALIAS DEBUG] @product/extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
-        return selectedPath;
-      })(),
-      '@product/settings-extensions/entry': (() => {
-        const eePath = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
-        const ossPath = path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx');
-        const selectedPath = isEE ? eePath : ossPath;
-        console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
-        return selectedPath;
-      })(),
+      // Webpack-specific feature swap aliases (point to .tsx files for proper resolution)
+      '@product/extensions/entry': isEE
+        ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
+        : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+      '@product/settings-extensions/entry': isEE
+        ? path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx')
+        : path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
       '@alga-psa/integrations/email/providers/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx')
         : path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),
@@ -529,7 +546,6 @@ const nextConfig = {
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
         : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
-      // Point stable specifiers to exact entry files to avoid conditional exports in package index
       '@alga-psa/product-extension-initialization': isEE
         ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
         : path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),

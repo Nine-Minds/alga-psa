@@ -70,5 +70,14 @@ export default defineConfig({
     'pdf-lib',
     'pdf2pic',
     'marked',
+    'typescript',
+    'source-map',
+    'source-map-support',
+    // pdf2pic transitive dependencies
+    'gm',
+    'graphicsmagick-static',
+    'bidi-js',
+    'tar-fs',
+    'yargs',
   ],
 });

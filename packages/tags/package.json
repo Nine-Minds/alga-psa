@@ -25,6 +25,10 @@
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts"
     },
+    "./actions/tagActions": {
+      "types": "./src/actions/tagActions.ts",
+      "import": "./src/actions/tagActions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./src/components/index.ts"
