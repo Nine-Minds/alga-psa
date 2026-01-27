@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
-  listWorkflowDefinitionsAction,
+  listWorkflowDefinitionsPagedAction,
   deleteWorkflowDefinitionAction,
   updateWorkflowDefinitionMetadataAction
 } from '@alga-psa/workflows/actions';
@@ -104,6 +104,8 @@ export interface WorkflowDefinitionListItem {
 
 type StatusFilter = 'all' | 'active' | 'draft' | 'paused';
 type TriggerFilter = 'all' | 'event' | 'scheduled' | 'manual';
+type WorkflowCounts = { total: number; active: number; draft: number; paused: number };
+type SortableColumnId = 'name' | 'status' | 'updated_at' | 'created_at';
 
 interface WorkflowListProps {
   onSelectWorkflow?: (workflowId: string) => void;
@@ -176,6 +178,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     (searchParams.get('status') as StatusFilter) || 'all'
   );
@@ -184,8 +187,11 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   );
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
-  const [sortBy, setSortBy] = useState<string>('updated_at');
+  const [sortBy, setSortBy] = useState<SortableColumnId>('updated_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [totalItems, setTotalItems] = useState(0);
+  const [counts, setCounts] = useState<WorkflowCounts>({ total: 0, active: 0, draft: 0, paused: 0 });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Bulk selection state
   const [selectedWorkflows, setSelectedWorkflows] = useState<Set<string>>(new Set());
@@ -223,48 +229,75 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     router.replace(newUrl, { scroll: false });
   };
 
-  const fetchWorkflows = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await listWorkflowDefinitionsAction();
-      if (!didUnmount.current) {
-        if (!Array.isArray(data)) {
-          setError('Failed to fetch workflows');
-        } else {
-          setWorkflows(data as WorkflowDefinitionListItem[]);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch workflows:', err);
-      if (!didUnmount.current) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch workflows');
-      }
-    } finally {
-      if (!didUnmount.current) {
-        setIsLoading(false);
-      }
-    }
-  };
-
+  // Server-side paging + sorting + filtering
   useEffect(() => {
     didUnmount.current = false;
-    fetchWorkflows();
+    const run = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await listWorkflowDefinitionsPagedAction({
+          page: currentPage,
+          pageSize,
+          search: debouncedSearchTerm || undefined,
+          status: statusFilter,
+          trigger: triggerFilter,
+          sortBy,
+          sortDirection
+        });
+
+        if (didUnmount.current) return;
+        const nextItems = Array.isArray((result as any)?.items)
+          ? ((result as any).items as WorkflowDefinitionListItem[])
+          : [];
+        const nextTotalItems = Number((result as any)?.totalItems ?? 0);
+        const nextCounts = (result as any)?.counts ?? { total: 0, active: 0, draft: 0, paused: 0 };
+
+        // If we deleted the last item on the last page, clamp to the last valid page.
+        const lastPage = nextTotalItems > 0 ? Math.ceil(nextTotalItems / pageSize) : 1;
+        if (nextTotalItems > 0 && nextItems.length === 0 && currentPage > lastPage) {
+          setCounts(nextCounts);
+          setTotalItems(nextTotalItems);
+          setCurrentPage(lastPage);
+          setIsLoading(true);
+          return;
+        }
+
+        setWorkflows(nextItems);
+        setTotalItems(nextTotalItems);
+        setCounts(nextCounts);
+      } catch (err) {
+        console.error('Failed to fetch workflows:', err);
+        if (!didUnmount.current) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch workflows');
+          setWorkflows([]);
+          setTotalItems(0);
+        }
+      } finally {
+        if (!didUnmount.current) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void run();
     return () => {
       didUnmount.current = true;
     };
-  }, []);
+  }, [currentPage, debouncedSearchTerm, pageSize, refreshKey, sortBy, sortDirection, statusFilter, triggerFilter]);
 
-  // Debounced URL update for search
+  // Debounced URL update + server fetch for search
   useEffect(() => {
     const timer = setTimeout(() => {
       updateUrlParams({ search: searchTerm });
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   const handleSortChange = (newSortBy: string, newSortDirection: 'asc' | 'desc') => {
-    setSortBy(newSortBy);
+    setSortBy(newSortBy as SortableColumnId);
     setSortDirection(newSortDirection);
     setCurrentPage(1);
   };
@@ -282,7 +315,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
         workflowId: workflow.workflow_id,
         isPaused: !workflow.is_paused
       });
-      await fetchWorkflows();
+      setRefreshKey((v) => v + 1);
     } catch (err) {
       console.error('Failed to toggle pause:', err);
     }
@@ -314,11 +347,17 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   };
 
   const toggleSelectAll = () => {
-    if (selectedWorkflows.size === filteredWorkflows.length) {
-      setSelectedWorkflows(new Set());
-    } else {
-      setSelectedWorkflows(new Set(filteredWorkflows.map(w => w.workflow_id)));
-    }
+    const ids = workflows.map((workflow) => workflow.workflow_id);
+    const allSelectedOnPage = ids.length > 0 && ids.every((id) => selectedWorkflows.has(id));
+    setSelectedWorkflows((prev) => {
+      const next = new Set(prev);
+      if (allSelectedOnPage) {
+        ids.forEach((id) => next.delete(id));
+        return next;
+      }
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
   };
 
   const handleBulkPause = async () => {
@@ -330,7 +369,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
       }
     }
     setSelectedWorkflows(new Set());
-    await fetchWorkflows();
+    setRefreshKey((v) => v + 1);
   };
 
   const handleBulkResume = async () => {
@@ -342,7 +381,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
       }
     }
     setSelectedWorkflows(new Set());
-    await fetchWorkflows();
+    setRefreshKey((v) => v + 1);
   };
 
   const handleBulkDelete = async () => {
@@ -356,7 +395,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
       }
     }
     setSelectedWorkflows(new Set());
-    await fetchWorkflows();
+    setRefreshKey((v) => v + 1);
   };
 
   const handleDeleteClick = (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
@@ -371,7 +410,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     setIsDeleting(true);
     try {
       await deleteWorkflowDefinitionAction({ workflowId: workflowToDelete.workflow_id });
-      await fetchWorkflows();
+      setRefreshKey((v) => v + 1);
       setIsDeleteDialogOpen(false);
       setWorkflowToDelete(null);
     } catch (err) {
@@ -381,80 +420,13 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     }
   };
 
-  // Filter and sort workflows
-  const filteredWorkflows = useMemo(() => {
-    let result = [...workflows];
+  // Clear bulk selection whenever the list query changes.
+  useEffect(() => {
+    setSelectedWorkflows(new Set());
+  }, [currentPage, debouncedSearchTerm, statusFilter, triggerFilter, sortBy, sortDirection]);
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(w =>
-        w.name.toLowerCase().includes(term) ||
-        w.description?.toLowerCase().includes(term)
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      result = result.filter(w => {
-        if (statusFilter === 'paused') return w.is_paused;
-        if (statusFilter === 'active') return (w.status === 'active' || w.status === 'published') && !w.is_paused;
-        if (statusFilter === 'draft') return w.status === 'draft' && !w.is_paused;
-        return true;
-      });
-    }
-
-    // Trigger filter
-    if (triggerFilter !== 'all') {
-      result = result.filter(w => {
-        const label = getTriggerLabel(w.trigger).toLowerCase();
-        return label === triggerFilter;
-      });
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-
-      switch (sortBy) {
-        case 'name':
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
-          break;
-        case 'status':
-          aVal = getStatusLabel(a.status, a.is_paused);
-          bVal = getStatusLabel(b.status, b.is_paused);
-          break;
-        case 'updated_at':
-          aVal = new Date(a.updated_at).getTime();
-          bVal = new Date(b.updated_at).getTime();
-          break;
-        case 'created_at':
-          aVal = new Date(a.created_at).getTime();
-          bVal = new Date(b.created_at).getTime();
-          break;
-        default:
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
-      }
-
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [workflows, searchTerm, statusFilter, triggerFilter, sortBy, sortDirection]);
-
-  // Compute counts
-  const counts = useMemo(() => {
-    const total = workflows.length;
-    const active = workflows.filter(w => (w.status === 'active' || w.status === 'published') && !w.is_paused).length;
-    const draft = workflows.filter(w => w.status === 'draft' && !w.is_paused).length;
-    const paused = workflows.filter(w => w.is_paused).length;
-    return { total, active, draft, paused };
-  }, [workflows]);
+  const allSelectedOnPage =
+    workflows.length > 0 && workflows.every((workflow) => selectedWorkflows.has(workflow.workflow_id));
 
   const columns: ColumnDefinition<WorkflowDefinitionListItem>[] = [
     {
@@ -466,7 +438,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
           }}
           className="p-0.5 hover:bg-[rgb(var(--color-border-100))] rounded"
         >
-          {selectedWorkflows.size === filteredWorkflows.length && filteredWorkflows.length > 0 ? (
+          {allSelectedOnPage ? (
             <CheckSquare className="w-4 h-4 text-[rgb(var(--color-primary-500))]" />
           ) : (
             <Square className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
@@ -474,6 +446,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
         </button>
       ) as unknown as string,
       dataIndex: 'workflow_id',
+      sortable: false,
       width: '40px',
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
         <button
@@ -526,6 +499,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     {
       title: 'Version',
       dataIndex: 'draft_version',
+      sortable: false,
       width: '100px',
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
         <div className="flex flex-col gap-0.5">
@@ -543,6 +517,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     {
       title: 'Trigger',
       dataIndex: 'trigger',
+      sortable: false,
       width: '120px',
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
         <div className="flex items-center gap-2">
@@ -568,6 +543,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     {
       title: 'Actions',
       dataIndex: 'workflow_id',
+      sortable: false,
       width: '80px',
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
         <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
@@ -659,7 +635,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
             {error}
           </p>
           <div className="flex items-center gap-2">
-            <Button id="workflow-list-retry-btn" variant="outline" onClick={fetchWorkflows}>
+            <Button id="workflow-list-retry-btn" variant="outline" onClick={() => setRefreshKey((v) => v + 1)}>
               Retry
             </Button>
             <Button id="workflow-list-create-btn" onClick={onCreateNew}>
@@ -672,8 +648,10 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     );
   }
 
-  // Empty state
-  if (workflows.length === 0) {
+  const hasAnyWorkflows = counts.total > 0;
+
+  // Empty state (no workflows exist for this tenant / visibility scope)
+  if (!hasAnyWorkflows) {
     return (
       <ReflectionContainer id="workflow-list-empty" label="Workflow List Empty State">
         <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -699,7 +677,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   }
 
   // No results state
-  const showNoResults = !isLoading && filteredWorkflows.length === 0 && workflows.length > 0;
+  const showNoResults = !isLoading && totalItems === 0 && hasAnyWorkflows;
 
   return (
     <ReflectionContainer id="workflow-list" label="Workflow List" className="h-full min-h-0">
@@ -826,8 +804,11 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
               className="mt-4 text-sm text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] font-medium"
               onClick={() => {
                 setSearchTerm('');
+                setDebouncedSearchTerm('');
                 setStatusFilter('all');
                 setTriggerFilter('all');
+                setCurrentPage(1);
+                updateUrlParams({ search: null, status: null, trigger: null });
               }}
             >
               Clear all filters
@@ -838,15 +819,18 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
           <div className="flex-1 min-h-0 overflow-y-auto">
             <DataTable
               id="workflow-list-table"
-              data={filteredWorkflows}
+              data={workflows}
               columns={columns}
               pagination={true}
               currentPage={currentPage}
               onPageChange={setCurrentPage}
               pageSize={pageSize}
+              totalItems={totalItems}
               onRowClick={handleRowClick}
-              manualSorting={false}
-              initialSorting={[{ id: sortBy, desc: sortDirection === 'desc' }]}
+              manualSorting={true}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortChange={handleSortChange}
             />
           </div>
         )}

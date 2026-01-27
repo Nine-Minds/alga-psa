@@ -38,6 +38,7 @@ import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
   GetWorkflowDefinitionVersionInput,
+  ListWorkflowDefinitionsPagedInput,
   PublishWorkflowDefinitionInput,
   RunIdInput,
   RunActionInput,
@@ -889,6 +890,134 @@ export const listWorkflowDefinitionsAction = withAuth(async (user, { tenant }) =
     return enrichedRecords;
   }
   return enrichedRecords.filter((record) => record.is_visible !== false);
+});
+
+export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = ListWorkflowDefinitionsPagedInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
+
+  const pageSize = parsed.pageSize;
+  const page = parsed.page;
+  const offset = (page - 1) * pageSize;
+
+  const search = typeof parsed.search === 'string' ? parsed.search.trim() : '';
+  const status = parsed.status ?? 'all';
+  const trigger = parsed.trigger ?? 'all';
+  const sortBy = parsed.sortBy ?? 'updated_at';
+  const sortDirection = parsed.sortDirection ?? 'desc';
+
+  const applyVisibilityFilter = (qb: any) => {
+    if (!canAdmin) {
+      qb.whereRaw('coalesce(wd.is_visible, true) = true');
+    }
+  };
+
+  const applyFilters = (qb: any) => {
+    applyVisibilityFilter(qb);
+
+    if (search) {
+      qb.andWhere(function whereSearch(this: any) {
+        this.whereRaw('wd.name ilike ?', [`%${search}%`]).orWhereRaw('wd.description ilike ?', [`%${search}%`]);
+      });
+    }
+
+    if (status !== 'all') {
+      if (status === 'paused') {
+        qb.andWhereRaw('coalesce(wd.is_paused, false) = true');
+      } else if (status === 'active') {
+        qb.andWhereIn('wd.status', ['active', 'published']).andWhereRaw('coalesce(wd.is_paused, false) = false');
+      } else if (status === 'draft') {
+        qb.andWhere('wd.status', 'draft').andWhereRaw('coalesce(wd.is_paused, false) = false');
+      }
+    }
+
+    if (trigger !== 'all') {
+      const eventNameExpr = "coalesce(wd.trigger->>'eventName', '')";
+      const scheduledExpr = `lower(${eventNameExpr}) like '%schedule%' or lower(${eventNameExpr}) like '%cron%'`;
+      if (trigger === 'manual') {
+        qb.andWhereRaw(`${eventNameExpr} = ''`);
+      } else if (trigger === 'scheduled') {
+        qb.andWhereRaw(`${eventNameExpr} <> '' and (${scheduledExpr})`);
+      } else if (trigger === 'event') {
+        qb.andWhereRaw(`${eventNameExpr} <> '' and not (${scheduledExpr})`);
+      }
+    }
+  };
+
+  const countQuery = knex('workflow_definitions as wd');
+  applyFilters(countQuery);
+  const countRow = await countQuery.count<{ count: number | string }[]>({ count: '*' }).first();
+  const totalItems = countRow?.count == null ? 0 : Number(countRow.count);
+
+  const versionsSubquery = knex('workflow_definition_versions')
+    .select('workflow_id')
+    .max('version as published_version')
+    .groupBy('workflow_id')
+    .as('pv');
+
+  const itemsQuery = knex('workflow_definitions as wd')
+    .select('wd.*')
+    .select(knex.raw('pv.published_version as published_version'))
+    .leftJoin(versionsSubquery, 'pv.workflow_id', 'wd.workflow_id');
+
+  applyFilters(itemsQuery);
+
+  if (sortBy === 'name') {
+    itemsQuery.orderByRaw(`lower(wd.name) ${sortDirection}`);
+  } else if (sortBy === 'created_at') {
+    itemsQuery.orderBy('wd.created_at', sortDirection);
+  } else if (sortBy === 'status') {
+    itemsQuery.orderByRaw(
+      `case
+        when coalesce(wd.is_paused, false) then 'paused'
+        when wd.status in ('active', 'published') then 'active'
+        else coalesce(wd.status, '')
+      end ${sortDirection}`
+    );
+  } else {
+    itemsQuery.orderBy('wd.updated_at', sortDirection);
+  }
+  itemsQuery.orderBy('wd.workflow_id', 'asc');
+
+  const rows = await itemsQuery.limit(pageSize).offset(offset);
+  const items = (rows as any[]).map((row) => ({
+    ...row,
+    published_version: row.published_version == null ? null : Number(row.published_version)
+  }));
+
+  // Aggregate counts (unfiltered, but respecting visibility rules).
+  const countBase = knex('workflow_definitions as wd');
+  applyVisibilityFilter(countBase);
+
+  const totalRow = await countBase.clone().count<{ count: number | string }[]>({ count: '*' }).first();
+  const activeRow = await countBase.clone()
+    .whereIn('wd.status', ['active', 'published'])
+    .andWhereRaw('coalesce(wd.is_paused, false) = false')
+    .count<{ count: number | string }[]>({ count: '*' })
+    .first();
+  const draftRow = await countBase.clone()
+    .where('wd.status', 'draft')
+    .andWhereRaw('coalesce(wd.is_paused, false) = false')
+    .count<{ count: number | string }[]>({ count: '*' })
+    .first();
+  const pausedRow = await countBase.clone()
+    .whereRaw('coalesce(wd.is_paused, false) = true')
+    .count<{ count: number | string }[]>({ count: '*' })
+    .first();
+
+  return {
+    items,
+    totalItems,
+    counts: {
+      total: totalRow?.count == null ? 0 : Number(totalRow.count),
+      active: activeRow?.count == null ? 0 : Number(activeRow.count),
+      draft: draftRow?.count == null ? 0 : Number(draftRow.count),
+      paused: pausedRow?.count == null ? 0 : Number(pausedRow.count)
+    }
+  };
 });
 
 export const listWorkflowDefinitionVersionsAction = withAuth(async (user, { tenant }, input: unknown) => {
