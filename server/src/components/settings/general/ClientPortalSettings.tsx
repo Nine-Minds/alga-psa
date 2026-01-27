@@ -45,6 +45,7 @@ const ClientPortalSettings = () => {
   const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
   const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
+  const customDomainRequiredMessage = t('ui.preview.customDomainRequired', 'Must have custom domain set up');
 
   // Check if custom domain is configured
   useEffect(() => {
@@ -433,11 +434,27 @@ const ClientPortalSettings = () => {
 
             {/* Preview Selection Buttons */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">{t('settings.clientPortal.preview.title', 'Preview')}</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">{t('ui.preview.title', 'Preview')}</h4>
               <div className="flex gap-2 mb-3">
                 {(() => {
                   const isDashboardPreview = previewMode === 'dashboard';
                   const isSigninPreview = previewMode === 'signin';
+                  const handleSignInPreviewClick = () => setPreviewMode(isSigninPreview ? null : 'signin');
+                  const signInButton = (
+                    <Button
+                      id="preview-signin"
+                      type="button"
+                      variant={isSigninPreview ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={hasCustomDomain ? handleSignInPreviewClick : undefined}
+                      disabled={!hasCustomDomain}
+                      aria-describedby={!hasCustomDomain ? 'preview-signin-requires-domain' : undefined}
+                    >
+                      {isSigninPreview
+                        ? t('ui.preview.hideSignInPage', 'Hide Sign-in Page')
+                        : t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
+                    </Button>
+                  );
 
                   return (
                     <>
@@ -449,42 +466,24 @@ const ClientPortalSettings = () => {
                         onClick={() => setPreviewMode(isDashboardPreview ? null : 'dashboard')}
                       >
                         {isDashboardPreview
-                          ? t('settings.clientPortal.preview.hideClientDashboard', 'Hide Client Dashboard')
-                          : t('settings.clientPortal.preview.previewClientDashboard', 'Preview Client Dashboard')}
+                          ? t('ui.preview.hideClientDashboard', 'Hide Client Dashboard')
+                          : t('ui.preview.previewClientDashboard', 'Preview Client Dashboard')}
                       </Button>
                       {!hasCustomDomain ? (
-                        <Tooltip content={t('settings.clientPortal.preview.customDomainRequired', 'Must have custom domain set up')}>
+                        <Tooltip content={customDomainRequiredMessage}>
                           <span
                             className="inline-block cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
                             tabIndex={0}
                             aria-describedby="preview-signin-requires-domain"
                           >
-                            <Button
-                              id="preview-signin"
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled
-                            >
-                              {t('settings.clientPortal.preview.previewSignInPage', 'Preview Sign-in Page')}
-                            </Button>
+                            {signInButton}
                             <span id="preview-signin-requires-domain" className="sr-only">
-                              {t('settings.clientPortal.preview.customDomainRequired', 'Must have custom domain set up')}
+                              {customDomainRequiredMessage}
                             </span>
                           </span>
                         </Tooltip>
                       ) : (
-                        <Button
-                          id="preview-signin"
-                          type="button"
-                          variant={isSigninPreview ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setPreviewMode(isSigninPreview ? null : 'signin')}
-                        >
-                          {isSigninPreview
-                            ? t('settings.clientPortal.preview.hideSignInPage', 'Hide Sign-in Page')
-                            : t('settings.clientPortal.preview.previewSignInPage', 'Preview Sign-in Page')}
-                        </Button>
+                        signInButton
                       )}
                     </>
                   );
