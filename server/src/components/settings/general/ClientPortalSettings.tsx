@@ -442,22 +442,6 @@ const ClientPortalSettings = () => {
                 {(() => {
                   const isDashboardPreview = previewMode === 'dashboard';
                   const isSigninPreview = previewMode === 'signin';
-                  const signInButton = (
-                    <Button
-                      id="preview-signin"
-                      type="button"
-                      variant={isSigninPreview ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={hasCustomDomain ? handleSignInPreviewClick : undefined}
-                      disabled={!hasCustomDomain}
-                      aria-describedby={!hasCustomDomain ? 'preview-signin-requires-domain' : undefined}
-                    >
-                      {isSigninPreview
-                        ? t('ui.preview.hideSignInPage', 'Hide Sign-in Page')
-                        : t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
-                    </Button>
-                  );
-
                   return (
                     <>
                       <Button
@@ -473,21 +457,36 @@ const ClientPortalSettings = () => {
                       </Button>
                       {!hasCustomDomain ? (
                         <Tooltip content={customDomainRequiredMessage}>
-                          <span
-                            className="inline-block cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-                            tabIndex={0}
-                            role="button"
-                            aria-disabled="true"
-                            aria-describedby="preview-signin-requires-domain"
-                          >
-                            {signInButton}
+                          <span className="inline-block">
+                            <Button
+                              id="preview-signin"
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="cursor-not-allowed opacity-50"
+                              onClick={(e) => e.preventDefault()}
+                              aria-disabled="true"
+                              aria-describedby="preview-signin-requires-domain"
+                            >
+                              {t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
+                            </Button>
                             <span id="preview-signin-requires-domain" className="sr-only">
                               {customDomainRequiredMessage}
                             </span>
                           </span>
                         </Tooltip>
                       ) : (
-                        signInButton
+                        <Button
+                          id="preview-signin"
+                          type="button"
+                          variant={isSigninPreview ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={handleSignInPreviewClick}
+                        >
+                          {isSigninPreview
+                            ? t('ui.preview.hideSignInPage', 'Hide Sign-in Page')
+                            : t('ui.preview.previewSignInPage', 'Preview Sign-in Page')}
+                        </Button>
                       )}
                     </>
                   );
