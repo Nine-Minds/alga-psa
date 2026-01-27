@@ -2,7 +2,7 @@
 
 ## Status
 
-- **In progress**: Ticket domain counterparts (50/70 complete; 92 remaining overall)
+- **In progress**: Ticket domain counterparts (60/70 complete; 82 remaining overall)
 
 ## Summary by Domain
 
@@ -36,7 +36,7 @@
 - [x] Batch 3: ticket-created-client-missing-create-note through ticket-created-email-with-retry
 - [x] Batch 4: ticket-created-error-creates-comment through ticket-created-log-initial-time
 - [x] Batch 5: ticket-created-missing-fields-comment through ticket-created-set-custom-fields
-- [ ] Batch 6: ticket-created-two-* through ticket-reopened-*
+- [x] Batch 6: ticket-created-set-sla-fields through ticket-merged-add-comment
 - [ ] Batch 7: ticket-response-* through ticket-updated-*
 - Completed commits:
   - Batch 1 (commit f230b76e4): 10 fixtures (ticket-approval-* through ticket-created-assign-contact-owner)
@@ -44,6 +44,7 @@
   - Batch 3 (commit 2862304a7): 10 fixtures (ticket-created-client-missing-create-note through ticket-created-email-with-retry)
   - Batch 4 (commit 36f8787d7): 10 fixtures (ticket-created-error-creates-comment through ticket-created-log-initial-time)
   - Batch 5 (commit 5052a466e): 10 fixtures (ticket-created-missing-fields-comment through ticket-created-set-custom-fields)
+  - Batch 6 (commit eb184c5b8): 10 fixtures (ticket-created-set-sla-fields through ticket-merged-add-comment)
 
 #### Project Domain (28 fixtures)
 - [ ] Batch 1: project-approval-* through project-created-*
