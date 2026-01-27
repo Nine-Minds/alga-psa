@@ -1,9 +1,10 @@
-const { runScaffoldedFixture } = require('../_lib/scaffolded-fixture.cjs');
+const { runNotificationFixture } = require('../_lib/notification-fixture.cjs');
 
 module.exports = async function run(ctx) {
-  return runScaffoldedFixture(ctx, {
+  return runNotificationFixture(ctx, {
     fixtureName: "ticket-created-additional-agent-notify",
     eventName: "TICKET_ADDITIONAL_AGENT_ASSIGNED",
-    schemaRef: "payload.TicketCreated.v1"
+    schemaRef: "payload.TicketAdditionalAgentAssigned.v1",
+    pattern: "default"
   });
 };

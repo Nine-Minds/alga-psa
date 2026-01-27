@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.032Z",
+  "exportedAt": "2026-01-27T02:06:59.430Z",
   "workflows": [
     {
       "key": "fixture.capacity-threshold-reached",
       "metadata": {
         "name": "Fixture: Capacity Threshold Reached",
-        "description": "Scaffolded catalog fixture for CAPACITY_THRESHOLD_REACHED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (CAPACITY_THRESHOLD_REACHED).",
+        "payloadSchemaRef": "payload.CapacityThresholdReached.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.CapacityThresholdReached.v1",
         "trigger": {
           "type": "event",
           "eventName": "CAPACITY_THRESHOLD_REACHED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.CapacityThresholdReached.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "12d82cfe-24ea-bbaf-94a3-064f1480933b",
           "version": 1,
           "name": "Fixture: Capacity Threshold Reached",
-          "description": "Scaffolded catalog fixture for CAPACITY_THRESHOLD_REACHED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (CAPACITY_THRESHOLD_REACHED).",
+          "payloadSchemaRef": "payload.CapacityThresholdReached.v1",
           "trigger": {
             "type": "event",
             "eventName": "CAPACITY_THRESHOLD_REACHED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture capacity-threshold-reached]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture capacity-threshold-reached] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture capacity-threshold-reached] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.capacity-threshold-reached:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "12d82cfe-24ea-bbaf-94a3-064f1480933b",
             "version": 1,
             "name": "Fixture: Capacity Threshold Reached",
-            "description": "Scaffolded catalog fixture for CAPACITY_THRESHOLD_REACHED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (CAPACITY_THRESHOLD_REACHED).",
+            "payloadSchemaRef": "payload.CapacityThresholdReached.v1",
             "trigger": {
               "type": "event",
               "eventName": "CAPACITY_THRESHOLD_REACHED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture capacity-threshold-reached]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture capacity-threshold-reached] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture capacity-threshold-reached] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.capacity-threshold-reached:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

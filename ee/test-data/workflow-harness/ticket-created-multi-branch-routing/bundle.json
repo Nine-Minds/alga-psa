@@ -1,13 +1,13 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.019Z",
+  "exportedAt": "2026-01-27T02:06:59.695Z",
   "workflows": [
     {
       "key": "fixture.ticket-created-multi-branch-routing",
       "metadata": {
         "name": "Fixture: Ticket Created Multi Branch Routing",
-        "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+        "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (TICKET_CREATED).",
         "payloadSchemaRef": "payload.TicketCreated.v1",
         "payloadSchemaMode": "pinned",
         "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
@@ -25,10 +25,18 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
           "payload.TicketCreated.v1"
@@ -40,7 +48,7 @@
           "id": "665a0848-f212-b320-e584-4353452ce799",
           "version": 1,
           "name": "Fixture: Ticket Created Multi Branch Routing",
-          "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+          "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (TICKET_CREATED).",
           "payloadSchemaRef": "payload.TicketCreated.v1",
           "trigger": {
             "type": "event",
@@ -48,26 +56,105 @@
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture ticket-created-multi-branch-routing]'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-multi-branch-routing] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-branch-a",
+              "type": "control.if",
+              "condition": {
+                "$expr": "payload.fixtureVariant = 'A'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture ticket-created-multi-branch-routing] Branch A'"
+                      },
+                      "body": {
+                        "$expr": "vars.body & ' branch=A'"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-created-multi-branch-routing:' & payload.fixtureDedupeKey & ':A'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-a",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "if-branch-b",
+                  "type": "control.if",
+                  "condition": {
+                    "$expr": "payload.fixtureVariant = 'B'"
+                  },
+                  "then": [
+                    {
+                      "id": "notify",
+                      "type": "action.call",
+                      "config": {
+                        "actionId": "notifications.send_in_app",
+                        "version": 1,
+                        "inputMapping": {
+                          "recipients": {
+                            "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                          },
+                          "title": {
+                            "$expr": "'[fixture ticket-created-multi-branch-routing] Branch B'"
+                          },
+                          "body": {
+                            "$expr": "vars.body & ' branch=B'"
+                          },
+                          "severity": "info",
+                          "dedupe_key": {
+                            "$expr": "'fixture.ticket-created-multi-branch-routing:' & payload.fixtureDedupeKey & ':B'"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "return-b",
+                      "type": "control.return"
+                    }
+                  ],
+                  "else": [
+                    {
+                      "id": "return-default",
+                      "type": "control.return"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -79,7 +166,7 @@
             "id": "665a0848-f212-b320-e584-4353452ce799",
             "version": 1,
             "name": "Fixture: Ticket Created Multi Branch Routing",
-            "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+            "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (TICKET_CREATED).",
             "payloadSchemaRef": "payload.TicketCreated.v1",
             "trigger": {
               "type": "event",
@@ -87,26 +174,105 @@
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture ticket-created-multi-branch-routing]'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-created-multi-branch-routing] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-branch-a",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "payload.fixtureVariant = 'A'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture ticket-created-multi-branch-routing] Branch A'"
+                        },
+                        "body": {
+                          "$expr": "vars.body & ' branch=A'"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-created-multi-branch-routing:' & payload.fixtureDedupeKey & ':A'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-a",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "if-branch-b",
+                    "type": "control.if",
+                    "condition": {
+                      "$expr": "payload.fixtureVariant = 'B'"
+                    },
+                    "then": [
+                      {
+                        "id": "notify",
+                        "type": "action.call",
+                        "config": {
+                          "actionId": "notifications.send_in_app",
+                          "version": 1,
+                          "inputMapping": {
+                            "recipients": {
+                              "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                            },
+                            "title": {
+                              "$expr": "'[fixture ticket-created-multi-branch-routing] Branch B'"
+                            },
+                            "body": {
+                              "$expr": "vars.body & ' branch=B'"
+                            },
+                            "severity": "info",
+                            "dedupe_key": {
+                              "$expr": "'fixture.ticket-created-multi-branch-routing:' & payload.fixtureDedupeKey & ':B'"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "return-b",
+                        "type": "control.return"
+                      }
+                    ],
+                    "else": [
+                      {
+                        "id": "return-default",
+                        "type": "control.return"
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           },

@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.026Z",
+  "exportedAt": "2026-01-27T02:06:59.514Z",
   "workflows": [
     {
       "key": "fixture.project-status-multi-branch",
       "metadata": {
         "name": "Fixture: Project Status Multi Branch",
-        "description": "Scaffolded catalog fixture for PROJECT_STATUS_CHANGED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (PROJECT_STATUS_CHANGED).",
+        "payloadSchemaRef": "payload.ProjectStatusChanged.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.ProjectStatusChanged.v1",
         "trigger": {
           "type": "event",
           "eventName": "PROJECT_STATUS_CHANGED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.ProjectStatusChanged.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,113 @@
           "id": "76f0a6f1-dc8b-0d45-0329-9546cf4d4fa3",
           "version": 1,
           "name": "Fixture: Project Status Multi Branch",
-          "description": "Scaffolded catalog fixture for PROJECT_STATUS_CHANGED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (PROJECT_STATUS_CHANGED).",
+          "payloadSchemaRef": "payload.ProjectStatusChanged.v1",
           "trigger": {
             "type": "event",
             "eventName": "PROJECT_STATUS_CHANGED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture project-status-multi-branch]'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-status-multi-branch] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-branch-a",
+              "type": "control.if",
+              "condition": {
+                "$expr": "payload.fixtureVariant = 'A'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture project-status-multi-branch] Branch A'"
+                      },
+                      "body": {
+                        "$expr": "vars.body & ' branch=A'"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-status-multi-branch:' & payload.fixtureDedupeKey & ':A'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-a",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "if-branch-b",
+                  "type": "control.if",
+                  "condition": {
+                    "$expr": "payload.fixtureVariant = 'B'"
+                  },
+                  "then": [
+                    {
+                      "id": "notify",
+                      "type": "action.call",
+                      "config": {
+                        "actionId": "notifications.send_in_app",
+                        "version": 1,
+                        "inputMapping": {
+                          "recipients": {
+                            "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                          },
+                          "title": {
+                            "$expr": "'[fixture project-status-multi-branch] Branch B'"
+                          },
+                          "body": {
+                            "$expr": "vars.body & ' branch=B'"
+                          },
+                          "severity": "info",
+                          "dedupe_key": {
+                            "$expr": "'fixture.project-status-multi-branch:' & payload.fixtureDedupeKey & ':B'"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "return-b",
+                      "type": "control.return"
+                    }
+                  ],
+                  "else": [
+                    {
+                      "id": "return-default",
+                      "type": "control.return"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -79,34 +166,113 @@
             "id": "76f0a6f1-dc8b-0d45-0329-9546cf4d4fa3",
             "version": 1,
             "name": "Fixture: Project Status Multi Branch",
-            "description": "Scaffolded catalog fixture for PROJECT_STATUS_CHANGED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (PROJECT_STATUS_CHANGED).",
+            "payloadSchemaRef": "payload.ProjectStatusChanged.v1",
             "trigger": {
               "type": "event",
               "eventName": "PROJECT_STATUS_CHANGED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture project-status-multi-branch]'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-status-multi-branch] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-branch-a",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "payload.fixtureVariant = 'A'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture project-status-multi-branch] Branch A'"
+                        },
+                        "body": {
+                          "$expr": "vars.body & ' branch=A'"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-status-multi-branch:' & payload.fixtureDedupeKey & ':A'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-a",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "if-branch-b",
+                    "type": "control.if",
+                    "condition": {
+                      "$expr": "payload.fixtureVariant = 'B'"
+                    },
+                    "then": [
+                      {
+                        "id": "notify",
+                        "type": "action.call",
+                        "config": {
+                          "actionId": "notifications.send_in_app",
+                          "version": 1,
+                          "inputMapping": {
+                            "recipients": {
+                              "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                            },
+                            "title": {
+                              "$expr": "'[fixture project-status-multi-branch] Branch B'"
+                            },
+                            "body": {
+                              "$expr": "vars.body & ' branch=B'"
+                            },
+                            "severity": "info",
+                            "dedupe_key": {
+                              "$expr": "'fixture.project-status-multi-branch:' & payload.fixtureDedupeKey & ':B'"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "return-b",
+                        "type": "control.return"
+                      }
+                    ],
+                    "else": [
+                      {
+                        "id": "return-default",
+                        "type": "control.return"
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           },

@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.033Z",
+  "exportedAt": "2026-01-27T02:06:59.633Z",
   "workflows": [
     {
       "key": "fixture.technician-checked-out",
       "metadata": {
         "name": "Fixture: Technician Checked Out",
-        "description": "Scaffolded catalog fixture for TECHNICIAN_CHECKED_OUT.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (TECHNICIAN_CHECKED_OUT).",
+        "payloadSchemaRef": "payload.TechnicianCheckedOut.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.TechnicianCheckedOut.v1",
         "trigger": {
           "type": "event",
           "eventName": "TECHNICIAN_CHECKED_OUT"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.TechnicianCheckedOut.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "dcd00f43-5ad4-8c17-26a6-78e4b046a9b0",
           "version": 1,
           "name": "Fixture: Technician Checked Out",
-          "description": "Scaffolded catalog fixture for TECHNICIAN_CHECKED_OUT.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (TECHNICIAN_CHECKED_OUT).",
+          "payloadSchemaRef": "payload.TechnicianCheckedOut.v1",
           "trigger": {
             "type": "event",
             "eventName": "TECHNICIAN_CHECKED_OUT"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture technician-checked-out]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture technician-checked-out] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture technician-checked-out] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.technician-checked-out:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "dcd00f43-5ad4-8c17-26a6-78e4b046a9b0",
             "version": 1,
             "name": "Fixture: Technician Checked Out",
-            "description": "Scaffolded catalog fixture for TECHNICIAN_CHECKED_OUT.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (TECHNICIAN_CHECKED_OUT).",
+            "payloadSchemaRef": "payload.TechnicianCheckedOut.v1",
             "trigger": {
               "type": "event",
               "eventName": "TECHNICIAN_CHECKED_OUT"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture technician-checked-out]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture technician-checked-out] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture technician-checked-out] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.technician-checked-out:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

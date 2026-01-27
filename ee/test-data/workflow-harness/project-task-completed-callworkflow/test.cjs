@@ -1,9 +1,9 @@
-const { runScaffoldedFixture } = require('../_lib/scaffolded-fixture.cjs');
+const { runCallWorkflowFixture } = require('../_lib/callworkflow-fixture.cjs');
 
 module.exports = async function run(ctx) {
-  return runScaffoldedFixture(ctx, {
+  return runCallWorkflowFixture(ctx, {
     fixtureName: "project-task-completed-callworkflow",
     eventName: "PROJECT_TASK_COMPLETED",
-    schemaRef: "payload.TicketCreated.v1"
+    schemaRef: "payload.ProjectTaskCompleted.v1"
   });
 };

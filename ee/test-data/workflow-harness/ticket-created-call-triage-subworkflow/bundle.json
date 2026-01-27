@@ -1,13 +1,13 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.013Z",
+  "exportedAt": "2026-01-27T02:06:59.663Z",
   "workflows": [
     {
       "key": "fixture.ticket-created-call-triage-subworkflow",
       "metadata": {
-        "name": "Fixture: Ticket Created Call Triage Subworkflow",
-        "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+        "name": "Fixture: Ticket Created Call Triage Subworkflow (CallWorkflow)",
+        "description": "Call a sub-workflow and assert both parent+child side effects (TICKET_CREATED).",
         "payloadSchemaRef": "payload.TicketCreated.v1",
         "payloadSchemaMode": "pinned",
         "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
@@ -25,8 +25,16 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.callWorkflow",
+          "control.return",
           "state.set",
           "transform.assign"
         ],
@@ -39,8 +47,8 @@
         "definition": {
           "id": "a21eadb6-f037-ee62-0371-1167f710e9a9",
           "version": 1,
-          "name": "Fixture: Ticket Created Call Triage Subworkflow",
-          "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+          "name": "Fixture: Ticket Created Call Triage Subworkflow (CallWorkflow)",
+          "description": "Call a sub-workflow and assert both parent+child side effects (TICKET_CREATED).",
           "payloadSchemaRef": "payload.TicketCreated.v1",
           "trigger": {
             "type": "event",
@@ -48,19 +56,62 @@
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture ticket-created-call-triage-subworkflow]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-call-triage-subworkflow] Parent'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-call-triage-subworkflow] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "call-child",
+              "type": "control.callWorkflow",
+              "workflowId": "00000000-0000-0000-0000-000000000000",
+              "workflowVersion": 1,
+              "inputMapping": {
+                "fixtureNotifyUserId": {
+                  "$expr": "payload.fixtureNotifyUserId"
+                },
+                "fixtureDedupeKey": {
+                  "$expr": "payload.fixtureDedupeKey"
+                }
+              }
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": {
+                    "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                  },
+                  "title": {
+                    "$expr": "vars.title"
+                  },
+                  "body": {
+                    "$expr": "vars.body"
+                  },
+                  "severity": "info",
+                  "dedupe_key": {
+                    "$expr": "'fixture.ticket-created-call-triage-subworkflow:' & payload.fixtureDedupeKey & ':parent'"
                   }
                 }
               }
@@ -72,47 +123,107 @@
           ]
         }
       },
-      "publishedVersions": [
-        {
+      "publishedVersions": []
+    },
+    {
+      "key": "subfixture.ticket-created-call-triage-subworkflow",
+      "metadata": {
+        "name": "Fixture: Ticket Created Call Triage Subworkflow (Child)",
+        "description": "Child workflow for callWorkflow fixture ticket-created-call-triage-subworkflow.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": null,
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000213b",
           "version": 1,
-          "definition": {
-            "id": "a21eadb6-f037-ee62-0371-1167f710e9a9",
-            "version": 1,
-            "name": "Fixture: Ticket Created Call Triage Subworkflow",
-            "description": "Scaffolded catalog fixture for TICKET_CREATED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
-            "trigger": {
-              "type": "event",
-              "eventName": "TICKET_CREATED"
+          "name": "Fixture: Ticket Created Call Triage Subworkflow (Child)",
+          "description": "Child workflow for callWorkflow fixture ticket-created-call-triage-subworkflow.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
             },
-            "steps": [
-              {
-                "id": "ready",
-                "type": "state.set",
-                "config": {
-                  "state": "READY"
-                }
-              },
-              {
-                "id": "assign-marker",
-                "type": "transform.assign",
-                "config": {
-                  "assign": {
-                    "vars.marker": {
-                      "$expr": "'[fixture ticket-created-call-triage-subworkflow]'"
-                    }
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-created-call-triage-subworkflow child]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-call-triage-subworkflow child] Child'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-call-triage-subworkflow child] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
-              },
-              {
-                "id": "done",
-                "type": "control.return"
               }
-            ]
-          },
-          "payloadSchemaJson": null
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": {
+                    "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                  },
+                  "title": {
+                    "$expr": "vars.title"
+                  },
+                  "body": {
+                    "$expr": "vars.body"
+                  },
+                  "severity": "info",
+                  "dedupe_key": {
+                    "$expr": "'fixture.ticket-created-call-triage-subworkflow:' & payload.fixtureDedupeKey & ':child'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
         }
-      ]
+      },
+      "publishedVersions": []
     }
   ]
 }

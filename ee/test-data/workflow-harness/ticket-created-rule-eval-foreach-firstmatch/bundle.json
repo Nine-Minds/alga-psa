@@ -1,13 +1,13 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.021Z",
+  "exportedAt": "2026-01-27T02:06:59.704Z",
   "workflows": [
     {
       "key": "fixture.ticket-created-rule-eval-foreach-firstmatch",
       "metadata": {
         "name": "Fixture: Ticket Created Rule Eval Foreach Firstmatch",
-        "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+        "description": "For each generated item, send an in-app notification (TICKET_CREATED).",
         "payloadSchemaRef": "payload.TicketCreated.v1",
         "payloadSchemaMode": "pinned",
         "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
@@ -25,10 +25,18 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.forEach"
         ],
         "schemaRefs": [
           "payload.TicketCreated.v1"
@@ -40,7 +48,7 @@
           "id": "763e6d7e-ec0f-f30d-308e-ef0ede5d7ace",
           "version": 1,
           "name": "Fixture: Ticket Created Rule Eval Foreach Firstmatch",
-          "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+          "description": "For each generated item, send an in-app notification (TICKET_CREATED).",
           "payloadSchemaRef": "payload.TicketCreated.v1",
           "trigger": {
             "type": "event",
@@ -48,22 +56,62 @@
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture ticket-created-rule-eval-foreach-firstmatch]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-rule-eval-foreach-firstmatch] ForEach notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-rule-eval-foreach-firstmatch] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
+            },
+            {
+              "id": "for-each-item",
+              "type": "control.forEach",
+              "items": {
+                "$expr": "[{ \"i\": 0, \"userId\": payload.fixtureNotifyUserId }, { \"i\": 1, \"userId\": payload.fixtureNotifyUserId }]"
+              },
+              "itemVar": "item",
+              "body": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [vars.item.userId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title & ' #' & vars.item.i"
+                      },
+                      "body": {
+                        "$expr": "vars.body & ' item=' & vars.item.i"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-created-rule-eval-foreach-firstmatch:' & payload.fixtureDedupeKey & ':' & vars.item.i"
+                      }
+                    }
+                  }
+                }
+              ],
+              "onItemError": "fail"
             },
             {
               "id": "done",
@@ -79,7 +127,7 @@
             "id": "763e6d7e-ec0f-f30d-308e-ef0ede5d7ace",
             "version": 1,
             "name": "Fixture: Ticket Created Rule Eval Foreach Firstmatch",
-            "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+            "description": "For each generated item, send an in-app notification (TICKET_CREATED).",
             "payloadSchemaRef": "payload.TicketCreated.v1",
             "trigger": {
               "type": "event",
@@ -87,22 +135,62 @@
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture ticket-created-rule-eval-foreach-firstmatch]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-created-rule-eval-foreach-firstmatch] ForEach notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-created-rule-eval-foreach-firstmatch] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
+              },
+              {
+                "id": "for-each-item",
+                "type": "control.forEach",
+                "items": {
+                  "$expr": "[{ \"i\": 0, \"userId\": payload.fixtureNotifyUserId }, { \"i\": 1, \"userId\": payload.fixtureNotifyUserId }]"
+                },
+                "itemVar": "item",
+                "body": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [vars.item.userId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title & ' #' & vars.item.i"
+                        },
+                        "body": {
+                          "$expr": "vars.body & ' item=' & vars.item.i"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-created-rule-eval-foreach-firstmatch:' & payload.fixtureDedupeKey & ':' & vars.item.i"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "onItemError": "fail"
               },
               {
                 "id": "done",

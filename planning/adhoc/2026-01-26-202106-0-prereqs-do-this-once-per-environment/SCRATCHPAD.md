@@ -2,7 +2,7 @@
 
 ## Status
 
-- Inventory scaffolded workflow-harness fixtures and identify missing schema refs needed to convert them into business-valid fixtures.
+- Converted all scaffolded workflow-harness fixtures into business-valid, notification-based fixtures with deterministic DB assertions and cleanup.
 
 ## Notes / Decisions
 
@@ -25,6 +25,25 @@
     - `TICKET_COMMENT_ADDED`, `TICKET_ADDITIONAL_AGENT_ASSIGNED`
     - `PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED`
   - Note: `/api/workflow/events` ingestion auto-injects `tenantId` + `occurredAt` via `buildWorkflowPayload(...)` before schema validation (`server/src/lib/actions/workflow-runtime-v2-actions.ts`, around `submitWorkflowEventAction`), so tests can omit those fields.
+- Conversion approach (scale decision):
+  - Implemented a generic notification-based fixture template using `notifications.send_in_app` as the persisted side effect.
+  - Standardized fixture-only payload fields:
+    - `payload.fixtureNotifyUserId` (recipient user id)
+    - `payload.fixtureDedupeKey` (deterministic marker/correlation + action idempotency)
+    - `payload.fixtureBadUserId` (try/catch fixtures only)
+    - `payload.fixtureVariant` (multi-branch fixtures only)
+  - Control-flow patterns applied by fixture name:
+    - default/idempotent: `control.if`
+    - foreach*: `control.forEach`
+    - trycatch*: `control.tryCatch`
+    - multi-branch*: nested `control.if`
+    - callworkflow*/subworkflow*: `control.callWorkflow` + child workflow, patched/published inside `test.cjs`
+  - Assertion target: `internal_notifications` rows containing `[fixture <name>]` and the `fixtureDedupeKey`.
+- Added runtime schema refs for legacy event types needed by the converted fixtures:
+  - Scheduling legacy: `payload.ScheduleEntry*`, `payload.AppointmentRequest*`
+  - Projects legacy: `payload.ProjectAssigned`, `payload.ProjectClosed`, `payload.ProjectTaskAdditionalAgentAssigned`, `payload.TaskComment*`
+  - Tickets legacy: `payload.TicketCommentAdded`, `payload.TicketAdditionalAgentAssigned`
+  - Time legacy: `payload.TimeEntrySubmitted`, `payload.TimeEntryApproved`
 
 ## Commands / Runbook
 
@@ -34,8 +53,15 @@
   - Both produced **139** identical fixture ids.
 - Summarize scaffolded trigger event types:
   - `cat /tmp/scaffolded-by-bundle.txt | while read -r f; do jq -r '.workflows[0].metadata.trigger.eventName' "ee/test-data/workflow-harness/$f/bundle.json"; done | sort | uniq -c | sort -nr`
+- Convert all scaffolded fixtures (one-time):
+  - `node tools/workflow-harness/convert-scaffolded-fixtures.cjs`
+- Quick sanity checks:
+  - `rg "_lib/scaffolded-fixture" ee/test-data/workflow-harness -S` (expect none)
+  - `rg "Scaffolded catalog fixture" ee/test-data/workflow-harness -S` (expect none)
+  - `node --test tools/workflow-harness/tests/runner-stubbed.test.cjs`
 
 ## Gotchas
 
 - `transform.assign` evaluation order gotcha: don’t build a string from `vars.marker` inside the same assign map unless split into multiple steps (marker can be omitted).
 - Zod validation in `submitWorkflowEventAction` checks success but does not replace payload with `validation.data`, so **unknown payload keys remain available** to workflows (useful for fixture-only fields like `payload.fixtureNotifyUserId`).
+- `notifications.send_in_app` is idempotent; `forEach` fixtures must vary `dedupe_key` per iteration or inserts collapse to 1.

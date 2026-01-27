@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.025Z",
+  "exportedAt": "2026-01-27T02:06:59.570Z",
   "workflows": [
     {
       "key": "fixture.project-task-dependency-blocked",
       "metadata": {
         "name": "Fixture: Project Task Dependency Blocked",
-        "description": "Scaffolded catalog fixture for PROJECT_TASK_DEPENDENCY_BLOCKED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (PROJECT_TASK_DEPENDENCY_BLOCKED).",
+        "payloadSchemaRef": "payload.ProjectTaskDependencyBlocked.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskDependencyBlocked.v1",
         "trigger": {
           "type": "event",
           "eventName": "PROJECT_TASK_DEPENDENCY_BLOCKED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.ProjectTaskDependencyBlocked.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "36fc9464-0612-725b-d81c-b82628fb8860",
           "version": 1,
           "name": "Fixture: Project Task Dependency Blocked",
-          "description": "Scaffolded catalog fixture for PROJECT_TASK_DEPENDENCY_BLOCKED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (PROJECT_TASK_DEPENDENCY_BLOCKED).",
+          "payloadSchemaRef": "payload.ProjectTaskDependencyBlocked.v1",
           "trigger": {
             "type": "event",
             "eventName": "PROJECT_TASK_DEPENDENCY_BLOCKED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture project-task-dependency-blocked]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-task-dependency-blocked] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-task-dependency-blocked] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-task-dependency-blocked:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "36fc9464-0612-725b-d81c-b82628fb8860",
             "version": 1,
             "name": "Fixture: Project Task Dependency Blocked",
-            "description": "Scaffolded catalog fixture for PROJECT_TASK_DEPENDENCY_BLOCKED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (PROJECT_TASK_DEPENDENCY_BLOCKED).",
+            "payloadSchemaRef": "payload.ProjectTaskDependencyBlocked.v1",
             "trigger": {
               "type": "event",
               "eventName": "PROJECT_TASK_DEPENDENCY_BLOCKED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture project-task-dependency-blocked]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-task-dependency-blocked] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-task-dependency-blocked] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-task-dependency-blocked:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

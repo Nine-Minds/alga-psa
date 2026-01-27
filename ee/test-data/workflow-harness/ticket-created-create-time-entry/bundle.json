@@ -1,13 +1,13 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.016Z",
+  "exportedAt": "2026-01-27T02:06:59.682Z",
   "workflows": [
     {
       "key": "fixture.ticket-created-create-time-entry",
       "metadata": {
         "name": "Fixture: Ticket Created Create Time Entry",
-        "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+        "description": "Send an in-app notification when the event fires (TICKET_CREATED).",
         "payloadSchemaRef": "payload.TicketCreated.v1",
         "payloadSchemaMode": "pinned",
         "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
@@ -25,10 +25,18 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
           "payload.TicketCreated.v1"
@@ -40,7 +48,7 @@
           "id": "eb7fe021-8cea-7b7e-ecdd-90ccf020bed4",
           "version": 1,
           "name": "Fixture: Ticket Created Create Time Entry",
-          "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+          "description": "Send an in-app notification when the event fires (TICKET_CREATED).",
           "payloadSchemaRef": "payload.TicketCreated.v1",
           "trigger": {
             "type": "event",
@@ -48,26 +56,70 @@
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture ticket-created-create-time-entry]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-create-time-entry] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-create-time-entry] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-created-create-time-entry:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,7 +131,7 @@
             "id": "eb7fe021-8cea-7b7e-ecdd-90ccf020bed4",
             "version": 1,
             "name": "Fixture: Ticket Created Create Time Entry",
-            "description": "Scaffolded catalog fixture for TICKET_CREATED.",
+            "description": "Send an in-app notification when the event fires (TICKET_CREATED).",
             "payloadSchemaRef": "payload.TicketCreated.v1",
             "trigger": {
               "type": "event",
@@ -87,26 +139,70 @@
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture ticket-created-create-time-entry]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-created-create-time-entry] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-created-create-time-entry] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-created-create-time-entry:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

@@ -1,9 +1,10 @@
-const { runScaffoldedFixture } = require('../_lib/scaffolded-fixture.cjs');
+const { runNotificationFixture } = require('../_lib/notification-fixture.cjs');
 
 module.exports = async function run(ctx) {
-  return runScaffoldedFixture(ctx, {
+  return runNotificationFixture(ctx, {
     fixtureName: "project-task-dependency-blocked",
     eventName: "PROJECT_TASK_DEPENDENCY_BLOCKED",
-    schemaRef: "payload.TicketCreated.v1"
+    schemaRef: "payload.ProjectTaskDependencyBlocked.v1",
+    pattern: "default"
   });
 };

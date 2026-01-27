@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.011Z",
+  "exportedAt": "2026-01-27T02:06:59.651Z",
   "workflows": [
     {
       "key": "fixture.ticket-closed-audit-crm-note",
       "metadata": {
         "name": "Fixture: Ticket Closed Audit Crm Note",
-        "description": "Scaffolded catalog fixture for TICKET_CLOSED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (TICKET_CLOSED).",
+        "payloadSchemaRef": "payload.TicketClosed.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.TicketClosed.v1",
         "trigger": {
           "type": "event",
           "eventName": "TICKET_CLOSED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.TicketClosed.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "a112c796-15e1-fecf-46a6-8bfda56b9f34",
           "version": 1,
           "name": "Fixture: Ticket Closed Audit Crm Note",
-          "description": "Scaffolded catalog fixture for TICKET_CLOSED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (TICKET_CLOSED).",
+          "payloadSchemaRef": "payload.TicketClosed.v1",
           "trigger": {
             "type": "event",
             "eventName": "TICKET_CLOSED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture ticket-closed-audit-crm-note]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-closed-audit-crm-note] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-closed-audit-crm-note] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-closed-audit-crm-note:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "a112c796-15e1-fecf-46a6-8bfda56b9f34",
             "version": 1,
             "name": "Fixture: Ticket Closed Audit Crm Note",
-            "description": "Scaffolded catalog fixture for TICKET_CLOSED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (TICKET_CLOSED).",
+            "payloadSchemaRef": "payload.TicketClosed.v1",
             "trigger": {
               "type": "event",
               "eventName": "TICKET_CLOSED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture ticket-closed-audit-crm-note]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-closed-audit-crm-note] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-closed-audit-crm-note] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-closed-audit-crm-note:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

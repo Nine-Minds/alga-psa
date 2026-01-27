@@ -1,9 +1,10 @@
-const { runScaffoldedFixture } = require('../_lib/scaffolded-fixture.cjs');
+const { runNotificationFixture } = require('../_lib/notification-fixture.cjs');
 
 module.exports = async function run(ctx) {
-  return runScaffoldedFixture(ctx, {
+  return runNotificationFixture(ctx, {
     fixtureName: "appointment-request-declined",
     eventName: "APPOINTMENT_REQUEST_DECLINED",
-    schemaRef: "payload.TicketCreated.v1"
+    schemaRef: "payload.AppointmentRequestDeclined.v1",
+    pattern: "default"
   });
 };

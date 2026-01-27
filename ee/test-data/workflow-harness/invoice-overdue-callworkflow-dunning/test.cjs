@@ -1,9 +1,9 @@
-const { runScaffoldedFixture } = require('../_lib/scaffolded-fixture.cjs');
+const { runCallWorkflowFixture } = require('../_lib/callworkflow-fixture.cjs');
 
 module.exports = async function run(ctx) {
-  return runScaffoldedFixture(ctx, {
+  return runCallWorkflowFixture(ctx, {
     fixtureName: "invoice-overdue-callworkflow-dunning",
     eventName: "INVOICE_OVERDUE",
-    schemaRef: "payload.TicketCreated.v1"
+    schemaRef: "payload.InvoiceOverdue.v1"
   });
 };

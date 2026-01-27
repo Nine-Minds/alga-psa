@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.037Z",
+  "exportedAt": "2026-01-27T02:06:59.439Z",
   "workflows": [
     {
       "key": "fixture.contract-renewal-create-ticket",
       "metadata": {
         "name": "Fixture: Contract Renewal Create Ticket",
-        "description": "Scaffolded catalog fixture for CONTRACT_RENEWAL_UPCOMING.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (CONTRACT_RENEWAL_UPCOMING).",
+        "payloadSchemaRef": "payload.ContractRenewalUpcoming.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.ContractRenewalUpcoming.v1",
         "trigger": {
           "type": "event",
           "eventName": "CONTRACT_RENEWAL_UPCOMING"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.ContractRenewalUpcoming.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "f95b6bcd-7efc-b80d-b6e2-d2a7245f5b35",
           "version": 1,
           "name": "Fixture: Contract Renewal Create Ticket",
-          "description": "Scaffolded catalog fixture for CONTRACT_RENEWAL_UPCOMING.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (CONTRACT_RENEWAL_UPCOMING).",
+          "payloadSchemaRef": "payload.ContractRenewalUpcoming.v1",
           "trigger": {
             "type": "event",
             "eventName": "CONTRACT_RENEWAL_UPCOMING"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture contract-renewal-create-ticket]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture contract-renewal-create-ticket] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture contract-renewal-create-ticket] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.contract-renewal-create-ticket:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "f95b6bcd-7efc-b80d-b6e2-d2a7245f5b35",
             "version": 1,
             "name": "Fixture: Contract Renewal Create Ticket",
-            "description": "Scaffolded catalog fixture for CONTRACT_RENEWAL_UPCOMING.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (CONTRACT_RENEWAL_UPCOMING).",
+            "payloadSchemaRef": "payload.ContractRenewalUpcoming.v1",
             "trigger": {
               "type": "event",
               "eventName": "CONTRACT_RENEWAL_UPCOMING"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture contract-renewal-create-ticket]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture contract-renewal-create-ticket] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture contract-renewal-create-ticket] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.contract-renewal-create-ticket:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

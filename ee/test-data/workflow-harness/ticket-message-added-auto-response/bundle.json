@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.010Z",
+  "exportedAt": "2026-01-27T02:06:59.721Z",
   "workflows": [
     {
       "key": "fixture.ticket-message-added-auto-response",
       "metadata": {
         "name": "Fixture: Ticket Message Added Auto Response",
-        "description": "Scaffolded catalog fixture for TICKET_MESSAGE_ADDED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (TICKET_MESSAGE_ADDED).",
+        "payloadSchemaRef": "payload.TicketMessageAdded.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.TicketMessageAdded.v1",
         "trigger": {
           "type": "event",
           "eventName": "TICKET_MESSAGE_ADDED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.TicketMessageAdded.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "1ff868df-fba8-f234-fa16-9f41cf412102",
           "version": 1,
           "name": "Fixture: Ticket Message Added Auto Response",
-          "description": "Scaffolded catalog fixture for TICKET_MESSAGE_ADDED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (TICKET_MESSAGE_ADDED).",
+          "payloadSchemaRef": "payload.TicketMessageAdded.v1",
           "trigger": {
             "type": "event",
             "eventName": "TICKET_MESSAGE_ADDED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture ticket-message-added-auto-response]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-message-added-auto-response] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-message-added-auto-response] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-message-added-auto-response:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "1ff868df-fba8-f234-fa16-9f41cf412102",
             "version": 1,
             "name": "Fixture: Ticket Message Added Auto Response",
-            "description": "Scaffolded catalog fixture for TICKET_MESSAGE_ADDED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (TICKET_MESSAGE_ADDED).",
+            "payloadSchemaRef": "payload.TicketMessageAdded.v1",
             "trigger": {
               "type": "event",
               "eventName": "TICKET_MESSAGE_ADDED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture ticket-message-added-auto-response]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-message-added-auto-response] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-message-added-auto-response] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-message-added-auto-response:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

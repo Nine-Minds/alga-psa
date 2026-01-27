@@ -1,9 +1,10 @@
-const { runScaffoldedFixture } = require('../_lib/scaffolded-fixture.cjs');
+const { runNotificationFixture } = require('../_lib/notification-fixture.cjs');
 
 module.exports = async function run(ctx) {
-  return runScaffoldedFixture(ctx, {
+  return runNotificationFixture(ctx, {
     fixtureName: "invoice-finalized-email",
     eventName: "INVOICE_FINALIZED",
-    schemaRef: "payload.TicketCreated.v1"
+    schemaRef: "payload.InvoiceFinalized.v1",
+    pattern: "default"
   });
 };

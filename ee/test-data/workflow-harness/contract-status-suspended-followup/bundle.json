@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.036Z",
+  "exportedAt": "2026-01-27T02:06:59.443Z",
   "workflows": [
     {
       "key": "fixture.contract-status-suspended-followup",
       "metadata": {
         "name": "Fixture: Contract Status Suspended Followup",
-        "description": "Scaffolded catalog fixture for CONTRACT_STATUS_CHANGED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (CONTRACT_STATUS_CHANGED).",
+        "payloadSchemaRef": "payload.ContractStatusChanged.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.ContractStatusChanged.v1",
         "trigger": {
           "type": "event",
           "eventName": "CONTRACT_STATUS_CHANGED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.ContractStatusChanged.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "43842b97-d357-3eed-54ef-e940df2c5b16",
           "version": 1,
           "name": "Fixture: Contract Status Suspended Followup",
-          "description": "Scaffolded catalog fixture for CONTRACT_STATUS_CHANGED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (CONTRACT_STATUS_CHANGED).",
+          "payloadSchemaRef": "payload.ContractStatusChanged.v1",
           "trigger": {
             "type": "event",
             "eventName": "CONTRACT_STATUS_CHANGED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture contract-status-suspended-followup]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture contract-status-suspended-followup] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture contract-status-suspended-followup] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.contract-status-suspended-followup:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "43842b97-d357-3eed-54ef-e940df2c5b16",
             "version": 1,
             "name": "Fixture: Contract Status Suspended Followup",
-            "description": "Scaffolded catalog fixture for CONTRACT_STATUS_CHANGED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (CONTRACT_STATUS_CHANGED).",
+            "payloadSchemaRef": "payload.ContractStatusChanged.v1",
             "trigger": {
               "type": "event",
               "eventName": "CONTRACT_STATUS_CHANGED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture contract-status-suspended-followup]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture contract-status-suspended-followup] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture contract-status-suspended-followup] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.contract-status-suspended-followup:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.034Z",
+  "exportedAt": "2026-01-27T02:06:59.450Z",
   "workflows": [
     {
       "key": "fixture.invoice-due-date-changed-email",
       "metadata": {
         "name": "Fixture: Invoice Due Date Changed Email",
-        "description": "Scaffolded catalog fixture for INVOICE_DUE_DATE_CHANGED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (INVOICE_DUE_DATE_CHANGED).",
+        "payloadSchemaRef": "payload.InvoiceDueDateChanged.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.InvoiceDueDateChanged.v1",
         "trigger": {
           "type": "event",
           "eventName": "INVOICE_DUE_DATE_CHANGED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.InvoiceDueDateChanged.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "6949939a-ae80-aebc-9965-3fff6a677a6f",
           "version": 1,
           "name": "Fixture: Invoice Due Date Changed Email",
-          "description": "Scaffolded catalog fixture for INVOICE_DUE_DATE_CHANGED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (INVOICE_DUE_DATE_CHANGED).",
+          "payloadSchemaRef": "payload.InvoiceDueDateChanged.v1",
           "trigger": {
             "type": "event",
             "eventName": "INVOICE_DUE_DATE_CHANGED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture invoice-due-date-changed-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture invoice-due-date-changed-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture invoice-due-date-changed-email] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.invoice-due-date-changed-email:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "6949939a-ae80-aebc-9965-3fff6a677a6f",
             "version": 1,
             "name": "Fixture: Invoice Due Date Changed Email",
-            "description": "Scaffolded catalog fixture for INVOICE_DUE_DATE_CHANGED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (INVOICE_DUE_DATE_CHANGED).",
+            "payloadSchemaRef": "payload.InvoiceDueDateChanged.v1",
             "trigger": {
               "type": "event",
               "eventName": "INVOICE_DUE_DATE_CHANGED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture invoice-due-date-changed-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture invoice-due-date-changed-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture invoice-due-date-changed-email] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.invoice-due-date-changed-email:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

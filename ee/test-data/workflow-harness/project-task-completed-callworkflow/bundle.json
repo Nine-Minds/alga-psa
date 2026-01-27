@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.028Z",
+  "exportedAt": "2026-01-27T02:06:59.535Z",
   "workflows": [
     {
       "key": "fixture.project-task-completed-callworkflow",
       "metadata": {
-        "name": "Fixture: Project Task Completed Callworkflow",
-        "description": "Scaffolded catalog fixture for PROJECT_TASK_COMPLETED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "name": "Fixture: Project Task Completed Callworkflow (CallWorkflow)",
+        "description": "Call a sub-workflow and assert both parent+child side effects (PROJECT_TASK_COMPLETED).",
+        "payloadSchemaRef": "payload.ProjectTaskCompleted.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskCompleted.v1",
         "trigger": {
           "type": "event",
           "eventName": "PROJECT_TASK_COMPLETED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.callWorkflow",
+          "control.return",
           "state.set",
           "transform.assign"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.ProjectTaskCompleted.v1"
         ]
       },
       "draft": {
@@ -39,28 +47,71 @@
         "definition": {
           "id": "0083d682-f1e0-22fe-eee9-0d49a8ee8633",
           "version": 1,
-          "name": "Fixture: Project Task Completed Callworkflow",
-          "description": "Scaffolded catalog fixture for PROJECT_TASK_COMPLETED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "name": "Fixture: Project Task Completed Callworkflow (CallWorkflow)",
+          "description": "Call a sub-workflow and assert both parent+child side effects (PROJECT_TASK_COMPLETED).",
+          "payloadSchemaRef": "payload.ProjectTaskCompleted.v1",
           "trigger": {
             "type": "event",
             "eventName": "PROJECT_TASK_COMPLETED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture project-task-completed-callworkflow]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-task-completed-callworkflow] Parent'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-task-completed-callworkflow] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "call-child",
+              "type": "control.callWorkflow",
+              "workflowId": "00000000-0000-0000-0000-000000000000",
+              "workflowVersion": 1,
+              "inputMapping": {
+                "fixtureNotifyUserId": {
+                  "$expr": "payload.fixtureNotifyUserId"
+                },
+                "fixtureDedupeKey": {
+                  "$expr": "payload.fixtureDedupeKey"
+                }
+              }
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": {
+                    "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                  },
+                  "title": {
+                    "$expr": "vars.title"
+                  },
+                  "body": {
+                    "$expr": "vars.body"
+                  },
+                  "severity": "info",
+                  "dedupe_key": {
+                    "$expr": "'fixture.project-task-completed-callworkflow:' & payload.fixtureDedupeKey & ':parent'"
                   }
                 }
               }
@@ -72,47 +123,107 @@
           ]
         }
       },
-      "publishedVersions": [
-        {
+      "publishedVersions": []
+    },
+    {
+      "key": "subfixture.project-task-completed-callworkflow",
+      "metadata": {
+        "name": "Fixture: Project Task Completed Callworkflow (Child)",
+        "description": "Child workflow for callWorkflow fixture project-task-completed-callworkflow.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": null,
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-000000000fe1",
           "version": 1,
-          "definition": {
-            "id": "0083d682-f1e0-22fe-eee9-0d49a8ee8633",
-            "version": 1,
-            "name": "Fixture: Project Task Completed Callworkflow",
-            "description": "Scaffolded catalog fixture for PROJECT_TASK_COMPLETED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
-            "trigger": {
-              "type": "event",
-              "eventName": "PROJECT_TASK_COMPLETED"
+          "name": "Fixture: Project Task Completed Callworkflow (Child)",
+          "description": "Child workflow for callWorkflow fixture project-task-completed-callworkflow.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
             },
-            "steps": [
-              {
-                "id": "ready",
-                "type": "state.set",
-                "config": {
-                  "state": "READY"
-                }
-              },
-              {
-                "id": "assign-marker",
-                "type": "transform.assign",
-                "config": {
-                  "assign": {
-                    "vars.marker": {
-                      "$expr": "'[fixture project-task-completed-callworkflow]'"
-                    }
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-task-completed-callworkflow child]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-task-completed-callworkflow child] Child'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-task-completed-callworkflow child] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
-              },
-              {
-                "id": "done",
-                "type": "control.return"
               }
-            ]
-          },
-          "payloadSchemaJson": null
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": {
+                    "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                  },
+                  "title": {
+                    "$expr": "vars.title"
+                  },
+                  "body": {
+                    "$expr": "vars.body"
+                  },
+                  "severity": "info",
+                  "dedupe_key": {
+                    "$expr": "'fixture.project-task-completed-callworkflow:' & payload.fixtureDedupeKey & ':child'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
         }
-      ]
+      },
+      "publishedVersions": []
     }
   ]
 }

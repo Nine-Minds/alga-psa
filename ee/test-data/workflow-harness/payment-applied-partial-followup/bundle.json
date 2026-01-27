@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.035Z",
+  "exportedAt": "2026-01-27T02:06:59.467Z",
   "workflows": [
     {
       "key": "fixture.payment-applied-partial-followup",
       "metadata": {
         "name": "Fixture: Payment Applied Partial Followup",
-        "description": "Scaffolded catalog fixture for PAYMENT_APPLIED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (PAYMENT_APPLIED).",
+        "payloadSchemaRef": "payload.PaymentApplied.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.PaymentApplied.v1",
         "trigger": {
           "type": "event",
           "eventName": "PAYMENT_APPLIED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.PaymentApplied.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "f5abe558-7f77-7de8-7c0b-abad81dc8fa8",
           "version": 1,
           "name": "Fixture: Payment Applied Partial Followup",
-          "description": "Scaffolded catalog fixture for PAYMENT_APPLIED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (PAYMENT_APPLIED).",
+          "payloadSchemaRef": "payload.PaymentApplied.v1",
           "trigger": {
             "type": "event",
             "eventName": "PAYMENT_APPLIED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture payment-applied-partial-followup]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture payment-applied-partial-followup] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture payment-applied-partial-followup] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.payment-applied-partial-followup:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "f5abe558-7f77-7de8-7c0b-abad81dc8fa8",
             "version": 1,
             "name": "Fixture: Payment Applied Partial Followup",
-            "description": "Scaffolded catalog fixture for PAYMENT_APPLIED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (PAYMENT_APPLIED).",
+            "payloadSchemaRef": "payload.PaymentApplied.v1",
             "trigger": {
               "type": "event",
               "eventName": "PAYMENT_APPLIED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture payment-applied-partial-followup]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture payment-applied-partial-followup] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture payment-applied-partial-followup] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.payment-applied-partial-followup:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

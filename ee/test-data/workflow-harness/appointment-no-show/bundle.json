@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.030Z",
+  "exportedAt": "2026-01-27T02:06:59.422Z",
   "workflows": [
     {
       "key": "fixture.appointment-no-show",
       "metadata": {
         "name": "Fixture: Appointment No Show",
-        "description": "Scaffolded catalog fixture for APPOINTMENT_NO_SHOW.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Send an in-app notification when the event fires (APPOINTMENT_NO_SHOW).",
+        "payloadSchemaRef": "payload.AppointmentNoShow.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.AppointmentNoShow.v1",
         "trigger": {
           "type": "event",
           "eventName": "APPOINTMENT_NO_SHOW"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.if"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.AppointmentNoShow.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,78 @@
           "id": "cef3a069-7752-4427-2462-8ca9c98e1a75",
           "version": 1,
           "name": "Fixture: Appointment No Show",
-          "description": "Scaffolded catalog fixture for APPOINTMENT_NO_SHOW.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Send an in-app notification when the event fires (APPOINTMENT_NO_SHOW).",
+          "payloadSchemaRef": "payload.AppointmentNoShow.v1",
           "trigger": {
             "type": "event",
             "eventName": "APPOINTMENT_NO_SHOW"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture appointment-no-show]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture appointment-no-show] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture appointment-no-show] dedupe=' & payload.fixtureDedupeKey"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.appointment-no-show:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +131,78 @@
             "id": "cef3a069-7752-4427-2462-8ca9c98e1a75",
             "version": 1,
             "name": "Fixture: Appointment No Show",
-            "description": "Scaffolded catalog fixture for APPOINTMENT_NO_SHOW.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Send an in-app notification when the event fires (APPOINTMENT_NO_SHOW).",
+            "payloadSchemaRef": "payload.AppointmentNoShow.v1",
             "trigger": {
               "type": "event",
               "eventName": "APPOINTMENT_NO_SHOW"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture appointment-no-show]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture appointment-no-show] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture appointment-no-show] dedupe=' & payload.fixtureDedupeKey"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.appointment-no-show:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },

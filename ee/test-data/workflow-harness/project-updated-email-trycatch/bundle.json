@@ -1,16 +1,16 @@
 {
   "format": "alga-psa.workflow-bundle",
   "formatVersion": 1,
-  "exportedAt": "2026-01-26T14:33:54.025Z",
+  "exportedAt": "2026-01-27T02:06:59.615Z",
   "workflows": [
     {
       "key": "fixture.project-updated-email-trycatch",
       "metadata": {
         "name": "Fixture: Project Updated Email Trycatch",
-        "description": "Scaffolded catalog fixture for PROJECT_UPDATED.",
-        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PROJECT_UPDATED).",
+        "payloadSchemaRef": "payload.ProjectUpdated.v1",
         "payloadSchemaMode": "pinned",
-        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "pinnedPayloadSchemaRef": "payload.ProjectUpdated.v1",
         "trigger": {
           "type": "event",
           "eventName": "PROJECT_UPDATED"
@@ -25,13 +25,21 @@
         "retentionPolicyOverride": null
       },
       "dependencies": {
-        "actions": [],
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
         "nodeTypes": [
+          "action.call",
+          "control.return",
           "state.set",
-          "transform.assign"
+          "transform.assign",
+          "control.tryCatch"
         ],
         "schemaRefs": [
-          "payload.TicketCreated.v1"
+          "payload.ProjectUpdated.v1"
         ]
       },
       "draft": {
@@ -40,34 +48,96 @@
           "id": "8e9ef416-9e2a-f22e-c7bd-9d4861d18e60",
           "version": 1,
           "name": "Fixture: Project Updated Email Trycatch",
-          "description": "Scaffolded catalog fixture for PROJECT_UPDATED.",
-          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PROJECT_UPDATED).",
+          "payloadSchemaRef": "payload.ProjectUpdated.v1",
           "trigger": {
             "type": "event",
             "eventName": "PROJECT_UPDATED"
           },
           "steps": [
             {
-              "id": "ready",
+              "id": "state-fixture",
               "type": "state.set",
               "config": {
-                "state": "READY"
+                "state": "FIXTURE"
               }
             },
             {
-              "id": "assign-marker",
+              "id": "assign-text",
               "type": "transform.assign",
               "config": {
                 "assign": {
                   "vars.marker": {
                     "$expr": "'[fixture project-updated-email-trycatch]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-updated-email-trycatch] Try/Catch notify'"
                   }
                 }
               }
             },
             {
-              "id": "done",
-              "type": "control.return"
+              "id": "try-notify",
+              "type": "control.tryCatch",
+              "captureErrorAs": "caught",
+              "try": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureBadUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture project-updated-email-trycatch] Try'"
+                      },
+                      "body": {
+                        "$expr": "'[fixture project-updated-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' attempt=try'"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-updated-email-trycatch:' & payload.fixtureDedupeKey & ':try'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-try",
+                  "type": "control.return"
+                }
+              ],
+              "catch": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture project-updated-email-trycatch] Fallback'"
+                      },
+                      "body": {
+                        "$expr": "'[fixture project-updated-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' error=' & coalesce(vars.caught.message, 'unknown')"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-updated-email-trycatch:' & payload.fixtureDedupeKey & ':catch'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-catch",
+                  "type": "control.return"
+                }
+              ]
             }
           ]
         }
@@ -79,34 +149,96 @@
             "id": "8e9ef416-9e2a-f22e-c7bd-9d4861d18e60",
             "version": 1,
             "name": "Fixture: Project Updated Email Trycatch",
-            "description": "Scaffolded catalog fixture for PROJECT_UPDATED.",
-            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PROJECT_UPDATED).",
+            "payloadSchemaRef": "payload.ProjectUpdated.v1",
             "trigger": {
               "type": "event",
               "eventName": "PROJECT_UPDATED"
             },
             "steps": [
               {
-                "id": "ready",
+                "id": "state-fixture",
                 "type": "state.set",
                 "config": {
-                  "state": "READY"
+                  "state": "FIXTURE"
                 }
               },
               {
-                "id": "assign-marker",
+                "id": "assign-text",
                 "type": "transform.assign",
                 "config": {
                   "assign": {
                     "vars.marker": {
                       "$expr": "'[fixture project-updated-email-trycatch]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-updated-email-trycatch] Try/Catch notify'"
                     }
                   }
                 }
               },
               {
-                "id": "done",
-                "type": "control.return"
+                "id": "try-notify",
+                "type": "control.tryCatch",
+                "captureErrorAs": "caught",
+                "try": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureBadUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture project-updated-email-trycatch] Try'"
+                        },
+                        "body": {
+                          "$expr": "'[fixture project-updated-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' attempt=try'"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-updated-email-trycatch:' & payload.fixtureDedupeKey & ':try'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-try",
+                    "type": "control.return"
+                  }
+                ],
+                "catch": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture project-updated-email-trycatch] Fallback'"
+                        },
+                        "body": {
+                          "$expr": "'[fixture project-updated-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' error=' & coalesce(vars.caught.message, 'unknown')"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-updated-email-trycatch:' & payload.fixtureDedupeKey & ':catch'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-catch",
+                    "type": "control.return"
+                  }
+                ]
               }
             ]
           },
