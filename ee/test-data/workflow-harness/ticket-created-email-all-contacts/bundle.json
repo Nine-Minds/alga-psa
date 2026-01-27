@@ -1,0 +1,202 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:09:36.197Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-email-all-contacts",
+      "metadata": {
+        "name": "Fixture: Ticket Created Notify Contacts Search",
+        "description": "Send an in-app notification when the event fires (TICKET_CREATED).",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "57696088-a3b6-78e7-d758-32372637410a",
+          "version": 1,
+          "name": "Fixture: Ticket Created Notify Contacts Search",
+          "description": "Send an in-app notification when the event fires (TICKET_CREATED).",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_CREATED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-created-email-all-contacts]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-email-all-contacts] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-email-all-contacts] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-email-all-contacts]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "57696088-a3b6-78e7-d758-32372637410a",
+            "version": 1,
+            "name": "Fixture: Ticket Created Notify Contacts Search",
+            "description": "Send an in-app notification when the event fires (TICKET_CREATED).",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_CREATED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-created-email-all-contacts]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-created-email-all-contacts] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-created-email-all-contacts] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-email-all-contacts]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
