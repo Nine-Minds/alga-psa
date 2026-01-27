@@ -539,15 +539,13 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies } = await getTasksForPhase(selectedPhase.phase_id);
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems } = await getTasksForPhase(selectedPhase.phase_id);
 
-        // Add checklist items to tasks
-        const tasksWithChecklists = await Promise.all(
-          tasks.map(async (task) => {
-            const checklistItems = await getTaskChecklistItems(task.task_id);
-            return { ...task, checklist_items: checklistItems };
-          })
-        );
+        // Add checklist items to tasks from batch-loaded data
+        const tasksWithChecklists = tasks.map((task) => ({
+          ...task,
+          checklist_items: checklistItems[task.task_id] || []
+        }));
 
         setProjectTasks(tasksWithChecklists);
         setPhaseTicketLinks(ticketLinks);
