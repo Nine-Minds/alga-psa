@@ -60,7 +60,7 @@
                     "actionId": "email.send",
                     "version": 1,
                     "inputMapping": {
-                      "to": { "$expr": "[{\\\"email\\\": payload.fixtureOnCallEmail}]" },
+                      "to": { "$expr": "[{\"email\": payload.fixtureOnCallEmail}]" },
                       "subject": { "$expr": "vars.subject" },
                       "text": { "$expr": "vars.text" },
                       "idempotency_key": { "$expr": "'fixture.ticket-queue-after-hours-email:email:' & payload.ticketId" }
@@ -109,7 +109,7 @@
                       "actionId": "email.send",
                       "version": 1,
                       "inputMapping": {
-                        "to": { "$expr": "[{\\\"email\\\": payload.fixtureOnCallEmail}]" },
+                        "to": { "$expr": "[{\"email\": payload.fixtureOnCallEmail}]" },
                         "subject": { "$expr": "vars.subject" },
                         "text": { "$expr": "vars.text" },
                         "idempotency_key": { "$expr": "'fixture.ticket-queue-after-hours-email:email:' & payload.ticketId" }
@@ -128,4 +128,3 @@
     }
   ]
 }
-

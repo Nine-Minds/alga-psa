@@ -69,7 +69,7 @@
                     "actionId": "email.send",
                     "version": 1,
                     "inputMapping": {
-                      "to": { "$expr": "[{\\\"email\\\": payload.fixtureRequesterEmail}]" },
+                      "to": { "$expr": "[{\"email\": payload.fixtureRequesterEmail}]" },
                       "subject": { "$expr": "vars.subject" },
                       "text": { "$expr": "vars.text" },
                       "idempotency_key": { "$expr": "'fixture.ticket-status-waiting-on-customer-reminder:email:' & payload.ticketId" }
@@ -127,7 +127,7 @@
                       "actionId": "email.send",
                       "version": 1,
                       "inputMapping": {
-                        "to": { "$expr": "[{\\\"email\\\": payload.fixtureRequesterEmail}]" },
+                        "to": { "$expr": "[{\"email\": payload.fixtureRequesterEmail}]" },
                         "subject": { "$expr": "vars.subject" },
                         "text": { "$expr": "vars.text" },
                         "idempotency_key": { "$expr": "'fixture.ticket-status-waiting-on-customer-reminder:email:' & payload.ticketId" }
@@ -146,4 +146,3 @@
     }
   ]
 }
-
