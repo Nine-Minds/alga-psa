@@ -42,6 +42,16 @@
     "confirmDeletion": "Verwijderen bevestigen",
     "saving": "Opslaan..."
   },
+  "ui": {
+    "preview": {
+      "title": "Preview",
+      "customDomainRequired": "Must have custom domain set up",
+      "previewSignInPage": "Preview Sign-in Page",
+      "hideSignInPage": "Hide Sign-in Page",
+      "previewClientDashboard": "Preview Client Dashboard",
+      "hideClientDashboard": "Hide Client Dashboard"
+    }
+  },
   "status": {
     "loading": "Bezig met laden...",
     "saving": "Bezig met opslaan...",

@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -46,6 +46,9 @@ const ClientPortalSettings = () => {
   const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
   const customDomainRequiredMessage = t('ui.preview.customDomainRequired', 'Must have custom domain set up');
+  const handleSignInPreviewClick = useCallback(() => {
+    setPreviewMode((current) => (current === 'signin' ? null : 'signin'));
+  }, []);
 
   // Check if custom domain is configured
   useEffect(() => {
@@ -439,7 +442,6 @@ const ClientPortalSettings = () => {
                 {(() => {
                   const isDashboardPreview = previewMode === 'dashboard';
                   const isSigninPreview = previewMode === 'signin';
-                  const handleSignInPreviewClick = () => setPreviewMode(isSigninPreview ? null : 'signin');
                   const signInButton = (
                     <Button
                       id="preview-signin"
@@ -474,6 +476,8 @@ const ClientPortalSettings = () => {
                           <span
                             className="inline-block cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
                             tabIndex={0}
+                            role="button"
+                            aria-disabled="true"
                             aria-describedby="preview-signin-requires-domain"
                           >
                             {signInButton}
