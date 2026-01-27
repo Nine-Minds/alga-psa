@@ -34,8 +34,7 @@ import { IContact } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
-import { ButtonComponent, FormFieldComponent, DialogComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { X } from 'lucide-react';
+import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -321,11 +320,11 @@ export function QuickAddInteraction({
   // Note: ContactPicker handles client filtering internally, 
   // so we don't need to refetch contacts when client changes
 
-  // Helper to get total duration in minutes from hours and minutes state
+  // Helper to get total duration in minutes from hours and minutes state (max 24h)
   const getTotalDurationMinutes = (): number => {
-    const hours = parseInt(durationHours) || 0;
-    const minutes = parseInt(durationMinutes) || 0;
-    return (hours * 60) + Math.min(Math.max(minutes, 0), 59);
+    const hours = Math.min(Math.max(parseInt(durationHours) || 0, 0), 24);
+    const minutes = Math.min(Math.max(parseInt(durationMinutes) || 0, 0), 59);
+    return (hours * 60) + minutes;
   };
 
   // Handle start time change
@@ -387,26 +386,28 @@ export function QuickAddInteraction({
     }
   };
 
-  // Handle duration hours change
+  // Handle duration hours change (max 24 hours to prevent unreasonable durations)
   const handleDurationHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newHours = e.target.value;
     const parsedHours = parseInt(newHours);
-    const nextHours = !isNaN(parsedHours) && parsedHours < 0 ? '0' : newHours;
+    let nextHours = newHours;
+    if (!isNaN(parsedHours)) {
+      nextHours = Math.min(Math.max(parsedHours, 0), 24).toString();
+    }
     setDurationHours(nextHours);
+    setEndTimeError(''); // Clear any previous error
 
     // If we have a start time, update end time
     if (startTime) {
-      const hours = parseInt(nextHours) || 0;
+      const hours = Math.min(Math.max(parseInt(nextHours) || 0, 0), 24);
       const minutes = Math.min(Math.max(parseInt(durationMinutes) || 0, 0), 59);
       const totalMinutes = (hours * 60) + minutes;
-      if (totalMinutes >= 0) {
-        const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
-        setEndTime(newEndTime);
-      }
+      const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
+      setEndTime(newEndTime);
     }
   };
 
-  // Handle duration minutes change
+  // Handle duration minutes change (0-59 range)
   const handleDurationMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMinutes = e.target.value;
     const parsedMinutes = parseInt(newMinutes);
@@ -414,16 +415,15 @@ export function QuickAddInteraction({
       ? Math.min(Math.max(parsedMinutes, 0), 59).toString()
       : newMinutes;
     setDurationMinutes(clampedMinutes);
+    setEndTimeError(''); // Clear any previous error
 
     // If we have a start time, update end time
     if (startTime) {
-      const hours = parseInt(durationHours) || 0;
+      const hours = Math.min(Math.max(parseInt(durationHours) || 0, 0), 24);
       const minutes = Math.min(Math.max(parseInt(clampedMinutes) || 0, 0), 59);
       const totalMinutes = (hours * 60) + minutes;
-      if (totalMinutes >= 0) {
-        const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
-        setEndTime(newEndTime);
-      }
+      const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
+      setEndTime(newEndTime);
     }
   };
 
@@ -750,6 +750,7 @@ export function QuickAddInteraction({
                       onChange={handleDurationHoursChange}
                       placeholder="0"
                       min="0"
+                      max="24"
                       className="w-20"
                     />
                     <span className="text-sm text-muted-foreground">hours</span>
