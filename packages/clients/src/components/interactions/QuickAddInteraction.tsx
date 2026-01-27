@@ -700,9 +700,18 @@ export function QuickAddInteraction({
                   <DateTimePicker
                     id="interaction-start-time"
                     value={startTime}
-                    onChange={handleStartTimeChange}
+                    onChange={(date) => {
+                      if (date) {
+                        handleStartTimeChange(date);
+                      } else {
+                        setStartTime(undefined);
+                        setDurationHours('');
+                        setDurationMinutes('');
+                      }
+                    }}
                     placeholder="Select start time"
                     label="Start Time"
+                    clearable
                   />
                 </div>
                 <div className="space-y-1">
@@ -710,10 +719,20 @@ export function QuickAddInteraction({
                   <DateTimePicker
                     id="interaction-end-time"
                     value={endTime}
-                    onChange={handleEndTimeChange}
+                    onChange={(date) => {
+                      if (date) {
+                        handleEndTimeChange(date);
+                      } else {
+                        setEndTime(undefined);
+                        setEndTimeError('');
+                        setDurationHours('');
+                        setDurationMinutes('');
+                      }
+                    }}
                     placeholder="Select end time"
                     label="End Time"
                     minDate={startTime}
+                    clearable
                   />
                   {endTimeError && (
                     <p className="text-xs text-red-600">{endTimeError}</p>

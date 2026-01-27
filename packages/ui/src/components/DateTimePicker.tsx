@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { DateTimePickerComponent } from '../ui-reflection/types';
@@ -12,7 +12,7 @@ import '../styles/calendar.css';
 
 export interface DateTimePickerProps {
   value?: Date;
-  onChange: (date: Date) => void;
+  onChange: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -22,6 +22,8 @@ export interface DateTimePickerProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
+  /** Whether the value can be cleared */
+  clearable?: boolean;
   /** Minimum allowed date */
   minDate?: Date;
   /** Maximum allowed date */
@@ -41,6 +43,7 @@ export function DateTimePicker({
   id,
   label,
   required,
+  clearable = false,
   minDate,
   maxDate,
   timeFormat = '12h',
@@ -49,6 +52,13 @@ export function DateTimePicker({
   const [open, setOpen] = React.useState(false);
   const hourListRef = React.useRef<HTMLDivElement>(null);
   const minuteListRef = React.useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearable) {
+      e.preventDefault();
+      onChange(undefined);
+    }
+  }, [value, disabled, clearable, onChange]);
 
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value);
   const [selectedHour, setSelectedHour] = React.useState(
@@ -158,6 +168,7 @@ export function DateTimePicker({
           {...automationIdProps}
           disabled={disabled}
           aria-label={label || placeholder}
+          onKeyDown={handleKeyDown}
           className={`
             flex h-10 w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
             file:border-0 file:bg-transparent file:text-sm file:font-medium
@@ -169,7 +180,28 @@ export function DateTimePicker({
           `}
         >
           <span className="flex-1 text-left truncate">{displayValue}</span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {clearable && value && !disabled && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(undefined);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onChange(undefined);
+                  }
+                }}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </span>
+            )}
             <Clock className="h-4 w-4 opacity-50" />
           </div>
         </Popover.Trigger>
