@@ -36,6 +36,7 @@ interface TaskCardProps {
   isAnimating?: boolean;
   searchQuery?: string;
   searchCaseSensitive?: boolean;
+  searchWholeWord?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -50,11 +51,18 @@ interface TaskCardProps {
 }
 
 // Helper function to highlight matching text in search results
-const highlightSearchMatch = (text: string, query: string, caseSensitive: boolean = false): React.ReactNode => {
+const highlightSearchMatch = (
+  text: string,
+  query: string,
+  caseSensitive: boolean = false,
+  wholeWord: boolean = false
+): React.ReactNode => {
   if (!query.trim()) return text;
 
   const flags = caseSensitive ? 'g' : 'gi';
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, flags);
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = wholeWord ? `\\b(${escapedQuery})\\b` : `(${escapedQuery})`;
+  const regex = new RegExp(pattern, flags);
   const parts = text.split(regex);
 
   return parts.map((part, index) =>
@@ -91,6 +99,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   isAnimating = false,
   searchQuery = '',
   searchCaseSensitive = false,
+  searchWholeWord = false,
   onTaskSelected,
   onAssigneeChange,
   onDragStart,
@@ -338,7 +347,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
         <div className="font-semibold text-lg flex-1">
-          {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive)}
+          {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
         </div>
         {priority && (
           <div className="flex items-center gap-1">
@@ -357,7 +366,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ref={descriptionRef}
             className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive)}
+            {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <button

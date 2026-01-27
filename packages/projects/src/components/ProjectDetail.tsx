@@ -1844,6 +1844,7 @@ export default function ProjectDetail({
               avatarUrls={avatarUrls}
               searchQuery={searchQuery}
               searchCaseSensitive={searchCaseSensitive}
+              searchWholeWord={searchWholeWord}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onAddCard={handleAddCard}

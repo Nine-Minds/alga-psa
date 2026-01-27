@@ -17,11 +17,18 @@ import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 // Helper function to highlight matching text in search results
-const highlightSearchMatch = (text: string, query: string, caseSensitive: boolean = false): React.ReactNode => {
+const highlightSearchMatch = (
+  text: string,
+  query: string,
+  caseSensitive: boolean = false,
+  wholeWord: boolean = false
+): React.ReactNode => {
   if (!query.trim()) return text;
 
   const flags = caseSensitive ? 'g' : 'gi';
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, flags);
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = wholeWord ? `\\b(${escapedQuery})\\b` : `(${escapedQuery})`;
+  const regex = new RegExp(pattern, flags);
   const parts = text.split(regex);
 
   return parts.map((part, index) =>
@@ -915,7 +922,7 @@ export default function TaskListView({
                                         onClick={() => onTaskClick(task)}
                                         title={!expandedTitles.has(task.task_id) ? task.task_name : undefined}
                                       >
-                                        {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive)}
+                                        {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
                                       </button>
                                       {task.task_name.length > 50 && (
                                         <button
@@ -944,7 +951,7 @@ export default function TaskListView({
                                           className={`text-xs text-gray-500 ${!expandedDescriptions.has(task.task_id) ? 'line-clamp-1' : ''}`}
                                           title={!expandedDescriptions.has(task.task_id) ? task.description : undefined}
                                         >
-                                          {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive)}
+                                          {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
                                         </p>
                                         {task.description.length > 80 && (
                                           <button
