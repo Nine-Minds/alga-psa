@@ -116,7 +116,7 @@ function replaceNotificationActionsInWorkflow({ workflow, kind, fixtureName }) {
   const markerExpr = `(vars.marker ? vars.marker : '${markerFallback}')`;
 
   const commentBodyExpr = `${markerExpr} & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))`;
-  const taskTitleExpr = `${markerExpr} & ' ' & (vars.title ? vars.title : (vars.body ? vars.body : ''))`;
+  const taskTitleExpr = `${markerExpr} & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))`;
 
   const actionId = kind === 'ticket_comment' ? 'tickets.add_comment' : 'projects.create_task';
 
@@ -172,16 +172,23 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
-function testTemplate({ fixtureName, eventName, schemaRef, kind, isCallWorkflow }) {
+function detectPatternFromTestSource(source) {
+  const match = String(source ?? '').match(/\\bpattern\\s*:\\s*['"]([A-Za-z0-9_]+)['"]/);
+  return match ? match[1] : null;
+}
+
+function testTemplate({ fixtureName, eventName, schemaRef, kind, isCallWorkflow, pattern }) {
   if (isCallWorkflow) {
     return `const { runCallWorkflowBizFixture } = require('../_lib/biz-fixture.cjs');\n\nmodule.exports = async function run(ctx) {\n  return runCallWorkflowBizFixture(ctx, {\n    fixtureName: ${JSON.stringify(fixtureName)},\n    eventName: ${JSON.stringify(eventName)},\n    schemaRef: ${JSON.stringify(schemaRef)},\n    kind: ${JSON.stringify(kind)}\n  });\n};\n`;
   }
 
   if (kind === 'ticket_comment') {
-    return `const { runTicketCommentFixture } = require('../_lib/biz-fixture.cjs');\n\nmodule.exports = async function run(ctx) {\n  return runTicketCommentFixture(ctx, {\n    fixtureName: ${JSON.stringify(fixtureName)},\n    eventName: ${JSON.stringify(eventName)},\n    schemaRef: ${JSON.stringify(schemaRef)}\n  });\n};\n`;
+    const patternLine = pattern && pattern !== 'default' ? `,\n    pattern: ${JSON.stringify(pattern)}` : '';
+    return `const { runTicketCommentFixture } = require('../_lib/biz-fixture.cjs');\n\nmodule.exports = async function run(ctx) {\n  return runTicketCommentFixture(ctx, {\n    fixtureName: ${JSON.stringify(fixtureName)},\n    eventName: ${JSON.stringify(eventName)},\n    schemaRef: ${JSON.stringify(schemaRef)}${patternLine}\n  });\n};\n`;
   }
 
-  return `const { runProjectTaskFixture } = require('../_lib/biz-fixture.cjs');\n\nmodule.exports = async function run(ctx) {\n  return runProjectTaskFixture(ctx, {\n    fixtureName: ${JSON.stringify(fixtureName)},\n    eventName: ${JSON.stringify(eventName)},\n    schemaRef: ${JSON.stringify(schemaRef)}\n  });\n};\n`;
+  const patternLine = pattern && pattern !== 'default' ? `,\n    pattern: ${JSON.stringify(pattern)}` : '';
+  return `const { runProjectTaskFixture } = require('../_lib/biz-fixture.cjs');\n\nmodule.exports = async function run(ctx) {\n  return runProjectTaskFixture(ctx, {\n    fixtureName: ${JSON.stringify(fixtureName)},\n    eventName: ${JSON.stringify(eventName)},\n    schemaRef: ${JSON.stringify(schemaRef)}${patternLine}\n  });\n};\n`;
 }
 
 async function main() {
@@ -214,6 +221,7 @@ async function main() {
       const srcDir = path.join(root, current);
       const dstDir = path.join(root, suggestedBiz);
       const srcBundlePath = path.join(srcDir, 'bundle.json');
+      const srcTestPath = path.join(srcDir, 'test.cjs');
       const dstBundlePath = path.join(dstDir, 'bundle.json');
       const dstTestPath = path.join(dstDir, 'test.cjs');
 
@@ -243,9 +251,12 @@ async function main() {
         throw new Error(`Unable to determine eventName/schemaRef for ${suggestedBiz}`);
       }
 
+      const originalTestSource = fs.existsSync(srcTestPath) ? fs.readFileSync(srcTestPath, 'utf8') : '';
+      const pattern = detectPatternFromTestSource(originalTestSource) ?? 'default';
+
       ensureDir(dstDir);
       writeIfMissing(dstBundlePath, `${JSON.stringify(bundle, null, 2)}\n`);
-      writeIfMissing(dstTestPath, testTemplate({ fixtureName: suggestedBiz, eventName, schemaRef, kind, isCallWorkflow: callWorkflow }));
+      writeIfMissing(dstTestPath, testTemplate({ fixtureName: suggestedBiz, eventName, schemaRef, kind, isCallWorkflow: callWorkflow, pattern }));
 
       // eslint-disable-next-line no-console
       console.log(`Generated ${suggestedBiz} (from ${current})`);
@@ -258,4 +269,3 @@ main().catch((err) => {
   usage();
   process.exit(1);
 });
-

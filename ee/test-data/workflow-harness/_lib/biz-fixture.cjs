@@ -200,7 +200,19 @@ async function listProjectTasks(ctx, { tenantId, projectId, limit = 50 }) {
   );
 }
 
-async function runTicketCommentFixture(ctx, { fixtureName, eventName, schemaRef }) {
+async function triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload }) {
+  await ctx.http.request('/api/workflow/events', {
+    method: 'POST',
+    json: {
+      eventName,
+      correlationKey,
+      payloadSchemaRef: schemaRef,
+      payload
+    }
+  });
+}
+
+async function runTicketCommentDefault(ctx, { fixtureName, eventName, schemaRef }) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
 
@@ -219,16 +231,7 @@ async function runTicketCommentFixture(ctx, { fixtureName, eventName, schemaRef 
     fixtureDedupeKey: correlationKey
   };
 
-  await ctx.http.request('/api/workflow/events', {
-    method: 'POST',
-    json: {
-      eventName,
-      correlationKey,
-      payloadSchemaRef: schemaRef,
-      payload
-    }
-  });
-
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
   await assertRunSucceeded(ctx, runRow);
 
@@ -239,12 +242,172 @@ async function runTicketCommentFixture(ctx, { fixtureName, eventName, schemaRef 
   }
 }
 
+async function runTicketCommentIdempotent(ctx, { fixtureName, eventName, schemaRef }) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const ticketId = await createTicket(ctx, { tenantId, apiKey });
+  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+
+  const correlationKey = ticketId;
+  const dedupeKey = randomUUID();
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureDedupeKey: dedupeKey
+  };
+
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow1 = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow1);
+
+  const startedAfter2 = new Date().toISOString();
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow2 = await ctx.waitForRun({ startedAfter: startedAfter2 });
+  await assertRunSucceeded(ctx, runRow2);
+
+  const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
+  const found = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
+  if (found.length < 1) {
+    throw new Error(`Expected a ticket comment containing "${marker}" + dedupeKey=${dedupeKey} on ticket ${ticketId}. Found ${comments.length} comment(s).`);
+  }
+}
+
+async function runTicketCommentForEach(ctx, { fixtureName, eventName, schemaRef }) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const ticketId = await createTicket(ctx, { tenantId, apiKey });
+  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+
+  const correlationKey = ticketId;
+  const dedupeKey = randomUUID();
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureDedupeKey: dedupeKey
+  };
+
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow);
+
+  const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
+  const found = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
+  if (found.length < 2) {
+    throw new Error(`Expected at least 2 ticket comments containing "${marker}" + dedupeKey=${dedupeKey} on ticket ${ticketId}. Found ${found.length}.`);
+  }
+}
+
+async function runTicketCommentTryCatch(ctx, { fixtureName, eventName, schemaRef }) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const ticketId = await createTicket(ctx, { tenantId, apiKey });
+  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+
+  const correlationKey = ticketId;
+  const dedupeKey = randomUUID();
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureBadUserId: randomUUID(),
+    fixtureDedupeKey: dedupeKey
+  };
+
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow);
+
+  const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
+  const found = comments.find((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
+  if (!found) {
+    throw new Error(`Expected a ticket comment containing "${marker}" + dedupeKey=${dedupeKey} on ticket ${ticketId}. Found ${comments.length} comment(s).`);
+  }
+}
+
+async function runTicketCommentMultiBranch(ctx, { fixtureName, eventName, schemaRef }) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const ticketId = await createTicket(ctx, { tenantId, apiKey });
+  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+
+  const correlationKey = ticketId;
+
+  async function runVariant(variant) {
+    const dedupeKey = randomUUID();
+    const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+    const payload = {
+      ...base,
+      fixtureNotifyUserId: user.user_id,
+      fixtureDedupeKey: dedupeKey,
+      fixtureVariant: variant
+    };
+
+    const startedAfter = new Date().toISOString();
+    await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+    const runRow = await ctx.waitForRun({ startedAfter });
+    await assertRunSucceeded(ctx, runRow);
+    return dedupeKey;
+  }
+
+  const a = await runVariant('A');
+  const b = await runVariant('B');
+
+  const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
+  const hasA = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(a));
+  const hasB = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(b));
+  if (!hasA || !hasB) {
+    throw new Error(`Expected ticket comments for both variants (A+B) containing "${marker}" on ticket ${ticketId}.`);
+  }
+}
+
+async function runTicketCommentFixture(ctx, opts) {
+  const { fixtureName, eventName, schemaRef, pattern = 'default' } = opts ?? {};
+  if (!fixtureName || !eventName || !schemaRef) throw new Error('runTicketCommentFixture requires fixtureName, eventName, schemaRef');
+
+  switch (pattern) {
+    case 'default':
+      return runTicketCommentDefault(ctx, { fixtureName, eventName, schemaRef });
+    case 'idempotent':
+      return runTicketCommentIdempotent(ctx, { fixtureName, eventName, schemaRef });
+    case 'forEach':
+      return runTicketCommentForEach(ctx, { fixtureName, eventName, schemaRef });
+    case 'tryCatch':
+      return runTicketCommentTryCatch(ctx, { fixtureName, eventName, schemaRef });
+    case 'multiBranch':
+      return runTicketCommentMultiBranch(ctx, { fixtureName, eventName, schemaRef });
+    default:
+      throw new Error(`Unknown ticket comment fixture pattern: ${pattern}`);
+  }
+}
+
 function isProjectPayloadViaNotificationFixture(eventName) {
   // These fixtures don't use the shared notification fixture payload builder, and schemas may not allow fixtureDedupeKey.
   return !['INTEGRATION_SYNC_FAILED', 'INTEGRATION_WEBHOOK_RECEIVED', 'EMAIL_PROVIDER_CONNECTED', 'PAYMENT_RECORDED'].includes(eventName);
 }
 
-async function runProjectTaskFixture(ctx, { fixtureName, eventName, schemaRef }) {
+async function runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef }) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
 
@@ -317,16 +480,7 @@ async function runProjectTaskFixture(ctx, { fixtureName, eventName, schemaRef })
     };
   }
 
-  await ctx.http.request('/api/workflow/events', {
-    method: 'POST',
-    json: {
-      eventName,
-      correlationKey,
-      payloadSchemaRef: schemaRef,
-      payload
-    }
-  });
-
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
   await assertRunSucceeded(ctx, runRow);
 
@@ -334,6 +488,203 @@ async function runProjectTaskFixture(ctx, { fixtureName, eventName, schemaRef })
   const found = tasks.find((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
   if (!found) {
     throw new Error(`Expected a project task containing "${marker}" on project ${projectId}. Found ${tasks.length} task(s).`);
+  }
+}
+
+async function runProjectTaskIdempotent(ctx, { fixtureName, eventName, schemaRef }) {
+  if (!isProjectPayloadViaNotificationFixture(eventName)) {
+    return runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef });
+  }
+
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+
+  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+
+  const correlationKey = projectId;
+  const dedupeKey = randomUUID();
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureDedupeKey: dedupeKey
+  };
+
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow1 = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow1);
+
+  const startedAfter2 = new Date().toISOString();
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow2 = await ctx.waitForRun({ startedAfter: startedAfter2 });
+  await assertRunSucceeded(ctx, runRow2);
+
+  const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
+  const found = tasks.filter((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
+  if (found.length < 1) {
+    throw new Error(`Expected a project task containing "${marker}" on project ${projectId}. Found ${tasks.length} task(s).`);
+  }
+}
+
+async function runProjectTaskForEach(ctx, { fixtureName, eventName, schemaRef }) {
+  if (!isProjectPayloadViaNotificationFixture(eventName)) {
+    return runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef });
+  }
+
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+
+  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+
+  const correlationKey = projectId;
+  const dedupeKey = randomUUID();
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureDedupeKey: dedupeKey
+  };
+
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow);
+
+  const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
+  const found = tasks.filter((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
+  if (found.length < 2) {
+    throw new Error(`Expected at least 2 project tasks containing "${marker}" on project ${projectId}. Found ${found.length}.`);
+  }
+}
+
+async function runProjectTaskTryCatch(ctx, { fixtureName, eventName, schemaRef }) {
+  if (!isProjectPayloadViaNotificationFixture(eventName)) {
+    return runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef });
+  }
+
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+
+  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+
+  const correlationKey = projectId;
+  const dedupeKey = randomUUID();
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureBadUserId: randomUUID(),
+    fixtureDedupeKey: dedupeKey
+  };
+
+  await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow);
+
+  const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
+  const found = tasks.find((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
+  if (!found) {
+    throw new Error(`Expected a project task containing "${marker}" on project ${projectId}. Found ${tasks.length} task(s).`);
+  }
+}
+
+async function runProjectTaskMultiBranch(ctx, { fixtureName, eventName, schemaRef }) {
+  if (!isProjectPayloadViaNotificationFixture(eventName)) {
+    return runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef });
+  }
+
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+
+  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+
+  const correlationKey = projectId;
+
+  async function runVariant(variant) {
+    const dedupeKey = randomUUID();
+    const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+    const payload = {
+      ...base,
+      fixtureNotifyUserId: user.user_id,
+      fixtureDedupeKey: dedupeKey,
+      fixtureVariant: variant
+    };
+    const startedAfter = new Date().toISOString();
+    await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+    const runRow = await ctx.waitForRun({ startedAfter });
+    await assertRunSucceeded(ctx, runRow);
+  }
+
+  await runVariant('A');
+  await runVariant('B');
+
+  const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
+  const found = tasks.filter((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
+  if (found.length < 2) {
+    throw new Error(`Expected project tasks for both variants (A+B) containing "${marker}" on project ${projectId}. Found ${found.length}.`);
+  }
+}
+
+async function runProjectTaskFixture(ctx, opts) {
+  const { fixtureName, eventName, schemaRef, pattern = 'default' } = opts ?? {};
+  if (!fixtureName || !eventName || !schemaRef) throw new Error('runProjectTaskFixture requires fixtureName, eventName, schemaRef');
+
+  switch (pattern) {
+    case 'default':
+      return runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef });
+    case 'idempotent':
+      return runProjectTaskIdempotent(ctx, { fixtureName, eventName, schemaRef });
+    case 'forEach':
+      return runProjectTaskForEach(ctx, { fixtureName, eventName, schemaRef });
+    case 'tryCatch':
+      return runProjectTaskTryCatch(ctx, { fixtureName, eventName, schemaRef });
+    case 'multiBranch':
+      return runProjectTaskMultiBranch(ctx, { fixtureName, eventName, schemaRef });
+    default:
+      throw new Error(`Unknown project task fixture pattern: ${pattern}`);
   }
 }
 
