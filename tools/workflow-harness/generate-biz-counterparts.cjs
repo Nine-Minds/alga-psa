@@ -226,7 +226,11 @@ async function main() {
       const dstTestPath = path.join(dstDir, 'test.cjs');
 
       if (!fs.existsSync(srcBundlePath)) throw new Error(`Missing source bundle.json: ${srcBundlePath}`);
-      if (fs.existsSync(dstDir)) throw new Error(`Destination fixture already exists: ${dstDir}`);
+      if (fs.existsSync(dstDir)) {
+        // eslint-disable-next-line no-console
+        console.log(`Skipping ${suggestedBiz} (already exists)`);
+        continue;
+      }
 
       const originalBundle = JSON.parse(fs.readFileSync(srcBundlePath, 'utf8'));
       const callWorkflow = isCallWorkflowBundle(originalBundle);
