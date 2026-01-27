@@ -454,9 +454,13 @@ const ClientPortalSettings = () => {
                       </Button>
                       {!hasCustomDomain ? (
                         <Tooltip content={t('settings.clientPortal.preview.customDomainRequired', 'Must have custom domain set up')}>
-                          <span className="inline-block w-full cursor-not-allowed">
+                          <span
+                            className="inline-block cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+                            tabIndex={0}
+                            aria-describedby="preview-signin-requires-domain"
+                          >
                             <Button
-                              id="preview-signin-disabled"
+                              id="preview-signin"
                               type="button"
                               variant="outline"
                               size="sm"
@@ -464,6 +468,9 @@ const ClientPortalSettings = () => {
                             >
                               {t('settings.clientPortal.preview.previewSignInPage', 'Preview Sign-in Page')}
                             </Button>
+                            <span id="preview-signin-requires-domain" className="sr-only">
+                              {t('settings.clientPortal.preview.customDomainRequired', 'Must have custom domain set up')}
+                            </span>
                           </span>
                         </Tooltip>
                       ) : (
