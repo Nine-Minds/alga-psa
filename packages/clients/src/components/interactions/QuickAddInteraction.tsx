@@ -81,6 +81,7 @@ export function QuickAddInteraction({
   const { data: session } = useSession();
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [endTimeError, setEndTimeError] = useState('');
   
   const isEditMode = !!editingInteraction;
 
@@ -324,7 +325,7 @@ export function QuickAddInteraction({
   const getTotalDurationMinutes = (): number => {
     const hours = parseInt(durationHours) || 0;
     const minutes = parseInt(durationMinutes) || 0;
-    return (hours * 60) + minutes;
+    return (hours * 60) + Math.min(Math.max(minutes, 0), 59);
   };
 
   // Handle start time change
@@ -336,6 +337,25 @@ export function QuickAddInteraction({
     if (totalMinutes > 0) {
       const newEndTime = new Date(date.getTime() + totalMinutes * 60000);
       setEndTime(newEndTime);
+      setEndTimeError('');
+      return;
+    }
+
+    if (endTime) {
+      const diffMilliseconds = endTime.getTime() - date.getTime();
+      if (diffMilliseconds < 0) {
+        setEndTime(date);
+        setEndTimeError('End time must be on or after the start time.');
+        setDurationHours('');
+        setDurationMinutes('');
+      } else {
+        const totalMinutesFromEnd = Math.round(diffMilliseconds / 60000);
+        const hours = Math.floor(totalMinutesFromEnd / 60);
+        const minutes = totalMinutesFromEnd % 60;
+        setDurationHours(hours > 0 ? hours.toString() : '');
+        setDurationMinutes(minutes > 0 ? minutes.toString() : '');
+        setEndTimeError('');
+      }
     }
   };
 
@@ -344,10 +364,12 @@ export function QuickAddInteraction({
     // Validate: end time must be after or equal to start time
     if (startTime && date.getTime() < startTime.getTime()) {
       // Don't allow setting end time before start time
+      setEndTimeError('End time must be on or after the start time.');
       return;
     }
 
     setEndTime(date);
+    setEndTimeError('');
 
     // If we have a start time, calculate and update duration (hours and minutes)
     if (startTime) {
@@ -367,12 +389,14 @@ export function QuickAddInteraction({
   // Handle duration hours change
   const handleDurationHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newHours = e.target.value;
-    setDurationHours(newHours);
+    const parsedHours = parseInt(newHours);
+    const nextHours = !isNaN(parsedHours) && parsedHours < 0 ? '0' : newHours;
+    setDurationHours(nextHours);
 
     // If we have a start time, update end time
     if (startTime) {
-      const hours = parseInt(newHours) || 0;
-      const minutes = parseInt(durationMinutes) || 0;
+      const hours = parseInt(nextHours) || 0;
+      const minutes = Math.min(Math.max(parseInt(durationMinutes) || 0, 0), 59);
       const totalMinutes = (hours * 60) + minutes;
       if (totalMinutes >= 0) {
         const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
@@ -384,12 +408,16 @@ export function QuickAddInteraction({
   // Handle duration minutes change
   const handleDurationMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMinutes = e.target.value;
-    setDurationMinutes(newMinutes);
+    const parsedMinutes = parseInt(newMinutes);
+    const clampedMinutes = !isNaN(parsedMinutes)
+      ? Math.min(Math.max(parsedMinutes, 0), 59).toString()
+      : newMinutes;
+    setDurationMinutes(clampedMinutes);
 
     // If we have a start time, update end time
     if (startTime) {
       const hours = parseInt(durationHours) || 0;
-      const minutes = parseInt(newMinutes) || 0;
+      const minutes = Math.min(Math.max(parseInt(clampedMinutes) || 0, 0), 59);
       const totalMinutes = (hours * 60) + minutes;
       if (totalMinutes >= 0) {
         const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
@@ -414,6 +442,10 @@ export function QuickAddInteraction({
     }
     if (!title.trim()) {
       errors.push('Title is required');
+    }
+    if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
+      errors.push('End time must be on or after the start time');
+      setEndTimeError('End time must be on or after the start time.');
     }
     
     if (errors.length > 0) {
@@ -491,6 +523,7 @@ export function QuickAddInteraction({
         setIsNotesContentReady(false);
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
+        setEndTimeError('');
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -514,6 +547,7 @@ export function QuickAddInteraction({
         onClose={() => {
           setHasAttemptedSubmit(false);
           setValidationErrors([]);
+          setEndTimeError('');
           onClose();
         }}
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
@@ -521,63 +555,63 @@ export function QuickAddInteraction({
         hideCloseButton={false}
         disableFocusTrap
       >
-        <DialogContent className="max-h-[80vh]">
-            {hasAttemptedSubmit && validationErrors.length > 0 && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>
-                  Please fix the following errors:
-                  <ul className="list-disc pl-5 mt-1 text-sm">
-                    {validationErrors.map((err, index) => (
-                      <li key={index}>{err}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
+        <DialogContent>
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {hasAttemptedSubmit && validationErrors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    Please fix the following errors:
+                    <ul className="list-disc pl-5 mt-1 text-sm">
+                      {validationErrors.map((err, index) => (
+                        <li key={index}>{err}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
               <CustomSelect
-                {...typeSelectProps}
-                options={interactionTypes.map((type) => ({ 
-                  value: type.type_id, 
-                  label: getTypeLabel(type)
-                }))}
-                value={typeId}
-                onValueChange={setTypeId}
-                placeholder="Select Interaction Type"
-                className={`w-fit ${hasAttemptedSubmit && !typeId ? 'ring-1 ring-red-500' : ''}`}
-                required
-              />
-              <Input
-                {...titleInputProps}
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Title"
-                required
-                className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
-              />
+                  {...typeSelectProps}
+                  options={interactionTypes.map((type) => ({ 
+                    value: type.type_id, 
+                    label: getTypeLabel(type)
+                  }))}
+                  value={typeId}
+                  onValueChange={setTypeId}
+                  placeholder="Select Interaction Type"
+                  className={`w-fit ${hasAttemptedSubmit && !typeId ? 'ring-1 ring-red-500' : ''}`}
+                  required
+                />
+                <Input
+                  {...titleInputProps}
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title"
+                  required
+                  className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
+                />
               
-              {/* Notes right under title */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Notes</label>
-                <div>
-                  {/* Only render TextEditor when content is ready */}
-                  {isNotesContentReady ? (
-                    <Suspense fallback={<RichTextEditorSkeleton height="150px" title="Interaction Notes" />}>
-                      <TextEditor
-                        key={isEditMode ? `edit-${editingInteraction?.interaction_id}` : 'add'}
-                        {...notesEditorProps}
-                        initialContent={notesContent}
-                        onContentChange={setNotesContent}
-                      />
-                    </Suspense>
-                  ) : (
-                    <div className="w-full h-[100px] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
-                      <span className="text-gray-500">Loading editor...</span>
-                    </div>
-                  )}
+                {/* Notes right under title */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Notes</label>
+                  <div>
+                    {/* Only render TextEditor when content is ready */}
+                    {isNotesContentReady ? (
+                      <Suspense fallback={<RichTextEditorSkeleton height="150px" title="Interaction Notes" />}>
+                        <TextEditor
+                          key={isEditMode ? `edit-${editingInteraction?.interaction_id}` : 'add'}
+                          {...notesEditorProps}
+                          initialContent={notesContent}
+                          onContentChange={setNotesContent}
+                        />
+                      </Suspense>
+                    ) : (
+                      <div className="w-full h-[100px] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-500">Loading editor...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
               {/* Edit mode fields in 2-column layout */}
               {isEditMode && (
@@ -680,6 +714,9 @@ export function QuickAddInteraction({
                     label="End Time"
                     minDate={startTime}
                   />
+                  {endTimeError && (
+                    <p className="text-xs text-red-600">{endTimeError}</p>
+                  )}
                 </div>
               </div>
               <div className="space-y-1">
@@ -687,6 +724,7 @@ export function QuickAddInteraction({
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <Input
+                      {...durationHoursProps}
                       type="number"
                       value={durationHours}
                       onChange={handleDurationHoursChange}
@@ -694,10 +732,11 @@ export function QuickAddInteraction({
                       min="0"
                       className="w-20"
                     />
-                    <span className="text-sm text-gray-600">hours</span>
+                    <span className="text-sm text-muted-foreground">hours</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Input
+                      {...durationMinutesProps}
                       type="number"
                       value={durationMinutes}
                       onChange={handleDurationMinutesChange}
@@ -706,11 +745,11 @@ export function QuickAddInteraction({
                       max="59"
                       className="w-20"
                     />
-                    <span className="text-sm text-gray-600">minutes</span>
+                    <span className="text-sm text-muted-foreground">minutes</span>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-4 border-t border-gray-100">
                 <Button 
                   id="cancel-interaction-button"
                   type="button"
@@ -719,6 +758,7 @@ export function QuickAddInteraction({
                   onClick={() => {
                     setHasAttemptedSubmit(false);
                     setValidationErrors([]);
+                    setEndTimeError('');
                     onClose();
                   }}
                 >
@@ -728,7 +768,7 @@ export function QuickAddInteraction({
                   id="save-interaction-button"
                   type="submit" 
                   className={`flex-1 ${!typeId || !title.trim() ? 'opacity-50' : ''}`}
-                  disabled={false}
+                  disabled={!typeId || !title.trim() || !!endTimeError}
                 >
                   {isEditMode ? 'Update Interaction' : 'Save Interaction'}
                 </Button>
