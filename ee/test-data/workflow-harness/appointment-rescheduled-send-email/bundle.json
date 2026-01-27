@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:58:44.386Z",
+  "workflows": [
+    {
+      "key": "fixture.appointment-rescheduled-send-email",
+      "metadata": {
+        "name": "Fixture: Appointment Rescheduled Email Note",
+        "description": "Send an in-app notification when the event fires (APPOINTMENT_RESCHEDULED).",
+        "payloadSchemaRef": "payload.AppointmentRescheduled.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.AppointmentRescheduled.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "APPOINTMENT_RESCHEDULED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.AppointmentRescheduled.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "73b16d5e-8b3d-3727-596f-e9f2dbd2008c",
+          "version": 1,
+          "name": "Fixture: Appointment Rescheduled Email Note",
+          "description": "Send an in-app notification when the event fires (APPOINTMENT_RESCHEDULED).",
+          "payloadSchemaRef": "payload.AppointmentRescheduled.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "APPOINTMENT_RESCHEDULED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture appointment-rescheduled-send-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture appointment-rescheduled-send-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture appointment-rescheduled-send-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.appointmentId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture appointment-rescheduled-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "73b16d5e-8b3d-3727-596f-e9f2dbd2008c",
+            "version": 1,
+            "name": "Fixture: Appointment Rescheduled Email Note",
+            "description": "Send an in-app notification when the event fires (APPOINTMENT_RESCHEDULED).",
+            "payloadSchemaRef": "payload.AppointmentRescheduled.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "APPOINTMENT_RESCHEDULED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture appointment-rescheduled-send-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture appointment-rescheduled-send-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture appointment-rescheduled-send-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.appointmentId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture appointment-rescheduled-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

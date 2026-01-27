@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:58:44.386Z",
+  "workflows": [
+    {
+      "key": "fixture.appointment-request-declined-email",
+      "metadata": {
+        "name": "Fixture: Appointment Request Declined",
+        "description": "Send an in-app notification when the event fires (APPOINTMENT_REQUEST_DECLINED).",
+        "payloadSchemaRef": "payload.AppointmentRequestDeclined.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.AppointmentRequestDeclined.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "APPOINTMENT_REQUEST_DECLINED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.AppointmentRequestDeclined.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "e3286fe1-d4e2-6553-61bb-89bd69f8824a",
+          "version": 1,
+          "name": "Fixture: Appointment Request Declined",
+          "description": "Send an in-app notification when the event fires (APPOINTMENT_REQUEST_DECLINED).",
+          "payloadSchemaRef": "payload.AppointmentRequestDeclined.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "APPOINTMENT_REQUEST_DECLINED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture appointment-request-declined-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture appointment-request-declined-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture appointment-request-declined-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.appointmentRequestId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture appointment-request-declined-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "e3286fe1-d4e2-6553-61bb-89bd69f8824a",
+            "version": 1,
+            "name": "Fixture: Appointment Request Declined",
+            "description": "Send an in-app notification when the event fires (APPOINTMENT_REQUEST_DECLINED).",
+            "payloadSchemaRef": "payload.AppointmentRequestDeclined.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "APPOINTMENT_REQUEST_DECLINED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture appointment-request-declined-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture appointment-request-declined-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture appointment-request-declined-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.appointmentRequestId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture appointment-request-declined-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

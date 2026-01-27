@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:58:44.378Z",
+  "workflows": [
+    {
+      "key": "fixture.appointment-assigned-send-email",
+      "metadata": {
+        "name": "Fixture: Appointment Assigned Notify Email",
+        "description": "Send an in-app notification when the event fires (APPOINTMENT_ASSIGNED).",
+        "payloadSchemaRef": "payload.AppointmentAssigned.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.AppointmentAssigned.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "APPOINTMENT_ASSIGNED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.AppointmentAssigned.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "9b6966df-3aaf-af2b-36d6-1171f4e15dec",
+          "version": 1,
+          "name": "Fixture: Appointment Assigned Notify Email",
+          "description": "Send an in-app notification when the event fires (APPOINTMENT_ASSIGNED).",
+          "payloadSchemaRef": "payload.AppointmentAssigned.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "APPOINTMENT_ASSIGNED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture appointment-assigned-send-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture appointment-assigned-send-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture appointment-assigned-send-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.appointmentId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture appointment-assigned-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "9b6966df-3aaf-af2b-36d6-1171f4e15dec",
+            "version": 1,
+            "name": "Fixture: Appointment Assigned Notify Email",
+            "description": "Send an in-app notification when the event fires (APPOINTMENT_ASSIGNED).",
+            "payloadSchemaRef": "payload.AppointmentAssigned.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "APPOINTMENT_ASSIGNED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture appointment-assigned-send-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture appointment-assigned-send-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture appointment-assigned-send-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.appointmentId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture appointment-assigned-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
