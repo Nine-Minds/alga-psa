@@ -5,9 +5,9 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ITimeEntry } from '@alga-psa/types';
-import { 
-  IService, 
-  IServiceType, 
+import {
+  IService,
+  IServiceType,
   IClientContractLine,
   IContractLine,
   IBucketUsage,
@@ -16,13 +16,13 @@ import {
 import { ITicket } from '@alga-psa/types';
 import { IProjectTask, IProject, IProjectPhase } from '@alga-psa/types';
 import { IUsageRecord } from '@alga-psa/types';
-import { 
+import {
   IContractLineServiceConfiguration,
   IContractLineServiceBucketConfig
 } from '@alga-psa/types';
 import { toPlainDate, formatDateOnly } from '@alga-psa/core';
 import { getUserRolesWithPermissions } from '@alga-psa/users/actions';
-import { getSession } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 
 // Define the schema for the hours by service input parameters
 const HoursByServiceInputSchema = z.object({
@@ -51,9 +51,11 @@ export interface ClientHoursByServiceResult {
  * @param input - Object containing startDate, endDate, and groupByServiceType flag.
  * @returns A promise that resolves to an array of aggregated hours by service.
  */
-export async function getClientHoursByService(
+export const getClientHoursByService = withAuth(async (
+  user,
+  { tenant },
   input: z.infer<typeof HoursByServiceInputSchema>
-): Promise<ClientHoursByServiceResult[]> {
+): Promise<ClientHoursByServiceResult[]> => {
   // Validate input
   const validationResult = HoursByServiceInputSchema.safeParse(input);
   if (!validationResult.success) {
@@ -62,35 +64,25 @@ export async function getClientHoursByService(
   }
   const { startDate, endDate, groupByServiceType } = validationResult.data;
 
-  // Get session and verify authentication
-  const session = await getSession();
-  if (!session?.user) {
-    throw new Error('Not authenticated');
-  }
-
-  // Get tenant and client ID from session
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get user's client_id
-      const user = await trx('users')
+      const userRecord = await trx('users')
         .where({
-          user_id: session.user.id,
+          user_id: user.user_id,
           tenant
         })
         .first();
 
-      if (!user?.contact_id) {
+      if (!userRecord?.contact_id) {
         throw new Error('User not associated with a contact');
       }
 
       const contact = await trx('contacts')
         .where({
-          contact_name_id: user.contact_id,
+          contact_name_id: userRecord.contact_id,
           tenant
         })
         .first();
@@ -156,13 +148,13 @@ export async function getClientHoursByService(
 
     // --- Aggregation and Grouping ---
     const groupByColumn = groupByServiceType ? 'st.name' : 'sc.service_name';
-    
+
     timeEntriesQuery
       .select(
         'sc.service_id',
         'sc.service_name',
         'sc.custom_service_type_id as service_type_id',
-        knex.raw('st.name as service_type_name'), 
+        knex.raw('st.name as service_type_name'),
         knex.raw('SUM(time_entries.billable_duration) as total_duration')
       )
         .groupBy('sc.service_id', 'sc.service_name', 'sc.custom_service_type_id', 'st.name', groupByColumn)
@@ -188,7 +180,7 @@ export async function getClientHoursByService(
     console.error(`Error fetching hours by service in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch hours by service: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});
 
 // Define the schema for the usage metrics input parameters
 const UsageMetricsInputSchema = z.object({
@@ -215,9 +207,11 @@ export interface ClientUsageMetricResult {
  * @param input - Object containing startDate and endDate.
  * @returns A promise that resolves to an array of usage metrics.
  */
-export async function getClientUsageMetrics(
+export const getClientUsageMetrics = withAuth(async (
+  user,
+  { tenant },
   input: z.infer<typeof UsageMetricsInputSchema>
-): Promise<ClientUsageMetricResult[]> {
+): Promise<ClientUsageMetricResult[]> => {
   // Validate input
   const validationResult = UsageMetricsInputSchema.safeParse(input);
   if (!validationResult.success) {
@@ -226,35 +220,25 @@ export async function getClientUsageMetrics(
   }
   const { startDate, endDate } = validationResult.data;
 
-  // Get session and verify authentication
-  const session = await getSession();
-  if (!session?.user) {
-    throw new Error('Not authenticated');
-  }
-
-  // Get tenant and client ID from session
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get user's client_id
-      const user = await trx('users')
+      const userRecord = await trx('users')
         .where({
-          user_id: session.user.id,
+          user_id: user.user_id,
           tenant
         })
         .first();
 
-      if (!user?.contact_id) {
+      if (!userRecord?.contact_id) {
         throw new Error('User not associated with a contact');
       }
 
       const contact = await trx('contacts')
         .where({
-          contact_name_id: user.contact_id,
+          contact_name_id: userRecord.contact_id,
           tenant
         })
         .first();
@@ -306,7 +290,7 @@ export async function getClientUsageMetrics(
     console.error(`Error fetching usage metrics in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch usage metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});
 
 // Define the structure for the bucket usage returned data
 export interface ClientBucketUsageResult {
@@ -334,7 +318,11 @@ export interface ClientBucketUsageResult {
  * @param serviceId - Optional service ID to filter by specific service
  * @returns Array of historical bucket usage data grouped by service
  */
-export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
+export const getClientBucketUsageHistory = withAuth(async (
+  user,
+  { tenant },
+  serviceId?: string
+): Promise<{
   service_id: string;
   service_name: string;
   history: Array<{
@@ -344,23 +332,15 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
     hours_used: number;
     hours_total: number;
   }>;
-}[]> {
-  const session = await getSession();
-  if (!session?.user) {
-    throw new Error('Not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+}[]> => {
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const user = await trx('users').where({ user_id: session.user.id, tenant }).first();
-      if (!user?.contact_id) throw new Error('User not associated with a contact');
+      const userRecord = await trx('users').where({ user_id: user.user_id, tenant }).first();
+      if (!userRecord?.contact_id) throw new Error('User not associated with a contact');
 
-      const contact = await trx('contacts').where({ contact_name_id: user.contact_id, tenant }).first();
+      const contact = await trx('contacts').where({ contact_name_id: userRecord.contact_id, tenant }).first();
       if (!contact?.client_id) throw new Error('Contact not associated with a client');
 
       const clientId = contact.client_id;
@@ -440,42 +420,33 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
     console.error(`Error fetching bucket usage history in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch bucket usage history: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});
+
 /**
  * This provides more detailed information than the basic getCurrentUsage function.
  *
  * @returns A promise that resolves to an array of detailed bucket usage information.
  */
-export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]> {
-  // Get session and verify authentication
-  const session = await getSession();
-  if (!session?.user) {
-    throw new Error('Not authenticated');
-  }
-
-  // Get tenant and client ID from session
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<ClientBucketUsageResult[]> => {
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get user's client_id
-      const user = await trx('users')
+      const userRecord = await trx('users')
         .where({
-          user_id: session.user.id,
+          user_id: user.user_id,
           tenant
         })
         .first();
 
-      if (!user?.contact_id) {
+      if (!userRecord?.contact_id) {
         throw new Error('User not associated with a contact');
       }
 
       const contact = await trx('contacts')
         .where({
-          contact_name_id: user.contact_id,
+          contact_name_id: userRecord.contact_id,
           tenant
         })
         .first();
@@ -504,7 +475,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() { 
+      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() {
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
@@ -539,26 +510,26 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
           'bu.period_start',
           'bu.period_end'
         );
-        
+
       const rawResults: any[] = await query;
-        
+
       const results: ClientBucketUsageResult[] = rawResults.map(row => {
       const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
       const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
       const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
       const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
       const displayLabel = `${row.contract_line_name} - ${row.service_name}`;
-      
+
       // Calculate additional metrics for enhanced display
       const totalWithRollover = totalMinutes + rolledOverMinutes;
       const percentageUsed = totalWithRollover > 0 ? (minutesUsed / totalWithRollover) * 100 : 0;
       const percentageRemaining = totalWithRollover > 0 ? (remainingMinutes / totalWithRollover) * 100 : 0;
-      
+
       // Convert minutes to hours for easier reading
       const hoursTotal = totalWithRollover / 60;
       const hoursUsed = minutesUsed / 60;
       const hoursRemaining = remainingMinutes / 60;
-      
+
         return {
           contract_line_id: row.contract_line_id,
           contract_line_name: row.contract_line_name,
@@ -578,7 +549,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
           hours_remaining: Math.round(hoursRemaining * 100) / 100
         };
       });
-        
+
       console.log(`Found ${results.length} active bucket plans for client client ${clientId}`);
       return results;
     });
@@ -588,4 +559,4 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
     console.error(`Error fetching bucket usage in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch bucket usage: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});

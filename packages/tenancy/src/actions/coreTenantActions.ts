@@ -1,25 +1,22 @@
 'use server'
 
-import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { Tenant, TenantCompany } from '@alga-psa/types';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
 
-export async function getCurrentTenant(): Promise<string | null> {
-  const tenant = await getTenantForCurrentRequest();
-  return tenant;
-}
+// Returns the current tenant ID, or null if not authenticated
+// Uses withOptionalAuth to support both authenticated and unauthenticated contexts (e.g., layout)
+export const getCurrentTenant = withOptionalAuth(async (_user, ctx): Promise<string | null> => {
+  return ctx?.tenant ?? null;
+});
 
-export async function getTenantDetails(): Promise<Tenant & { clients: TenantCompany[] }> {
-  const tenantId = await getCurrentTenant();
-  if (!tenantId) throw new Error('No tenant found');
-
-  const { knex: db } = await createTenantKnex(tenantId);
+export const getTenantDetails = withAuth(async (_user, { tenant }): Promise<Tenant & { clients: TenantCompany[] }> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const [tenantDetails] = await trx('tenants')
       .select('*')
-      .where('tenant', tenantId);
+      .where('tenant', tenant);
 
     const clients = await trx('tenant_companies as tc')
       .join('clients as c', function() {
@@ -33,7 +30,7 @@ export async function getTenantDetails(): Promise<Tenant & { clients: TenantComp
         'tc.created_at',
         'tc.updated_at'
       )
-      .where('tc.tenant', tenantId)
+      .where('tc.tenant', tenant)
       .whereNull('tc.deleted_at');
 
     return {
@@ -41,64 +38,52 @@ export async function getTenantDetails(): Promise<Tenant & { clients: TenantComp
       clients
     };
   });
-}
+});
 
-export async function updateTenantName(name: string): Promise<void> {
-  const tenantId = await getCurrentTenant();
-  if (!tenantId) throw new Error('No tenant found');
-
-  const { knex: db } = await createTenantKnex(tenantId);
+export const updateTenantName = withAuth(async (_user, { tenant }, name: string): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('tenants')
-      .where('tenant', tenantId)
+      .where('tenant', tenant)
       .update({ client_name: name });
   });
-}
+});
 
-export async function addClientToTenant(clientId: string): Promise<void> {
-  const tenantId = await getCurrentTenant();
-  if (!tenantId) throw new Error('No tenant found');
-
-  const { knex: db } = await createTenantKnex(tenantId);
+export const addClientToTenant = withAuth(async (_user, { tenant }, clientId: string): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('tenant_companies')
       .insert({
-        tenant: tenantId,
+        tenant,
         client_id: clientId,
         is_default: false
       });
   });
-}
+});
 
-export async function removeClientFromTenant(clientId: string): Promise<void> {
-  const tenantId = await getCurrentTenant();
-  if (!tenantId) throw new Error('No tenant found');
-
-  const { knex: db } = await createTenantKnex(tenantId);
+export const removeClientFromTenant = withAuth(async (_user, { tenant }, clientId: string): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('tenant_companies')
-      .where('tenant', tenantId)
+      .where('tenant', tenant)
       .where('client_id', clientId)
       .update({ deleted_at: trx.fn.now() });
   });
-}
+});
 
-export async function setDefaultClient(clientId: string): Promise<void> {
-  const tenantId = await getCurrentTenant();
-  if (!tenantId) throw new Error('No tenant found');
-
-  const { knex: db } = await createTenantKnex(tenantId);
+export const setDefaultClient = withAuth(async (_user, { tenant }, clientId: string): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     // Clear existing default
     await trx('tenant_companies')
-      .where('tenant', tenantId)
+      .where('tenant', tenant)
       .where('is_default', true)
       .update({ is_default: false });
 
     // Set new default
     await trx('tenant_companies')
-      .where('tenant', tenantId)
+      .where('tenant', tenant)
       .where('client_id', clientId)
       .update({ is_default: true });
   });
-}
+});

@@ -4,6 +4,7 @@
  * Server actions for workflow runtime integration with database-driven workflow registration
  */
 import { createTenantKnex } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import WorkflowRegistrationModel, { WorkflowRegistration, WorkflowRegistrationWithSystemFlag } from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel'; // Import the new type
@@ -18,13 +19,18 @@ import { v4 as uuidv4 } from 'uuid';
  * @param version Optional version string
  * @returns The workflow registration or null if not found
  */
-export async function getWorkflowRegistration(id: string, version?: string): Promise<WorkflowRegistrationWithSystemFlag | null> { // Updated return type
-  const { knex, tenant } = await createTenantKnex();
-  
+export const getWorkflowRegistration = withAuth(async (
+  _user,
+  { tenant },
+  id: string,
+  version?: string
+): Promise<WorkflowRegistrationWithSystemFlag | null> => { // Updated return type
+  const { knex } = await createTenantKnex();
+
   if (!tenant) {
     throw new Error('Tenant is required');
   }
-  
+
   try {
     // Use the model to get the workflow registration by ID
     return await WorkflowRegistrationModel.getById(knex, tenant, id, version);
@@ -34,20 +40,23 @@ export async function getWorkflowRegistration(id: string, version?: string): Pro
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Get all workflow registrations
- * 
+ *
  * @returns Array of workflow registrations
  */
-export async function getAllWorkflowRegistrations(): Promise<WorkflowRegistrationWithSystemFlag[]> { // Updated return type
-  const { knex, tenant } = await createTenantKnex();
-  
+export const getAllWorkflowRegistrations = withAuth(async (
+  _user,
+  { tenant }
+): Promise<WorkflowRegistrationWithSystemFlag[]> => { // Updated return type
+  const { knex } = await createTenantKnex();
+
   if (!tenant) {
     throw new Error('Tenant is required');
   }
-  
+
   try {
     // Use the model to get all workflow registrations
     return await WorkflowRegistrationModel.getAll(knex, tenant);
@@ -57,26 +66,30 @@ export async function getAllWorkflowRegistrations(): Promise<WorkflowRegistratio
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Create a workflow registration from a template
- * 
+ *
  * @param params Parameters for creating a registration from a template
  * @returns The created workflow registration
  */
-export async function createRegistrationFromTemplate(params: {
-  templateId: string;
-  name: string;
-  description?: string;
-  parameters?: any;
-}): Promise<{ registrationId: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  
+export const createRegistrationFromTemplate = withAuth(async (
+  _user,
+  { tenant },
+  params: {
+    templateId: string;
+    name: string;
+    description?: string;
+    parameters?: any;
+  }
+): Promise<{ registrationId: string }> => {
+  const { knex } = await createTenantKnex();
+
   if (!tenant) {
     throw new Error('Tenant is required');
   }
-  
+
   try {
     // Use the model to create a registration from a template
     return await WorkflowRegistrationModel.createFromTemplate(knex, tenant, {
@@ -91,7 +104,7 @@ export async function createRegistrationFromTemplate(params: {
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Start a workflow execution from an event
@@ -112,11 +125,11 @@ export async function startWorkflowFromEvent(params: {
   message: string;
 }> {
   const { workflowName, eventType, eventPayload, tenant, userId } = params;
-  
+
   try {
     // Import here to avoid circular dependencies
     const { submitWorkflowEventAction } = await import('./workflow-event-actions');
-    
+
     // Instead of directly starting the workflow, submit an event to the event bus
     // This will be picked up by the workflow worker through the event subscription system
     const result = await submitWorkflowEventAction({
@@ -131,7 +144,7 @@ export async function startWorkflowFromEvent(params: {
         userId
       }
     });
-    
+
     // Log the event submission
     logger.info(`Submitted event ${eventType} to trigger workflow ${workflowName}`, {
       tenant,
@@ -139,7 +152,7 @@ export async function startWorkflowFromEvent(params: {
       eventType,
       status: result.status
     });
-    
+
     return {
       executionId: result.eventId, // Use the event ID as a reference
       status: result.status === 'error' ? 'error' : 'accepted',

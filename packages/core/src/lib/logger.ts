@@ -44,14 +44,14 @@ const getLogger = () => {
 };
 
 const logger = {
-  error: (msg: string, meta?: any) => getLogger().error(msg, meta),
-  warn: (msg: string, meta?: any) => getLogger().warn(msg, meta),
-  info: (msg: string, meta?: any) => getLogger().info(msg, meta),
-  http: (msg: string, meta?: any) => getLogger().log(msg, meta),
-  verbose: (msg: string, meta?: any) => getLogger().log(msg, meta),
-  debug: (msg: string, meta?: any) => getLogger().debug(msg, meta),
-  trace: (msg: string, meta?: any) => getLogger().debug(msg, meta),
-  system: (msg: string, meta?: any) => getLogger().log(msg, meta),
+  error: (msg: string, meta?: any) => meta !== undefined ? getLogger().error(msg, meta) : getLogger().error(msg),
+  warn: (msg: string, meta?: any) => meta !== undefined ? getLogger().warn(msg, meta) : getLogger().warn(msg),
+  info: (msg: string, meta?: any) => meta !== undefined ? getLogger().info(msg, meta) : getLogger().info(msg),
+  http: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, meta) : getLogger().log(msg),
+  verbose: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, meta) : getLogger().log(msg),
+  debug: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, meta) : getLogger().debug(msg),
+  trace: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, meta) : getLogger().debug(msg),
+  system: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, meta) : getLogger().log(msg),
 };
 
 export default logger;

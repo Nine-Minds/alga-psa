@@ -19,42 +19,47 @@ import {
 } from '@alga-psa/shared/workflow/persistence';
 import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
 import { createTenantKnex } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 
 /**
  * Get workflow definition by ID
  * This function retrieves a workflow definition from the runtime registry
  */
-export async function getWorkflowDefinition(definitionId: string): Promise<any> {
+export const getWorkflowDefinition = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string
+): Promise<any> => {
   try {
     // Initialize the workflow system on the server side
     await initializeServerWorkflows();
-    
+
     // Get the action registry
     const actionRegistry = getActionRegistry();
-    
+
     // Get the workflow runtime
     const runtime = getWorkflowRuntime(actionRegistry);
-    
+
     // Get all registered workflows
     const workflowDefinitions = runtime.getRegisteredWorkflows();
-    
+
     // Find the requested workflow in registered workflows
     let workflowDefinition = workflowDefinitions.get(definitionId);
-    
+
     // If not found in registered workflows, try to load it from the database
     if (!workflowDefinition) {
       console.log(`Workflow definition "${definitionId}" not found in registered workflows, trying to load from database...`);
-      
+
       // Create a tenant knex instance
-      const { knex, tenant } = await createTenantKnex();
-      
+      const { knex } = await createTenantKnex();
+
       if (!tenant) {
         throw new Error('Tenant not found');
       }
-      
+
       // Import WorkflowRegistrationModel
       const WorkflowRegistrationModel = (await import('@alga-psa/shared/workflow/persistence/workflowRegistrationModel')).default;
-      
+
       // Try to get the workflow registration and its current version's code
       const registrationWithVersion = await knex('workflow_registrations as reg')
         .join('workflow_registration_versions as ver', function() {
@@ -164,7 +169,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
     if (!workflowDefinition) {
       throw new Error(`Workflow definition not found: ${definitionId}`);
     }
-    
+
     // Convert the workflow definition to a format suitable for visualization
     return {
       name: workflowDefinition.metadata.name,
@@ -181,7 +186,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
       ? error
       : new Error(`Unknown error loading workflow definition: ${String(error)}`);
   }
-}
+});
 
 /**
  * Extract states from a TypeScript workflow definition
@@ -193,7 +198,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
 function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[] {
   // Get the execute function source code
   let executeFnSource = '';
-  
+
   // Check if we have a serialized function string directly
   if ('executeFn' in workflowDefinition && typeof (workflowDefinition as any).executeFn === 'string') {
     executeFnSource = (workflowDefinition as any).executeFn;
@@ -202,12 +207,12 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
   else if (workflowDefinition.execute) {
     executeFnSource = workflowDefinition.execute.toString();
   }
-  
+
   if (!executeFnSource) {
     console.warn('No execute function source found in workflow definition');
     return [];
   }
-  
+
   try {
     // Parse the execute function source code
     const sourceFile = ts.createSourceFile(
@@ -216,10 +221,10 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
       ts.ScriptTarget.Latest,
       true
     );
-    
+
     // Find all state transitions (context.setState calls)
     const states = new Map<string, { name: string; description: string }>();
-    
+
     // Visitor function to find all setState calls
     function visit(node: ts.Node) {
       // Check if this is a setState call
@@ -228,11 +233,11 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
           ts.isPropertyAccessExpression(node.expression.expression) &&
           node.expression.expression.name.text === 'context' &&
           node.expression.name.text === 'setState') {
-        
+
         // Get the state argument
         const stateArg = node.arguments[0];
         let stateName = 'unknown';
-        
+
         if (ts.isStringLiteral(stateArg)) {
           stateName = stateArg.text;
         } else if (ts.isIdentifier(stateArg)) {
@@ -244,7 +249,7 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
           // For other expressions, use the text representation
           stateName = `[${stateArg.getText()}]`;
         }
-        
+
         // Add the state to our map if it's not already there
         if (!states.has(stateName)) {
           states.set(stateName, {
@@ -253,14 +258,14 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
           });
         }
       }
-      
+
       // Visit all children
       ts.forEachChild(node, visit);
     }
-    
+
     // Start the visitor at the source file level
     visit(sourceFile);
-    
+
     // If we didn't find any states, look for state constants
     if (states.size === 0) {
       // Look for state constants (e.g., const DRAFT = 'draft')
@@ -278,13 +283,13 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
             }
           }
         }
-        
+
         ts.forEachChild(node, findStateConstants);
       }
-      
+
       findStateConstants(sourceFile);
     }
-    
+
     // Convert the map to an array
     return Array.from(states.values());
   } catch (error) {
@@ -301,7 +306,7 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
 function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition): any[] {
   // Get the execute function source code
   let executeFnSource = '';
-  
+
   // Check if we have a serialized function string directly
   if ('executeFn' in workflowDefinition && typeof (workflowDefinition as any).executeFn === 'string') {
     executeFnSource = (workflowDefinition as any).executeFn;
@@ -310,12 +315,12 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
   else if (workflowDefinition.execute) {
     executeFnSource = workflowDefinition.execute.toString();
   }
-  
+
   if (!executeFnSource) {
     console.warn('No execute function source found in workflow definition');
     return [];
   }
-  
+
   try {
     // Parse the execute function source code
     const sourceFile = ts.createSourceFile(
@@ -324,11 +329,11 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
       ts.ScriptTarget.Latest,
       true
     );
-    
+
     // Track the current state and transitions
     const transitions: { from: string; to: string; event: string }[] = [];
     let currentState: string | null = null;
-    
+
     // Helper function to find the nearest enclosing if condition
     function findEnclosingCondition(node: ts.Node): string | null {
       let parent = node.parent;
@@ -336,14 +341,14 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
         if (ts.isIfStatement(parent) && parent.expression) {
           // Check if the condition is a state check
           const condition = parent.expression.getText();
-          
+
           // Look for patterns like context.state === 'someState'
           const stateCheckRegex = /context\.state\s*===?\s*['"]([^'"]+)['"]/;
           const match = condition.match(stateCheckRegex);
           if (match) {
             return match[1];
           }
-          
+
           // Look for other state check patterns
           if (condition.includes('context.state')) {
             return '[conditional]';
@@ -353,7 +358,7 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
       }
       return null;
     }
-    
+
     // Visitor function to find state transitions and build the transition graph
     function visit(node: ts.Node) {
       // Check if this is a setState call
@@ -362,11 +367,11 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
           ts.isPropertyAccessExpression(node.expression.expression) &&
           node.expression.expression.name.text === 'context' &&
           node.expression.name.text === 'setState') {
-        
+
         // Get the state argument
         const stateArg = node.arguments[0];
         let toState = 'unknown';
-        
+
         if (ts.isStringLiteral(stateArg)) {
           toState = stateArg.text;
         } else if (ts.isIdentifier(stateArg)) {
@@ -376,20 +381,20 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
         } else if (stateArg) {
           toState = `[${stateArg.getText()}]`;
         }
-        
+
         // Find the enclosing condition to determine the from state
         const fromState = findEnclosingCondition(node) || currentState || 'initial';
-        
+
         // Find the event that triggered this transition
         let event = 'unknown';
-        
+
         // Look for event handling patterns
         let parent = node.parent;
         while (parent) {
           // Check if we're in an event handler function
           if (ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isArrowFunction(parent)) {
             const functionText = parent.getText();
-            
+
             // Look for patterns like handleEvent, onEvent, processEvent
             const eventHandlerRegex = /handle([A-Z]\w+)|on([A-Z]\w+)|process([A-Z]\w+)/;
             const match = functionText.match(eventHandlerRegex);
@@ -398,46 +403,46 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
               break;
             }
           }
-          
+
           // Check if we're in a waitForEvent call
           if (ts.isCallExpression(parent) &&
               ts.isPropertyAccessExpression(parent.expression) &&
               ts.isPropertyAccessExpression(parent.expression.expression) &&
               parent.expression.expression.name.text === 'context' &&
               parent.expression.name.text === 'waitForEvent') {
-            
+
             const eventArg = parent.arguments[0];
             if (ts.isStringLiteral(eventArg)) {
               event = eventArg.text;
               break;
             }
           }
-          
+
           parent = parent.parent;
         }
-        
+
         // Add the transition
         transitions.push({
           from: fromState,
           to: toState,
           event: event
         });
-        
+
         // Update the current state
         currentState = toState;
       }
-      
+
       // Visit all children
       ts.forEachChild(node, visit);
     }
-    
+
     // Start the visitor at the source file level
     visit(sourceFile);
-    
+
     // If we didn't find any transitions, create some default ones based on the states
     if (transitions.length === 0) {
       const states = extractStatesFromWorkflow(workflowDefinition);
-      
+
       // Create transitions between consecutive states
       for (let i = 0; i < states.length - 1; i++) {
         transitions.push({
@@ -447,7 +452,7 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
         });
       }
     }
-    
+
     return transitions;
   } catch (error) {
     console.error('Error extracting transitions from workflow definition:', error);
@@ -458,12 +463,16 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
 /**
  * Get raw TypeScript content for a workflow definition
  */
-export async function getWorkflowDSLContent(definitionId: string): Promise<string> {
+export const getWorkflowDSLContent = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string
+): Promise<string> => {
   try {
     // First, try to find the workflow in the examples directory
     const examplesDir = path.join(process.cwd(), 'src', 'lib', 'workflow', 'examples');
     const tsFilePath = path.join(examplesDir, `${definitionId}Workflow.ts`);
-    
+
     try {
       // Try to read the TypeScript file from the examples directory
       const tsContent = await fs.readFile(tsFilePath, 'utf-8');
@@ -473,17 +482,17 @@ export async function getWorkflowDSLContent(definitionId: string): Promise<strin
       if ((fileError as NodeJS.ErrnoException).code === 'ENOENT') {
         // File not found in examples directory, try to load from database
         console.log(`Workflow TypeScript file not found in examples directory, trying to load from database: ${definitionId}`);
-        
+
         // Create a tenant knex instance
-        const { knex, tenant } = await createTenantKnex();
-        
+        const { knex } = await createTenantKnex();
+
         if (!tenant) {
           throw new Error('Tenant not found');
         }
-        
+
         // Import WorkflowRegistrationModel
         const WorkflowRegistrationModel = (await import('@alga-psa/shared/workflow/persistence/workflowRegistrationModel')).default;
-        
+
         // Try to get the workflow registration and its current version's code
         const registrationWithVersion = await knex('workflow_registrations as reg')
           .join('workflow_registration_versions as ver', function() {
@@ -533,12 +542,16 @@ export async function getWorkflowDSLContent(definitionId: string): Promise<strin
       ? error
       : new Error(`Unknown error loading workflow TypeScript content: ${String(error)}`);
   }
-}
+});
 
 /**
  * Get workflow execution by ID
  */
-export async function getWorkflowExecution(executionId: string): Promise<IWorkflowExecution | null> {
+export const getWorkflowExecution = withAuth(async (
+  _user,
+  { tenant },
+  executionId: string
+): Promise<IWorkflowExecution | null> => {
   try {
     // For testing purposes, return mock data if executionId is 'mock'
     if (executionId === 'mock') {
@@ -565,17 +578,17 @@ export async function getWorkflowExecution(executionId: string): Promise<IWorkfl
         updated_at: new Date().toISOString()
       };
     }
-    
+
     // Create a tenant knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     const execution = await WorkflowExecutionModel.getById(knex, tenant!, executionId);
-    
+
     // If no execution found, return null
     if (!execution) {
       return null;
     }
-    
+
     // Return a clean copy without any non-serializable data
     return {
       execution_id: execution.execution_id,
@@ -593,12 +606,16 @@ export async function getWorkflowExecution(executionId: string): Promise<IWorkfl
     console.error(`Error getting workflow execution ${executionId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Get workflow events by execution ID
  */
-export async function getWorkflowEvents(executionId: string): Promise<IWorkflowEvent[]> {
+export const getWorkflowEvents = withAuth(async (
+  _user,
+  { tenant },
+  executionId: string
+): Promise<IWorkflowEvent[]> => {
   try {
     // For testing purposes, return mock data if executionId is 'mock'
     if (executionId === 'mock') {
@@ -626,12 +643,12 @@ export async function getWorkflowEvents(executionId: string): Promise<IWorkflowE
         }
       ];
     }
-    
+
     // Create a tenant knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     const events = await WorkflowEventModel.getByExecutionId(knex, tenant!, executionId);
-    
+
     // Return clean copies without any non-serializable data
     return events.map((event: IWorkflowEvent) => ({
       event_id: event.event_id,
@@ -648,12 +665,16 @@ export async function getWorkflowEvents(executionId: string): Promise<IWorkflowE
     console.error(`Error getting workflow events for execution ${executionId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Get workflow action results by execution ID
  */
-export async function getWorkflowActionResults(executionId: string): Promise<IWorkflowActionResult[]> {
+export const getWorkflowActionResults = withAuth(async (
+  _user,
+  { tenant },
+  executionId: string
+): Promise<IWorkflowActionResult[]> => {
   try {
     // For testing purposes, return mock data if executionId is 'mock'
     if (executionId === 'mock') {
@@ -675,12 +696,12 @@ export async function getWorkflowActionResults(executionId: string): Promise<IWo
         }
       ];
     }
-    
+
     // Create a tenant knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     const results = await WorkflowActionResultModel.getByExecutionId(knex, tenant!, executionId);
-    
+
     // Return clean copies without any non-serializable data
     return results.map((result: IWorkflowActionResult) => ({
       result_id: result.result_id,
@@ -704,7 +725,7 @@ export async function getWorkflowActionResults(executionId: string): Promise<IWo
     console.error(`Error getting workflow action results for execution ${executionId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Helper function to ensure an object is serializable
@@ -714,21 +735,21 @@ function makeSerializable(obj: any): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
-  
+
   // Handle Date objects
   if (obj instanceof Date) {
     return obj.toISOString();
   }
-  
+
   // Handle arrays
   if (Array.isArray(obj)) {
     return obj.map(item => makeSerializable(item));
   }
-  
+
   // Handle plain objects
   if (typeof obj === 'object') {
     const result: Record<string, any> = {};
-    
+
     for (const key in obj) {
       // Skip functions and properties that start with underscore (often internal properties)
       if (typeof obj[key] !== 'function' && !key.startsWith('_')) {
@@ -742,10 +763,10 @@ function makeSerializable(obj: any): any {
         }
       }
     }
-    
+
     return result;
   }
-  
+
   // Return primitive values as is
   return obj;
 }
@@ -754,7 +775,11 @@ function makeSerializable(obj: any): any {
  * Get workflow execution status
  * This function returns a serializable version of the execution data
  */
-export async function getWorkflowExecutionStatus(executionId: string) {
+export const getWorkflowExecutionStatus = withAuth(async (
+  _user,
+  { tenant },
+  executionId: string
+) => {
   try {
     // Mock data for testing
     if (executionId === 'mock') {
@@ -794,21 +819,19 @@ export async function getWorkflowExecutionStatus(executionId: string) {
         ]
       };
     }
-    
+
     // Create a tenant knex instance - we'll use the same one for all queries
-    const { knex, tenant } = await createTenantKnex();
-    
-    // Pass the knex and tenant to each function
-    const [execution, events, actionResults] = await Promise.all([
-      getWorkflowExecution(executionId),
-      getWorkflowEvents(executionId),
-      getWorkflowActionResults(executionId)
-    ]);
-    
+    const { knex } = await createTenantKnex();
+
+    // Fetch execution, events, and action results
+    const execution = await WorkflowExecutionModel.getById(knex, tenant!, executionId);
+    const events = await WorkflowEventModel.getByExecutionId(knex, tenant!, executionId);
+    const actionResults = await WorkflowActionResultModel.getByExecutionId(knex, tenant!, executionId);
+
     if (!execution) {
       return null;
     }
-    
+
     // Create a serializable version of the data
     const serializedData = {
       execution: {
@@ -841,28 +864,31 @@ export async function getWorkflowExecutionStatus(executionId: string) {
         created_at: result.created_at
       }))
     };
-    
+
     // Ensure the data is fully serializable
     return makeSerializable(serializedData);
   } catch (error) {
     console.error(`Error getting workflow execution status for ${executionId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Get workflow visualization data
  * This combines definition, execution status, and TypeScript content
  */
-export async function getWorkflowVisualizationData(definitionId: string, executionId?: string) {
+export const getWorkflowVisualizationData = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string,
+  executionId?: string
+) => {
   try {
-    // Fetch definition, TypeScript content, and execution status in parallel
-    const [definition, tsContent, executionStatus] = await Promise.all([
-      getWorkflowDefinition(definitionId),
-      getWorkflowDSLContent(definitionId).catch(() => null),
-      executionId ? getWorkflowExecutionStatus(executionId) : Promise.resolve(null)
-    ]);
-    
+    // Fetch definition and TypeScript content
+    const definition = await getWorkflowDefinition(definitionId);
+    const tsContent = await getWorkflowDSLContent(definitionId).catch(() => null);
+    const executionStatus = executionId ? await getWorkflowExecutionStatus(executionId) : null;
+
     return {
       definition,
       tsContent,
@@ -872,4 +898,4 @@ export async function getWorkflowVisualizationData(definitionId: string, executi
     console.error(`Error getting workflow visualization data:`, error);
     throw error;
   }
-}
+});
