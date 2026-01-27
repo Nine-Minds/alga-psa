@@ -34,7 +34,7 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -42,6 +42,7 @@ import { useUserPreference } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
+const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
@@ -87,6 +88,19 @@ export default function ProjectDetail({
     {
       defaultValue: 'kanban',
       localStorageKey: PROJECT_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Phases panel visibility state with persistence (default: visible)
+  const {
+    value: isPhasesPanelVisible,
+    setValue: setIsPhasesPanelVisible,
+  } = useUserPreference<boolean>(
+    PROJECT_PHASES_PANEL_VISIBLE_SETTING,
+    {
+      defaultValue: true,
+      localStorageKey: PROJECT_PHASES_PANEL_VISIBLE_SETTING,
       debounceMs: 300
     }
   );
@@ -1754,48 +1768,61 @@ export default function ProjectDetail({
         onDragOver={handleDragOver}
       >
         <div className={styles.contentWrapper}>
-          {/* Hide phase panel when in list view */}
+          {/* Phases panel - collapsible in kanban view */}
           {viewMode === 'kanban' && (
-            <div className={styles.phasesList}>
-              <ProjectPhases
-              phases={projectPhases}
-              selectedPhase={selectedPhase}
-              isAddingTask={isAddingTask}
-              editingPhaseId={editingPhaseId}
-              editingPhaseName={editingPhaseName}
-              editingPhaseDescription={editingPhaseDescription}
-              editingStartDate={editingStartDate}
-              editingEndDate={editingEndDate}
-              phaseTaskCounts={phaseTaskCounts}
-              phaseDropTarget={phaseDropTarget}
-              taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass new state
-              animatingPhases={animatingPhases}
-              onPhaseSelect={handlePhaseSelect}
-              onAddTask={() => {
-                if (!selectedPhase) {
-                  toast.error('Please select a phase before adding a task.');
-                  return;
-                }
-                setCurrentPhase(selectedPhase);
-                setShowQuickAdd(true);
-              }}
-              onAddPhase={() => setShowPhaseQuickAdd(true)}
-              onEditPhase={handleEditPhase}
-              onSavePhase={handleSavePhase}
-              onCancelEdit={handleCancelEdit}
-              onDeletePhase={handleDeletePhaseClick}
-              onEditingPhaseNameChange={setEditingPhaseName}
-              onEditingPhaseDescriptionChange={setEditingPhaseDescription}
-              onEditingStartDateChange={setEditingStartDate}
-              onEditingEndDateChange={setEditingEndDate}
-              onDragOver={handlePhaseDragOver}
-              onDragLeave={handlePhaseDragLeave}
-              onDrop={handlePhaseDropZone}
-              onDragStart={handlePhaseDragStart}
-              onDragEnd={handlePhaseDragEnd}
-              onImport={() => setShowImportDialog(true)}
-            />
-          </div>
+            <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
+              {/* Toggle button */}
+              <button
+                onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
+                className={styles.phasesPanelToggle}
+                title={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+                aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+              >
+                <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Phases panel content */}
+              <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
+                <ProjectPhases
+                  phases={projectPhases}
+                  selectedPhase={selectedPhase}
+                  isAddingTask={isAddingTask}
+                  editingPhaseId={editingPhaseId}
+                  editingPhaseName={editingPhaseName}
+                  editingPhaseDescription={editingPhaseDescription}
+                  editingStartDate={editingStartDate}
+                  editingEndDate={editingEndDate}
+                  phaseTaskCounts={phaseTaskCounts}
+                  phaseDropTarget={phaseDropTarget}
+                  taskDraggingOverPhaseId={taskDraggingOverPhaseId}
+                  animatingPhases={animatingPhases}
+                  onPhaseSelect={handlePhaseSelect}
+                  onAddTask={() => {
+                    if (!selectedPhase) {
+                      toast.error('Please select a phase before adding a task.');
+                      return;
+                    }
+                    setCurrentPhase(selectedPhase);
+                    setShowQuickAdd(true);
+                  }}
+                  onAddPhase={() => setShowPhaseQuickAdd(true)}
+                  onEditPhase={handleEditPhase}
+                  onSavePhase={handleSavePhase}
+                  onCancelEdit={handleCancelEdit}
+                  onDeletePhase={handleDeletePhaseClick}
+                  onEditingPhaseNameChange={setEditingPhaseName}
+                  onEditingPhaseDescriptionChange={setEditingPhaseDescription}
+                  onEditingStartDateChange={setEditingStartDate}
+                  onEditingEndDateChange={setEditingEndDate}
+                  onDragOver={handlePhaseDragOver}
+                  onDragLeave={handlePhaseDragLeave}
+                  onDrop={handlePhaseDropZone}
+                  onDragStart={handlePhaseDragStart}
+                  onDragEnd={handlePhaseDragEnd}
+                  onImport={() => setShowImportDialog(true)}
+                />
+              </div>
+            </div>
           )}
           <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
             {renderContent()}
