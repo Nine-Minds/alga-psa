@@ -955,12 +955,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
-    // {
-    //   label: "Assets",
-    //   content: (
-    //     <ClientAssets clientId={client.client_id} />
-    //   )
-    // },
+    {
+      label: "Assets",
+      content: (
+        <ClientAssets clientId={client.client_id} />
+      )
+    },
     {
       label: "Billing",
       content: (

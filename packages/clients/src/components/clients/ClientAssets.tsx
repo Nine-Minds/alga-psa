@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { ClientMaintenanceSummary, Asset } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { Button } from '@alga-psa/ui/components/Button';
 import { getClientMaintenanceSummary, listAssets } from '@alga-psa/assets/actions/assetActions';
+import { loadAssetDetailDrawerData } from '@alga-psa/assets/actions/assetDrawerActions';
 import {
   Boxes,
   AlertTriangle,
@@ -18,9 +18,15 @@ import {
   TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
+import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
+import {
+  ASSET_DRAWER_TABS,
+  type AssetDrawerTab,
+  tabToPanelParam,
+  type AssetDrawerServerData,
+} from '@alga-psa/assets/components/AssetDetailDrawer.types';
 
 interface ClientAssetsProps {
   clientId: string;
@@ -45,13 +51,83 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const router = useRouter();
+
+  // Drawer state
+  const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
+  const [drawerData, setDrawerData] = useState<AssetDrawerServerData>({ asset: null });
+  const [drawerError, setDrawerError] = useState<string | null>(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const lastRequestIdRef = useRef<number>(0);
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
   };
+
+  // Drawer data loading
+  const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
+    const requestId = lastRequestIdRef.current + 1;
+    lastRequestIdRef.current = requestId;
+
+    setDrawerLoading(true);
+    setDrawerError(null);
+
+    try {
+      const result = await loadAssetDetailDrawerData({ assetId, panel: tabToPanelParam(tab) });
+
+      if (lastRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setDrawerData(result.data ?? { asset: null });
+      setDrawerError(result.error ?? null);
+    } catch (error) {
+      if (lastRequestIdRef.current !== requestId) {
+        return;
+      }
+      console.error('Failed to load asset drawer data', error);
+      setDrawerData({ asset: null });
+      setDrawerError('Unable to load asset details right now. Please try again.');
+    } finally {
+      if (lastRequestIdRef.current === requestId) {
+        setDrawerLoading(false);
+      }
+    }
+  }, []);
+
+  const openDrawerForAsset = useCallback((asset: Asset, tab?: AssetDrawerTab) => {
+    const nextTab = tab ?? ASSET_DRAWER_TABS.OVERVIEW;
+    if (drawerAssetId !== asset.asset_id) {
+      setDrawerAssetId(asset.asset_id);
+    }
+    if (!isDrawerOpen) {
+      setIsDrawerOpen(true);
+    }
+    if (activeDrawerTab !== nextTab) {
+      setActiveDrawerTab(nextTab);
+    }
+    void loadDrawerData(asset.asset_id, nextTab);
+  }, [activeDrawerTab, drawerAssetId, isDrawerOpen, loadDrawerData]);
+
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    setDrawerAssetId(null);
+    setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
+    setDrawerData({ asset: null });
+    setDrawerError(null);
+  }, []);
+
+  const handleDrawerTabChange = useCallback((tab: AssetDrawerTab) => {
+    if (activeDrawerTab !== tab) {
+      setActiveDrawerTab(tab);
+    }
+    if (drawerAssetId) {
+      void loadDrawerData(drawerAssetId, tab);
+    }
+  }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
   const getAssetTypeIcon = (type: string): React.JSX.Element => {
     const iconProps = { className: "h-4 w-4 text-gray-600" };
@@ -349,7 +425,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
           pagination={true}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          onRowClick={(asset: Asset) => router.push(`/msp/assets/${asset.asset_id}`)}
+          onRowClick={(asset: Asset) => openDrawerForAsset(asset)}
           totalItems={totalItems}
           pageSize={pageSize}
           onItemsPerPageChange={handlePageSizeChange}
@@ -427,6 +503,22 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
           </div>
         </div>
       </div>
+
+      <AssetDetailDrawerClient
+        isOpen={isDrawerOpen}
+        selectedAssetId={drawerAssetId}
+        activeTab={activeDrawerTab}
+        asset={drawerData.asset}
+        maintenanceReport={drawerData.maintenanceReport}
+        maintenanceHistory={drawerData.maintenanceHistory}
+        history={drawerData.history}
+        tickets={drawerData.tickets}
+        documents={drawerData.documents}
+        error={drawerError}
+        isLoading={drawerLoading}
+        onClose={handleDrawerClose}
+        onTabChange={handleDrawerTabChange}
+      />
     </div>
   );
 };
