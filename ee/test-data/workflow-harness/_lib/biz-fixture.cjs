@@ -40,7 +40,7 @@ function ensureCallWorkflowInputMapping(callStep, { kind, eventName }) {
 
   if (kind === 'ticket_comment') {
     const idExpr = ticketIdExprForEvent(eventName);
-    const match = /^payload\\.(\\w+)$/.exec(idExpr);
+    const match = /^payload\.(\w+)$/.exec(idExpr);
     const field = match ? match[1] : 'ticketId';
     inputMapping[field] = { $expr: idExpr };
     return;
@@ -48,7 +48,7 @@ function ensureCallWorkflowInputMapping(callStep, { kind, eventName }) {
 
   if (kind === 'project_task') {
     const idExpr = projectIdExprForEvent(eventName);
-    const match = /^payload\\.(\\w+)$/.exec(idExpr);
+    const match = /^payload\.(\w+)$/.exec(idExpr);
     const field = match ? match[1] : 'projectId';
     inputMapping[field] = { $expr: idExpr };
     return;

@@ -173,7 +173,7 @@ function ensureDir(dirPath) {
 }
 
 function detectPatternFromTestSource(source) {
-  const match = String(source ?? '').match(/\\bpattern\\s*:\\s*['"]([A-Za-z0-9_]+)['"]/);
+  const match = String(source ?? '').match(/\bpattern\s*:\s*['"]([A-Za-z0-9_]+)['"]/);
   return match ? match[1] : null;
 }
 
