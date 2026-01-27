@@ -701,27 +701,50 @@ const nextConfig = {
       }
     }
     
-    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
-    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
-    if (isEE) {
-      if (!webpack) {
-        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
-      } else {
-        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
-        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
-        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
-        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
-        config.plugins = config.plugins || [];
-        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
-          try {
-            const req = resource.request || '';
-            // Replace src/empty paths
-            if (ceEmptyRegex.test(req)) {
-              const rel = req.substring(ceEmptyPrefix.length);
-              const mapped = path.join(eeSrcRoot, rel);
-              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+	    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
+	    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
+	    if (isEE) {
+	      if (!webpack) {
+	        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
+	      } else {
+	        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
+	        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+	        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
+	        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
+	        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+	        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+	        config.plugins = config.plugins || [];
+	        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
+	          try {
+	            const req = resource.request || '';
+	            // IMPORTANT:
+	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
+	            // Our tsconfig maps `@ee/* -> packages/ee/src/*` (CE stubs) and relies on webpack to override
+	            // to `ee/server/src` in EE builds.
+	            //
+	            // In practice, JsConfigPathsPlugin can resolve the stub path first when the stub file exists,
+	            // producing "hybrid" EE builds where some `@ee/*` imports fall back to real EE code (when no
+	            // stub exists), but many resolve to CE stubs (when the stub does exist).
+	            //
+	            // To force consistency, rewrite `@ee/*` specifiers to the EE source root *before* resolution.
+	            if (req === '@ee') {
+	              resource.request = eeSrcRoot.slice(0, -path.sep.length);
+	              return;
+	            }
+	            if (req.startsWith('@ee/')) {
+	              const rel = req.substring('@ee/'.length);
+	              const mapped = path.join(eeSrcRoot, rel);
+	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+	                console.log('[replace:EE:@ee]', { from: req, to: mapped });
+	              }
+	              resource.request = mapped;
+	              return;
+	            }
+	            // Replace src/empty paths
+	            if (ceEmptyRegex.test(req)) {
+	              const rel = req.substring(ceEmptyPrefix.length);
+	              const mapped = path.join(eeSrcRoot, rel);
+	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
                 console.log('[replace:EE:empty]', { from: req, to: mapped });
               }
               resource.request = mapped;
@@ -733,12 +756,12 @@ const nextConfig = {
               if (process.env.LOG_MODULE_RESOLUTION === '1') {
                 console.log('[replace:EE:packages]', { from: req, to: mapped });
               }
-              resource.request = mapped;
-            }
-          } catch {}
-        }));
-      }
-    }
+	              resource.request = mapped;
+	            }
+	          } catch {}
+	        }));
+	      }
+	    }
 
   // Conditionally enable verbose resolution logging for EE/CE module paths
   if (process.env.LOG_MODULE_RESOLUTION === '1') {
