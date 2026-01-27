@@ -442,6 +442,81 @@ const buildDataContext = (
     }
   };
 
+  const assignedVars = new Map<string, { lastStepId: string; lastStepName: string; nestedPaths: string[][] }>();
+
+  const recordAssignedVarPath = (assignmentPath: string, step: Step) => {
+    if (!assignmentPath.startsWith('vars.')) return;
+
+    const remainder = assignmentPath.slice('vars.'.length);
+    const parts = remainder.split('.').filter(Boolean);
+    if (parts.length === 0) return;
+
+    const rootName = parts[0]!;
+    const nested = parts.slice(1);
+
+    const nodeStep = step as NodeStep;
+    const defaultName = step.type === 'transform.assign' ? 'Assign' : step.type;
+    const stepName = nodeStep.name || defaultName;
+
+    const existing = assignedVars.get(rootName) ?? {
+      lastStepId: step.id,
+      lastStepName: stepName,
+      nestedPaths: []
+    };
+
+    existing.lastStepId = step.id;
+    existing.lastStepName = stepName;
+    if (nested.length > 0) {
+      existing.nestedPaths.push(nested);
+    }
+
+    assignedVars.set(rootName, existing);
+  };
+
+  const buildAssignedVarSchema = (nestedPaths: string[][]): JsonSchema => {
+    if (!nestedPaths.length) {
+      return {};
+    }
+
+    const root: JsonSchema = { type: 'object', properties: {} };
+
+    const ensureObjectProperty = (schema: JsonSchema, key: string): JsonSchema => {
+      schema.properties ??= {};
+      const existing = schema.properties[key] as JsonSchema | undefined;
+      if (existing && typeof existing === 'object') {
+        if (normalizeSchemaType(existing) !== 'object') {
+          schema.properties[key] = { type: 'object', properties: {} };
+        } else {
+          (schema.properties[key] as JsonSchema).properties ??= {};
+        }
+      } else {
+        schema.properties[key] = { type: 'object', properties: {} };
+      }
+      return schema.properties[key] as JsonSchema;
+    };
+
+    const ensureLeafProperty = (schema: JsonSchema, key: string) => {
+      schema.properties ??= {};
+      if (!(key in schema.properties)) {
+        schema.properties[key] = {};
+      }
+    };
+
+    for (const pathParts of nestedPaths) {
+      let cursor = root;
+      pathParts.forEach((segment, idx) => {
+        const isLeaf = idx === pathParts.length - 1;
+        if (isLeaf) {
+          ensureLeafProperty(cursor, segment);
+        } else {
+          cursor = ensureObjectProperty(cursor, segment);
+        }
+      });
+    }
+
+    return root;
+  };
+
   // Walk through steps to build context up to currentStepId
   // Returns the block context if the target step is found
   const walkSteps = (steps: Step[], stopAtId: string, blockCtx: BlockContext): BlockContext | null => {
@@ -498,6 +573,16 @@ const buildDataContext = (
         }
       }
 
+      // Collect vars assignments from assign-style steps that occur before the current step.
+      if (step.type === 'transform.assign' || step.type === 'event.wait') {
+        const config = (step as NodeStep).config as { assign?: Record<string, { $expr: string }> } | undefined;
+        if (config?.assign) {
+          for (const path of Object.keys(config.assign)) {
+            recordAssignedVarPath(path, step);
+          }
+        }
+      }
+
       // Walk nested blocks with updated context
       if (step.type === 'control.if') {
         const ifBlock = step as IfBlock;
@@ -543,6 +628,20 @@ const buildDataContext = (
     if (foundBlockCtx.inCatchBlock) {
       context.inCatchBlock = true;
     }
+  }
+
+  // Add workflow vars that were assigned (e.g., via transform.assign) before this step.
+  const existingSaveAs = new Set(context.steps.map((entry) => entry.saveAs));
+  for (const [saveAs, meta] of assignedVars.entries()) {
+    if (existingSaveAs.has(saveAs)) continue;
+    const outputSchema = buildAssignedVarSchema(meta.nestedPaths);
+    context.steps.push({
+      stepId: `${meta.lastStepId}:${saveAs}`,
+      stepName: meta.lastStepName,
+      saveAs,
+      outputSchema,
+      fields: extractSchemaFields(outputSchema, outputSchema)
+    });
   }
 
   return context;

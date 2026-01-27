@@ -575,7 +575,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
               <div className="mt-1 space-y-1">
                 {context.vars.length === 0 ? (
                   <div className="text-xs text-gray-500 px-2 py-2 ml-4">
-                    No step outputs yet. Enable <span className="font-medium">Save output</span> on a step to expose <code className="font-mono">vars.&lt;name&gt;</code> here.
+                    No vars yet. Use <span className="font-medium">Save output</span> or an <span className="font-medium">Assign</span> step to populate <code className="font-mono">vars.&lt;name&gt;</code>.
                   </div>
                 ) : (
                   context.vars.map(stepVar => {
