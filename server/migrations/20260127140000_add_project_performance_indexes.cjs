@@ -34,3 +34,6 @@ exports.down = async function(knex) {
     await knex.schema.raw('DROP INDEX IF EXISTS idx_project_ticket_links_tenant_task');
     await knex.schema.raw('DROP INDEX IF EXISTS idx_project_task_deps_tenant_pred_type');
 };
+
+// Disable transaction wrapper for Citus - CREATE INDEX can cause long locks on distributed tables
+exports.config = { transaction: false };
