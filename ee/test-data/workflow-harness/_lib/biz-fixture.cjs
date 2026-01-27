@@ -212,6 +212,69 @@ async function triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload
   });
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getLatestFixtureRun({ ctx, workflowId, tenantId, startedAfter, fixtureNotifyUserId, fixtureDedupeKey }) {
+  const rows = await ctx.db.query(
+    `
+      select
+        run_id,
+        workflow_id,
+        workflow_version,
+        tenant_id,
+        status,
+        event_type,
+        source_payload_schema_ref,
+        trigger_mapping_applied,
+        started_at,
+        completed_at,
+        updated_at,
+        error_json
+      from workflow_runs
+      where workflow_id = $1
+        and tenant_id = $2
+        and started_at >= $3
+        and input_json->>'fixtureNotifyUserId' = $4
+        and ($5::text is null or input_json->>'fixtureDedupeKey' = $5)
+      order by started_at desc
+      limit 1
+    `,
+    [workflowId, tenantId, startedAfter, fixtureNotifyUserId, fixtureDedupeKey ?? null]
+  );
+  return rows[0] ?? null;
+}
+
+async function waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId, fixtureDedupeKey, timeoutMs, pollMs = 500 }) {
+  if (!fixtureNotifyUserId) throw new Error('waitForFixtureRun requires fixtureNotifyUserId');
+
+  const workflowId = ctx.workflow.id;
+  const tenantId = ctx.config.tenantId;
+  const timeout = Number(timeoutMs ?? ctx.config.timeoutMs ?? 60_000);
+
+  const deadline = Date.now() + timeout;
+  let last = null;
+
+  while (Date.now() < deadline) {
+    // eslint-disable-next-line no-await-in-loop
+    last = await getLatestFixtureRun({ ctx, workflowId, tenantId, startedAfter, fixtureNotifyUserId, fixtureDedupeKey });
+    if (last) {
+      const status = String(last.status || '');
+      const isTerminal = status === 'SUCCEEDED' || status === 'FAILED' || status === 'CANCELED';
+      if (isTerminal) return last;
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await sleep(pollMs);
+  }
+
+  const err = new Error(
+    `Timed out waiting for workflow run (workflowId=${workflowId}, tenantId=${tenantId}, startedAfter=${startedAfter}, fixtureNotifyUserId=${fixtureNotifyUserId}).`
+  );
+  err.details = { lastSeen: last };
+  throw err;
+}
+
 async function runTicketCommentDefault(ctx, { fixtureName, eventName, schemaRef }) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
@@ -231,8 +294,9 @@ async function runTicketCommentDefault(ctx, { fixtureName, eventName, schemaRef 
     fixtureDedupeKey: correlationKey
   };
 
+  const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: correlationKey });
   await assertRunSucceeded(ctx, runRow);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
@@ -262,13 +326,14 @@ async function runTicketCommentIdempotent(ctx, { fixtureName, eventName, schemaR
     fixtureDedupeKey: dedupeKey
   };
 
+  const startedAfter1 = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow1 = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow1 = await waitForFixtureRun(ctx, { startedAfter: startedAfter1, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow1);
 
   const startedAfter2 = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow2 = await ctx.waitForRun({ startedAfter: startedAfter2 });
+  const runRow2 = await waitForFixtureRun(ctx, { startedAfter: startedAfter2, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow2);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
@@ -298,8 +363,9 @@ async function runTicketCommentForEach(ctx, { fixtureName, eventName, schemaRef 
     fixtureDedupeKey: dedupeKey
   };
 
+  const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
@@ -330,8 +396,9 @@ async function runTicketCommentTryCatch(ctx, { fixtureName, eventName, schemaRef
     fixtureDedupeKey: dedupeKey
   };
 
+  const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
@@ -366,7 +433,7 @@ async function runTicketCommentMultiBranch(ctx, { fixtureName, eventName, schema
 
     const startedAfter = new Date().toISOString();
     await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-    const runRow = await ctx.waitForRun({ startedAfter });
+    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
     await assertRunSucceeded(ctx, runRow);
     return dedupeKey;
   }
@@ -480,8 +547,10 @@ async function runProjectTaskDefault(ctx, { fixtureName, eventName, schemaRef })
     };
   }
 
+  const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const fixtureDedupeKey = payload?.fixtureDedupeKey ?? null;
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey });
   await assertRunSucceeded(ctx, runRow);
 
   const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
@@ -521,13 +590,14 @@ async function runProjectTaskIdempotent(ctx, { fixtureName, eventName, schemaRef
     fixtureDedupeKey: dedupeKey
   };
 
+  const startedAfter1 = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow1 = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow1 = await waitForFixtureRun(ctx, { startedAfter: startedAfter1, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow1);
 
   const startedAfter2 = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow2 = await ctx.waitForRun({ startedAfter: startedAfter2 });
+  const runRow2 = await waitForFixtureRun(ctx, { startedAfter: startedAfter2, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow2);
 
   const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
@@ -567,8 +637,9 @@ async function runProjectTaskForEach(ctx, { fixtureName, eventName, schemaRef })
     fixtureDedupeKey: dedupeKey
   };
 
+  const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow);
 
   const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
@@ -609,8 +680,9 @@ async function runProjectTaskTryCatch(ctx, { fixtureName, eventName, schemaRef }
     fixtureDedupeKey: dedupeKey
   };
 
+  const startedAfter = new Date().toISOString();
   await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
   await assertRunSucceeded(ctx, runRow);
 
   const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
@@ -654,7 +726,7 @@ async function runProjectTaskMultiBranch(ctx, { fixtureName, eventName, schemaRe
     };
     const startedAfter = new Date().toISOString();
     await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
-    const runRow = await ctx.waitForRun({ startedAfter });
+    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: dedupeKey });
     await assertRunSucceeded(ctx, runRow);
   }
 
@@ -773,12 +845,9 @@ async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRe
       fixtureDedupeKey: correlationKey
     };
 
-    await ctx.http.request('/api/workflow/events', {
-      method: 'POST',
-      json: { eventName, correlationKey, payloadSchemaRef: schemaRef, payload }
-    });
-
-    const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+    const startedAfter = new Date().toISOString();
+    await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: correlationKey });
     await assertRunSucceeded(ctx, runRow);
 
     const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
@@ -811,12 +880,9 @@ async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRe
       fixtureDedupeKey: correlationKey
     };
 
-    await ctx.http.request('/api/workflow/events', {
-      method: 'POST',
-      json: { eventName, correlationKey, payloadSchemaRef: schemaRef, payload }
-    });
-
-    const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+    const startedAfter = new Date().toISOString();
+    await triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload });
+    const runRow = await waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId: user.user_id, fixtureDedupeKey: correlationKey });
     await assertRunSucceeded(ctx, runRow);
 
     const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
