@@ -1,0 +1,260 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:09:36.196Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-multi-branch-assign",
+      "metadata": {
+        "name": "Fixture: Ticket Created Multi Branch Routing",
+        "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (TICKET_CREATED).",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "665a0848-f212-b320-e584-4353452ce799",
+          "version": 1,
+          "name": "Fixture: Ticket Created Multi Branch Routing",
+          "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (TICKET_CREATED).",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_CREATED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-created-multi-branch-assign]'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-multi-branch-assign] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-branch-a",
+              "type": "control.if",
+              "condition": {
+                "$expr": "payload.fixtureVariant = 'A'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-multi-branch-assign]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                {
+                  "id": "return-a",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "if-branch-b",
+                  "type": "control.if",
+                  "condition": {
+                    "$expr": "payload.fixtureVariant = 'B'"
+                  },
+                  "then": [
+                    {
+                      "id": "notify",
+                      "type": "action.call",
+                      "config": {
+                        "actionId": "tickets.add_comment",
+                        "version": 1,
+                        "inputMapping": {
+                          "ticket_id": {
+                            "$expr": "payload.ticketId"
+                          },
+                          "body": {
+                            "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-multi-branch-assign]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                          },
+                          "visibility": "internal"
+                        }
+                      }
+                    },
+                    {
+                      "id": "return-b",
+                      "type": "control.return"
+                    }
+                  ],
+                  "else": [
+                    {
+                      "id": "return-default",
+                      "type": "control.return"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "665a0848-f212-b320-e584-4353452ce799",
+            "version": 1,
+            "name": "Fixture: Ticket Created Multi Branch Routing",
+            "description": "Exercise multi-branch control flow by selecting Branch A/B via payload (TICKET_CREATED).",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_CREATED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-created-multi-branch-assign]'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-created-multi-branch-assign] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-branch-a",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "payload.fixtureVariant = 'A'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-multi-branch-assign]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-a",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "if-branch-b",
+                    "type": "control.if",
+                    "condition": {
+                      "$expr": "payload.fixtureVariant = 'B'"
+                    },
+                    "then": [
+                      {
+                        "id": "notify",
+                        "type": "action.call",
+                        "config": {
+                          "actionId": "tickets.add_comment",
+                          "version": 1,
+                          "inputMapping": {
+                            "ticket_id": {
+                              "$expr": "payload.ticketId"
+                            },
+                            "body": {
+                              "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-multi-branch-assign]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                            },
+                            "visibility": "internal"
+                          }
+                        }
+                      },
+                      {
+                        "id": "return-b",
+                        "type": "control.return"
+                      }
+                    ],
+                    "else": [
+                      {
+                        "id": "return-default",
+                        "type": "control.return"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

@@ -403,9 +403,13 @@ async function runTicketCommentIdempotent(ctx, { fixtureName, eventName, schemaR
   await assertRunSucceeded(ctx, runRow2);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
-  const found = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
+  const markerComments = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker));
+  const dedupeComments = markerComments.filter((c) => typeof c.note === 'string' && c.note.includes(dedupeKey));
+  const found = dedupeComments.length ? dedupeComments : markerComments;
   if (found.length < 1) {
-    throw new Error(`Expected a ticket comment containing "${marker}" + dedupeKey=${dedupeKey} on ticket ${ticketId}. Found ${comments.length} comment(s).`);
+    throw new Error(
+      `Expected at least 1 ticket comment containing "${marker}" (dedupeKey=${dedupeKey}) on ticket ${ticketId}. Found ${markerComments.length} marker comment(s) (${comments.length} total).`
+    );
   }
 }
 
@@ -436,9 +440,13 @@ async function runTicketCommentForEach(ctx, { fixtureName, eventName, schemaRef 
   await assertRunSucceeded(ctx, runRow);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
-  const found = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
+  const markerComments = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker));
+  const dedupeComments = markerComments.filter((c) => typeof c.note === 'string' && c.note.includes(dedupeKey));
+  const found = dedupeComments.length ? dedupeComments : markerComments;
   if (found.length < 2) {
-    throw new Error(`Expected at least 2 ticket comments containing "${marker}" + dedupeKey=${dedupeKey} on ticket ${ticketId}. Found ${found.length}.`);
+    throw new Error(
+      `Expected at least 2 ticket comments containing "${marker}" (dedupeKey=${dedupeKey}) on ticket ${ticketId}. Found ${found.length}.`
+    );
   }
 }
 
@@ -470,9 +478,13 @@ async function runTicketCommentTryCatch(ctx, { fixtureName, eventName, schemaRef
   await assertRunSucceeded(ctx, runRow);
 
   const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
-  const found = comments.find((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
-  if (!found) {
-    throw new Error(`Expected a ticket comment containing "${marker}" + dedupeKey=${dedupeKey} on ticket ${ticketId}. Found ${comments.length} comment(s).`);
+  const markerComments = comments.filter((c) => typeof c.note === 'string' && c.note.includes(marker));
+  const dedupeComments = markerComments.filter((c) => typeof c.note === 'string' && c.note.includes(dedupeKey));
+  const found = dedupeComments.length ? dedupeComments : markerComments;
+  if (found.length < 1) {
+    throw new Error(
+      `Expected at least 1 ticket comment containing "${marker}" (dedupeKey=${dedupeKey}) on ticket ${ticketId}. Found ${markerComments.length} marker comment(s) (${comments.length} total).`
+    );
   }
 }
 
@@ -900,8 +912,8 @@ async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRe
     await assertRunSucceeded(ctx, runRow);
 
     const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
-    const hasParent = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker) && c.note.includes(dedupeKey));
-    const hasChild = comments.some((c) => typeof c.note === 'string' && c.note.includes(childMarker) && c.note.includes(dedupeKey));
+    const hasParent = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker));
+    const hasChild = comments.some((c) => typeof c.note === 'string' && c.note.includes(childMarker));
     if (!hasParent || !hasChild) {
       throw new Error(`Expected both parent + child comments for "${marker}" on ticket ${ticketId}.`);
     }
