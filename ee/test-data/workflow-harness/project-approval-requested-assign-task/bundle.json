@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:56:14.245Z",
+  "workflows": [
+    {
+      "key": "fixture.project-approval-requested-assign-task",
+      "metadata": {
+        "name": "Fixture: Project Approval Requested",
+        "description": "Send an in-app notification when the event fires (PROJECT_APPROVAL_REQUESTED).",
+        "payloadSchemaRef": "payload.ProjectApprovalRequested.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectApprovalRequested.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_APPROVAL_REQUESTED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectApprovalRequested.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "cd205380-c9a4-e4af-344d-82680afcb865",
+          "version": 1,
+          "name": "Fixture: Project Approval Requested",
+          "description": "Send an in-app notification when the event fires (PROJECT_APPROVAL_REQUESTED).",
+          "payloadSchemaRef": "payload.ProjectApprovalRequested.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_APPROVAL_REQUESTED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-approval-requested-assign-task]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-approval-requested-assign-task] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-approval-requested-assign-task] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.projectId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture project-approval-requested-assign-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "cd205380-c9a4-e4af-344d-82680afcb865",
+            "version": 1,
+            "name": "Fixture: Project Approval Requested",
+            "description": "Send an in-app notification when the event fires (PROJECT_APPROVAL_REQUESTED).",
+            "payloadSchemaRef": "payload.ProjectApprovalRequested.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_APPROVAL_REQUESTED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-approval-requested-assign-task]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-approval-requested-assign-task] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-approval-requested-assign-task] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.projectId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture project-approval-requested-assign-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
