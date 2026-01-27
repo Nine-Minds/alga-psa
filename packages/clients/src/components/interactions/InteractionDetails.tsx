@@ -322,7 +322,18 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           <div className="flex items-center">
             <span className="font-semibold">Duration:</span>
             <span className="ml-2">
-              {interaction.duration} minutes
+              {(() => {
+                const totalMinutes = interaction.duration;
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                if (hours > 0 && minutes > 0) {
+                  return `${hours}h ${minutes}m`;
+                } else if (hours > 0) {
+                  return `${hours}h`;
+                } else {
+                  return `${minutes}m`;
+                }
+              })()}
             </span>
           </div>
         )}

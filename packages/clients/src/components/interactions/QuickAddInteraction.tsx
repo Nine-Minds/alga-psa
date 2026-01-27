@@ -62,7 +62,8 @@ export function QuickAddInteraction({
   const [notesContent, setNotesContent] = useState<PartialBlock[]>([]);
   const [isNotesContentReady, setIsNotesContentReady] = useState<boolean>(false);
   const [typeId, setTypeId] = useState('');
-  const [duration, setDuration] = useState('');
+  const [durationHours, setDurationHours] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState('');
   const [startTime, setStartTime] = useState<Date | undefined>(undefined);
   const [endTime, setEndTime] = useState<Date | undefined>(undefined);
   const [statusId, setStatusId] = useState('');
@@ -156,12 +157,20 @@ export function QuickAddInteraction({
     helperText: 'When did this interaction end?'
   });
 
-  const { automationIdProps: durationProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-duration`,
+  const { automationIdProps: durationHoursProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-duration-hours`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'Duration',
-    helperText: 'Duration of the interaction in minutes'
+    label: 'Duration Hours',
+    helperText: 'Duration hours of the interaction'
+  });
+
+  const { automationIdProps: durationMinutesProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-duration-minutes`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Duration Minutes',
+    helperText: 'Duration minutes of the interaction'
   });
 
   const { automationIdProps: cancelButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -236,7 +245,17 @@ export function QuickAddInteraction({
       setTitle(editingInteraction.title || '');
       setTypeId(editingInteraction.type_id || '');
       setStatusId(editingInteraction.status_id || '');
-      setDuration(editingInteraction.duration?.toString() || '');
+      // Convert duration from total minutes to hours and minutes
+      if (editingInteraction.duration) {
+        const totalMinutes = editingInteraction.duration;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        setDurationHours(hours > 0 ? hours.toString() : '');
+        setDurationMinutes(minutes > 0 ? minutes.toString() : '');
+      } else {
+        setDurationHours('');
+        setDurationMinutes('');
+      }
       setStartTime(editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined);
       setEndTime(editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined);
       setSelectedUserId(editingInteraction.user_id || '');
@@ -301,44 +320,81 @@ export function QuickAddInteraction({
   // Note: ContactPicker handles client filtering internally, 
   // so we don't need to refetch contacts when client changes
 
+  // Helper to get total duration in minutes from hours and minutes state
+  const getTotalDurationMinutes = (): number => {
+    const hours = parseInt(durationHours) || 0;
+    const minutes = parseInt(durationMinutes) || 0;
+    return (hours * 60) + minutes;
+  };
+
   // Handle start time change
   const handleStartTimeChange = (date: Date) => {
     setStartTime(date);
-    
+
     // If we have a duration, update end time accordingly
-    if (duration && !isNaN(parseInt(duration))) {
-      const durationMinutes = parseInt(duration);
-      const newEndTime = new Date(date.getTime() + durationMinutes * 60000);
+    const totalMinutes = getTotalDurationMinutes();
+    if (totalMinutes > 0) {
+      const newEndTime = new Date(date.getTime() + totalMinutes * 60000);
       setEndTime(newEndTime);
     }
   };
 
   // Handle end time change
   const handleEndTimeChange = (date: Date) => {
+    // Validate: end time must be after or equal to start time
+    if (startTime && date.getTime() < startTime.getTime()) {
+      // Don't allow setting end time before start time
+      return;
+    }
+
     setEndTime(date);
-    
-    // If we have a start time, calculate and update duration
+
+    // If we have a start time, calculate and update duration (hours and minutes)
     if (startTime) {
       const diffMilliseconds = date.getTime() - startTime.getTime();
-      const diffMinutes = Math.round(diffMilliseconds / 60000);
-      
+      const totalMinutes = Math.round(diffMilliseconds / 60000);
+
       // Only update duration if the difference is positive
-      if (diffMinutes >= 0) {
-        setDuration(diffMinutes.toString());
+      if (totalMinutes >= 0) {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        setDurationHours(hours > 0 ? hours.toString() : '');
+        setDurationMinutes(minutes > 0 ? minutes.toString() : '');
       }
     }
   };
 
-  // Handle duration change
-  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDuration = e.target.value;
-    setDuration(newDuration);
-    
-    // If we have a start time and valid duration, update end time
-    if (startTime && newDuration && !isNaN(parseInt(newDuration))) {
-      const durationMinutes = parseInt(newDuration);
-      const newEndTime = new Date(startTime.getTime() + durationMinutes * 60000);
-      setEndTime(newEndTime);
+  // Handle duration hours change
+  const handleDurationHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newHours = e.target.value;
+    setDurationHours(newHours);
+
+    // If we have a start time, update end time
+    if (startTime) {
+      const hours = parseInt(newHours) || 0;
+      const minutes = parseInt(durationMinutes) || 0;
+      const totalMinutes = (hours * 60) + minutes;
+      if (totalMinutes >= 0) {
+        const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
+        setEndTime(newEndTime);
+      }
+    }
+  };
+
+  // Handle duration minutes change
+  const handleDurationMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMinutes = e.target.value;
+    setDurationMinutes(newMinutes);
+
+    // If we have a start time, update end time
+    if (startTime) {
+      const hours = parseInt(durationHours) || 0;
+      const minutes = parseInt(newMinutes) || 0;
+      const totalMinutes = (hours * 60) + minutes;
+      if (totalMinutes >= 0) {
+        const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
+        setEndTime(newEndTime);
+      }
     }
   };
 
@@ -372,7 +428,7 @@ export function QuickAddInteraction({
         title,
         notes: JSON.stringify(notesContent),
         type_id: typeId,
-        duration: duration ? parseInt(duration, 10) : null,
+        duration: getTotalDurationMinutes() > 0 ? getTotalDurationMinutes() : null,
         start_time: startTime,
         end_time: endTime,
         status_id: statusId,
@@ -425,7 +481,8 @@ export function QuickAddInteraction({
         setNotesContent([]);
         setTypeId('');
         setStatusId('');
-        setDuration('');
+        setDurationHours('');
+        setDurationMinutes('');
         setStartTime(undefined);
         setEndTime(undefined);
         setSelectedUserId('');
@@ -625,13 +682,34 @@ export function QuickAddInteraction({
                   />
                 </div>
               </div>
-              <Input
-                type="number"
-                value={duration}
-                onChange={handleDurationChange}
-                placeholder="Duration (minutes)"
-                min="0"
-              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Duration</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={durationHours}
+                      onChange={handleDurationHoursChange}
+                      placeholder="0"
+                      min="0"
+                      className="w-20"
+                    />
+                    <span className="text-sm text-gray-600">hours</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={durationMinutes}
+                      onChange={handleDurationMinutesChange}
+                      placeholder="0"
+                      min="0"
+                      max="59"
+                      className="w-20"
+                    />
+                    <span className="text-sm text-gray-600">minutes</span>
+                  </div>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <Button 
                   id="cancel-interaction-button"
