@@ -4,8 +4,11 @@ import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSc
 const appointmentIdSchema = uuidSchema('Appointment ID');
 const ticketIdSchema = uuidSchema('Ticket ID');
 const scheduleBlockIdSchema = uuidSchema('Schedule Block ID');
+const scheduleEntryIdSchema = uuidSchema('Schedule Entry ID');
 const teamIdSchema = uuidSchema('Team ID');
 const userIdSchema = uuidSchema('User ID');
+const appointmentRequestIdSchema = uuidSchema('Appointment Request ID');
+const serviceIdSchema = uuidSchema('Service ID');
 
 const assigneeTypeSchema = z.enum(['user', 'team']).describe('Assignee type');
 const partySchema = z.enum(['customer', 'agent']).describe('No-show party');
@@ -150,3 +153,64 @@ export const technicianCheckedOutEventPayloadSchema = BaseDomainEventPayloadSche
 }).describe('Payload for TECHNICIAN_CHECKED_OUT');
 
 export type TechnicianCheckedOutEventPayload = z.infer<typeof technicianCheckedOutEventPayloadSchema>;
+
+// ---------------------------------------------------------------------------
+// Legacy scheduling events (still used in harness fixtures)
+// ---------------------------------------------------------------------------
+
+export const scheduleEntryEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  entryId: scheduleEntryIdSchema,
+  userId: userIdSchema,
+  changes: z.record(z.unknown()).optional(),
+}).describe('Payload for schedule entry events (SCHEDULE_ENTRY_*)');
+
+export type ScheduleEntryEventPayload = z.infer<typeof scheduleEntryEventPayloadSchema>;
+
+export const scheduleEntryCreatedEventPayloadSchema = scheduleEntryEventPayloadSchema.describe(
+  'Payload for SCHEDULE_ENTRY_CREATED'
+);
+export const scheduleEntryUpdatedEventPayloadSchema = scheduleEntryEventPayloadSchema.describe(
+  'Payload for SCHEDULE_ENTRY_UPDATED'
+);
+export const scheduleEntryDeletedEventPayloadSchema = scheduleEntryEventPayloadSchema.describe(
+  'Payload for SCHEDULE_ENTRY_DELETED'
+);
+
+export const appointmentRequestEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  appointmentRequestId: appointmentRequestIdSchema,
+  serviceId: serviceIdSchema,
+  serviceName: z.string().min(1),
+  requestedDate: z.string().min(1),
+  requestedTime: z.string().min(1),
+  requestedDuration: z.number().int().positive(),
+  isAuthenticated: z.boolean(),
+  requesterEmail: z.string().email(),
+  requesterName: z.string().optional(),
+  requesterPhone: z.string().optional(),
+  clientId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  clientUserId: z.string().uuid().optional(),
+  preferredAssignedUserId: z.string().uuid().optional(),
+  companyName: z.string().optional(),
+  ticketId: z.string().uuid().optional(),
+  description: z.string().optional(),
+  approvedByUserId: z.string().uuid().optional(),
+  assignedUserId: z.string().uuid().optional(),
+  scheduleEntryId: z.string().uuid().optional(),
+  declineReason: z.string().optional(),
+}).describe('Payload for appointment request events (APPOINTMENT_REQUEST_*)');
+
+export type AppointmentRequestEventPayload = z.infer<typeof appointmentRequestEventPayloadSchema>;
+
+export const appointmentRequestCreatedEventPayloadSchema = appointmentRequestEventPayloadSchema.describe(
+  'Payload for APPOINTMENT_REQUEST_CREATED'
+);
+export const appointmentRequestApprovedEventPayloadSchema = appointmentRequestEventPayloadSchema.describe(
+  'Payload for APPOINTMENT_REQUEST_APPROVED'
+);
+export const appointmentRequestDeclinedEventPayloadSchema = appointmentRequestEventPayloadSchema.describe(
+  'Payload for APPOINTMENT_REQUEST_DECLINED'
+);
+export const appointmentRequestCancelledEventPayloadSchema = appointmentRequestEventPayloadSchema.describe(
+  'Payload for APPOINTMENT_REQUEST_CANCELLED'
+);
