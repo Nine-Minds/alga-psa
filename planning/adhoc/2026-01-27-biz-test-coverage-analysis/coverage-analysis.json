@@ -1,0 +1,181 @@
+{
+  "analysisDate": "2026-01-27",
+  "analysisVersion": 2,
+  "criteria": {
+    "businessRelevant": "Calls domain-modifying actions: tickets.create/update/assign/add_comment, projects.create_task, time_entries.create, email.send (to customers), crm.create_activity_note, scheduling.assign_user, etc.",
+    "notificationOnly": "Only calls notifications.send_in_app - internal notification without domain state modification",
+    "scaffold": "No action.call at all - just state.set/assign/return",
+    "harnessTest": "Tests harness/runtime behavior (schema validation, paused workflows)"
+  },
+  "summary": {
+    "totalFixtures": 171,
+    "businessRelevant": 24,
+    "notificationOnly": 142,
+    "scaffold": 2,
+    "harnessTest": 3,
+    "needingBizCounterparts": 142,
+    "coveragePercentage": 14
+  },
+  "domainSummaries": [
+    {
+      "domain": "ticket",
+      "total": 88,
+      "businessRelevant": 16,
+      "notificationOnly": 70,
+      "scaffold": 2,
+      "needingCounterparts": 70,
+      "bizRelevantFixtures": [
+        "ticket-assigned-acknowledge",
+        "ticket-created-assign-invalid-fails",
+        "ticket-created-assign-trycatch",
+        "ticket-created-auto-assign-by-priority",
+        "ticket-created-create-project-task",
+        "ticket-created-outage-escalate",
+        "ticket-created-triage-comment",
+        "ticket-escalated-crm-note",
+        "ticket-priority-changed-audit-comment",
+        "ticket-queue-after-hours-email",
+        "ticket-reopened-notify-tech",
+        "ticket-status-waiting-on-customer-reminder",
+        "ticket-tags-billing-route",
+        "ticket-unassigned-return-to-triage"
+      ]
+    },
+    {
+      "domain": "project",
+      "total": 29,
+      "businessRelevant": 1,
+      "notificationOnly": 28,
+      "scaffold": 0,
+      "needingCounterparts": 28,
+      "bizRelevantFixtures": [
+        "project-created-kickoff-tasks"
+      ]
+    },
+    {
+      "domain": "invoice",
+      "total": 12,
+      "businessRelevant": 1,
+      "notificationOnly": 11,
+      "scaffold": 0,
+      "needingCounterparts": 11,
+      "bizRelevantFixtures": [
+        "invoice-generated-review-task"
+      ]
+    },
+    {
+      "domain": "payment",
+      "total": 4,
+      "businessRelevant": 0,
+      "notificationOnly": 4,
+      "scaffold": 0,
+      "needingCounterparts": 4
+    },
+    {
+      "domain": "appointment",
+      "total": 10,
+      "businessRelevant": 1,
+      "notificationOnly": 9,
+      "scaffold": 0,
+      "needingCounterparts": 9,
+      "bizRelevantFixtures": [
+        "appointment-created-assign-notify"
+      ]
+    },
+    {
+      "domain": "contract",
+      "total": 5,
+      "businessRelevant": 1,
+      "notificationOnly": 4,
+      "scaffold": 0,
+      "needingCounterparts": 4,
+      "bizRelevantFixtures": [
+        "contract-created-onboarding-task"
+      ]
+    },
+    {
+      "domain": "schedule",
+      "total": 5,
+      "businessRelevant": 1,
+      "notificationOnly": 4,
+      "scaffold": 0,
+      "needingCounterparts": 4,
+      "bizRelevantFixtures": [
+        "schedule-block-created"
+      ]
+    },
+    {
+      "domain": "technician",
+      "total": 4,
+      "businessRelevant": 0,
+      "notificationOnly": 4,
+      "scaffold": 0,
+      "needingCounterparts": 4
+    },
+    {
+      "domain": "email",
+      "total": 2,
+      "businessRelevant": 1,
+      "notificationOnly": 1,
+      "scaffold": 0,
+      "needingCounterparts": 1,
+      "bizRelevantFixtures": [
+        "email-inbound-received-ticket-comment"
+      ]
+    },
+    {
+      "domain": "company",
+      "total": 2,
+      "businessRelevant": 0,
+      "notificationOnly": 2,
+      "scaffold": 0,
+      "needingCounterparts": 2
+    },
+    {
+      "domain": "integration",
+      "total": 2,
+      "businessRelevant": 0,
+      "notificationOnly": 2,
+      "scaffold": 0,
+      "needingCounterparts": 2
+    },
+    {
+      "domain": "task",
+      "total": 2,
+      "businessRelevant": 0,
+      "notificationOnly": 2,
+      "scaffold": 0,
+      "needingCounterparts": 2
+    },
+    {
+      "domain": "time",
+      "total": 2,
+      "businessRelevant": 0,
+      "notificationOnly": 2,
+      "scaffold": 0,
+      "needingCounterparts": 2
+    },
+    {
+      "domain": "capacity",
+      "total": 1,
+      "businessRelevant": 0,
+      "notificationOnly": 1,
+      "scaffold": 0,
+      "needingCounterparts": 1
+    },
+    {
+      "domain": "harness",
+      "total": 3,
+      "businessRelevant": 0,
+      "notificationOnly": 0,
+      "scaffold": 0,
+      "harnessTest": 3,
+      "needingCounterparts": 0,
+      "fixtures": [
+        "runtime-paused-no-run",
+        "schema-invalid-event-payload",
+        "schema-unknown-schema-ref"
+      ]
+    }
+  ]
+}
