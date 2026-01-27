@@ -320,7 +320,7 @@ export function QuickAddInteraction({
   // Note: ContactPicker handles client filtering internally, 
   // so we don't need to refetch contacts when client changes
 
-  // Helper to get total duration in minutes from hours and minutes state (max 24h)
+  // Helper to get total duration in minutes from hours and minutes state (max 24h 59m = 1499 minutes)
   const getTotalDurationMinutes = (): number => {
     const hours = Math.min(Math.max(parseInt(durationHours) || 0, 0), 24);
     const minutes = Math.min(Math.max(parseInt(durationMinutes) || 0, 0), 59);
@@ -698,7 +698,7 @@ export function QuickAddInteraction({
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Start Time</label>
                   <DateTimePicker
-                    id="interaction-start-time"
+                    id={`${id}-start-time`}
                     value={startTime}
                     onChange={(date) => {
                       if (date) {
@@ -717,7 +717,7 @@ export function QuickAddInteraction({
                 <div className="space-y-1">
                   <label className="text-sm font-medium">End Time</label>
                   <DateTimePicker
-                    id="interaction-end-time"
+                    id={`${id}-end-time`}
                     value={endTime}
                     onChange={(date) => {
                       if (date) {
