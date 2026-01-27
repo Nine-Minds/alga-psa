@@ -702,8 +702,8 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   const showNoResults = !isLoading && filteredWorkflows.length === 0 && workflows.length > 0;
 
   return (
-    <ReflectionContainer id="workflow-list" label="Workflow List">
-      <div className="flex flex-col h-full">
+    <ReflectionContainer id="workflow-list" label="Workflow List" className="h-full min-h-0">
+      <div className="flex flex-col h-full min-h-0">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -835,7 +835,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
           </div>
         ) : (
           /* Table */
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <DataTable
               id="workflow-list-table"
               data={filteredWorkflows}
