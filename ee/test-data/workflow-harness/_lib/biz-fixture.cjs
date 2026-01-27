@@ -1,0 +1,436 @@
+const { randomUUID } = require('node:crypto');
+
+const { buildBasePayloadForEvent, pickOne, pickUser } = require('./notification-fixture.cjs');
+
+function getApiKey() {
+  return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
+}
+
+async function assertRunSucceeded(ctx, runRow) {
+  if (runRow.status === 'SUCCEEDED') return;
+  const steps = await ctx.getRunSteps(runRow.run_id);
+  throw new Error(`Expected run SUCCEEDED, got ${runRow.status}. Steps: ${JSON.stringify(ctx.summarizeSteps(steps))}`);
+}
+
+async function createProject(ctx, { tenantId, apiKey, clientId }) {
+  const projectName = `Fixture project ${randomUUID()}`;
+  const createRes = await ctx.http.request('/api/v1/projects', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    json: {
+      client_id: clientId,
+      project_name: projectName,
+      create_default_phase: true
+    }
+  });
+
+  const projectId = createRes.json?.data?.project_id;
+  if (!projectId) throw new Error('Project create response missing data.project_id');
+  return projectId;
+}
+
+async function cleanupProject(ctx, { tenantId, apiKey, projectId }) {
+  let projectDeleted = false;
+  try {
+    await ctx.http.request(`/api/v1/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': apiKey }
+    });
+    projectDeleted = true;
+  } catch {
+    // Fall back to DB cleanup if project deletion fails due to FK constraints.
+  }
+
+  if (projectDeleted) return;
+
+  const phaseIds = await ctx.db.query(`select phase_id from project_phases where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  const phaseIdList = phaseIds.map((r) => r.phase_id);
+
+  if (phaseIdList.length) {
+    const taskIds = await ctx.db.query(`select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`, [
+      tenantId,
+      phaseIdList
+    ]);
+    const taskIdList = taskIds.map((r) => r.task_id);
+
+    if (taskIdList.length) {
+      await ctx.dbWrite.query(`delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+      await ctx.dbWrite.query(`delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+    }
+
+    await ctx.dbWrite.query(`delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`, [tenantId, phaseIdList]);
+  }
+
+  await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+}
+
+async function createTicket(ctx, { tenantId, apiKey }) {
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+  const board = await pickOne(ctx, {
+    label: 'a ticket board',
+    sql: `select board_id from boards where tenant = $1 order by is_default desc, display_order asc limit 1`,
+    params: [tenantId]
+  });
+  const status = await pickOne(ctx, {
+    label: 'a ticket status',
+    sql: `select status_id from statuses where tenant = $1 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
+    params: [tenantId]
+  });
+  const priority = await pickOne(ctx, {
+    label: 'a ticket priority',
+    sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
+    params: [tenantId]
+  });
+
+  const title = `Fixture ticket ${randomUUID()}`;
+
+  const createRes = await ctx.http.request('/api/v1/tickets', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    json: {
+      title,
+      client_id: client.client_id,
+      board_id: board.board_id,
+      status_id: status.status_id,
+      priority_id: priority.priority_id
+    }
+  });
+
+  const ticketId = createRes.json?.data?.ticket_id;
+  if (!ticketId) throw new Error('Ticket create response missing data.ticket_id');
+  return ticketId;
+}
+
+async function cleanupTicket(ctx, { tenantId, apiKey, ticketId }) {
+  try {
+    await ctx.http.request(`/api/v1/tickets/${ticketId}`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': apiKey }
+    });
+    return;
+  } catch {
+    // Ticket deletion is blocked when comments reference the ticket; clean up those rows first.
+  }
+
+  await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+  await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+}
+
+async function listTicketComments(ctx, { tenantId, ticketId, limit = 50 }) {
+  return ctx.db.query(
+    `
+      select comment_id, note, is_internal, metadata, created_at
+      from comments
+      where tenant = $1 and ticket_id = $2
+      order by created_at desc
+      limit ${Number(limit) || 50}
+    `,
+    [tenantId, ticketId]
+  );
+}
+
+async function listProjectTasks(ctx, { tenantId, projectId, limit = 50 }) {
+  return ctx.db.query(
+    `
+      select t.task_id, t.task_name, t.created_at
+      from project_tasks t
+      join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant
+      where p.tenant = $1 and p.project_id = $2
+      order by t.created_at desc
+      limit ${Number(limit) || 50}
+    `,
+    [tenantId, projectId]
+  );
+}
+
+async function runTicketCommentFixture(ctx, { fixtureName, eventName, schemaRef }) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const ticketId = await createTicket(ctx, { tenantId, apiKey });
+  ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+
+  const correlationKey = ticketId;
+  const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+  const payload = {
+    ...base,
+    fixtureNotifyUserId: user.user_id,
+    fixtureDedupeKey: correlationKey
+  };
+
+  await ctx.http.request('/api/workflow/events', {
+    method: 'POST',
+    json: {
+      eventName,
+      correlationKey,
+      payloadSchemaRef: schemaRef,
+      payload
+    }
+  });
+
+  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow);
+
+  const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
+  const found = comments.find((c) => typeof c.note === 'string' && c.note.includes(marker));
+  if (!found) {
+    throw new Error(`Expected a ticket comment containing "${marker}" on ticket ${ticketId}. Found ${comments.length} comment(s).`);
+  }
+}
+
+function isProjectPayloadViaNotificationFixture(eventName) {
+  // These fixtures don't use the shared notification fixture payload builder, and schemas may not allow fixtureDedupeKey.
+  return !['INTEGRATION_SYNC_FAILED', 'INTEGRATION_WEBHOOK_RECEIVED', 'EMAIL_PROVIDER_CONNECTED', 'PAYMENT_RECORDED'].includes(eventName);
+}
+
+async function runProjectTaskFixture(ctx, { fixtureName, eventName, schemaRef }) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+  const tenantId = ctx.config.tenantId;
+  const marker = `[fixture ${fixtureName}]`;
+  const user = await pickUser(ctx, { tenantId });
+
+  const client = await pickOne(ctx, {
+    label: 'a client',
+    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+    params: [tenantId]
+  });
+
+  const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+  ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+
+  let correlationKey = projectId;
+  let payload;
+
+  if (!isProjectPayloadViaNotificationFixture(eventName)) {
+    if (eventName === 'INTEGRATION_SYNC_FAILED') {
+      const syncId = `fixture-sync-${randomUUID()}`;
+      correlationKey = syncId;
+      payload = {
+        integrationId: projectId,
+        provider: 'fixture',
+        syncId,
+        errorMessage: 'fixture sync failed',
+        retryable: true,
+        fixtureNotifyUserId: user.user_id
+      };
+    } else if (eventName === 'INTEGRATION_WEBHOOK_RECEIVED') {
+      const webhookId = `fixture-webhook-${randomUUID()}`;
+      correlationKey = webhookId;
+      payload = {
+        integrationId: projectId,
+        provider: 'fixture',
+        webhookId,
+        eventName: 'fixture.updated',
+        fixtureNotifyUserId: user.user_id
+      };
+    } else if (eventName === 'EMAIL_PROVIDER_CONNECTED') {
+      correlationKey = projectId;
+      payload = {
+        providerId: projectId,
+        providerType: 'google',
+        providerName: 'Fixture Provider',
+        mailbox: 'fixture-mailbox@example.com',
+        connectedAt: new Date().toISOString(),
+        fixtureNotifyUserId: user.user_id
+      };
+    } else if (eventName === 'PAYMENT_RECORDED') {
+      correlationKey = projectId;
+      payload = {
+        paymentId: projectId,
+        amount: '42.00',
+        currency: 'USD',
+        method: 'wire',
+        fixtureNotifyUserId: user.user_id
+      };
+    } else {
+      throw new Error(`Unsupported non-notification fixture eventName: ${eventName}`);
+    }
+  } else {
+    const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+    payload = {
+      ...base,
+      fixtureNotifyUserId: user.user_id,
+      fixtureDedupeKey: correlationKey
+    };
+  }
+
+  await ctx.http.request('/api/workflow/events', {
+    method: 'POST',
+    json: {
+      eventName,
+      correlationKey,
+      payloadSchemaRef: schemaRef,
+      payload
+    }
+  });
+
+  const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+  await assertRunSucceeded(ctx, runRow);
+
+  const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
+  const found = tasks.find((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
+  if (!found) {
+    throw new Error(`Expected a project task containing "${marker}" on project ${projectId}. Found ${tasks.length} task(s).`);
+  }
+}
+
+async function publishWorkflow(ctx, { workflowId, version }) {
+  await ctx.http.request(`/api/workflow-definitions/${workflowId}/${version}/publish`, {
+    method: 'POST',
+    json: {}
+  });
+}
+
+async function updateDraft(ctx, { workflowId, definition }) {
+  await ctx.http.request(`/api/workflow-definitions/${workflowId}/1`, {
+    method: 'PUT',
+    json: { definition }
+  });
+}
+
+async function getExportedDraftDefinition(ctx, { workflowId }) {
+  const res = await ctx.http.request(`/api/workflow-definitions/${workflowId}/export`, { method: 'GET' });
+  const bundle = res.json;
+  if (!bundle || !Array.isArray(bundle.workflows) || !bundle.workflows[0]?.draft?.definition) {
+    throw new Error(`Export did not return a draft definition for workflow ${workflowId}`);
+  }
+  return bundle.workflows[0].draft.definition;
+}
+
+async function getNextPublishVersion(ctx, { workflowId }) {
+  const rows = await ctx.db.query(`select max(version) as max_version from workflow_definition_versions where workflow_id = $1`, [workflowId]);
+  const max = rows[0]?.max_version ?? null;
+  const n = max === null || max === undefined ? 0 : Number(max);
+  return Number.isFinite(n) && n > 0 ? n + 1 : 1;
+}
+
+async function runCallWorkflowBizFixture(ctx, { fixtureName, eventName, schemaRef, kind }) {
+  const tenantId = ctx.config.tenantId;
+
+  const parentWorkflowId = ctx.workflow.id;
+  const childKey = `subfixture.${fixtureName}`;
+  const childWorkflowId =
+    Array.isArray(ctx.workflow?.importSummary?.createdWorkflows)
+      ? ctx.workflow.importSummary.createdWorkflows.find((w) => w.key === childKey)?.workflowId ?? null
+      : null;
+
+  if (!childWorkflowId) {
+    throw new Error(`callWorkflow fixture missing child workflowId for key ${childKey}`);
+  }
+
+  // Publish child (ensure a version exists for callWorkflow.workflowVersion).
+  const childVersion = await getNextPublishVersion(ctx, { workflowId: childWorkflowId });
+  await publishWorkflow(ctx, { workflowId: childWorkflowId, version: childVersion });
+
+  // Patch parent draft to point callWorkflow step at child workflowId + version.
+  const parentDraft = await getExportedDraftDefinition(ctx, { workflowId: parentWorkflowId });
+  const callStep = Array.isArray(parentDraft.steps)
+    ? parentDraft.steps.find((s) => s && typeof s === 'object' && s.type === 'control.callWorkflow')
+    : null;
+  if (!callStep) {
+    throw new Error(`callWorkflow fixture parent definition missing control.callWorkflow step (${fixtureName})`);
+  }
+
+  callStep.workflowId = childWorkflowId;
+  callStep.workflowVersion = childVersion;
+
+  await updateDraft(ctx, { workflowId: parentWorkflowId, definition: parentDraft });
+
+  const parentVersion = await getNextPublishVersion(ctx, { workflowId: parentWorkflowId });
+  await publishWorkflow(ctx, { workflowId: parentWorkflowId, version: parentVersion });
+
+  const marker = `[fixture ${fixtureName}]`;
+  const childMarker = `[fixture ${fixtureName} child]`;
+
+  if (kind === 'ticket_comment') {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+    const user = await pickUser(ctx, { tenantId });
+    const ticketId = await createTicket(ctx, { tenantId, apiKey });
+    ctx.onCleanup(() => cleanupTicket(ctx, { tenantId, apiKey, ticketId }));
+
+    const correlationKey = ticketId;
+    const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+    const payload = {
+      ...base,
+      fixtureNotifyUserId: user.user_id,
+      fixtureDedupeKey: correlationKey
+    };
+
+    await ctx.http.request('/api/workflow/events', {
+      method: 'POST',
+      json: { eventName, correlationKey, payloadSchemaRef: schemaRef, payload }
+    });
+
+    const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+    await assertRunSucceeded(ctx, runRow);
+
+    const comments = await listTicketComments(ctx, { tenantId, ticketId, limit: 200 });
+    const hasParent = comments.some((c) => typeof c.note === 'string' && c.note.includes(marker));
+    const hasChild = comments.some((c) => typeof c.note === 'string' && c.note.includes(childMarker));
+    if (!hasParent || !hasChild) {
+      throw new Error(`Expected both parent + child comments for "${marker}" on ticket ${ticketId}.`);
+    }
+    return;
+  }
+
+  if (kind === 'project_task') {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
+
+    const user = await pickUser(ctx, { tenantId });
+    const client = await pickOne(ctx, {
+      label: 'a client',
+      sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
+      params: [tenantId]
+    });
+    const projectId = await createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
+    ctx.onCleanup(() => cleanupProject(ctx, { tenantId, apiKey, projectId }));
+
+    const correlationKey = projectId;
+    const base = buildBasePayloadForEvent({ eventName, correlationKey, userId: user.user_id });
+    const payload = {
+      ...base,
+      fixtureNotifyUserId: user.user_id,
+      fixtureDedupeKey: correlationKey
+    };
+
+    await ctx.http.request('/api/workflow/events', {
+      method: 'POST',
+      json: { eventName, correlationKey, payloadSchemaRef: schemaRef, payload }
+    });
+
+    const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
+    await assertRunSucceeded(ctx, runRow);
+
+    const tasks = await listProjectTasks(ctx, { tenantId, projectId, limit: 200 });
+    const hasParent = tasks.some((t) => typeof t.task_name === 'string' && t.task_name.includes(marker));
+    const hasChild = tasks.some((t) => typeof t.task_name === 'string' && t.task_name.includes(childMarker));
+    if (!hasParent || !hasChild) {
+      throw new Error(`Expected both parent + child tasks for "${marker}" on project ${projectId}.`);
+    }
+    return;
+  }
+
+  throw new Error(`Unknown callWorkflow biz fixture kind: ${kind}`);
+}
+
+module.exports = {
+  runTicketCommentFixture,
+  runProjectTaskFixture,
+  runCallWorkflowBizFixture
+};
+

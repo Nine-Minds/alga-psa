@@ -70,6 +70,11 @@
 - Current coverage: only 14% of fixtures exercise real business actions
 - Counterparts should preserve the control flow pattern of the original (foreach, tryCatch, etc.)
 - Counterparts should assert actual DB state changes, not just workflow run success
+- Implementation approach (batch generator):
+  - Ticket domain counterparts: replace `notifications.send_in_app` → `tickets.add_comment` and assert DB `comments`.
+  - All other domains (project/invoice/appointment/etc): replace `notifications.send_in_app` → `projects.create_task` and assert DB `project_tasks`.
+  - Shared runner: `ee/test-data/workflow-harness/_lib/biz-fixture.cjs`
+  - Generator: `tools/workflow-harness/generate-biz-counterparts.cjs`
 - Local harness env (this worktree):
   - Server: http://localhost:3010 (docker `prep_1_0_server_ee`)
   - Postgres: localhost:55432 (db `server`, user `postgres`, password in `secrets/postgres_password`)
