@@ -2,7 +2,7 @@
 
 ## Status
 
-- **In progress**: Invoice domain counterparts (0/10 complete; 43 remaining overall)
+- **In progress**: Appointment domain counterparts (0/9 complete; 33 remaining overall)
 
 ## Summary by Domain (needed-biz-tests.json)
 
@@ -49,8 +49,8 @@
   - Batch 2 (commit afc446abd): 10 fixtures
   - Batch 3 (commit a801edcf5): 8 fixtures
 
-#### Invoice Domain (11 fixtures)
-- [ ] Batch 1: All invoice-*
+#### Invoice Domain (10 fixtures)
+- [x] Batch 1: All invoice-* (commit fbf3534e8)
 
 #### Appointment Domain (9 fixtures)
 - [ ] Batch 1: All appointment-*
