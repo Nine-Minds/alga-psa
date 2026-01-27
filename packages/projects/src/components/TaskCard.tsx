@@ -129,27 +129,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
 
-  // Auto-expand description when search matches in description but would be hidden
+  // Auto-expand description when search matches in description
   useEffect(() => {
     if (!searchQuery.trim() || !task.description) {
       setIsDescriptionExpanded(false);
       return;
     }
 
-    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-    const description = searchCaseSensitive ? task.description : task.description.toLowerCase();
-    const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+    // Build regex for matching (same logic as filtering)
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = searchWholeWord ? `\\b${escapedQuery}\\b` : escapedQuery;
+    const regex = new RegExp(pattern, searchCaseSensitive ? '' : 'i');
 
-    // If search matches in description but not in name, auto-expand
-    const matchesDescription = description.includes(query);
-    const matchesName = taskName.includes(query);
+    // Auto-expand description if the match is in the description
+    const matchesDescription = regex.test(task.description);
 
-    if (matchesDescription && !matchesName) {
+    if (matchesDescription) {
       setIsDescriptionExpanded(true);
-    } else if (!matchesDescription) {
+    } else {
       setIsDescriptionExpanded(false);
     }
-  }, [searchQuery, searchCaseSensitive, task.description, task.task_name]);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, task.description]);
 
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {

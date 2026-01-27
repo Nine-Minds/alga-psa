@@ -150,31 +150,30 @@ export default function TaskListView({
 
     const newExpandedTitles = new Set<string>();
     const newExpandedDescriptions = new Set<string>();
-    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+
+    // Build regex for matching (same logic as filtering)
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = searchWholeWord ? `\\b${escapedQuery}\\b` : escapedQuery;
+    const regex = new RegExp(pattern, searchCaseSensitive ? '' : 'i');
 
     tasks.forEach(task => {
-      const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-      const description = task.description
-        ? (searchCaseSensitive ? task.description : task.description.toLowerCase())
-        : '';
-
-      const matchesName = taskName.includes(query);
-      const matchesDescription = description.includes(query);
+      const matchesName = regex.test(task.task_name);
+      const matchesDescription = task.description ? regex.test(task.description) : false;
 
       // Auto-expand title if it matches and is long enough to be truncated
       if (matchesName && task.task_name.length > 50) {
         newExpandedTitles.add(task.task_id);
       }
 
-      // Auto-expand description if it matches but name doesn't
-      if (matchesDescription && !matchesName) {
+      // Auto-expand description if it matches (independent of title match)
+      if (matchesDescription) {
         newExpandedDescriptions.add(task.task_id);
       }
     });
 
     setExpandedTitles(newExpandedTitles);
     setExpandedDescriptions(newExpandedDescriptions);
-  }, [searchQuery, searchCaseSensitive, tasks]);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, tasks]);
 
   // Fetch avatar URLs for assignees and additional agents
   useEffect(() => {
