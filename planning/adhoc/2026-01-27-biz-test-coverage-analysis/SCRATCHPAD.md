@@ -34,14 +34,15 @@
 - [x] Batch 1: ticket-approval-* through ticket-created-assign-contact-owner
 - [x] Batch 2: ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email
 - [x] Batch 3: ticket-created-client-missing-create-note through ticket-created-email-with-retry
-- [ ] Batch 4: ticket-created-error-creates-comment through ticket-created-log-initial-time
-- [ ] Batch 5: ticket-created-onerror-* through ticket-created-state-*
+- [x] Batch 4: ticket-created-error-creates-comment through ticket-created-log-initial-time
+- [ ] Batch 5: ticket-created-missing-fields-comment through ticket-created-set-custom-fields
 - [ ] Batch 6: ticket-created-two-* through ticket-reopened-*
 - [ ] Batch 7: ticket-response-* through ticket-updated-*
 - Completed commits:
   - Batch 1 (commit f230b76e4): 10 fixtures (ticket-approval-* through ticket-created-assign-contact-owner)
   - Batch 2 (commit 761473599): 10 fixtures (ticket-created-assign-idempotent-real through ticket-created-chain-assign-comment-email)
   - Batch 3 (commit 2862304a7): 10 fixtures (ticket-created-client-missing-create-note through ticket-created-email-with-retry)
+  - Batch 4 (commit 36f8787d7): 10 fixtures (ticket-created-error-creates-comment through ticket-created-log-initial-time)
 
 #### Project Domain (28 fixtures)
 - [ ] Batch 1: project-approval-* through project-created-*
