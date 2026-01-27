@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
 import { exportWorkflowAuditLogsAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 
-export async function GET(req: NextRequest, { params }: { params: { workflowId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ workflowId: string }> }) {
   try {
+    const resolvedParams = await params;
     const format = req.nextUrl.searchParams.get('format') ?? 'json';
     const result = await exportWorkflowAuditLogsAction({
       tableName: 'workflow_definitions',
-      recordId: params.workflowId,
+      recordId: resolvedParams.workflowId,
       format
     });
     return new NextResponse(result.body, {

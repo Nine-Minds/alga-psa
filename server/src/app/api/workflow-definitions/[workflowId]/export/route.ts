@@ -3,9 +3,10 @@ import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Ap
 import { exportWorkflowBundleV1Action } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
 
-export async function GET(_: Request, ctx: { params: { workflowId: string } }) {
+export async function GET(_: Request, { params }: { params: Promise<{ workflowId: string }> }) {
   try {
-    const bundle = await exportWorkflowBundleV1Action({ workflowId: ctx.params.workflowId });
+    const resolvedParams = await params;
+    const bundle = await exportWorkflowBundleV1Action({ workflowId: resolvedParams.workflowId });
     const body = stringifyCanonicalJson(bundle);
     return new NextResponse(body, {
       status: 200,
@@ -18,4 +19,3 @@ export async function GET(_: Request, ctx: { params: { workflowId: string } }) {
     return handleWorkflowV2ApiError(error);
   }
 }
-
