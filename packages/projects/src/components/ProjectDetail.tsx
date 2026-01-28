@@ -17,6 +17,7 @@ import { useTags } from '@alga-psa/tags/context';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { Button } from '@alga-psa/ui/components/Button';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
@@ -1625,30 +1626,24 @@ export default function ProjectDetail({
                   className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <button
-                type="button"
+              <Button
+                id="search-whole-word-list"
+                variant={searchWholeWord ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchWholeWord(!searchWholeWord)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchWholeWord
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Whole word"
               >
                 Word
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                id="search-case-sensitive-list"
+                variant={searchCaseSensitive ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchCaseSensitive
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Case sensitive"
               >
                 Aa
-              </button>
+              </Button>
             </div>
 
             {/* Tag Filter */}
@@ -1681,18 +1676,15 @@ export default function ProjectDetail({
                 />
               </div>
               {selectedAgentFilter.length === 1 && (
-                <button
-                  type="button"
+                <Button
+                  id="primary-agent-only-list"
+                  variant={primaryAgentOnly ? 'soft' : 'outline'}
+                  size="xs"
                   onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
-                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
-                    primaryAgentOnly
-                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                  }`}
                   title="Only show tasks where selected agent is the primary assignee"
                 >
                   Primary
-                </button>
+                </Button>
               )}
             </div>
 
@@ -1755,30 +1747,24 @@ export default function ProjectDetail({
                   className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <button
-                type="button"
+              <Button
+                id="search-whole-word-kanban"
+                variant={searchWholeWord ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchWholeWord(!searchWholeWord)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchWholeWord
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Whole word"
               >
                 Word
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                id="search-case-sensitive-kanban"
+                variant={searchCaseSensitive ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchCaseSensitive
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Case sensitive"
               >
                 Aa
-              </button>
+              </Button>
             </div>
 
             {/* Tag Filter */}
@@ -1811,18 +1797,15 @@ export default function ProjectDetail({
                 />
               </div>
               {selectedAgentFilter.length === 1 && (
-                <button
-                  type="button"
+                <Button
+                  id="primary-agent-only-kanban"
+                  variant={primaryAgentOnly ? 'soft' : 'outline'}
+                  size="xs"
                   onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
-                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
-                    primaryAgentOnly
-                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                  }`}
                   title="Only show tasks where selected agent is the primary assignee"
                 >
                   Primary
-                </button>
+                </Button>
               )}
             </div>
 
