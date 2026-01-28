@@ -145,7 +145,8 @@ describe('getDraftContractForResume action', () => {
       {
         contract_line_id: 'line-1',
         contract_line_type: 'Fixed',
-        rate: 10,
+        // Rates are stored in cents in the database.
+        rate: 1000,
         enable_proration: false,
         billing_frequency: 'monthly',
       },
@@ -161,6 +162,7 @@ describe('getDraftContractForResume action', () => {
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     const result = await getDraftContractForResume('contract-1');
 
+    expect(result.fixed_base_rate).toBe(1000);
     expect(result.fixed_services).toEqual([
       {
         service_id: 'svc-1',
@@ -197,7 +199,8 @@ describe('getDraftContractForResume action', () => {
       {
         contract_line_id: 'fixed-1',
         contract_line_type: 'Fixed',
-        rate: 25,
+        // Rates are stored in cents in the database.
+        rate: 2500,
         enable_proration: true,
         billing_frequency: 'monthly',
       },
@@ -273,6 +276,7 @@ describe('getDraftContractForResume action', () => {
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     const result = await getDraftContractForResume('contract-1');
 
+    expect(result.fixed_base_rate).toBe(2500);
     expect(result.fixed_services[0]?.bucket_overlay).toEqual({
       total_minutes: 120,
       overage_rate: 1500,

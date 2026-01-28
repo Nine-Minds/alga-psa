@@ -1412,7 +1412,8 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
       // Only treat this as the "fixed fee services" line if it has non-product items.
       if (servicesWithConfig.some(({ service }) => service.item_kind !== 'product')) {
         const baseRateValue = line.rate != null ? Number(line.rate) : undefined;
-        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
+        // Rates are stored in cents in the database already.
+        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = line.enable_proration ?? false;
       }
     } else if (line.contract_line_type === 'Hourly') {
@@ -1638,7 +1639,8 @@ export const getDraftContractForResume = withAuth(async (
       // Only treat this as the "fixed fee services" line if it has non-product items.
       if (servicesWithConfig.some(({ service }) => service.item_kind !== 'product')) {
         const baseRateValue = line.rate != null ? Number(line.rate) : undefined;
-        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
+        // Rates are stored in cents in the database already.
+        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = Boolean(line.enable_proration);
         fixedBillingFrequency = line.billing_frequency ?? fixedBillingFrequency;
       }
