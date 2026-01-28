@@ -137,12 +137,24 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             {(record.master_ticket_id || (!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0)) && (
               <div className="flex items-center gap-1">
                 {record.master_ticket_id ? (
-                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                  <span 
+                    className="rounded px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      color: 'rgb(var(--color-primary-700))',
+                      backgroundColor: 'rgb(var(--color-primary-100))'
+                    }}
+                  >
                     Bundled → {record.bundle_master_ticket_number || 'Master'}
                   </span>
                 ) : null}
                 {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
-                  <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
+                  <span 
+                    className="rounded px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      color: 'rgb(var(--color-secondary-700))',
+                      backgroundColor: 'rgb(var(--color-secondary-100))'
+                    }}
+                  >
                     Bundle · {record.bundle_child_count}
                   </span>
                 ) : null}
@@ -304,7 +316,13 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             <div className="flex flex-col gap-1">
               <span>{value || 'No Client'}</span>
               {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1 ? (
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                <span 
+                  className="rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{
+                    color: 'rgb(var(--color-accent-700))',
+                    backgroundColor: 'rgb(var(--color-accent-100))'
+                  }}
+                >
                   Multiple clients
                 </span>
               ) : null}

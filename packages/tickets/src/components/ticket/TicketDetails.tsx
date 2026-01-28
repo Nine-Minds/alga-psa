@@ -1318,7 +1318,7 @@ const handleClose = () => {
                                 {bundle?.isBundleMaster ? (
                                     <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-900" id="ticket-bundle-master-banner">
                                         This ticket is the master of a bundle ({Array.isArray(bundle.children) ? bundle.children.length : 0} children). Mode:{' '}
-                                        {bundle.mode || 'sync_updates'}.
+                                        {(bundle.mode || 'sync_updates').split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.
                                         {bundleHasMultipleClients ? (
                                             <span className="ml-2 inline-flex items-center rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
                                                 Multiple clients
@@ -1339,7 +1339,7 @@ const handleClose = () => {
                                                     onClick={handleToggleBundleMode}
                                                     disabled={isUpdatingBundleSettings}
                                                 >
-                                                    Mode: {bundle.mode || 'sync_updates'}
+                                                    Mode: {(bundle.mode || 'sync_updates').split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                                 </Button>
                                                 <Button
                                                     id="ticket-bundle-unbundle-button"
