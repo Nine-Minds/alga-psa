@@ -1474,7 +1474,7 @@ const handleClose = () => {
                                                     value={addChildTicketNumber}
                                                     onChange={handleSearchInputChange}
                                                     onFocus={() => addChildTicketNumber.trim() && setShowSearchResults(true)}
-                                                    placeholder="Search ticket number…"
+                                                    placeholder="Search ticket number or title…"
                                                     className="h-8"
                                                     containerClassName="mb-0"
                                                     autoComplete="off"

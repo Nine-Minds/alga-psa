@@ -504,7 +504,10 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
       })
       .whereIn('tickets.status_id', openStatusIds)
       .whereNull('tickets.master_ticket_id') // Not already bundled
-      .andWhere('tickets.ticket_number', 'ilike', `%${data.searchQuery}%`)
+      .andWhere((builder) => {
+        builder.where('tickets.ticket_number', 'ilike', `%${data.searchQuery}%`)
+          .orWhere('tickets.title', 'ilike', `%${data.searchQuery}%`);
+      })
       .orderBy('tickets.entered_at', 'desc')
       .limit(data.limit);
 
