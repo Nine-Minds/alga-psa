@@ -52,18 +52,26 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
+  // Type-safe helper for clearing - only defined when clearable is true
+  // This avoids repeated type assertions throughout the component
+  const clearValue = React.useMemo(() => {
+    if (clearable) {
+      return () => (onChange as (date: Date | undefined) => void)(undefined);
+    }
+    return undefined;
+  }, [clearable, onChange]);
+
   const handleClear = React.useCallback(() => {
-    // handleClear is only passed to Calendar when clearable is true
-    (onChange as (date: Date | undefined) => void)(undefined);
+    clearValue?.();
     setOpen(false);
-  }, [onChange]);
+  }, [clearValue, setOpen]);
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearable) {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearValue) {
       e.preventDefault();
-      (onChange as (date: Date | undefined) => void)(undefined);
+      clearValue();
     }
-  }, [value, disabled, clearable, onChange]);
+  }, [value, disabled, clearValue]);
 
   // Register with UI reflection system if id is provided
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<DatePickerComponent>({
@@ -107,20 +115,20 @@ export function DatePicker({
           <span className="flex-1 text-left">
             {value ? format(value, 'MM/dd/yyyy') : placeholder}
           </span>
-          {clearable && value && !disabled && (
+          {clearValue && value && !disabled && (
             <span
               role="button"
               tabIndex={0}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                (onChange as (date: Date | undefined) => void)(undefined);
+                clearValue();
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   e.stopPropagation();
-                  (onChange as (date: Date | undefined) => void)(undefined);
+                  clearValue();
                 }
               }}
               className="mr-2 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -145,12 +153,12 @@ export function DatePicker({
                   if (date) {
                     onChange(new Date(date)); // Ensure we pass a new Date object
                     setOpen(false);
-                  } else if (clearable) {
+                  } else if (clearValue) {
                     // Only allow clearing when clearable is true
-                    (onChange as (date: Date | undefined) => void)(undefined);
+                    clearValue();
                   }
                 }}
-                onClear={clearable ? handleClear : undefined}
+                onClear={clearValue ? handleClear : undefined}
                 defaultMonth={value}
                 fromDate={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
               />

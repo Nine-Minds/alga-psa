@@ -64,12 +64,21 @@ export function DateTimePicker({
   const hourListRef = React.useRef<HTMLDivElement>(null);
   const minuteListRef = React.useRef<HTMLDivElement>(null);
 
-  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearable) {
-      e.preventDefault();
-      (onChange as (date: Date | undefined) => void)(undefined);
+  // Type-safe helper for clearing - only defined when clearable is true
+  // This avoids repeated type assertions throughout the component
+  const clearValue = React.useMemo(() => {
+    if (clearable) {
+      return () => (onChange as (date: Date | undefined) => void)(undefined);
     }
-  }, [value, disabled, clearable, onChange]);
+    return undefined;
+  }, [clearable, onChange]);
+
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearValue) {
+      e.preventDefault();
+      clearValue();
+    }
+  }, [value, disabled, clearValue]);
 
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value);
   const [selectedHour, setSelectedHour] = React.useState(
@@ -192,20 +201,20 @@ export function DateTimePicker({
         >
           <span className="flex-1 text-left truncate">{displayValue}</span>
           <div className="flex items-center gap-2">
-            {clearable && value && !disabled && (
+            {clearValue && value && !disabled && (
               <span
                 role="button"
                 tabIndex={0}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  (onChange as (date: Date | undefined) => void)(undefined);
+                  clearValue();
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     e.stopPropagation();
-                    (onChange as (date: Date | undefined) => void)(undefined);
+                    clearValue();
                   }
                 }}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
