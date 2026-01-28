@@ -183,13 +183,24 @@
   margin: 0;
 }
 
-.kanbanContainer {
+/* Wrapper for header + scrollable kanban content */
+.kanbanArea {
   flex: 4;
   min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0; /* Allow it to shrink */
-  overflow-x: auto; /* Move horizontal scrolling to kanban container level */
+  overflow: hidden; /* Prevent overflow at this level */
+}
+
+.kanbanContainer {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Allow it to shrink */
+  overflow-x: auto; /* Horizontal scrolling only */
+  overflow-y: hidden;
 }
 
 /* Kanban container scrollbar styling */
@@ -216,30 +227,10 @@
   display: flex;
   gap: 1rem;
   min-width: min-content;
-  flex: 1; /* Take up available height */
-  min-height: 0; /* Allow it to shrink */
-  height: 100%; /* Ensure it takes full height of container */
-  overflow-x: auto; /* Enable horizontal scrolling */
-  overflow-y: hidden;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   padding-bottom: 0.5rem; /* Space for scrollbar */
-}
-
-.kanbanBoard::-webkit-scrollbar {
-  height: 8px;
-}
-
-.kanbanBoard::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 4px;
-}
-
-.kanbanBoard::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-
-.kanbanBoard::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
 }
 
 .kanbanColumn {
@@ -249,29 +240,25 @@
   min-width: 350px; /* Ensure minimum width */
   max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
-  height: calc(100vh - 200px); /* Full screen minus header and padding */
-  max-height: calc(100vh - 200px);
+  height: calc(100vh - 260px); /* Full height minus header and padding */
+  max-height: calc(100vh - 260px);
   overflow: hidden; /* Prevent overflow on the column itself */
 }
 
 .kanbanTasks {
   padding: 8px;
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto; /* Individual column scrolling */
   overflow-x: hidden;
   scrollbar-width: thin; /* Firefox */
   scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
-  /* Ensure smooth scrolling */
   scroll-behavior: smooth;
-  /* Add a subtle border to make scrollable area more obvious */
   border-radius: 4px;
 }
 
-/* Scrollbar styling moved below - see "Always show scrollbar" section */
-
 /* Always show scrollbar to make it clear each column scrolls independently */
 .kanbanTasks::-webkit-scrollbar {
-  width: 8px !important; /* Always visible and prominent */
+  width: 8px !important;
 }
 
 .kanbanTasks::-webkit-scrollbar-track {
@@ -282,16 +269,15 @@
 .kanbanTasks::-webkit-scrollbar-thumb {
   background-color: rgba(155, 155, 155, 0.7) !important;
   border-radius: 4px !important;
-  transition: background-color 0.2s ease !important;
 }
 
 .kanbanTasks::-webkit-scrollbar-thumb:hover {
   background-color: rgba(155, 155, 155, 0.9) !important;
 }
 
-/* Firefox scrollbar - always visible */
+/* Firefox scrollbar */
 .kanbanTasks {
-  scrollbar-width: auto !important; /* Always visible in Firefox */
+  scrollbar-width: auto !important;
   scrollbar-color: rgba(155, 155, 155, 0.7) rgba(0, 0, 0, 0.1) !important;
 }
 
@@ -299,8 +285,8 @@
   flex: 1;
   padding: 1px;
   position: relative;
-  height: 100%; /* Ensure wrapper takes full height */
-  min-height: 0; /* Allow flex children to shrink */
+  height: 100%;
+  min-height: 0;
 }
 
 .statusBadge {

@@ -15,6 +15,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { highlightSearchMatch } from '../lib/searchUtils';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
@@ -70,6 +71,9 @@ interface TaskListViewProps {
   // Filter props
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
+  searchQuery?: string;
+  searchWholeWord?: boolean;
+  searchCaseSensitive?: boolean;
 }
 
 interface PhaseGroup {
@@ -99,11 +103,51 @@ export default function TaskListView({
   onAssigneeChange,
   users,
   selectedPriorityFilter = 'all',
-  selectedTaskTags = []
+  selectedTaskTags = [],
+  searchQuery = '',
+  searchWholeWord = false,
+  searchCaseSensitive = false
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+  const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+
+  // Auto-expand titles and descriptions when search matches
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setExpandedTitles(new Set());
+      setExpandedDescriptions(new Set());
+      return;
+    }
+
+    const newExpandedTitles = new Set<string>();
+    const newExpandedDescriptions = new Set<string>();
+
+    // Build regex for matching (same logic as filtering)
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = searchWholeWord ? `\\b${escapedQuery}\\b` : escapedQuery;
+    const regex = new RegExp(pattern, searchCaseSensitive ? '' : 'i');
+
+    tasks.forEach(task => {
+      const matchesName = regex.test(task.task_name);
+      const matchesDescription = task.description ? regex.test(task.description) : false;
+
+      // Auto-expand title if it matches and is long enough to be truncated
+      if (matchesName && task.task_name.length > 50) {
+        newExpandedTitles.add(task.task_id);
+      }
+
+      // Auto-expand description if it matches (independent of title match)
+      if (matchesDescription) {
+        newExpandedDescriptions.add(task.task_id);
+      }
+    });
+
+    setExpandedTitles(newExpandedTitles);
+    setExpandedDescriptions(newExpandedDescriptions);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, tasks]);
 
   // Fetch avatar URLs for assignees and additional agents
   useEffect(() => {
@@ -164,9 +208,29 @@ export default function TaskListView({
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedRef = useRef<number>(0);
 
-  // Filter tasks based on priority and tags
+  // Filter tasks based on search, priority and tags
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+      filtered = filtered.filter(task => {
+        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const taskDescription = searchCaseSensitive
+          ? (task.description ?? '')
+          : (task.description?.toLowerCase() ?? '');
+
+        if (searchWholeWord) {
+          // Use word boundary regex for whole word matching
+          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+        } else {
+          return taskName.includes(query) || taskDescription.includes(query);
+        }
+      });
+    }
 
     // Apply priority filter
     if (selectedPriorityFilter !== 'all') {
@@ -183,7 +247,7 @@ export default function TaskListView({
     }
 
     return filtered;
-  }, [tasks, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -824,18 +888,65 @@ export default function TaskListView({
                                 {/* Task Name */}
                                 <td className="py-3 px-6">
                                   <div className="min-w-0">
-                                    <button
-                                      type="button"
-                                      className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline cursor-pointer truncate text-left max-w-full block"
-                                      onClick={() => onTaskClick(task)}
-                                      title={task.task_name}
-                                    >
-                                      {task.task_name}
-                                    </button>
+                                    <div>
+                                      <button
+                                        type="button"
+                                        className={`text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline cursor-pointer text-left max-w-full block ${!expandedTitles.has(task.task_id) ? 'truncate' : ''}`}
+                                        onClick={() => onTaskClick(task)}
+                                        title={!expandedTitles.has(task.task_id) ? task.task_name : undefined}
+                                      >
+                                        {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
+                                      </button>
+                                      {task.task_name.length > 50 && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setExpandedTitles(prev => {
+                                              const newSet = new Set(prev);
+                                              if (newSet.has(task.task_id)) {
+                                                newSet.delete(task.task_id);
+                                              } else {
+                                                newSet.add(task.task_id);
+                                              }
+                                              return newSet;
+                                            });
+                                          }}
+                                          className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                        >
+                                          {expandedTitles.has(task.task_id) ? 'See less' : 'See more'}
+                                        </button>
+                                      )}
+                                    </div>
                                     {task.description && (
-                                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1" title={task.description}>
-                                        {task.description}
-                                      </p>
+                                      <div className="mt-0.5">
+                                        <p
+                                          className={`text-xs text-gray-500 ${!expandedDescriptions.has(task.task_id) ? 'line-clamp-1' : ''}`}
+                                          title={!expandedDescriptions.has(task.task_id) ? task.description : undefined}
+                                        >
+                                          {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
+                                        </p>
+                                        {task.description.length > 80 && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setExpandedDescriptions(prev => {
+                                                const newSet = new Set(prev);
+                                                if (newSet.has(task.task_id)) {
+                                                  newSet.delete(task.task_id);
+                                                } else {
+                                                  newSet.add(task.task_id);
+                                                }
+                                                return newSet;
+                                              });
+                                            }}
+                                            className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                          >
+                                            {expandedDescriptions.has(task.task_id) ? 'See less' : 'See more'}
+                                          </button>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 </td>

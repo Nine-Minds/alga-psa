@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@alga-psa/ui/components/DropdownMenu";
 import styles from './ProjectDetail.module.css';
+import { highlightSearchMatch } from '../lib/searchUtils';
 
 interface TaskCardProps {
   task: IProjectTask;
@@ -34,6 +35,9 @@ interface TaskCardProps {
   taskTags?: ITag[];
   documentCount?: number;
   isAnimating?: boolean;
+  searchQuery?: string;
+  searchCaseSensitive?: boolean;
+  searchWholeWord?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -67,6 +71,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
   isAnimating = false,
+  searchQuery = '',
+  searchCaseSensitive = false,
+  searchWholeWord = false,
   onTaskSelected,
   onAssigneeChange,
   onDragStart,
@@ -95,6 +102,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
+
+  // Auto-expand description when search matches in description
+  useEffect(() => {
+    if (!searchQuery.trim() || !task.description) {
+      setIsDescriptionExpanded(false);
+      return;
+    }
+
+    // Build regex for matching (same logic as filtering)
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = searchWholeWord ? `\\b${escapedQuery}\\b` : escapedQuery;
+    const regex = new RegExp(pattern, searchCaseSensitive ? '' : 'i');
+
+    // Auto-expand description if the match is in the description
+    const matchesDescription = regex.test(task.description);
+
+    if (matchesDescription) {
+      setIsDescriptionExpanded(true);
+    } else {
+      setIsDescriptionExpanded(false);
+    }
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, task.description]);
 
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {
@@ -292,7 +321,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
         <div className="font-semibold text-lg flex-1">
-          {task.task_name}
+          {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
         </div>
         {priority && (
           <div className="flex items-center gap-1">
@@ -311,7 +340,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ref={descriptionRef}
             className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {task.description}
+            {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <button

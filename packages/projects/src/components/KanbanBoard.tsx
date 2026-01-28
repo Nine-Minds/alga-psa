@@ -27,6 +27,9 @@ interface KanbanBoardProps {
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
+  searchQuery?: string;
+  searchCaseSensitive?: boolean;
+  searchWholeWord?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -97,6 +100,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   projectTreeData,
   animatingTasks,
   avatarUrls = {},
+  searchQuery = '',
+  searchCaseSensitive = false,
+  searchWholeWord = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -191,6 +197,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onReorderTasks={onReorderTasks}
             projectTreeData={projectTreeData}
             animatingTasks={animatingTasks}
+            searchQuery={searchQuery}
+            searchCaseSensitive={searchCaseSensitive}
+            searchWholeWord={searchWholeWord}
             onMoveTaskClick={onMoveTaskClick}
             onDuplicateTaskClick={onDuplicateTaskClick}
             onEditTaskClick={onEditTaskClick}
