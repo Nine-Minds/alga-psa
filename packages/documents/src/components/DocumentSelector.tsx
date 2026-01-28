@@ -47,8 +47,10 @@ export default function DocumentSelector({
     description,
     excludeDocumentIds
 }: DocumentSelectorProps): React.JSX.Element {
-    // Pending mode is when no entityId is provided - documents are returned without creating associations
-    const isPendingMode = !entityId || !entityType;
+    // Pending mode is only when BOTH entityId and entityType are intentionally omitted
+    // If only one is missing, that's likely a bug - we'll show an error
+    const isPendingMode = !entityId && !entityType;
+    const hasPartialEntityInfo = (!entityId && entityType) || (entityId && !entityType);
     const [documents, setDocuments] = useState<IDocument[]>([]);
     const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +75,14 @@ export default function DocumentSelector({
         try {
             setIsLoading(true);
             setError(null);
+
+            // Validate: if only one of entityId/entityType is provided, that's likely a bug
+            if (hasPartialEntityInfo) {
+                console.error('DocumentSelector: Both entityId and entityType must be provided together, or both omitted for pending mode');
+                setError(t('documents.selector.errors.configuration', 'Configuration error: Missing entity information'));
+                setIsLoading(false);
+                return;
+            }
 
             let response;
 
@@ -103,15 +113,13 @@ export default function DocumentSelector({
                 }, pageToLoad, pageSize);
             }
 
-            // Filter out excluded document IDs (for pending mode)
-            if (excludeDocumentIds && excludeDocumentIds.length > 0 && response && Array.isArray(response.documents)) {
-                response.documents = response.documents.filter(
-                    (doc: IDocument) => !excludeDocumentIds.includes(doc.document_id)
-                );
-            }
-
             if (response && Array.isArray(response.documents)) {
-                setDocuments(response.documents);
+                // Filter out excluded document IDs without mutating the original response
+                const filteredDocuments = excludeDocumentIds && excludeDocumentIds.length > 0
+                    ? response.documents.filter((doc: IDocument) => !excludeDocumentIds.includes(doc.document_id))
+                    : response.documents;
+
+                setDocuments(filteredDocuments);
                 setTotalPages(response.totalPages || Math.ceil(response.total / pageSize));
                 setCurrentPage(response.currentPage || pageToLoad);
             } else {
