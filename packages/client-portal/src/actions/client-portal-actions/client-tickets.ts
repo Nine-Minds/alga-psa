@@ -309,7 +309,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     }
 
     // Create user map, including avatar URLs
-    // Reuse db connection from earlier
     const usersWithAvatars = await Promise.all(result.users.map(async (userRecord: any) => {
       let avatarUrl: string | null = null;
 

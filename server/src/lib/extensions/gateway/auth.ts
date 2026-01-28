@@ -32,32 +32,22 @@ async function getTenantClientName(tenantId: string): Promise<string> {
 /**
  * Look up user's client_id from their contact association.
  * Returns undefined if user doesn't have a contact or contact doesn't have a client.
+ * Throws on database errors to allow caller to handle appropriately.
  */
 async function getUserClientId(userId: string, tenantId: string): Promise<string | undefined> {
-  try {
-    const knex = await getAdminConnection();
-    // First get the user's contact_id, then look up the client_id from contacts
-    const user = await knex('users')
-      .select('contact_id')
-      .where('user_id', userId)
-      .where('tenant', tenantId)
-      .first();
+  const knex = await getAdminConnection();
+  // Single JOIN query with tenant in join predicate (Citus best practice)
+  const result = await knex('users as u')
+    .select('c.client_id')
+    .join('contacts as c', function() {
+      this.on('c.contact_name_id', '=', 'u.contact_id')
+          .andOn('c.tenant', '=', 'u.tenant');
+    })
+    .where('u.user_id', userId)
+    .where('u.tenant', tenantId)
+    .first();
 
-    if (!user?.contact_id) {
-      return undefined;
-    }
-
-    const contact = await knex('contacts')
-      .select('client_id')
-      .where('contact_name_id', user.contact_id)
-      .where('tenant', tenantId)
-      .first();
-
-    return contact?.client_id || undefined;
-  } catch (error) {
-    console.error('[auth] Failed to look up user client_id:', error);
-    return undefined;
-  }
+  return result?.client_id || undefined;
 }
 
 /**
