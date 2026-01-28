@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
@@ -61,7 +61,9 @@ import {
     promoteBundleMasterAction,
     removeChildFromBundleAction,
     unbundleMasterTicketAction,
-    updateBundleSettingsAction
+    updateBundleSettingsAction,
+    searchEligibleChildTicketsAction,
+    type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
 
 
@@ -181,6 +183,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
+    const [searchResults, setSearchResults] = useState<EligibleChildTicket[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
@@ -229,6 +236,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
+
+    // Debounced search for child tickets
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
@@ -1116,6 +1126,29 @@ const handleClose = () => {
         const normalized = addChildTicketNumber.trim();
         if (!normalized) return;
 
+        // Check if we have a selected ticket from search results
+        const selectedTicketId = (addChildTicketNumber as any).selectedTicketId;
+        const selectedTicketClientId = (addChildTicketNumber as any).selectedTicketClientId;
+
+        if (selectedTicketId) {
+            // Use the selected ticket from search
+            if (ticket.client_id && selectedTicketClientId && selectedTicketClientId !== ticket.client_id) {
+                setPendingChildToAdd({
+                    ticket_id: selectedTicketId,
+                    ticket_number: normalized,
+                    client_id: selectedTicketClientId
+                });
+                setIsAddChildMultiClientConfirmOpen(true);
+                return;
+            }
+            await performAddChildToBundle(selectedTicketId);
+            // Clear the stored selection
+            (addChildTicketNumber as any).selectedTicketId = undefined;
+            (addChildTicketNumber as any).selectedTicketClientId = undefined;
+            return;
+        }
+
+        // Fallback: search by exact ticket number
         try {
             const found = await findTicketByNumberAction({ ticketNumber: normalized });
             if (!found) {
@@ -1153,6 +1186,85 @@ const handleClose = () => {
         }
         return ids.size > 1;
     }, [bundle?.isBundleMaster, bundle?.children, ticket.client_id]);
+
+    // Debounced search for eligible child tickets
+    const performSearch = useCallback(async (query: string) => {
+        if (!ticket.board_id || !query.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const results = await searchEligibleChildTicketsAction({
+                boardId: ticket.board_id,
+                searchQuery: query.trim(),
+                excludeTicketId: ticket.ticket_id,
+                limit: 10
+            });
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Failed to search tickets:', error);
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+        }
+    }, [ticket.board_id, ticket.ticket_id]);
+
+    const debouncedSearch = useCallback((query: string) => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        if (!query.trim()) {
+            setSearchResults([]);
+            setShowSearchResults(false);
+            return;
+        }
+
+        searchTimeoutRef.current = setTimeout(() => {
+            performSearch(query);
+        }, 300); // 300ms debounce
+    }, [performSearch]);
+
+    const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setAddChildTicketNumber(value);
+        setShowSearchResults(true);
+        debouncedSearch(value);
+    }, [debouncedSearch]);
+
+    const handleSelectSearchResult = useCallback((selectedTicket: EligibleChildTicket) => {
+        setAddChildTicketNumber(selectedTicket.ticket_number);
+        setShowSearchResults(false);
+        setSearchResults([]);
+        // Store the selected ticket ID for adding
+        (addChildTicketNumber as any).selectedTicketId = selectedTicket.ticket_id;
+        (addChildTicketNumber as any).selectedTicketClientId = selectedTicket.client_id;
+    }, []);
+
+    // Handle click outside to close search results
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setShowSearchResults(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const handlePromoteChildToMaster = useCallback(async (childTicketId: string) => {
         if (!ticket.ticket_id) return;
@@ -1354,15 +1466,58 @@ const handleClose = () => {
                                         <div className="text-xs text-gray-500 mb-2">
                                             Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.
                                         </div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Input
-                                                id="ticket-bundle-add-child-input"
-                                                value={addChildTicketNumber}
-                                                onChange={(e) => setAddChildTicketNumber(e.target.value)}
-                                                placeholder="Add child by ticket number…"
-                                                className="h-8"
-                                                containerClassName="mb-0 flex-1"
-                                            />
+                                        <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
+                                            <div className="relative flex-1">
+                                                <Input
+                                                    id="ticket-bundle-add-child-input"
+                                                    ref={searchInputRef}
+                                                    value={addChildTicketNumber}
+                                                    onChange={handleSearchInputChange}
+                                                    onFocus={() => addChildTicketNumber.trim() && setShowSearchResults(true)}
+                                                    placeholder="Search ticket number…"
+                                                    className="h-8"
+                                                    containerClassName="mb-0"
+                                                    autoComplete="off"
+                                                />
+                                                {isSearching && (
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                                                    </div>
+                                                )}
+                                                {showSearchResults && (
+                                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                        {searchResults.length > 0 ? (
+                                                            <ul className="py-1">
+                                                                {searchResults.map((result) => (
+                                                                    <li
+                                                                        key={result.ticket_id}
+                                                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                                                        onClick={() => handleSelectSearchResult(result)}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="text-sm font-medium text-gray-900">
+                                                                                {result.ticket_number}
+                                                                            </span>
+                                                                            {result.client_name && (
+                                                                                <span className="text-xs text-gray-500 ml-2">
+                                                                                    {result.client_name}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-600 truncate">
+                                                                            {result.title}
+                                                                        </div>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : addChildTicketNumber.trim().length > 0 && !isSearching ? (
+                                                            <div className="px-3 py-2 text-sm text-gray-500">
+                                                                No tickets found
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <Button
                                                 id="ticket-bundle-add-child-button"
                                                 size="sm"

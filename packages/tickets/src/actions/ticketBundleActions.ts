@@ -447,6 +447,74 @@ const unbundleSchema = z.object({
   masterTicketId: z.string().uuid(),
 });
 
+const searchEligibleChildTicketsSchema = z.object({
+  boardId: z.string().uuid(),
+  searchQuery: z.string().min(1).max(100),
+  excludeTicketId: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(20).default(10),
+});
+
+export type EligibleChildTicket = {
+  ticket_id: string;
+  ticket_number: string;
+  title: string;
+  client_id: string | null;
+  client_name?: string;
+};
+
+export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }, input: z.input<typeof searchEligibleChildTicketsSchema>): Promise<EligibleChildTicket[]> => {
+  const data = searchEligibleChildTicketsSchema.parse(input);
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    // Get statuses that are NOT closed (is_closed = false or null)
+    const openStatuses = await trx('ticket_statuses')
+      .select('status_id')
+      .where({ tenant })
+      .andWhere((builder) => {
+        builder.where('is_closed', false).orWhereNull('is_closed');
+      });
+
+    const openStatusIds = openStatuses.map((s: any) => s.status_id);
+
+    if (openStatusIds.length === 0) {
+      return [];
+    }
+
+    // Search for tickets on the same board with open status, not already bundled
+    let query = trx('tickets')
+      .select(
+        'tickets.ticket_id',
+        'tickets.ticket_number',
+        'tickets.title',
+        'tickets.client_id',
+        'companies.company_name as client_name'
+      )
+      .leftJoin('companies', 'tickets.client_id', 'companies.company_id')
+      .where({ 
+        'tickets.tenant': tenant,
+        'tickets.board_id': data.boardId 
+      })
+      .whereIn('tickets.status_id', openStatusIds)
+      .whereNull('tickets.master_ticket_id') // Not already bundled
+      .andWhere('tickets.ticket_number', 'ilike', `%${data.searchQuery}%`)
+      .orderBy('tickets.entered_at', 'desc')
+      .limit(data.limit);
+
+    // Exclude the master ticket itself if provided
+    if (data.excludeTicketId) {
+      query = query.andWhereNot('tickets.ticket_id', data.excludeTicketId);
+    }
+
+    const tickets = await query;
+    return tickets;
+  });
+});
+
 export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, input: z.input<typeof unbundleSchema>) => {
   const data = unbundleSchema.parse(input);
   const { knex: db } = await createTenantKnex();
