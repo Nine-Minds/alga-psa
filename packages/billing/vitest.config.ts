@@ -10,6 +10,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@shared': path.resolve(__dirname, '../../shared'),
+      '@alga-psa/event-bus': path.resolve(__dirname, '../event-bus/src'),
       '@alga-psa/types': path.resolve(__dirname, '../types/src'),
     },
   },

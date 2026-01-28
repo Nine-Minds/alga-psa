@@ -1056,6 +1056,7 @@ const ContractTemplateDetail: React.FC = () => {
       {showServicesEditor && contract && (
         <TemplateServicesManager
           contractId={contract.contract_id}
+          currencyCode={contract.currency_code ?? 'USD'}
           contractLines={templateLines}
           onServicesChanged={() => {
             if (contract.contract_id) {
@@ -1188,36 +1189,37 @@ const ContractTemplateDetail: React.FC = () => {
 
 type TemplateServicesManagerProps = {
   contractId: string;
+  currencyCode: string;
   contractLines: TemplateContractLine[];
   onServicesChanged: () => void;
 };
 
 const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractId,
+  currencyCode,
   contractLines,
   onServicesChanged,
 }) => {
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(null);
 
-  const formatCurrency = (value?: number | null) => {
-    if (value === null || value === undefined) {
+  const formatCurrency = (minorUnits?: number | null) => {
+    if (minorUnits === null || minorUnits === undefined) {
       return 'Not set';
     }
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
+    return formatCurrencyFromMinorUnits(
+      Math.round(Number(minorUnits)),
+      'en-US',
+      currencyCode
+    );
   };
 
   const handleSaveRate = async (
     contractLineId: string,
-    rate: number,
+    rateCents: number,
     billingTiming: 'arrears' | 'advance'
   ) => {
     try {
-      await updateContractLineRate(contractId, contractLineId, rate, billingTiming);
+      await updateContractLineRate(contractId, contractLineId, rateCents, billingTiming);
       setEditingLine(null);
       onServicesChanged();
     } catch (error) {
@@ -1289,6 +1291,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
+          currencyCode={currencyCode}
         />
       )}
     </Card>

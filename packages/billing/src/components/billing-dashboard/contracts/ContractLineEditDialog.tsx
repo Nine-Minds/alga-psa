@@ -8,44 +8,54 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
+import { getCurrencySymbol } from '@alga-psa/core';
 
 interface ContractLineEditDialogProps {
   line: {
     contract_line_id: string;
     contract_line_name?: string;
+    /** Stored in cents. */
     rate?: number | null;
+    /** Stored in cents. */
     custom_rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
   };
+  currencyCode: string;
   onClose: () => void;
-  onSave: (contractLineId: string, rate: number, billingTiming: 'arrears' | 'advance') => Promise<void>;
+  onSave: (contractLineId: string, rateCents: number, billingTiming: 'arrears' | 'advance') => Promise<void>;
 }
 
-export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEditDialogProps) {
-  const [rate, setRate] = useState<number>(
+export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: ContractLineEditDialogProps) {
+  const initialRateCents =
     line.rate !== undefined && line.rate !== null
-      ? line.rate
+      ? Math.round(Number(line.rate))
       : line.custom_rate !== undefined && line.custom_rate !== null
-        ? line.custom_rate
-        : 0
-  );
+        ? Math.round(Number(line.custom_rate))
+        : 0;
+
+  const [rateInput, setRateInput] = useState<string>(() => (initialRateCents / 100).toFixed(2));
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>(
     line.billing_timing || 'arrears'
   );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const currencySymbol = getCurrencySymbol(currencyCode);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isNaN(rate) || rate < 0) {
+    const dollars = Number.parseFloat(rateInput);
+    if (!Number.isFinite(dollars) || dollars < 0) {
       setError('Please enter a valid rate (must be a non-negative number)');
       return;
     }
 
+    const rateCents = Math.round(dollars * 100);
+
     setIsSaving(true);
     try {
-      await onSave(line.contract_line_id, rate, billingTiming);
+      await onSave(line.contract_line_id, rateCents, billingTiming);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save changes');
       setIsSaving(false);
@@ -75,16 +85,33 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
             <div>
               <Label htmlFor="contract-line-rate">Rate</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  {currencySymbol}
+                </span>
                 <Input
                   id="contract-line-rate"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={rate}
+                  type="text"
+                  inputMode="decimal"
+                  value={rateInput}
                   onChange={(e) => {
-                    const value = parseFloat(e.target.value);
-                    setRate(Number.isNaN(value) ? 0 : value);
+                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                    const decimalCount = (value.match(/\./g) || []).length;
+                    if (decimalCount <= 1) {
+                      setRateInput(value);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (rateInput.trim() === '' || rateInput === '.') {
+                      setRateInput('0.00');
+                      return;
+                    }
+                    const dollars = Number.parseFloat(rateInput);
+                    if (!Number.isFinite(dollars) || dollars < 0) {
+                      setRateInput('0.00');
+                      return;
+                    }
+                    const cents = Math.round(dollars * 100);
+                    setRateInput((cents / 100).toFixed(2));
                   }}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
