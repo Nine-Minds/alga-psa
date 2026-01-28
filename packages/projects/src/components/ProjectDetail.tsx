@@ -254,6 +254,7 @@ export default function ProjectDetail({
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
   const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
+  const [primaryAgentOnly, setPrimaryAgentOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchWholeWord, setSearchWholeWord] = useState<boolean>(false);
   const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
@@ -317,13 +318,16 @@ export default function ProjectDetail({
             return true;
           }
 
-          // Check additional agents from task resources
-          const resources = phaseTaskResources[task.task_id] || [];
-          const hasMatchingAdditionalAgent = resources.some(
-            resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-          );
-          if (hasMatchingAdditionalAgent) {
-            return true;
+          // Check additional agents from task resources (only if not filtering for primary only)
+          // Primary only filter is only applicable when exactly one agent is selected
+          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
+            const resources = phaseTaskResources[task.task_id] || [];
+            const hasMatchingAdditionalAgent = resources.some(
+              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
+            );
+            if (hasMatchingAdditionalAgent) {
+              return true;
+            }
           }
         }
 
@@ -332,7 +336,7 @@ export default function ProjectDetail({
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, phaseTaskResources]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -1654,18 +1658,34 @@ export default function ProjectDetail({
             />
 
             {/* Agent Filter */}
-            <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
-              <MultiUserPicker
-                id="task-agent-filter-list"
-                values={selectedAgentFilter}
-                onValuesChange={setSelectedAgentFilter}
-                users={users}
-                filterMode={true}
-                includeUnassigned={includeUnassignedAgents}
-                onUnassignedChange={setIncludeUnassignedAgents}
-                compactDisplay={true}
-                placeholder="All Agents"
-              />
+            <div className="flex items-center gap-2">
+              <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+                <MultiUserPicker
+                  id="task-agent-filter-list"
+                  values={selectedAgentFilter}
+                  onValuesChange={setSelectedAgentFilter}
+                  users={users}
+                  filterMode={true}
+                  includeUnassigned={includeUnassignedAgents}
+                  onUnassignedChange={setIncludeUnassignedAgents}
+                  compactDisplay={true}
+                  placeholder="All Agents"
+                />
+              </div>
+              {selectedAgentFilter.length === 1 && (
+                <button
+                  type="button"
+                  onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
+                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                    primaryAgentOnly
+                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Only show tasks where selected agent is the primary assignee"
+                >
+                  Primary
+                </button>
+              )}
             </div>
 
             {/* Priority Filter */}
@@ -1768,18 +1788,34 @@ export default function ProjectDetail({
             />
 
             {/* Agent Filter */}
-            <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
-              <MultiUserPicker
-                id="task-agent-filter-kanban"
-                values={selectedAgentFilter}
-                onValuesChange={setSelectedAgentFilter}
-                users={users}
-                filterMode={true}
-                includeUnassigned={includeUnassignedAgents}
-                onUnassignedChange={setIncludeUnassignedAgents}
-                compactDisplay={true}
-                placeholder="All Agents"
-              />
+            <div className="flex items-center gap-2">
+              <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+                <MultiUserPicker
+                  id="task-agent-filter-kanban"
+                  values={selectedAgentFilter}
+                  onValuesChange={setSelectedAgentFilter}
+                  users={users}
+                  filterMode={true}
+                  includeUnassigned={includeUnassignedAgents}
+                  onUnassignedChange={setIncludeUnassignedAgents}
+                  compactDisplay={true}
+                  placeholder="All Agents"
+                />
+              </div>
+              {selectedAgentFilter.length === 1 && (
+                <button
+                  type="button"
+                  onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
+                  className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                    primaryAgentOnly
+                      ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Only show tasks where selected agent is the primary assignee"
+                >
+                  Primary
+                </button>
+              )}
             </div>
 
             {/* Priority Filter */}
@@ -1872,6 +1908,7 @@ export default function ProjectDetail({
           selectedTaskTags={selectedTaskTags}
           selectedAgentFilter={selectedAgentFilter}
           includeUnassignedAgents={includeUnassignedAgents}
+          primaryAgentOnly={primaryAgentOnly}
           searchQuery={searchQuery}
           searchWholeWord={searchWholeWord}
           searchCaseSensitive={searchCaseSensitive}
