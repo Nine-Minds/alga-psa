@@ -3,7 +3,7 @@
 import User from '@alga-psa/db/models/user';
 import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex, getTenantContext, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -389,36 +389,19 @@ export const updateUserRoles = withAuth(async (
   }
 });
 
-export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRole[]> {
+export const getUserRoles = withAuth(async (
+  _user,
+  _ctx,
+  userId: string
+): Promise<IRole[]> => {
   try {
-    let knex: Knex | Knex.Transaction | undefined = knexConnection;
-    let tenant = await getTenantContext();
-
-    if (!knex) {
-      const result = await createTenantKnex();
-      knex = result.knex;
-      tenant = tenant ?? result.tenant ?? undefined;
-    }
-
-    if (!tenant) {
-      const { tenant: currentTenantId } = await createTenantKnex();
-      if (currentTenantId) {
-        tenant = currentTenantId;
-      }
-    }
-
-    if (!tenant) {
-      throw new Error('Tenant context is required to fetch user roles');
-    }
-
-    return await runWithTenant(tenant, async () => {
-      return User.getUserRoles(knex!, userId);
-    });
+    const { knex } = await createTenantKnex();
+    return await User.getUserRoles(knex, userId);
   } catch (error) {
     logger.error(`Failed to fetch roles for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles');
   }
-}
+});
 
 export const getAllRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
   try {

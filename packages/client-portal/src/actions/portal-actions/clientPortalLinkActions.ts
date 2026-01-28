@@ -4,6 +4,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { getPortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
 import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
+import { withAuth } from '@alga-psa/auth';
 
 export interface TenantPortalLinkResult {
   url: string;
@@ -11,11 +12,11 @@ export interface TenantPortalLinkResult {
   tenantSlug: string;
 }
 
-export async function getTenantPortalLoginLink(): Promise<TenantPortalLinkResult> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required to build portal login link');
-  }
+export const getTenantPortalLoginLink = withAuth(async (
+  _user,
+  { tenant }
+): Promise<TenantPortalLinkResult> => {
+  const { knex } = await createTenantKnex();
 
   const tenantSlug = await getTenantSlugForTenant(tenant);
   try {
@@ -56,4 +57,4 @@ export async function getTenantPortalLoginLink(): Promise<TenantPortalLinkResult
     });
     throw error;
   }
-}
+});

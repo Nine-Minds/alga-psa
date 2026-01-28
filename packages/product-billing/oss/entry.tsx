@@ -1,7 +1,7 @@
 import React from 'react';
 
 // OSS stub implementation for Billing features
-export const BillingDashboard = () => {
+export const BillingDashboard: React.FC = () => {
   return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
@@ -64,7 +64,7 @@ export const PaymentSettings = () => {
   );
 };
 
-export const StripeConnectionSettings = () => {
+export const StripeConnectionSettings: React.FC = () => {
   return (
     <div className="text-center py-8 text-muted-foreground">
       <p className="text-lg font-medium">Enterprise Feature</p>

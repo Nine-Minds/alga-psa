@@ -106,6 +106,8 @@
       "next-auth/*": ["node_modules/next-auth/*"],
       "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],
       "@product/settings-extensions/*": ["packages/product-settings-extensions/*"],
+      "@product/billing/entry": ["packages/product-billing/oss/entry"],
+      "@product/billing/*": ["packages/product-billing/*"],
       "@/types/imports.types": ["server/src/types/imports.types"],
       "@/types/*": ["server/src/types/*"],
       "@/lib/*": ["server/src/lib/*"],

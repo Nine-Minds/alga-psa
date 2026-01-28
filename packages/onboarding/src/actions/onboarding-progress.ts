@@ -4,7 +4,7 @@ import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
 import { createTenantKnex, getConnection } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import {
   deriveParentStepFromSubsteps,
@@ -69,29 +69,23 @@ const buildErrorStep = (
   };
 };
 
-export async function getOnboardingProgressAction(): Promise<OnboardingProgressResponse> {
-  // Get tenant from session to ensure tenant context is established
-  const session = await getSession();
-  const sessionTenant = (session?.user as any)?.tenant;
-
-  if (!sessionTenant || typeof sessionTenant !== 'string') {
-    throw new Error('Tenant context is required to load onboarding progress');
-  }
-  const tenantId = sessionTenant;
-
+export const getOnboardingProgressAction = withAuth(async (
+  _user,
+  { tenant }
+): Promise<OnboardingProgressResponse> => {
   const [identity, customerPortal, importStep, calendar, email] = await Promise.all([
-    resolveIdentityStep(tenantId),
-    resolveCustomerPortalStep(tenantId),
-    resolveImportStep(tenantId),
-    resolveCalendarStep(tenantId),
-    resolveEmailStep(tenantId),
+    resolveIdentityStep(tenant),
+    resolveCustomerPortalStep(tenant),
+    resolveImportStep(tenant),
+    resolveCalendarStep(tenant),
+    resolveEmailStep(tenant),
   ]);
 
   return {
     generatedAt: new Date().toISOString(),
     steps: [identity, customerPortal, importStep, calendar, email],
   };
-}
+});
 
 async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
