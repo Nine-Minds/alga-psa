@@ -16,6 +16,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
@@ -251,6 +252,8 @@ export default function ProjectDetail({
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
+  const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchWholeWord, setSearchWholeWord] = useState<boolean>(false);
   const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
@@ -296,8 +299,40 @@ export default function ProjectDetail({
       });
     }
 
+    // Apply agent filter
+    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+      tasks = tasks.filter(task => {
+        // Check if task is unassigned (no primary assignee)
+        const isUnassigned = !task.assigned_to;
+
+        // If includeUnassignedAgents is selected and task is unassigned, include it
+        if (includeUnassignedAgents && isUnassigned) {
+          return true;
+        }
+
+        // If specific agents are selected, check if task matches
+        if (selectedAgentFilter.length > 0) {
+          // Check primary assignee
+          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
+            return true;
+          }
+
+          // Check additional agents from task resources
+          const resources = phaseTaskResources[task.task_id] || [];
+          const hasMatchingAdditionalAgent = resources.some(
+            resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
+          );
+          if (hasMatchingAdditionalAgent) {
+            return true;
+          }
+        }
+
+        return false;
+      });
+    }
+
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, phaseTaskResources]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -1618,6 +1653,21 @@ export default function ProjectDetail({
               onClearTags={() => setSelectedTaskTags([])}
             />
 
+            {/* Agent Filter */}
+            <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+              <MultiUserPicker
+                id="task-agent-filter-list"
+                values={selectedAgentFilter}
+                onValuesChange={setSelectedAgentFilter}
+                users={users}
+                filterMode={true}
+                includeUnassigned={includeUnassignedAgents}
+                onUnassignedChange={setIncludeUnassignedAgents}
+                compactDisplay={true}
+                placeholder="All Agents"
+              />
+            </div>
+
             {/* Priority Filter */}
             <CustomSelect
               value={selectedPriorityFilter}
@@ -1717,6 +1767,21 @@ export default function ProjectDetail({
               onClearTags={() => setSelectedTaskTags([])}
             />
 
+            {/* Agent Filter */}
+            <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+              <MultiUserPicker
+                id="task-agent-filter-kanban"
+                values={selectedAgentFilter}
+                onValuesChange={setSelectedAgentFilter}
+                users={users}
+                filterMode={true}
+                includeUnassigned={includeUnassignedAgents}
+                onUnassignedChange={setIncludeUnassignedAgents}
+                compactDisplay={true}
+                placeholder="All Agents"
+              />
+            </div>
+
             {/* Priority Filter */}
             <CustomSelect
               value={selectedPriorityFilter}
@@ -1805,6 +1870,8 @@ export default function ProjectDetail({
           users={users}
           selectedPriorityFilter={selectedPriorityFilter}
           selectedTaskTags={selectedTaskTags}
+          selectedAgentFilter={selectedAgentFilter}
+          includeUnassignedAgents={includeUnassignedAgents}
           searchQuery={searchQuery}
           searchWholeWord={searchWholeWord}
           searchCaseSensitive={searchCaseSensitive}
