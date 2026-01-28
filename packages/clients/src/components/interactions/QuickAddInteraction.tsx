@@ -27,6 +27,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
+import { clampDuration } from '../../lib/durationHelpers';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -322,9 +323,7 @@ export function QuickAddInteraction({
 
   // Helper to get total duration in minutes from hours and minutes state (max 24h 59m = 1499 minutes)
   const getTotalDurationMinutes = (): number => {
-    const hours = Math.min(Math.max(parseInt(durationHours) || 0, 0), 24);
-    const minutes = Math.min(Math.max(parseInt(durationMinutes) || 0, 0), 59);
-    return (hours * 60) + minutes;
+    return clampDuration(durationHours, durationMinutes).totalMinutes;
   };
 
   // Handle start time change
@@ -399,9 +398,7 @@ export function QuickAddInteraction({
 
     // If we have a start time, update end time
     if (startTime) {
-      const hours = Math.min(Math.max(parseInt(nextHours) || 0, 0), 24);
-      const minutes = Math.min(Math.max(parseInt(durationMinutes) || 0, 0), 59);
-      const totalMinutes = (hours * 60) + minutes;
+      const { totalMinutes } = clampDuration(nextHours, durationMinutes);
       const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
       setEndTime(newEndTime);
     }
@@ -419,9 +416,7 @@ export function QuickAddInteraction({
 
     // If we have a start time, update end time
     if (startTime) {
-      const hours = Math.min(Math.max(parseInt(durationHours) || 0, 0), 24);
-      const minutes = Math.min(Math.max(parseInt(clampedMinutes) || 0, 0), 59);
-      const totalMinutes = (hours * 60) + minutes;
+      const { totalMinutes } = clampDuration(durationHours, clampedMinutes);
       const newEndTime = new Date(startTime.getTime() + totalMinutes * 60000);
       setEndTime(newEndTime);
     }

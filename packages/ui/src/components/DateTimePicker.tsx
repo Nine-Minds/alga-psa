@@ -68,7 +68,7 @@ export function DateTimePicker({
   // This avoids repeated type assertions throughout the component
   const clearValue = React.useMemo(() => {
     if (clearable) {
-      return () => (onChange as (date: Date | undefined) => void)(undefined);
+      return () => onChange(undefined);
     }
     return undefined;
   }, [clearable, onChange]);
