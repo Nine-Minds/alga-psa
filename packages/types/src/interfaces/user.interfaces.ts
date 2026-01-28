@@ -26,6 +26,8 @@ export interface IUser {
   tenant: string;
   user_type: 'internal' | 'client';
   contact_id?: string;
+  /** The client_id associated with this user (derived from contact_id for client users) */
+  clientId?: string;
   phone?: string;
   timezone?: string;
   last_login_at?: Date | string;

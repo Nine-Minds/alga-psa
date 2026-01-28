@@ -53,7 +53,6 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
 
     console.log('Debug - User ID:', user.user_id);
     console.log('Debug - Tenant:', tenant);
-    console.log('Debug - ClientId:', user.clientId);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's client_id
@@ -310,7 +309,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     }
 
     // Create user map, including avatar URLs
-    const db = await getConnection(tenant);
+    // Reuse db connection from earlier
     const usersWithAvatars = await Promise.all(result.users.map(async (userRecord: any) => {
       let avatarUrl: string | null = null;
 

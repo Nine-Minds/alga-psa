@@ -175,9 +175,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
         setActiveTab('examples');
       } else {
         // Try to fetch the schema directly if not found in the cached entries
-        const fetchedEntry = await getEventCatalogEntryByEventType({
-          eventType: selectedEventType
-        });
+        const fetchedEntry = await getEventCatalogEntryByEventType(selectedEventType);
         
         if (fetchedEntry && fetchedEntry.payload_schema) {
           setSelectedEventSchema(fetchedEntry.payload_schema);

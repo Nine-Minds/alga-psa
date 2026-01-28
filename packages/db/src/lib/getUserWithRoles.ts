@@ -48,7 +48,20 @@ export async function getUserWithRoles(
       .where('roles.tenant', tenantId)
       .select('roles.*');
 
-    return { ...user, roles };
+    // Look up clientId from contacts table if user has a contact_id
+    let clientId: string | undefined;
+    if (user.contact_id) {
+      const contact = await trx('contacts')
+        .select('client_id')
+        .where('contact_name_id', user.contact_id)
+        .where('tenant', tenantId)
+        .first();
+      if (contact?.client_id) {
+        clientId = contact.client_id;
+      }
+    }
+
+    return { ...user, roles, clientId };
   });
 
   if (!userWithRoles) {
@@ -102,7 +115,20 @@ export async function getUserWithRolesByEmail(
       .where('roles.tenant', tenantId)
       .select('roles.*');
 
-    return { ...user, roles };
+    // Look up clientId from contacts table if user has a contact_id
+    let clientId: string | undefined;
+    if (user.contact_id) {
+      const contact = await trx('contacts')
+        .select('client_id')
+        .where('contact_name_id', user.contact_id)
+        .where('tenant', tenantId)
+        .first();
+      if (contact?.client_id) {
+        clientId = contact.client_id;
+      }
+    }
+
+    return { ...user, roles, clientId };
   });
 
   if (!userWithRoles) {

@@ -8,6 +8,8 @@ export interface ExtProxyUserInfo {
   user_name: string;
   user_type: string;
   client_name: string;
+  /** For client portal users, the client_id they are associated with */
+  client_id?: string;
 }
 
 /**
@@ -24,6 +26,37 @@ async function getTenantClientName(tenantId: string): Promise<string> {
   } catch (error) {
     console.error('[auth] Failed to look up tenant client_name:', error);
     return '';
+  }
+}
+
+/**
+ * Look up user's client_id from their contact association.
+ * Returns undefined if user doesn't have a contact or contact doesn't have a client.
+ */
+async function getUserClientId(userId: string, tenantId: string): Promise<string | undefined> {
+  try {
+    const knex = await getAdminConnection();
+    // First get the user's contact_id, then look up the client_id from contacts
+    const user = await knex('users')
+      .select('contact_id')
+      .where('user_id', userId)
+      .where('tenant', tenantId)
+      .first();
+
+    if (!user?.contact_id) {
+      return undefined;
+    }
+
+    const contact = await knex('contacts')
+      .select('client_id')
+      .where('contact_name_id', user.contact_id)
+      .where('tenant', tenantId)
+      .first();
+
+    return contact?.client_id || undefined;
+  } catch (error) {
+    console.error('[auth] Failed to look up user client_id:', error);
+    return undefined;
   }
 }
 
@@ -58,12 +91,20 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   const tenantId = user.tenant || '';
   const clientName = tenantId ? await getTenantClientName(tenantId) : '';
 
-  const userInfo = {
-    user_id: user.user_id || user.id || '',
+  // Look up user's client_id if they are a client portal user
+  const userId = user.user_id || user.id || '';
+  const userType = user.user_type || 'internal';
+  const clientId = (userType === 'client' && userId && tenantId)
+    ? await getUserClientId(userId, tenantId)
+    : undefined;
+
+  const userInfo: ExtProxyUserInfo = {
+    user_id: userId,
     user_email: user.email || '',
     user_name: user.name || user.username || '',
-    user_type: user.user_type || 'internal',
+    user_type: userType,
     client_name: clientName,
+    client_id: clientId,
   };
 
   console.log('[ext-proxy auth] Returning user info', {
