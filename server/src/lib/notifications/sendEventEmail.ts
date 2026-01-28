@@ -10,6 +10,12 @@ import Handlebars from 'handlebars';
 import { EmailAddress } from '../../types/email.types';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
+const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
+
+function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
+  if (typeof message !== 'string') return false;
+  return message.includes(EMAIL_SERVICE_DISABLED_MESSAGE) || message.includes('disabled or not configured');
+}
 
 interface ReplyMarkerPayload {
   token: string;
@@ -399,6 +405,17 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     if (!result.success) {
+      // If email delivery is intentionally disabled/unconfigured, treat as an informational skip (common in dev/test).
+      if (isEmailServiceDisabledErrorMessage(result.error)) {
+        logger.info('[SendEventEmail] Email skipped (service disabled or not configured):', {
+          to: params.to,
+          subject,
+          tenantId: params.tenantId,
+          template: params.template,
+          providerId: params.providerId
+        });
+        return;
+      }
       throw new Error(`Failed to send email: ${result.error || 'Unknown error'}`);
     }
 
@@ -449,13 +466,25 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       template: params.template
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (isEmailServiceDisabledErrorMessage(errorMessage)) {
+      logger.info('[SendEventEmail] Email skipped (service disabled or not configured):', {
+        to: params.to,
+        subject: params.subject,
+        tenantId: params.tenantId,
+        template: params.template,
+        providerId: params.providerId
+      });
+      return;
+    }
+
     logger.error('[SendEventEmail] Failed to publish email event:', {
       error,
       to: params.to,
       subject: params.subject,
       tenantId: params.tenantId,
       template: params.template,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorMessage,
       errorStack: error instanceof Error ? error.stack : undefined
     });
     throw error;

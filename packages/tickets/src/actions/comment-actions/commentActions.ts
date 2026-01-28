@@ -310,10 +310,13 @@ export const updateComment = withAuth(async (_user, { tenant }, id: string, comm
 
   const { knex: db } = await createTenantKnex();
   const commentTenant = tenant;
+  if (!commentTenant) {
+    throw new Error('Tenant is required to update comment');
+  }
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Fetch existing comment to verify it exists
-      const existingComment = await Comment.get(trx, id);
+      const existingComment = await Comment.get(trx, commentTenant, id);
       if (!existingComment) {
         console.error(`[updateComment] Comment with ID ${id} not found`);
         throw new Error(`Comment with id ${id} not found`);
@@ -410,11 +413,11 @@ export const updateComment = withAuth(async (_user, { tenant }, id: string, comm
     });
 
       // Use the Comment model to update the comment
-      await Comment.update(trx, id, commentToUpdate);
+      await Comment.update(trx, commentTenant, id, commentToUpdate);
       console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
 
       // Verify the comment was updated correctly
-      const updatedComment = await Comment.get(trx, id);
+      const updatedComment = await Comment.get(trx, commentTenant, id);
       if (updatedComment) {
         console.log(`[updateComment] Verification - updated comment:`, {
           comment_id: updatedComment.comment_id,
@@ -470,11 +473,16 @@ export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
   const { knex: db } = await createTenantKnex();
   try {
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const existingComment = await Comment.get(trx, id);
+      const tenant = _ctx?.tenant;
+      if (!tenant) {
+        throw new Error('Tenant is required to delete comment');
+      }
+
+      const existingComment = await Comment.get(trx, tenant, id);
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
-      await Comment.delete(trx, id);
+      await Comment.delete(trx, tenant, id);
     });
   } catch (error) {
     console.error(`Failed to delete comment with id ${id}:`, error);
