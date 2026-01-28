@@ -9,7 +9,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
-type ExperimentalFeatureKey = 'aiAssistant';
+type ExperimentalFeatureKey = 'aiAssistant' | 'workflowAutomation';
 
 type ExperimentalFeatureDefinition = {
   key: ExperimentalFeatureKey;
@@ -23,12 +23,18 @@ const experimentalFeatureDefinitions: ExperimentalFeatureDefinition[] = [
     name: 'AI Assistant',
     description: 'Enable AI-powered Quick Ask and Chat sidebar.',
   },
+  {
+    key: 'workflowAutomation',
+    name: 'Workflow Automation',
+    description: 'Enable experimental workflow automation features in Automation Hub.',
+  },
 ];
 
 type ExperimentalFeatureState = Record<ExperimentalFeatureKey, boolean>;
 
 const defaultExperimentalFeatureState: ExperimentalFeatureState = {
   aiAssistant: false,
+  workflowAutomation: false,
 };
 
 export default function ExperimentalFeaturesSettings(): React.JSX.Element {
@@ -46,6 +52,7 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       const saved = await getExperimentalFeatures();
       const loaded: ExperimentalFeatureState = {
         aiAssistant: saved.aiAssistant === true,
+        workflowAutomation: saved.workflowAutomation === true,
       };
       setFeatures(loaded);
       setSavedFeatures(loaded);
@@ -69,14 +76,14 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
     }));
   }, []);
 
-  const hasChanges = features.aiAssistant !== savedFeatures.aiAssistant;
+  const hasChanges = (Object.keys(features) as ExperimentalFeatureKey[]).some(
+    (key) => features[key] !== savedFeatures[key]
+  );
 
   const handleSave = useCallback(async (): Promise<void> => {
     try {
       setSaving(true);
-      await updateExperimentalFeatures({
-        aiAssistant: features.aiAssistant,
-      });
+      await updateExperimentalFeatures(features);
       setSavedFeatures(features);
       toast.success('Experimental feature settings saved. Reload the page to apply changes.');
     } catch (error) {
