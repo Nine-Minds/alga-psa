@@ -244,6 +244,23 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Debounced search for child tickets
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const childTicketSearchSeqRef = useRef(0);
+
+    const cancelChildTicketSearch = useCallback(() => {
+        childTicketSearchSeqRef.current += 1;
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
+        setIsSearching(false);
+    }, []);
+
+    const resetChildTicketPickerState = useCallback(() => {
+        cancelChildTicketSearch();
+        setSearchResults([]);
+        setShowSearchResults(false);
+        setSelectedChildTicket(null);
+    }, [cancelChildTicketSearch]);
 
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
@@ -1123,8 +1140,9 @@ const handleClose = () => {
         await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
         toast.success('Added ticket to bundle');
         setAddChildTicketNumber('');
+        resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, resetChildTicketPickerState]);
 
     const handleAddChildToBundle = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -1144,8 +1162,6 @@ const handleClose = () => {
                 return;
             }
             await performAddChildToBundle(selectedChildTicket.ticket_id);
-            // Clear the selection after adding
-            setSelectedChildTicket(null);
             return;
         }
 
@@ -1172,8 +1188,6 @@ const handleClose = () => {
             }
 
             await performAddChildToBundle(found.ticket_id);
-            // Clear the selection after adding
-            setSelectedChildTicket(null);
         } catch (error) {
             console.error('Failed to add child to bundle:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
@@ -1192,34 +1206,42 @@ const handleClose = () => {
 
     // Debounced search for eligible child tickets
     const performSearch = useCallback(async (query: string) => {
-        if (!ticket.board_id || !query.trim()) {
+        const normalizedQuery = query.trim();
+        if (!ticket.board_id || !normalizedQuery) {
             setSearchResults([]);
             return;
         }
 
+        const searchSeq = ++childTicketSearchSeqRef.current;
         setIsSearching(true);
         try {
             const results = await searchEligibleChildTicketsAction({
                 boardId: ticket.board_id,
-                searchQuery: query.trim(),
+                searchQuery: normalizedQuery,
                 excludeTicketId: ticket.ticket_id,
                 limit: 10
             });
+            if (searchSeq !== childTicketSearchSeqRef.current) return;
             setSearchResults(results);
         } catch (error) {
             console.error('Failed to search tickets:', error);
+            if (searchSeq !== childTicketSearchSeqRef.current) return;
             setSearchResults([]);
         } finally {
-            setIsSearching(false);
+            if (searchSeq === childTicketSearchSeqRef.current) {
+                setIsSearching(false);
+            }
         }
     }, [ticket.board_id, ticket.ticket_id]);
 
     const debouncedSearch = useCallback((query: string) => {
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
         }
 
         if (!query.trim()) {
+            cancelChildTicketSearch();
             setSearchResults([]);
             setShowSearchResults(false);
             return;
@@ -1228,7 +1250,7 @@ const handleClose = () => {
         searchTimeoutRef.current = setTimeout(() => {
             performSearch(query);
         }, 300); // 300ms debounce
-    }, [performSearch]);
+    }, [performSearch, cancelChildTicketSearch]);
 
     const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -1242,6 +1264,7 @@ const handleClose = () => {
     }, [debouncedSearch, selectedChildTicket]);
 
     const handleSelectSearchResult = useCallback((selectedTicket: EligibleChildTicket) => {
+        cancelChildTicketSearch();
         setAddChildTicketNumber(selectedTicket.ticket_number);
         setSelectedChildTicket({
             ticket_id: selectedTicket.ticket_id,
@@ -1250,7 +1273,7 @@ const handleClose = () => {
         });
         setShowSearchResults(false);
         setSearchResults([]);
-    }, []);
+    }, [cancelChildTicketSearch]);
 
     // Handle click outside to close search results
     useEffect(() => {
@@ -1439,7 +1462,7 @@ const handleClose = () => {
                                 {bundle?.isBundleMaster ? (
                                     <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-900" id="ticket-bundle-master-banner">
                                         This ticket is the master of a bundle ({Array.isArray(bundle.children) ? bundle.children.length : 0} children). Mode:{' '}
-                                        {(bundle.mode || 'sync_updates').split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.
+                                        {(bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.
                                         {bundleHasMultipleClients ? (
                                             <span className="ml-2 inline-flex items-center rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
                                                 Multiple clients
@@ -1460,7 +1483,7 @@ const handleClose = () => {
                                                     onClick={handleToggleBundleMode}
                                                     disabled={isUpdatingBundleSettings}
                                                 >
-                                                    Mode: {(bundle.mode || 'sync_updates').split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                    Mode: {(bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                                 </Button>
                                                 <Button
                                                     id="ticket-bundle-unbundle-button"
