@@ -51,17 +51,34 @@ function isViewableType(mimeType: string | undefined): boolean {
   );
 }
 
+// Pending document for create mode (before task is saved)
+export interface PendingTaskDocument {
+  document_id: string;
+  document_name: string;
+  type: 'uploaded' | 'linked' | 'block';
+  mime_type?: string;
+  file_id?: string;
+}
+
 interface TaskDocumentsSimpleProps {
-  taskId: string;
+  taskId?: string;  // Optional - when not provided, works in pending mode
   initialDocuments?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
+  // Pending mode props (for task creation)
+  pendingDocuments?: PendingTaskDocument[];
+  onPendingDocumentsChange?: (docs: PendingTaskDocument[]) => void;
 }
 
 export default function TaskDocumentsSimple({
   taskId,
   initialDocuments,
-  onDocumentCreated
+  onDocumentCreated,
+  pendingDocuments,
+  onPendingDocumentsChange
 }: TaskDocumentsSimpleProps) {
+  // Pending mode is active when we don't have a taskId yet (task creation)
+  const isPendingMode = !taskId;
+
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
   const [loading, setLoading] = useState(false);
   const [documentsLoaded, setDocumentsLoaded] = useState(!!initialDocuments);
@@ -119,11 +136,13 @@ export default function TaskDocumentsSimple({
     }
   }, [initialDocuments]);
 
-  // Refetch documents from the server
+  // Refetch documents from the server (only in edit mode)
   const refetchDocuments = useCallback(async () => {
+    if (isPendingMode) return; // Don't fetch in pending mode
+
     try {
       setLoading(true);
-      const response = await getDocumentsByEntity(taskId, 'project_task');
+      const response = await getDocumentsByEntity(taskId!, 'project_task');
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
@@ -132,7 +151,7 @@ export default function TaskDocumentsSimple({
     } finally {
       setLoading(false);
     }
-  }, [taskId]);
+  }, [taskId, isPendingMode]);
 
   // Handle document mutation - refetch documents to update local state immediately
   const handleDocumentMutation = useCallback(async () => {
@@ -144,11 +163,11 @@ export default function TaskDocumentsSimple({
   }, [onDocumentCreated, refetchDocuments]);
 
   const fetchDocuments = async () => {
-    if (documentsLoaded) return; // Don't refetch if already loaded
+    if (documentsLoaded || isPendingMode) return; // Don't refetch if already loaded or in pending mode
 
     try {
       setLoading(true);
-      const response = await getDocumentsByEntity(taskId, 'project_task');
+      const response = await getDocumentsByEntity(taskId!, 'project_task');
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
@@ -159,12 +178,12 @@ export default function TaskDocumentsSimple({
     }
   };
 
-  // Load documents when expanded - only if no initialDocuments provided
+  // Load documents when expanded - only if no initialDocuments provided and not in pending mode
   useEffect(() => {
-    if (isExpanded && taskId && !documentsLoaded && !initialDocuments) {
+    if (isExpanded && taskId && !documentsLoaded && !initialDocuments && !isPendingMode) {
       fetchDocuments();
     }
-  }, [isExpanded, taskId, documentsLoaded, initialDocuments]);
+  }, [isExpanded, taskId, documentsLoaded, initialDocuments, isPendingMode]);
 
   const getFileIcon = (document: IDocument) => {
     if (!document.file_id) return <FileText className="h-4 w-4 text-blue-600" />;
@@ -257,7 +276,7 @@ export default function TaskDocumentsSimple({
       toast.error('Document name is required');
       return;
     }
-    
+
     // Fetch user if not already loaded
     const user = await fetchUser();
     if (!user) {
@@ -267,17 +286,30 @@ export default function TaskDocumentsSimple({
 
     try {
       setIsSaving(true);
-      await createBlockDocument({
+      // In pending mode, create document without entity association
+      const result = await createBlockDocument({
         document_name: newDocumentName,
         user_id: user.user_id,
         block_data: JSON.stringify(currentContent),
-        entityId: taskId,
-        entityType: 'project_task',
+        entityId: isPendingMode ? undefined : taskId,
+        entityType: isPendingMode ? undefined : 'project_task',
         folder_path: selectedFolderPath
       });
 
       toast.success('Document created successfully');
-      await handleDocumentMutation();
+
+      if (isPendingMode) {
+        // Add to pending documents list
+        const newPendingDoc: PendingTaskDocument = {
+          document_id: result.document_id,
+          document_name: newDocumentName,
+          type: 'block'
+        };
+        onPendingDocumentsChange?.([...(pendingDocuments || []), newPendingDoc]);
+      } else {
+        await handleDocumentMutation();
+      }
+
       handleCloseDrawer();
       setIsCreatingNew(false);
       setSelectedFolderPath(null); // Reset folder selection
@@ -330,15 +362,22 @@ export default function TaskDocumentsSimple({
 
   const handleDeleteClick = (e: React.MouseEvent, document: IDocument) => {
     e.stopPropagation();
-    setDocumentToDelete(document);
-    setShowDeleteConfirm(true);
+    if (isPendingMode) {
+      // In pending mode, remove directly from pending list without confirmation
+      const updatedPending = (pendingDocuments || []).filter(d => d.document_id !== document.document_id);
+      onPendingDocumentsChange?.(updatedPending);
+      toast.success('Document removed');
+    } else {
+      setDocumentToDelete(document);
+      setShowDeleteConfirm(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!documentToDelete) return;
+    if (!documentToDelete || isPendingMode) return;
 
     try {
-      await removeDocumentAssociations(taskId, 'project_task', [documentToDelete.document_id]);
+      await removeDocumentAssociations(taskId!, 'project_task', [documentToDelete.document_id]);
       toast.success('Document removed successfully');
       await handleDocumentMutation();
     } catch (error) {
@@ -425,8 +464,8 @@ export default function TaskDocumentsSimple({
             )}
             <Paperclip className="h-4 w-4" />
             <h3 className="font-medium">Attachments</h3>
-            {documentsLoaded && documents.length > 0 && (
-              <span className="text-sm text-gray-500">({documents.length})</span>
+            {(isPendingMode ? (pendingDocuments || []).length > 0 : documentsLoaded && documents.length > 0) && (
+              <span className="text-sm text-gray-500">({isPendingMode ? (pendingDocuments || []).length : documents.length})</span>
             )}
           </button>
           <div className="flex gap-2">
@@ -495,13 +534,25 @@ export default function TaskDocumentsSimple({
             <DocumentUpload
               id="task-document-upload"
               userId={currentUser.user_id}
-              entityId={taskId}
-              entityType="project_task"
+              entityId={isPendingMode ? undefined : taskId}
+              entityType={isPendingMode ? undefined : "project_task"}
               onUploadComplete={async (result) => {
                 setShowUpload(false);
-                if (result?.success) {
+                if (result?.success && result.document) {
                   toast.success('Document uploaded successfully');
-                  await handleDocumentMutation();
+                  if (isPendingMode) {
+                    // In pending mode, add to pending documents list
+                    const newPendingDoc: PendingTaskDocument = {
+                      document_id: result.document.document_id,
+                      document_name: result.document.document_name,
+                      type: 'uploaded',
+                      mime_type: result.document.mime_type,
+                      file_id: result.document.file_id
+                    };
+                    onPendingDocumentsChange?.([...(pendingDocuments || []), newPendingDoc]);
+                  } else {
+                    await handleDocumentMutation();
+                  }
                 }
               }}
               onCancel={() => setShowUpload(false)}
@@ -514,13 +565,24 @@ export default function TaskDocumentsSimple({
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
           </div>
-        ) : documents.length === 0 ? (
+        ) : (isPendingMode ? (pendingDocuments || []).length === 0 : documents.length === 0) ? (
           <div className="text-center py-4 text-gray-500 text-sm">
             No documents attached
           </div>
         ) : (
           <div className="space-y-1">
-            {documents.map((doc) => (
+            {/* In pending mode, show pending documents; otherwise show actual documents */}
+            {(isPendingMode ? (pendingDocuments || []).map(pd => ({
+              document_id: pd.document_id,
+              document_name: pd.document_name,
+              file_id: pd.file_id,
+              mime_type: pd.mime_type,
+              // Add required IDocument fields with defaults for display purposes
+              user_id: '',
+              created_by: '',
+              order_number: 0,
+              tenant: ''
+            } as IDocument)) : documents).map((doc) => (
               <div
                 key={doc.document_id}
                 className="flex items-center justify-between p-2 hover:bg-gray-50 rounded cursor-pointer group"
@@ -601,11 +663,24 @@ export default function TaskDocumentsSimple({
       {showSelector && (
         <DocumentSelector
           id="task-document-selector"
-          entityId={taskId}
-          entityType="project_task"
-          onDocumentsSelected={async () => {
+          entityId={isPendingMode ? undefined : taskId}
+          entityType={isPendingMode ? undefined : "project_task"}
+          excludeDocumentIds={isPendingMode ? pendingDocuments?.map(d => d.document_id) : undefined}
+          onDocumentsSelected={async (selectedDocs?: IDocument[]) => {
             setShowSelector(false);
-            await handleDocumentMutation();
+            if (isPendingMode && selectedDocs && selectedDocs.length > 0) {
+              // In pending mode, add selected documents to pending list
+              const newPendingDocs: PendingTaskDocument[] = selectedDocs.map(doc => ({
+                document_id: doc.document_id,
+                document_name: doc.document_name,
+                type: 'linked' as const,
+                mime_type: doc.mime_type,
+                file_id: doc.file_id
+              }));
+              onPendingDocumentsChange?.([...(pendingDocuments || []), ...newPendingDocs]);
+            } else {
+              await handleDocumentMutation();
+            }
           }}
           isOpen={showSelector}
           onClose={() => setShowSelector(false)}

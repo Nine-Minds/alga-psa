@@ -44,8 +44,9 @@ import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
-import TaskDocumentsSimple from './TaskDocumentsSimple';
+import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
+import { createDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
@@ -109,6 +110,7 @@ export default function TaskForm({
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
+  const [pendingDocuments, setPendingDocuments] = useState<PendingTaskDocument[]>([]);
 
   // Ref to prevent race conditions when rapidly adding/removing agents
   const isProcessingAgentsRef = useRef(false);
@@ -520,6 +522,12 @@ export default function TaskForm({
             for (const link of pendingTicketLinks) {
               await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
             }
+
+            // Create document associations for pending documents
+            if (pendingDocuments.length > 0) {
+              const documentIds = pendingDocuments.map(d => d.document_id);
+              await createDocumentAssociations(resultTask.task_id, 'project_task', documentIds);
+            }
           } catch (error) {
             console.error('Error adding resources or linking tickets:', error);
             toast.error('Task created but failed to link some items');
@@ -593,6 +601,7 @@ export default function TaskForm({
       if (selectedTaskType !== initialTaskType) return true; // Only if changed from initial value
       if (selectedServiceId !== null) return true; // User explicitly selected a service
       if (pendingTags.length > 0) return true;
+      if (pendingDocuments.length > 0) return true; // User has added pending documents
       return false; // No changes detected
     }
 
@@ -1287,13 +1296,13 @@ export default function TaskForm({
           />
 
           {/* Full width Attachments section */}
-          {mode === 'edit' && task && (
-            <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
-              <TaskDocumentsSimple
-                taskId={task.task_id}
-              />
-            </div>
-          )}
+          <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+            <TaskDocumentsSimple
+              taskId={mode === 'edit' && task ? task.task_id : undefined}
+              pendingDocuments={mode === 'create' ? pendingDocuments : undefined}
+              onPendingDocumentsChange={mode === 'create' ? setPendingDocuments : undefined}
+            />
+          </div>
 
           {/* Full width Comments section */}
           {mode === 'edit' && task && (
