@@ -721,6 +721,7 @@ export default function TaskForm({
         ? pendingDocuments.filter(d => d.type === 'uploaded' || d.type === 'block')
         : sessionAddedDocuments.filter(d => d.type === 'uploaded' || d.type === 'block');
 
+      let failureCount = 0;
       for (const doc of docsToDelete) {
         try {
           if (mode === 'edit' && task?.task_id) {
@@ -731,7 +732,12 @@ export default function TaskForm({
           await deleteDocument(doc.document_id, currentUserId);
         } catch (error) {
           console.error(`Failed to delete document ${doc.document_id}:`, error);
+          failureCount++;
         }
+      }
+
+      if (failureCount > 0) {
+        toast.error(`${failureCount} document${failureCount !== 1 ? 's' : ''} could not be deleted and will remain in Documents`);
       }
     } finally {
       setIsDeletingDocuments(false);
