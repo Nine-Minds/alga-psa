@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 let mockTenantContext: string | null = null;
 let allowTenantKnex = false;
 let tenantSettingsRow: any = null;
+const originalMasterBillingTenantId = process.env.MASTER_BILLING_TENANT_ID;
 
 const knexWhereMock = vi.fn();
 const knexFromMock = vi.fn();
@@ -40,6 +41,7 @@ vi.mock('@alga-psa/users/actions', () => ({
 
 describe('tenantSettingsActions.getExperimentalFeatures', () => {
   beforeEach(() => {
+    process.env.MASTER_BILLING_TENANT_ID = 'tenant-test';
     mockTenantContext = null;
     allowTenantKnex = true;
     tenantSettingsRow = null;
@@ -111,10 +113,29 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true, workflowAutomation: true });
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
   });
+
+  it('forces aiAssistant off when tenant is not the master billing tenant', async () => {
+    process.env.MASTER_BILLING_TENANT_ID = 'some-other-tenant';
+    tenantSettingsRow = {
+      settings: {
+        experimentalFeatures: {
+          aiAssistant: true,
+          workflowAutomation: true,
+        },
+      },
+    };
+
+    const { getExperimentalFeatures } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false, workflowAutomation: true });
+  });
 });
 
 describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   beforeEach(() => {
+    process.env.MASTER_BILLING_TENANT_ID = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = null;
 
@@ -266,10 +287,32 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     expect(createTenantKnexMock).not.toHaveBeenCalled();
     expect(tenantKnexTableMock).not.toHaveBeenCalled();
   });
+
+  it('rejects enabling aiAssistant when tenant is not the master billing tenant', async () => {
+    process.env.MASTER_BILLING_TENANT_ID = 'some-other-tenant';
+    allowTenantKnex = false;
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { updateExperimentalFeatures } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    try {
+      await expect(updateExperimentalFeatures({ aiAssistant: true })).rejects.toThrow(
+        'Permission denied: Cannot enable AI Assistant for this tenant'
+      );
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(tenantKnexTableMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
   beforeEach(() => {
+    process.env.MASTER_BILLING_TENANT_ID = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = null;
 
@@ -357,4 +400,8 @@ describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
     await expect(isExperimentalFeatureEnabled('aiAssistant')).resolves.toBe(true);
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
   });
+});
+
+afterAll(() => {
+  process.env.MASTER_BILLING_TENANT_ID = originalMasterBillingTenantId;
 });
