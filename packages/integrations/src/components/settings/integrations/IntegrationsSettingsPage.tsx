@@ -27,9 +27,24 @@ import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
-// Static import for StripeConnectionSettings using the modular pattern
-// The bundler alias @product/billing/entry resolves to EE or OSS version at build time
-import { StripeConnectionSettings } from '@product/billing/entry';
+// Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
+// Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
+const StripeConnectionSettings = dynamic(
+  () => import('@product/billing/entry').then(mod => (mod as unknown as { StripeConnectionSettings: React.ComponentType }).StripeConnectionSettings),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading payment settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+);
 
 // Dynamic import for NinjaOne (EE feature)
 const NinjaOneIntegrationSettings = dynamic(
