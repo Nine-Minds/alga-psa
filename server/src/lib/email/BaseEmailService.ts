@@ -124,7 +124,7 @@ export abstract class BaseEmailService {
     }
 
     if (!this.emailProvider) {
-      logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
+      logger.info(`[${this.getServiceName()}] Email skipped (service disabled or not configured)`);
       return {
         success: false,
         error: 'Email service is disabled or not configured'
