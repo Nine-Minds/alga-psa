@@ -71,6 +71,9 @@ interface TaskListViewProps {
   // Filter props
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
+  selectedAgentFilter?: string[];
+  includeUnassignedAgents?: boolean;
+  primaryAgentOnly?: boolean;
   searchQuery?: string;
   searchWholeWord?: boolean;
   searchCaseSensitive?: boolean;
@@ -104,6 +107,9 @@ export default function TaskListView({
   users,
   selectedPriorityFilter = 'all',
   selectedTaskTags = [],
+  selectedAgentFilter = [],
+  includeUnassignedAgents = false,
+  primaryAgentOnly = false,
   searchQuery = '',
   searchWholeWord = false,
   searchCaseSensitive = false
@@ -246,8 +252,43 @@ export default function TaskListView({
       });
     }
 
+    // Apply agent filter
+    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+      filtered = filtered.filter(task => {
+        // Check if task is unassigned (no primary assignee)
+        const isUnassigned = !task.assigned_to;
+
+        // If includeUnassignedAgents is selected and task is unassigned, include it
+        if (includeUnassignedAgents && isUnassigned) {
+          return true;
+        }
+
+        // If specific agents are selected, check if task matches
+        if (selectedAgentFilter.length > 0) {
+          // Check primary assignee
+          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
+            return true;
+          }
+
+          // Check additional agents from task resources (only if not filtering for primary only)
+          // Primary only filter is only applicable when exactly one agent is selected
+          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
+            const resources = taskResources[task.task_id] || [];
+            const hasMatchingAdditionalAgent = resources.some(
+              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
+            );
+            if (hasMatchingAdditionalAgent) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      });
+    }
+
     return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {

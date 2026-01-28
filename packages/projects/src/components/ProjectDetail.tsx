@@ -16,6 +16,8 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { Button } from '@alga-psa/ui/components/Button';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
@@ -251,6 +253,17 @@ export default function ProjectDetail({
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
+  const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
+  const [primaryAgentOnly, setPrimaryAgentOnly] = useState<boolean>(false);
+
+  // Reset primaryAgentOnly when agent selection changes away from exactly one agent
+  const handleAgentFilterChange = (newValues: string[]) => {
+    setSelectedAgentFilter(newValues);
+    if (newValues.length !== 1) {
+      setPrimaryAgentOnly(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchWholeWord, setSearchWholeWord] = useState<boolean>(false);
   const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
@@ -296,8 +309,43 @@ export default function ProjectDetail({
       });
     }
 
+    // Apply agent filter
+    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+      tasks = tasks.filter(task => {
+        // Check if task is unassigned (no primary assignee)
+        const isUnassigned = !task.assigned_to;
+
+        // If includeUnassignedAgents is selected and task is unassigned, include it
+        if (includeUnassignedAgents && isUnassigned) {
+          return true;
+        }
+
+        // If specific agents are selected, check if task matches
+        if (selectedAgentFilter.length > 0) {
+          // Check primary assignee
+          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
+            return true;
+          }
+
+          // Check additional agents from task resources (only if not filtering for primary only)
+          // Primary only filter is only applicable when exactly one agent is selected
+          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
+            const resources = phaseTaskResources[task.task_id] || [];
+            const hasMatchingAdditionalAgent = resources.some(
+              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
+            );
+            if (hasMatchingAdditionalAgent) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      });
+    }
+
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -1578,30 +1626,24 @@ export default function ProjectDetail({
                   className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <button
-                type="button"
+              <Button
+                id="search-whole-word-list"
+                variant={searchWholeWord ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchWholeWord(!searchWholeWord)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchWholeWord
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Whole word"
               >
                 Word
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                id="search-case-sensitive-list"
+                variant={searchCaseSensitive ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchCaseSensitive
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Case sensitive"
               >
                 Aa
-              </button>
+              </Button>
             </div>
 
             {/* Tag Filter */}
@@ -1617,6 +1659,34 @@ export default function ProjectDetail({
               }}
               onClearTags={() => setSelectedTaskTags([])}
             />
+
+            {/* Agent Filter */}
+            <div className="flex items-center gap-2">
+              <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+                <MultiUserPicker
+                  id="task-agent-filter-list"
+                  values={selectedAgentFilter}
+                  onValuesChange={handleAgentFilterChange}
+                  users={users}
+                  filterMode={true}
+                  includeUnassigned={includeUnassignedAgents}
+                  onUnassignedChange={setIncludeUnassignedAgents}
+                  compactDisplay={true}
+                  placeholder="All Agents"
+                />
+              </div>
+              {selectedAgentFilter.length === 1 && (
+                <Button
+                  id="primary-agent-only-list"
+                  variant={primaryAgentOnly ? 'soft' : 'outline'}
+                  size="xs"
+                  onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
+                  title="Only show tasks where selected agent is the primary assignee"
+                >
+                  Primary
+                </Button>
+              )}
+            </div>
 
             {/* Priority Filter */}
             <CustomSelect
@@ -1677,30 +1747,24 @@ export default function ProjectDetail({
                   className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <button
-                type="button"
+              <Button
+                id="search-whole-word-kanban"
+                variant={searchWholeWord ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchWholeWord(!searchWholeWord)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchWholeWord
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Whole word"
               >
                 Word
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                id="search-case-sensitive-kanban"
+                variant={searchCaseSensitive ? 'soft' : 'outline'}
+                size="xs"
                 onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
-                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-                  searchCaseSensitive
-                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
                 title="Case sensitive"
               >
                 Aa
-              </button>
+              </Button>
             </div>
 
             {/* Tag Filter */}
@@ -1716,6 +1780,34 @@ export default function ProjectDetail({
               }}
               onClearTags={() => setSelectedTaskTags([])}
             />
+
+            {/* Agent Filter */}
+            <div className="flex items-center gap-2">
+              <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+                <MultiUserPicker
+                  id="task-agent-filter-kanban"
+                  values={selectedAgentFilter}
+                  onValuesChange={handleAgentFilterChange}
+                  users={users}
+                  filterMode={true}
+                  includeUnassigned={includeUnassignedAgents}
+                  onUnassignedChange={setIncludeUnassignedAgents}
+                  compactDisplay={true}
+                  placeholder="All Agents"
+                />
+              </div>
+              {selectedAgentFilter.length === 1 && (
+                <Button
+                  id="primary-agent-only-kanban"
+                  variant={primaryAgentOnly ? 'soft' : 'outline'}
+                  size="xs"
+                  onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
+                  title="Only show tasks where selected agent is the primary assignee"
+                >
+                  Primary
+                </Button>
+              )}
+            </div>
 
             {/* Priority Filter */}
             <CustomSelect
@@ -1805,6 +1897,9 @@ export default function ProjectDetail({
           users={users}
           selectedPriorityFilter={selectedPriorityFilter}
           selectedTaskTags={selectedTaskTags}
+          selectedAgentFilter={selectedAgentFilter}
+          includeUnassignedAgents={includeUnassignedAgents}
+          primaryAgentOnly={primaryAgentOnly}
           searchQuery={searchQuery}
           searchWholeWord={searchWholeWord}
           searchCaseSensitive={searchCaseSensitive}
