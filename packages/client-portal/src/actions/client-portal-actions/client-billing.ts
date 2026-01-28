@@ -4,7 +4,7 @@ import { getConnection } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getUserRolesWithPermissions } from '@alga-psa/users/actions';
+import { getUserClientId, getUserRolesWithPermissions } from '@alga-psa/users/actions';
 import {
   IClientContractLine,
   IBillingResult,
@@ -25,10 +25,16 @@ import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/
 import { JobService } from '@alga-psa/jobs';
 import { JobStatus } from '@alga-psa/jobs';
 
-export const getClientContractLine = withAuth(async (user, { tenant }): Promise<IClientContractLine | null> => {
-  if (!user.clientId) {
+async function requireClientId(userId: string): Promise<string> {
+  const clientId = await getUserClientId(userId);
+  if (!clientId) {
     throw new Error('Unauthorized');
   }
+  return clientId;
+}
+
+export const getClientContractLine = withAuth(async (user, { tenant }): Promise<IClientContractLine | null> => {
+  const clientId = await requireClientId(user.user_id);
 
   const knex = await getConnection(tenant);
 
@@ -50,7 +56,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
             .andOn('sc.tenant', '=', 'cl.tenant');
         })
         .where({
-          'cc.client_id': user.clientId,
+          'cc.client_id': clientId,
           'cc.tenant': tenant
         })
         .select(
@@ -80,9 +86,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
  * Fetch all invoices for the current client
  */
 export const getClientInvoices = withAuth(async (user, { tenant }): Promise<InvoiceViewModel[]> => {
-  if (!user.clientId) {
-    throw new Error('Unauthorized');
-  }
+  const clientId = await requireClientId(user.user_id);
 
   // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(user.user_id);
@@ -98,7 +102,7 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Invo
 
   try {
     // Directly fetch only invoices for the current client
-    const invoices = await fetchInvoicesByClient(user.clientId);
+    const invoices = await fetchInvoicesByClient(clientId);
     // Filter out draft invoices - only finalized invoices should be visible in client portal
     // An invoice is finalized when finalized_at is set (not null)
     return invoices.filter(invoice => invoice.finalized_at != null);
@@ -112,9 +116,7 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Invo
  * Get invoice details by ID
  */
 export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId: string): Promise<InvoiceViewModel> => {
-  if (!user.clientId) {
-    throw new Error('Unauthorized');
-  }
+  const clientId = await requireClientId(user.user_id);
 
   // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(user.user_id);
@@ -136,7 +138,7 @@ export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId:
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          client_id: user.clientId,
+          client_id: clientId,
           tenant
         })
         .whereNot('status', 'draft')
@@ -159,9 +161,7 @@ export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId:
  * Get invoice line items
  */
 export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoiceId: string) => {
-  if (!user.clientId) {
-    throw new Error('Unauthorized');
-  }
+  const clientId = await requireClientId(user.user_id);
 
   // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(user.user_id);
@@ -183,7 +183,7 @@ export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoi
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          client_id: user.clientId,
+          client_id: clientId,
           tenant
         })
         .whereNot('status', 'draft')
@@ -228,9 +228,7 @@ export interface DownloadPdfResult {
  * Download invoice PDF - schedules job, waits for completion, returns file ID
  */
 export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<DownloadPdfResult> => {
-  if (!user.clientId) {
-    throw new Error('Unauthorized');
-  }
+  const clientId = await requireClientId(user.user_id);
 
   // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(user.user_id);
@@ -252,7 +250,7 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          client_id: user.clientId,
+          client_id: clientId,
           tenant
         })
         .whereNot('status', 'draft')
@@ -296,9 +294,7 @@ export interface SendEmailResult {
  * Send invoice email - schedules job, waits for completion
  */
 export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceId: string): Promise<SendEmailResult> => {
-  if (!user.clientId) {
-    throw new Error('Unauthorized');
-  }
+  const clientId = await requireClientId(user.user_id);
 
   // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(user.user_id);
@@ -320,7 +316,7 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          client_id: user.clientId,
+          client_id: clientId,
           tenant
         })
         .whereNot('status', 'draft')
@@ -454,9 +450,7 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
   bucketUsage: IBucketUsage | null;
   services: IService[];
 }> => {
-  if (!user.clientId) {
-    throw new Error('Unauthorized');
-  }
+  const clientId = await requireClientId(user.user_id);
 
   const knex = await getConnection(tenant);
 
@@ -466,7 +460,7 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
       const bucketUsage = await trx('bucket_usage')
         .select('*')
         .where({
-          client_id: user.clientId,
+          client_id: clientId,
           tenant
         })
         .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
@@ -484,7 +478,7 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
             .andOn('contract_line_services.tenant', '=', 'client_contract_lines.tenant')
         })
         .where({
-          'client_contract_lines.client_id': user.clientId,
+          'client_contract_lines.client_id': clientId,
           'client_contract_lines.is_active': true,
           'service_catalog.tenant': tenant,
           'contract_line_services.tenant': tenant,
