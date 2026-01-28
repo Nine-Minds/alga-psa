@@ -412,7 +412,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       try {
         const user = await getCurrentUser();
         if (!user?.tenant) return;
-        const entries = await getEventCatalogEntries({ tenant: user.tenant });
+        const entries = await getEventCatalogEntries();
         setEventCatalogEntries(entries as EventCatalogEntry[]);
       } catch {
         setEventCatalogEntries([]);
@@ -458,7 +458,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       try {
         const user = await getCurrentUser();
         if (!user?.tenant) return;
-        const fetched = await getEventCatalogEntryByEventType({ eventType: selectedEventType, tenant: user.tenant });
+        const fetched = await getEventCatalogEntryByEventType(selectedEventType);
         const fetchedRef = (fetched as any)?.payload_schema_ref;
         if (typeof fetchedRef === 'string' && fetchedRef) {
           setEventSchemaRef(fetchedRef);

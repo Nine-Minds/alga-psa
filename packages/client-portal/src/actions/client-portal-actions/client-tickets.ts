@@ -53,6 +53,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
 
     console.log('Debug - User ID:', user.user_id);
     console.log('Debug - Tenant:', tenant);
+    console.log('Debug - Client user:', user.user_id);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's client_id

@@ -121,14 +121,18 @@ export const bundleTicketsAction = withAuth(async (user, { tenant }, input: z.in
     }
 
     // Attach children to master (do not change child status/assignment/etc)
-    await trx('tickets')
+    const updatedChildrenCount = await trx('tickets')
       .where({ tenant })
       .whereIn('ticket_id', uniqueChildIds)
+      .whereNull('master_ticket_id')
       .update({
         master_ticket_id: data.masterTicketId,
         updated_by: user.user_id,
         updated_at: nowIso(),
       });
+    if (updatedChildrenCount !== uniqueChildIds.length) {
+      throw new Error('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+    }
 
     // Upsert bundle settings for the master
     await trx('ticket_bundle_settings')
@@ -205,14 +209,18 @@ export const addChildrenToBundleAction = withAuth(async (user, { tenant }, input
     // Prevent nesting bundles: children cannot themselves be masters
     await ensureTicketsAreNotBundleMasters(trx, tenant, childIds);
 
-    await trx('tickets')
+    const updatedChildrenCount = await trx('tickets')
       .where({ tenant })
       .whereIn('ticket_id', childIds)
+      .whereNull('master_ticket_id')
       .update({
         master_ticket_id: data.masterTicketId,
         updated_by: user.user_id,
         updated_at: nowIso(),
       });
+    if (updatedChildrenCount !== childIds.length) {
+      throw new Error('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+    }
 
     return { masterTicketId: data.masterTicketId, childTicketIds: childIds };
   });
@@ -445,6 +453,72 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
 
 const unbundleSchema = z.object({
   masterTicketId: z.string().uuid(),
+});
+
+const searchEligibleChildTicketsSchema = z.object({
+  boardId: z.string().uuid(),
+  searchQuery: z.string().min(1).max(100),
+  excludeTicketId: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(20).default(10),
+});
+
+export type EligibleChildTicket = {
+  ticket_id: string;
+  ticket_number: string;
+  title: string;
+  client_id: string | null;
+  client_name?: string;
+};
+
+export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }, input: z.input<typeof searchEligibleChildTicketsSchema>): Promise<EligibleChildTicket[]> => {
+  const data = searchEligibleChildTicketsSchema.parse(input);
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    // Search for tickets on the same board with open status, not already bundled
+    let query = trx('tickets')
+      .select(
+        'tickets.ticket_id',
+        'tickets.ticket_number',
+        'tickets.title',
+        'tickets.client_id',
+        'clients.client_name'
+      )
+      .join('statuses', function() {
+        this.on('tickets.status_id', 'statuses.status_id')
+          .andOn('tickets.tenant', 'statuses.tenant');
+      })
+      .leftJoin('clients', function() {
+        this.on('tickets.client_id', 'clients.client_id')
+          .andOn('tickets.tenant', 'clients.tenant');
+      })
+      .where({ 
+        'tickets.tenant': tenant,
+        'tickets.board_id': data.boardId 
+      })
+      .andWhere((builder) => {
+        builder.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
+      })
+      .whereNull('tickets.master_ticket_id') // Not already bundled
+      .andWhere((builder) => {
+        builder.where('tickets.ticket_number', 'ilike', `%${data.searchQuery}%`)
+          .orWhere('tickets.title', 'ilike', `%${data.searchQuery}%`);
+      })
+      .orderBy('tickets.entered_at', 'desc')
+      .limit(data.limit);
+
+    // Exclude the master ticket itself if provided
+    if (data.excludeTicketId) {
+      query = query.andWhereNot('tickets.ticket_id', data.excludeTicketId);
+    }
+
+    const tickets = await query;
+    return tickets;
+  });
 });
 
 export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, input: z.input<typeof unbundleSchema>) => {
