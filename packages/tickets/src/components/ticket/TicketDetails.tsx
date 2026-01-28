@@ -183,6 +183,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
+    const [selectedChildTicket, setSelectedChildTicket] = useState<{
+        ticket_id: string;
+        client_id: string | null;
+        ticket_number: string;
+    } | null>(null);
     const [searchResults, setSearchResults] = useState<EligibleChildTicket[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
@@ -1127,24 +1132,20 @@ const handleClose = () => {
         if (!normalized) return;
 
         // Check if we have a selected ticket from search results
-        const selectedTicketId = (addChildTicketNumber as any).selectedTicketId;
-        const selectedTicketClientId = (addChildTicketNumber as any).selectedTicketClientId;
-
-        if (selectedTicketId) {
+        if (selectedChildTicket && selectedChildTicket.ticket_number === normalized) {
             // Use the selected ticket from search
-            if (ticket.client_id && selectedTicketClientId && selectedTicketClientId !== ticket.client_id) {
+            if (ticket.client_id && selectedChildTicket.client_id && selectedChildTicket.client_id !== ticket.client_id) {
                 setPendingChildToAdd({
-                    ticket_id: selectedTicketId,
+                    ticket_id: selectedChildTicket.ticket_id,
                     ticket_number: normalized,
-                    client_id: selectedTicketClientId
+                    client_id: selectedChildTicket.client_id
                 });
                 setIsAddChildMultiClientConfirmOpen(true);
                 return;
             }
-            await performAddChildToBundle(selectedTicketId);
-            // Clear the stored selection
-            (addChildTicketNumber as any).selectedTicketId = undefined;
-            (addChildTicketNumber as any).selectedTicketClientId = undefined;
+            await performAddChildToBundle(selectedChildTicket.ticket_id);
+            // Clear the selection after adding
+            setSelectedChildTicket(null);
             return;
         }
 
@@ -1171,11 +1172,13 @@ const handleClose = () => {
             }
 
             await performAddChildToBundle(found.ticket_id);
+            // Clear the selection after adding
+            setSelectedChildTicket(null);
         } catch (error) {
             console.error('Failed to add child to bundle:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
         }
-    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, performAddChildToBundle]);
+    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
 
     const bundleHasMultipleClients = useMemo(() => {
         if (!bundle?.isBundleMaster || !Array.isArray(bundle.children)) return false;
@@ -1230,17 +1233,23 @@ const handleClose = () => {
     const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setAddChildTicketNumber(value);
+        // Clear selected ticket if input doesn't match the selected ticket number
+        if (selectedChildTicket && value !== selectedChildTicket.ticket_number) {
+            setSelectedChildTicket(null);
+        }
         setShowSearchResults(true);
         debouncedSearch(value);
-    }, [debouncedSearch]);
+    }, [debouncedSearch, selectedChildTicket]);
 
     const handleSelectSearchResult = useCallback((selectedTicket: EligibleChildTicket) => {
         setAddChildTicketNumber(selectedTicket.ticket_number);
+        setSelectedChildTicket({
+            ticket_id: selectedTicket.ticket_id,
+            client_id: selectedTicket.client_id,
+            ticket_number: selectedTicket.ticket_number
+        });
         setShowSearchResults(false);
         setSearchResults([]);
-        // Store the selected ticket ID for adding
-        (addChildTicketNumber as any).selectedTicketId = selectedTicket.ticket_id;
-        (addChildTicketNumber as any).selectedTicketClientId = selectedTicket.client_id;
     }, []);
 
     // Handle click outside to close search results
