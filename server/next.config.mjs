@@ -863,6 +863,9 @@ const nextConfig = {
     ...(buildCpus ? { cpus: buildCpus } : {}),
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
   },
+  // Externalize Node.js-only packages with native dependencies from server bundles.
+  // This prevents Turbopack from bundling them with mangled names.
+  serverExternalPackages: ['puppeteer', 'sharp'],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
     return 'build-' + Date.now();
