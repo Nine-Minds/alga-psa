@@ -121,14 +121,18 @@ export const bundleTicketsAction = withAuth(async (user, { tenant }, input: z.in
     }
 
     // Attach children to master (do not change child status/assignment/etc)
-    await trx('tickets')
+    const updatedChildrenCount = await trx('tickets')
       .where({ tenant })
       .whereIn('ticket_id', uniqueChildIds)
+      .whereNull('master_ticket_id')
       .update({
         master_ticket_id: data.masterTicketId,
         updated_by: user.user_id,
         updated_at: nowIso(),
       });
+    if (updatedChildrenCount !== uniqueChildIds.length) {
+      throw new Error('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+    }
 
     // Upsert bundle settings for the master
     await trx('ticket_bundle_settings')
@@ -205,14 +209,18 @@ export const addChildrenToBundleAction = withAuth(async (user, { tenant }, input
     // Prevent nesting bundles: children cannot themselves be masters
     await ensureTicketsAreNotBundleMasters(trx, tenant, childIds);
 
-    await trx('tickets')
+    const updatedChildrenCount = await trx('tickets')
       .where({ tenant })
       .whereIn('ticket_id', childIds)
+      .whereNull('master_ticket_id')
       .update({
         master_ticket_id: data.masterTicketId,
         updated_by: user.user_id,
         updated_at: nowIso(),
       });
+    if (updatedChildrenCount !== childIds.length) {
+      throw new Error('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+    }
 
     return { masterTicketId: data.masterTicketId, childTicketIds: childIds };
   });
@@ -471,20 +479,6 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
       throw new Error('Permission denied: Cannot view tickets');
     }
 
-    // Get statuses that are NOT closed (is_closed = false or null)
-    const openStatuses = await trx('statuses')
-      .select('status_id')
-      .where({ tenant })
-      .andWhere((builder) => {
-        builder.where('is_closed', false).orWhereNull('is_closed');
-      });
-
-    const openStatusIds = openStatuses.map((s: any) => s.status_id);
-
-    if (openStatusIds.length === 0) {
-      return [];
-    }
-
     // Search for tickets on the same board with open status, not already bundled
     let query = trx('tickets')
       .select(
@@ -494,6 +488,10 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
         'tickets.client_id',
         'clients.client_name'
       )
+      .join('statuses', function() {
+        this.on('tickets.status_id', 'statuses.status_id')
+          .andOn('tickets.tenant', 'statuses.tenant');
+      })
       .leftJoin('clients', function() {
         this.on('tickets.client_id', 'clients.client_id')
           .andOn('tickets.tenant', 'clients.tenant');
@@ -502,7 +500,9 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
         'tickets.tenant': tenant,
         'tickets.board_id': data.boardId 
       })
-      .whereIn('tickets.status_id', openStatusIds)
+      .andWhere((builder) => {
+        builder.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
+      })
       .whereNull('tickets.master_ticket_id') // Not already bundled
       .andWhere((builder) => {
         builder.where('tickets.ticket_number', 'ilike', `%${data.searchQuery}%`)
