@@ -472,7 +472,7 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
     }
 
     // Get statuses that are NOT closed (is_closed = false or null)
-    const openStatuses = await trx('ticket_statuses')
+    const openStatuses = await trx('statuses')
       .select('status_id')
       .where({ tenant })
       .andWhere((builder) => {
