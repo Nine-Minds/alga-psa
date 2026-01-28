@@ -10,8 +10,16 @@ describe('clampDuration', () => {
     expect(clampDuration('2', '30')).toEqual({ hours: 2, minutes: 30, totalMinutes: 150 });
   });
 
-  it('clamps out-of-range inputs', () => {
-    expect(clampDuration('25', '61')).toEqual({ hours: 24, minutes: 59, totalMinutes: 1499 });
+  it('clamps out-of-range hours to 24', () => {
+    expect(clampDuration('25', '30')).toEqual({ hours: 24, minutes: 0, totalMinutes: 1440 });
+  });
+
+  it('forces minutes to 0 when hours equals 24', () => {
+    expect(clampDuration('24', '59')).toEqual({ hours: 24, minutes: 0, totalMinutes: 1440 });
+  });
+
+  it('clamps out-of-range minutes to 59', () => {
+    expect(clampDuration('2', '61')).toEqual({ hours: 2, minutes: 59, totalMinutes: 179 });
   });
 
   it('clamps negative inputs to zero', () => {
