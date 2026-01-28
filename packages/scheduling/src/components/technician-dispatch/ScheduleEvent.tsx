@@ -4,12 +4,13 @@ import { IScheduleEntry } from '@alga-psa/types';
 import { getEventColors } from './utils';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
+import { useIsCompactEvent } from '@alga-psa/ui/hooks';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;
@@ -43,10 +44,15 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   const [isNarrow, setIsNarrow] = useState(false);
   const [isRecentlyResized, setIsRecentlyResized] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownClosedRecentlyRef = useRef(false);
   const eventRef = useRef<HTMLDivElement>(null);
   const isPrimary = true;
   const isComparison = false;
   const { bg, hover, text } = getEventColors(event.work_item_type, isPrimary, isComparison);
+
+  // Use the compact event hook for duration-based styling
+  // Lock the compact state during resize to prevent layout shifts
+  const { isCompact, compactClasses } = useIsCompactEvent(event, eventRef, { isLocked: isResizing });
   
   useEffect(() => {
     if (!isResizing && isRecentlyResized) {
@@ -124,7 +130,8 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
               !(e.target as HTMLElement).closest('.delete-button') &&
               !(e.target as HTMLElement).closest('.details-button') &&
               !(e.target as HTMLElement).closest('.dropdown-trigger') &&
-              !isDropdownOpen) {
+              !isDropdownOpen &&
+              !dropdownClosedRecentlyRef.current) {
             onClick();
           } else {
             e.stopPropagation();
@@ -134,15 +141,15 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         {/* Main flex container */}
         <div className="flex flex-col h-full w-full px-1 relative">
           {/* Buttons container */}
-          <div className="absolute top-2 right-1" style={{ zIndex: 100 }}>
+          <div className={`absolute ${isCompact ? 'top-0.5 right-0.5' : 'top-2 right-1'}`} style={{ zIndex: 100 }}>
             {/* Show individual buttons if not narrow */}
             {!isNarrow && (
-              <div className="flex gap-1">
+              <div className={`flex ${compactClasses.buttonGap}`}>
               <Button
                 id={`view-details-${event.entry_id}`}
                 variant="icon"
                 size="icon"
-                className="w-4 h-4 details-button"
+                className={`${compactClasses.button} details-button`}
                 onClick={(e) => {
                   if (!isResizing) {
                     e.stopPropagation();
@@ -155,19 +162,19 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                 title="View Details"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <ExternalLink className="w-4 h-4 pointer-events-none" />
+                <ExternalLink className={`${compactClasses.button} pointer-events-none`} />
               </Button>
 
               <Button
                 id={`delete-entry-${event.entry_id}`}
                 variant="icon"
                 size="icon"
-                className="w-4 h-4 delete-button"
+                className={`${compactClasses.button} delete-button`}
                 onClick={handleDeleteClick}
                 title="Delete schedule entry"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <Trash className="w-4 h-4 pointer-events-none" />
+                <Trash className={`${compactClasses.button} pointer-events-none`} />
               </Button>
               </div>
             )}
@@ -175,13 +182,22 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
             {/* Show dropdown menu if narrow */}
             {isNarrow && (
               <div>
-              <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+              <DropdownMenu open={isDropdownOpen} onOpenChange={(open) => {
+                setIsDropdownOpen(open);
+                if (!open) {
+                  // Mark that dropdown was just closed to prevent click-through
+                  dropdownClosedRecentlyRef.current = true;
+                  setTimeout(() => {
+                    dropdownClosedRecentlyRef.current = false;
+                  }, 100);
+                }
+              }}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     id={`more-options-${event.entry_id}`}
                     variant="icon"
                     size="icon"
-                    className="w-4 h-4 dropdown-trigger"
+                    className={`${compactClasses.button} dropdown-trigger`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -191,7 +207,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                       e.preventDefault();
                     }}
                   >
-                    <MoreVertical className="w-4 h-4 pointer-events-none" />
+                    <MoreVertical className={`${compactClasses.button} pointer-events-none`} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -237,10 +253,10 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
           </div>
 
           {/* Text container */}
-          <div className="flex flex-col justify-center items-start text-left overflow-hidden flex-grow min-w-0 pt-1.5 px-1">
-            <div className="font-bold text-sm w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[0]}</div>
-            {event.title.split(':')[1] && (
-              <div className="text-xs mt-0.5 w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[1]}</div>
+          <div className={`flex flex-col justify-center items-start text-left overflow-hidden flex-grow min-w-0 ${isCompact ? 'pt-0.5 px-0.5' : 'pt-1.5 px-1'}`}>
+            <div className={`font-bold ${compactClasses.textTitle} w-full overflow-hidden whitespace-nowrap text-ellipsis`}>{event.title.split(':')[0]}</div>
+            {!isCompact && event.title.split(':')[1] && (
+              <div className={`${compactClasses.textSubtitle} mt-0.5 w-full overflow-hidden whitespace-nowrap text-ellipsis`}>{event.title.split(':')[1]}</div>
             )}
           </div>
         </div>
