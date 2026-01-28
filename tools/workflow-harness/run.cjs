@@ -29,6 +29,7 @@ Flags:
   --cookie-file    File containing the raw Cookie header value (newlines trimmed)
   --pg-url         Postgres connection string (defaults to $DATABASE_URL)
   --force          Overwrite workflows on import
+  --skip-import    Skip workflow import; look up existing workflow by key in database
   --timeout-ms     Global timeout (default: 60000)
   --debug          Verbose logs
   --artifacts-dir  Failure artifact output directory (default: $TMPDIR)
@@ -48,7 +49,7 @@ function parseArgs(argv) {
     }
     if (token.startsWith('--')) {
       const key = token.slice(2);
-      if (key === 'force' || key === 'debug' || key === 'json') {
+      if (key === 'force' || key === 'debug' || key === 'json' || key === 'skip-import') {
         args[key] = true;
         i += 1;
         continue;
@@ -102,7 +103,7 @@ function sanitizeSingleLine(value) {
     .slice(0, 500);
 }
 
-async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, cookie, force, timeoutMs, debug, artifactsDir, pgUrl }) {
+async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, cookie, force, skipImport, timeoutMs, debug, artifactsDir, pgUrl }) {
   const testId = fixtureIdFromDir(testDir);
   const http = createHttpClient({ baseUrl, tenantId, cookie, debug });
   let db;
@@ -134,9 +135,6 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
       throw new Error(`Failed to parse bundle JSON: ${bundlePath}\n${err?.message ?? String(err)}`);
     }
 
-    const importSummary = await importWorkflowBundleV1({ http, bundle, force });
-    state.importSummary = importSummary;
-
     const workflowKey =
       Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0].key === 'string'
         ? bundle.workflows[0].key
@@ -145,11 +143,36 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
       Array.isArray(bundle?.workflows) && bundle.workflows[0] && typeof bundle.workflows[0]?.metadata?.isPaused === 'boolean'
         ? bundle.workflows[0].metadata.isPaused
         : false;
-    const workflowId =
-      workflowKey && Array.isArray(importSummary?.createdWorkflows)
-        ? importSummary.createdWorkflows.find((w) => w.key === workflowKey)?.workflowId ?? importSummary.createdWorkflows[0]?.workflowId ?? null
-        : importSummary?.createdWorkflows?.[0]?.workflowId ?? null;
 
+    let importSummary = null;
+    let workflowId = null;
+
+    if (skipImport) {
+      // Look up workflow by key in the database instead of importing
+      if (!workflowKey) {
+        throw new Error('--skip-import requires bundle.json to have a workflow key');
+      }
+      const rows = await db.query(
+        `SELECT workflow_id FROM workflow_definitions WHERE key = $1`,
+        [workflowKey]
+      );
+      if (!rows || rows.length === 0) {
+        throw new Error(`--skip-import: Workflow with key "${workflowKey}" not found in database. Import it first.`);
+      }
+      workflowId = rows[0].workflow_id;
+      importSummary = { skipped: true, workflowKey, workflowId };
+      if (debug) {
+        console.error('[harness] --skip-import: found workflow by key', { workflowKey, workflowId });
+      }
+    } else {
+      importSummary = await importWorkflowBundleV1({ http, bundle, force });
+      workflowId =
+        workflowKey && Array.isArray(importSummary?.createdWorkflows)
+          ? importSummary.createdWorkflows.find((w) => w.key === workflowKey)?.workflowId ?? importSummary.createdWorkflows[0]?.workflowId ?? null
+          : importSummary?.createdWorkflows?.[0]?.workflowId ?? null;
+    }
+
+    state.importSummary = importSummary;
     state.workflowId = workflowId;
     state.workflowKey = workflowKey;
 
@@ -364,6 +387,7 @@ async function main() {
   const cookie = args.cookie ?? (args['cookie-file'] ? readCookieFromFile(args['cookie-file']) : undefined);
   const envApiKey = process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
   const force = !!args.force;
+  const skipImport = !!args['skip-import'];
   const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : 60_000;
   const debug = !!args.debug;
   const artifactsDir = args['artifacts-dir'] ?? getDefaultArtifactsDir();
@@ -373,8 +397,8 @@ async function main() {
   if (!testDir) throw new Error('Missing --test');
   if (!baseUrl) throw new Error('Missing --base-url');
   if (!tenant) throw new Error('Missing --tenant');
-  if (!cookie && !envApiKey) {
-    throw new Error('Missing auth. Provide --cookie/--cookie-file or set WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY).');
+  if (!skipImport && !cookie && !envApiKey) {
+    throw new Error('Missing auth. Provide --cookie/--cookie-file or set WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY), or use --skip-import if workflows are already imported.');
   }
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
 
@@ -390,6 +414,7 @@ async function main() {
       tenantId: tenant,
       cookie,
       force,
+      skipImport,
       timeoutMs,
       debug,
       artifactsDir,
@@ -450,6 +475,7 @@ async function runCliOnceForTests(argv) {
   const cookie = args.cookie ?? (args['cookie-file'] ? readCookieFromFile(args['cookie-file']) : undefined);
   const envApiKey = process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
   const force = !!args.force;
+  const skipImport = !!args['skip-import'];
   const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : 60_000;
   const debug = !!args.debug;
   const artifactsDir = args['artifacts-dir'] ?? getDefaultArtifactsDir();
@@ -459,8 +485,8 @@ async function runCliOnceForTests(argv) {
   if (!testDir) throw new Error('Missing --test');
   if (!baseUrl) throw new Error('Missing --base-url');
   if (!tenant) throw new Error('Missing --tenant');
-  if (!cookie && !envApiKey) {
-    throw new Error('Missing auth. Provide --cookie/--cookie-file or set WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY).');
+  if (!skipImport && !cookie && !envApiKey) {
+    throw new Error('Missing auth. Provide --cookie/--cookie-file or set WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY), or use --skip-import if workflows are already imported.');
   }
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid --timeout-ms (expected positive integer)');
 
@@ -476,6 +502,7 @@ async function runCliOnceForTests(argv) {
       tenantId: tenant,
       cookie,
       force,
+      skipImport,
       timeoutMs,
       debug,
       artifactsDir,
