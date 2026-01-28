@@ -301,7 +301,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         {isCompact ? (
           // For short events, show text with minimal padding
           <div className="flex items-center">
-            <div className="font-medium truncate flex-1 text-xs">
+            <div className={`font-medium truncate flex-1 ${compactClasses.text}`}>
               {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
             </div>
           </div>

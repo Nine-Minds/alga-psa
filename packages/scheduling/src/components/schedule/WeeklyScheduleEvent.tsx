@@ -193,12 +193,12 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           // For short events, show text with minimal padding
           <div className="flex items-center">
             {showContinuationIndicator && (
-              <span className="text-[10px] mr-1 opacity-60" title="Continues from previous week">...</span>
+              <span className="text-[9px] mr-0.5 opacity-60" title="Continues from previous week">...</span>
             )}
             {isMultiDay && !showContinuationIndicator && (
-              <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
+              <CalendarDays className="w-2.5 h-2.5 mr-0.5 opacity-70 flex-shrink-0" />
             )}
-            <div className="font-medium truncate flex-1 text-xs">
+            <div className={`font-medium truncate flex-1 ${compactClasses.text}`}>
               {mainTitle.length > 15 && showContinuationIndicator ? mainTitle.substring(0, 12) + '...' : mainTitle}
             </div>
           </div>
