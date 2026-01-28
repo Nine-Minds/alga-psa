@@ -204,6 +204,23 @@ const nextConfig = {
 	      '@alga-psa/documents': '../packages/documents/src',
 	      '@alga-psa/documents/': '../packages/documents/src/',
 	      '@alga-psa/documents/storage/StorageService': '../packages/documents/src/storage/StorageService.ts',
+	      // Reference data package
+	      '@alga-psa/reference-data': '../packages/reference-data/src',
+	      '@alga-psa/reference-data/': '../packages/reference-data/src/',
+	      '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
+	      '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
+	      // Billing package
+	      '@alga-psa/billing': '../packages/billing/src',
+	      '@alga-psa/billing/': '../packages/billing/src/',
+	      '@alga-psa/billing/actions': '../packages/billing/src/actions/index.ts',
+	      '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
+	      '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
+	      '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+	      // Projects package
+	      '@alga-psa/projects': '../packages/projects/src',
+	      '@alga-psa/projects/': '../packages/projects/src/',
+	      '@alga-psa/projects/actions': '../packages/projects/src/actions/index.ts',
+	      '@alga-psa/projects/components': '../packages/projects/src/components/index.ts',
 	      // DB package (use source files for Turbopack dev/HMR)
 	      '@alga-psa/db': '../packages/db/src/index.ts',
 	      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
@@ -330,6 +347,9 @@ const nextConfig = {
 	    '@alga-psa/client-portal',
 	    '@alga-psa/event-schemas',
 	    '@alga-psa/documents',
+	    '@alga-psa/reference-data',
+	    '@alga-psa/billing',
+	    '@alga-psa/projects',
 	    // Product feature packages (only those needed in this app)
 	    '@product/extensions',
     '@product/settings-extensions',
