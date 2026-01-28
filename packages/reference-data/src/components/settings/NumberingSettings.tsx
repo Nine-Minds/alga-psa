@@ -8,21 +8,19 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
 import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { useSession } from 'next-auth/react';
 import type { EntityType } from '@alga-psa/shared/services/numberingService';
-import { getNumberSettings, updateNumberSettings, type NumberSettings } from '@alga-psa/reference-data/actions';
+import { getNumberSettings, updateNumberSettings, canEditNumberingSettings, type NumberSettings } from '@alga-psa/reference-data/actions';
 
 interface NumberingSettingsProps {
   entityType: EntityType;
 }
 
 const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.Element => {
-  const { data: session } = useSession();
   // General state
   const [settings, setSettings] = useState<NumberSettings | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -36,7 +34,10 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
   useEffect(() => {
     const init = async () => {
       try {
-        const numberSettings = await getNumberSettings(entityType);
+        const [numberSettings, hasEditPermission] = await Promise.all([
+          getNumberSettings(entityType),
+          canEditNumberingSettings()
+        ]);
 
         if (!numberSettings) {
           // Initialize with default values for new settings
@@ -54,8 +55,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
           setFormState(numberSettings);
         }
 
-        const roles = (session?.user as any)?.roles as Array<{ role_name?: string }> | undefined;
-        setIsAdmin(roles?.some((role) => role.role_name?.toLowerCase() === 'admin') ?? false);
+        setCanEdit(hasEditPermission);
       } catch (err) {
         setError(`Failed to load ${entityType.toLowerCase()} numbering settings`);
         console.error('Error:', err);
@@ -63,7 +63,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
     };
 
     init();
-  }, [entityType, session]);
+  }, [entityType]);
 
   const handleInputChange = (field: keyof NumberSettings, value: string) => {
     setFormState(prev => ({
@@ -174,7 +174,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
               className="!w-48"
               placeholder={entityType === 'TICKET' ? 'TK-' : entityType === 'INVOICE' ? 'INV-' : 'PRJ-'}
             />
-            {!isEditing && isAdmin && (
+            {!isEditing && canEdit && (
               <Button
                 id={`edit-${entityId}-settings-button`}
                 variant="ghost"
@@ -274,7 +274,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
               id={`save-${entityId}-settings-button`}
               variant="default"
               onClick={() => setShowConfirmation(true)}
-              disabled={!isAdmin}
+              disabled={!canEdit}
             >
               Save Changes
             </Button>

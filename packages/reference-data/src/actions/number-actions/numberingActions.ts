@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import type { EntityType } from '@alga-psa/shared/services/numberingService';
 
@@ -120,6 +120,11 @@ export const updateNumberSettings = withAuth(async (
     console.error(`Error updating ${entityType} number settings:`, error);
     return { success: false, error: 'Failed to update number settings' };
   }
+});
+
+// Check if user can edit numbering settings
+export const canEditNumberingSettings = withAuth(async (user): Promise<boolean> => {
+  return hasPermission(user, 'settings', 'update');
 });
 
 // Legacy support
