@@ -2,6 +2,11 @@
 // Re-exports OSS stubs for features not yet implemented,
 // and actual EE implementations for features that exist
 
+import React from 'react';
+import PaymentSettingsComponent from '@ee/components/settings/billing/PaymentSettings';
+import StripeConnectionSettingsComponent from '@ee/components/settings/integrations/StripeConnectionSettings';
+import PaymentSettingsConfigComponent from '@ee/components/settings/billing/PaymentSettingsConfig';
+
 // Import OSS stubs for features not yet implemented in EE
 export {
   BillingDashboard,
@@ -10,24 +15,18 @@ export {
   BillingReports
 } from '../oss/entry';
 
-// PaymentSettings is implemented in EE - use dynamic import (kept for backwards compatibility)
-export const PaymentSettings = () => import('../../../ee/server/src/components/settings/billing/PaymentSettings');
-
-// StripeConnectionSettings - for Integrations settings page
-export const StripeConnectionSettings = () => import('../../../ee/server/src/components/settings/integrations/StripeConnectionSettings');
-
-// PaymentSettingsConfig - for Billing settings page
-export const PaymentSettingsConfig = () => import('../../../ee/server/src/components/settings/billing/PaymentSettingsConfig');
+// Wrapper components for EE implementations (same pattern as @product/chat)
+export const PaymentSettings = () => <PaymentSettingsComponent />;
+export const StripeConnectionSettings = () => <StripeConnectionSettingsComponent />;
+export const PaymentSettingsConfig = () => <PaymentSettingsConfigComponent />;
 
 // Default export
-const billing = {
+export default {
   BillingDashboard: async () => (await import('../oss/entry')).BillingDashboard,
   InvoiceTemplates: async () => (await import('../oss/entry')).InvoiceTemplates,
   PaymentProcessing: async () => (await import('../oss/entry')).PaymentProcessing,
   BillingReports: async () => (await import('../oss/entry')).BillingReports,
-  PaymentSettings: () => import('../../../ee/server/src/components/settings/billing/PaymentSettings'),
-  StripeConnectionSettings: () => import('../../../ee/server/src/components/settings/integrations/StripeConnectionSettings'),
-  PaymentSettingsConfig: () => import('../../../ee/server/src/components/settings/billing/PaymentSettingsConfig'),
+  PaymentSettings,
+  StripeConnectionSettings,
+  PaymentSettingsConfig,
 };
-
-export default billing;
