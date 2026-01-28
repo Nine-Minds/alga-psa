@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
 type ExperimentalFeatureKey = 'aiAssistant' | 'workflowAutomation';
 
@@ -43,19 +43,21 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [aiAssistantAllowed, setAiAssistantAllowed] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setLoadError(null);
 
-      const saved = await getExperimentalFeatures();
+      const [saved, aiAllowed] = await Promise.all([getExperimentalFeatures(), canEnableAiAssistant()]);
       const loaded: ExperimentalFeatureState = {
         aiAssistant: saved.aiAssistant === true,
         workflowAutomation: saved.workflowAutomation === true,
       };
       setFeatures(loaded);
       setSavedFeatures(loaded);
+      setAiAssistantAllowed(aiAllowed);
     } catch (error) {
       console.error('Failed to load experimental features:', error);
       setLoadError('Failed to load experimental feature settings.');
@@ -135,10 +137,16 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
             <div className="min-w-0">
               <div className="font-medium">{feature.name}</div>
               <div className="text-sm text-gray-600">{feature.description}</div>
+              {feature.key === 'aiAssistant' && !aiAssistantAllowed && (
+                <div className="text-xs text-gray-500">
+                  Only available for the master billing tenant.
+                </div>
+              )}
             </div>
             <Switch
               id={`experimental-feature-toggle-${feature.key}`}
               checked={features[feature.key]}
+              disabled={feature.key === 'aiAssistant' && !aiAssistantAllowed}
               onCheckedChange={(checked) => handleToggle(feature.key, checked)}
             />
           </div>

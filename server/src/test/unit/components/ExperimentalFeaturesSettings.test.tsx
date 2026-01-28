@@ -9,10 +9,11 @@ import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 import { toast } from 'react-hot-toast';
 
 import ExperimentalFeaturesSettings from '../../../components/settings/general/ExperimentalFeaturesSettings';
-import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false, workflowAutomation: false }),
+  canEnableAiAssistant: vi.fn().mockResolvedValue(true),
   updateExperimentalFeatures: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it("shows 'AI Assistant' name and description", async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
 
     render(
@@ -50,6 +52,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('defaults AI Assistant toggle to off', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({} as any);
 
     render(
@@ -76,6 +79,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('renders experimental features warning banner', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
 
     render(
@@ -97,6 +101,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('calls updateExperimentalFeatures() with current toggle states on save', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
     vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
 
@@ -134,6 +139,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('shows success feedback after saving', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
     vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
 
@@ -173,6 +179,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('updates local state when toggled', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
 
     render(
@@ -201,6 +208,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('loads current settings on mount', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: true, workflowAutomation: false });
 
     render(
@@ -227,6 +235,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('renders list of features with toggles', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
     render(
       <UIStateProvider
         initialPageState={{
@@ -252,5 +261,35 @@ describe('ExperimentalFeaturesSettings', () => {
     );
     expect(workflowAutomationToggle).toBeTruthy();
     expect(screen.getAllByRole('switch')).toHaveLength(2);
+  });
+
+  it('disables AI Assistant toggle when not allowed', async () => {
+    vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(false);
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+
+    render(
+      <UIStateProvider
+        initialPageState={{
+          id: 'test-page',
+          title: 'Test Page',
+          components: [],
+        }}
+      >
+        <ExperimentalFeaturesSettings />
+      </UIStateProvider>
+    );
+
+    const toggle = await waitFor(() => {
+      const el = document.querySelector(
+        '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
+      ) as HTMLElement | null;
+      expect(el).toBeTruthy();
+      return el!;
+    });
+
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    expect(await screen.findByText('Only available for the master billing tenant.')).toBeInTheDocument();
   });
 });

@@ -28,6 +28,15 @@ const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
   workflowAutomation: false,
 };
 
+function isMasterBillingTenant(tenant: string): boolean {
+  const masterBillingTenantId = process.env.MASTER_BILLING_TENANT_ID;
+  if (!masterBillingTenantId) {
+    return false;
+  }
+
+  return tenant === masterBillingTenantId;
+}
+
 function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
   if (!value || typeof value !== 'object') {
     return { ...DEFAULT_EXPERIMENTAL_FEATURES };
@@ -67,7 +76,12 @@ export async function getTenantSettingsByTenantId(tenantId: string): Promise<Ten
 
 const getExperimentalFeaturesForTenant = async (tenant: string): Promise<ExperimentalFeatures> => {
   const settings = await getTenantSettingsForTenant(tenant);
-  return normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
+  const features = normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
+  if (!isMasterBillingTenant(tenant)) {
+    features.aiAssistant = false;
+  }
+
+  return features;
 };
 
 export const getExperimentalFeatures = withAuth(async (
@@ -75,6 +89,13 @@ export const getExperimentalFeatures = withAuth(async (
   { tenant }: AuthContext
 ): Promise<ExperimentalFeatures> => {
   return getExperimentalFeaturesForTenant(tenant);
+});
+
+export const canEnableAiAssistant = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<boolean> => {
+  return isMasterBillingTenant(tenant);
 });
 
 export const updateExperimentalFeatures = withAuth(async (
@@ -86,6 +107,10 @@ export const updateExperimentalFeatures = withAuth(async (
     const permissions = await getCurrentUserPermissions();
     if (!permissions.includes('settings:update')) {
       throw new Error('Permission denied: Cannot update settings');
+    }
+
+    if (features.aiAssistant === true && !isMasterBillingTenant(tenant)) {
+      throw new Error('Permission denied: Cannot enable AI Assistant for this tenant');
     }
 
     const current = await getExperimentalFeaturesForTenant(tenant);
