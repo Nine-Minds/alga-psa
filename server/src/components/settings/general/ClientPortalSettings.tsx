@@ -19,6 +19,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { useBranding } from '@alga-psa/tenancy/components';
@@ -439,19 +440,42 @@ const ClientPortalSettings = () => {
                   size="sm"
                   onClick={() => setPreviewMode(previewMode === 'dashboard' ? null : 'dashboard')}
                 >
-                  {previewMode === 'dashboard' ? 'Hide' : 'Preview'} Client Dashboard
+                  {previewMode === 'dashboard' ? 'Hide Client Dashboard' : 'Preview Client Dashboard'}
                 </Button>
-                <Button
-                  id="preview-signin"
-                  type="button"
-                  variant={previewMode === 'signin' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
-                  disabled={!hasCustomDomain}
-                  title={!hasCustomDomain ? 'Configure a custom domain first to preview sign-in page' : ''}
-                >
-                  {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
-                </Button>
+                {(() => {
+                  const disabledMessage = 'Must have custom domain set up';
+                  const signInButton = (
+                    <Button
+                      id="preview-signin"
+                      type="button"
+                      variant={previewMode === 'signin' ? 'default' : 'outline'}
+                      size="sm"
+                      className={!hasCustomDomain ? 'cursor-not-allowed opacity-50' : ''}
+                      onClick={(e) => {
+                        if (!hasCustomDomain) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          return;
+                        }
+                        setPreviewMode(previewMode === 'signin' ? null : 'signin');
+                      }}
+                      aria-disabled={!hasCustomDomain || undefined}
+                      aria-describedby={!hasCustomDomain ? 'preview-signin-disabled-reason' : undefined}
+                    >
+                      {previewMode === 'signin' ? 'Hide Sign-in Page' : 'Preview Sign-in Page'}
+                    </Button>
+                  );
+                  return !hasCustomDomain ? (
+                    <>
+                      <Tooltip content={disabledMessage}>{signInButton}</Tooltip>
+                      <span id="preview-signin-disabled-reason" className="sr-only">
+                        {disabledMessage}
+                      </span>
+                    </>
+                  ) : (
+                    signInButton
+                  );
+                })()}
               </div>
 
               {/* Dashboard Preview */}

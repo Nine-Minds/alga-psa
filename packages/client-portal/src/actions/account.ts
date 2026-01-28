@@ -3,7 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 import { getCurrencySymbol } from '@alga-psa/core';
 
 export interface IClientProfile {
@@ -93,12 +93,12 @@ const formatDate = (date: string | null) => {
 
 const determineBillingPeriod = (startDate: string, endDate: string | null): string => {
   if (!endDate) return 'Ongoing';
-  
+
   try {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
-    
+
     if (diffMonths === 1) return 'Monthly';
     if (diffMonths === 3) return 'Quarterly';
     if (diffMonths === 12) return 'Yearly';
@@ -136,21 +136,18 @@ const determineServiceStatus = (startDate: string, endDate: string | null): Serv
   }
 };
 
-export async function getClientProfile(): Promise<IClientProfile> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
+export const getClientProfile = withAuth(async (user, { tenant }): Promise<IClientProfile> => {
+  const { knex } = await createTenantKnex();
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
-  if (session.user.user_type === 'client') {
-    if (!session.user.contactId) throw new Error('No contact associated with user');
-    
+  if (user.user_type === 'client') {
+    if (!user.contact_id) throw new Error('No contact associated with user');
+
     // First get the contact to find the client
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('contacts')
-        .where({ 
-          contact_name_id: session.user.contactId,
-          tenant: session.user.tenant 
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
         })
         .first();
     });
@@ -171,9 +168,9 @@ export async function getClientProfile(): Promise<IClientProfile> {
           'cl.phone as location_phone',
           'cl.address_line1 as location_address'
         )
-        .where({ 
+        .where({
           'c.client_id': contact.client_id,
-          'c.tenant': session.user.tenant 
+          'c.tenant': tenant
         })
         .first();
     });
@@ -189,7 +186,7 @@ export async function getClientProfile(): Promise<IClientProfile> {
     };
   } else {
     // For non-client users, use the original clientId logic
-    if (!session.user.clientId) throw new Error('No client associated with user');
+    if (!user.clientId) throw new Error('No client associated with user');
 
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('clients as c')
@@ -204,9 +201,9 @@ export async function getClientProfile(): Promise<IClientProfile> {
           'cl.phone as location_phone',
           'cl.address_line1 as location_address'
         )
-        .where({ 
-          'c.client_id': session.user.clientId,
-          'c.tenant': session.user.tenant 
+        .where({
+          'c.client_id': user.clientId,
+          'c.tenant': tenant
         })
         .first();
     });
@@ -221,20 +218,18 @@ export async function getClientProfile(): Promise<IClientProfile> {
       notes: client.notes || ''
     };
   }
-}
+});
 
-export async function updateClientProfile(profile: IClientProfile): Promise<{ success: boolean }> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const updateClientProfile = withAuth(async (user, { tenant }, profile: IClientProfile): Promise<{ success: boolean }> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
+  const { knex } = await createTenantKnex();
+
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients')
-      .where({ 
-        client_id: session.user.clientId,
-        tenant: session.user.tenant
+      .where({
+        client_id: user.clientId,
+        tenant
       })
       .update({
         client_name: profile.name,
@@ -247,20 +242,18 @@ export async function updateClientProfile(profile: IClientProfile): Promise<{ su
   });
 
   return { success: true };
-}
+});
 
-export async function getPaymentMethods(): Promise<PaymentMethod[]> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const getPaymentMethods = withAuth(async (user, { tenant }): Promise<PaymentMethod[]> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
+  const { knex } = await createTenantKnex();
+
   const methods = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('payment_methods')
-      .where({ 
-        client_id: session.user.clientId,
-        tenant: session.user.tenant,
+      .where({
+        client_id: user.clientId,
+        tenant,
         is_deleted: false
       })
       .orderBy('is_default', 'desc')
@@ -275,27 +268,25 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
     expYear: method.exp_year,
     isDefault: method.is_default
   }));
-}
+});
 
-export async function addPaymentMethod(data: {
+export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
   type: PaymentMethod['type'];
   token: string;
   setDefault: boolean;
-}): Promise<{ success: boolean }> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+}): Promise<{ success: boolean }> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
+  const { knex } = await createTenantKnex();
 
   // Start a transaction
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If this is set as default, unset any existing default
     if (data.setDefault) {
       await trx('payment_methods')
-        .where({ 
-          client_id: session.user.clientId,
-          tenant: session.user.tenant,
+        .where({
+          client_id: user.clientId,
+          tenant,
           is_deleted: false
         })
         .update({ is_default: false });
@@ -307,8 +298,8 @@ export async function addPaymentMethod(data: {
 
     // Add the new payment method
     return await trx('payment_methods').insert({
-      client_id: session.user.clientId,
-      tenant: session.user.tenant,
+      client_id: user.clientId,
+      tenant,
       type: data.type,
       last4: paymentDetails.last4,
       exp_month: paymentDetails.expMonth,
@@ -319,61 +310,57 @@ export async function addPaymentMethod(data: {
   });
 
   return { success: true };
-}
+});
 
-export async function removePaymentMethod(id: string): Promise<{ success: boolean }> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const removePaymentMethod = withAuth(async (user, { tenant }, id: string): Promise<{ success: boolean }> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('payment_methods')
-      .where({ 
+      .where({
         payment_method_id: id,
-        client_id: session.user.clientId,
-        tenant: session.user.tenant
+        client_id: user.clientId,
+        tenant
       })
-      .update({ 
+      .update({
         is_deleted: true,
         updated_at: new Date().toISOString()
       });
   });
 
   return { success: true };
-}
+});
 
-export async function setDefaultPaymentMethod(id: string): Promise<{ success: boolean }> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: string): Promise<{ success: boolean }> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Unset any existing default
     await trx('payment_methods')
-      .where({ 
-        client_id: session.user.clientId,
-        tenant: session.user.tenant,
+      .where({
+        client_id: user.clientId,
+        tenant,
         is_deleted: false
       })
       .update({ is_default: false });
 
     // Set the new default
     return await trx('payment_methods')
-      .where({ 
+      .where({
         payment_method_id: id,
-        client_id: session.user.clientId,
-        tenant: session.user.tenant,
+        client_id: user.clientId,
+        tenant,
         is_deleted: false
       })
       .update({ is_default: true });
   });
 
   return { success: true };
-}
+});
 
 // This is a placeholder function - replace with actual payment processor integration
 async function processPaymentToken(token: string) {
@@ -393,18 +380,16 @@ async function processPaymentToken(token: string) {
   });
 }
 
-export async function getInvoices(): Promise<Invoice[]> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[]> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
+  const { knex } = await createTenantKnex();
+
   const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
-      .where({ 
-        client_id: session.user.clientId,
-        tenant: session.user.tenant
+      .where({
+        client_id: user.clientId,
+        tenant
       })
       .orderBy('created_at', 'desc')
       .limit(10)
@@ -435,20 +420,18 @@ export async function getInvoices(): Promise<Invoice[]> {
       status
     };
   });
-}
+});
 
-export async function getBillingCycles(): Promise<BillingCycle[]> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const getBillingCycles = withAuth(async (user, { tenant }): Promise<BillingCycle[]> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
+  const { knex } = await createTenantKnex();
+
   const cycles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_contract_lines')
-      .where({ 
-        client_id: session.user.clientId,
-        tenant: session.user.tenant
+      .where({
+        client_id: user.clientId,
+        tenant
       })
       .orderBy('start_date', 'desc')
       .limit(12)
@@ -466,17 +449,15 @@ export async function getBillingCycles(): Promise<BillingCycle[]> {
     endDate: formatDate(cycle.end_date),
     status: determineBillingStatus(cycle.start_date, cycle.end_date)
   }));
-}
+});
 
-export async function getActiveServices(): Promise<Service[]> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const getActiveServices = withAuth(async (user, { tenant }): Promise<Service[]> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
+  const { knex } = await createTenantKnex();
+
   const now = new Date().toISOString();
-  
+
   const services = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_contract_lines as ccl')
       .join('contract_lines as cl', function(this: Knex.JoinClause) {
@@ -502,11 +483,11 @@ export async function getActiveServices(): Promise<Service[]> {
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .where({
-        'ccl.client_id': session.user.clientId,
-        'ccl.tenant': session.user.tenant,
-        'cl.tenant': session.user.tenant,
-        'ps.tenant': session.user.tenant,
-        'sc.tenant': session.user.tenant
+        'ccl.client_id': user.clientId,
+        'ccl.tenant': tenant,
+        'cl.tenant': tenant,
+        'ps.tenant': tenant,
+        'sc.tenant': tenant
       })
       .whereIn('cl.contract_line_type', ['Fixed', 'Hourly', 'Usage'])
       .andWhere('ccl.start_date', '<=', now)
@@ -654,7 +635,7 @@ export async function getActiveServices(): Promise<Service[]> {
       canManage: status === 'active' // Only allow management of active services
     };
   });
-}
+});
 
 export interface ServiceUpgrade {
   id: string;
@@ -678,13 +659,11 @@ export interface ServicePlan {
   isCurrentPlan: boolean;
 }
 
-export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan[]> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
+export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: string): Promise<ServicePlan[]> => {
+  if (!user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex(session.user.tenant);
-  
+  const { knex } = await createTenantKnex();
+
   // Get current service details
   const currentService = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_contract_lines as ccl')
@@ -696,10 +675,10 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
-      .where({ 
+      .where({
         'ps.service_id': serviceId,
-        'ccl.client_id': session.user.clientId,
-        'ccl.tenant': session.user.tenant
+        'ccl.client_id': user.clientId,
+        'ccl.tenant': tenant
       })
       .first();
   });
@@ -717,9 +696,9 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .where({ 
+      .where({
         'ps.service_id': serviceId,
-        'cl.tenant': session.user.tenant,
+        'cl.tenant': tenant,
         'cl.is_active': true
       })
       .select(
@@ -741,7 +720,7 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
     },
     isCurrentPlan: plan.id === currentService.contract_line_id
   }));
-}
+});
 
 /**
  * @deprecated This function operated on the legacy client_contract_lines table which is being phased out.

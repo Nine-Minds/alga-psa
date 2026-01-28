@@ -59,7 +59,7 @@ async function resolveProjectStatusInfo(
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
       trx.raw(
-        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id) as status_name'
+        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'
       ),
       trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
     )

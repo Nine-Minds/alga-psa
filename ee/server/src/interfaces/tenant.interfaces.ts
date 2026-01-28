@@ -110,6 +110,11 @@ export interface TenantDeletionWorkflowState {
   rollbackReason?: string;
   rolledBackBy?: string;
   error?: string;
+  /** Export information (populated during export step) */
+  exportId?: string;
+  exportBucket?: string;
+  exportS3Key?: string;
+  exportFileSizeBytes?: number;
 }
 
 export type ConfirmationType = 'immediate' | '30_days' | '90_days';
@@ -145,8 +150,6 @@ export interface TenantExportInput {
   tenantId: string;
   requestedBy: string;
   reason?: string;
-  /** URL expiration in seconds (default: 1 hour = 3600) */
-  urlExpiresIn?: number;
 }
 
 export interface TenantExportWorkflowState {
@@ -159,12 +162,10 @@ export interface TenantExportWorkflowState {
   progress?: number;
   /** Current table being exported */
   currentTable?: string;
+  /** S3 bucket where export is stored */
+  bucket?: string;
   /** S3 key where export is stored */
   s3Key?: string;
-  /** Presigned download URL */
-  downloadUrl?: string;
-  /** When download URL expires */
-  urlExpiresAt?: string;
   /** File size in bytes */
   fileSizeBytes?: number;
   /** Number of tables exported */
@@ -185,9 +186,10 @@ export interface TenantExportResult {
   tenantId: string;
   tenantName?: string;
   status: TenantExportStatus;
+  /** S3 bucket where export is stored */
+  bucket?: string;
+  /** S3 key where export is stored */
   s3Key?: string;
-  downloadUrl?: string;
-  urlExpiresAt?: string;
   fileSizeBytes?: number;
   tableCount?: number;
   recordCount?: number;

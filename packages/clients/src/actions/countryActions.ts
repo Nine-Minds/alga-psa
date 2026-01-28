@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 
 export interface ICountry {
   code: string;
@@ -9,7 +10,10 @@ export interface ICountry {
   flag_emoji?: string;
 }
 
-export async function getAllCountries(): Promise<ICountry[]> {
+export const getAllCountries = withAuth(async (
+  _user,
+  { tenant }
+): Promise<ICountry[]> => {
   // Countries are global reference data (not tenant-scoped).
   const { knex } = await createTenantKnex(null);
 
@@ -19,10 +23,10 @@ export async function getAllCountries(): Promise<ICountry[]> {
       .select('code', 'name', 'phone_code')
       .where('is_active', true)
       .orderBy('name');
-    
+
     return countries;
   } catch (error) {
     console.error('Error fetching countries:', error);
     throw error;
   }
-}
+});

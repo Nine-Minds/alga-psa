@@ -1150,9 +1150,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Ticketing Dashboard">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
-        <div className="flex gap-2">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Ticketing Dashboard</h1>
+        <div className="flex items-center gap-3">
           {hasSelection && (
             <Button
               id={`${id}-bulk-delete-button`}
@@ -1185,9 +1185,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
         </div>
       </div>
-      <div className="bg-white shadow rounded-lg p-4">
-        <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
-          <div className="flex items-center gap-3 flex-nowrap">
+      <div className="bg-white shadow rounded-lg">
+        <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
+          <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
+            <div className="flex items-center gap-4 flex-wrap">
             <BoardPicker
               id={`${id}-board-picker`}
               boards={boards}
@@ -1220,6 +1221,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               showSearch={true}
               compactDisplay={true}
             />
+
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
             <CustomSelect
               data-automation-id={`${id}-status-select`}
               options={statusOptions}
@@ -1281,6 +1285,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 />
               )}
             </div>
+
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
             <CategoryPicker
               id={`${id}-category-picker`}
               categories={categories}
@@ -1299,8 +1306,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               placeholder="Search tickets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] min-w-[200px] text-sm" // Applied to the <input> element itself
-              containerClassName="" // Applied to the wrapping <div>, removes default mb-4
+              className="h-[38px] min-w-[350px] text-sm"
+              containerClassName=""
             />
             <TagFilter
               tags={allUniqueTags}
@@ -1314,32 +1321,35 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               }}
               onClearTags={() => setSelectedTags([])}
             />
-            <div className="flex items-center gap-4 ml-auto">
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-700">
-                  Bundled view
-                </Label>
-                <Switch
-                  id={`${id}-bundle-view-toggle`}
-                  checked={bundleView === 'bundled'}
-                  onCheckedChange={(checked) => setBundleView(checked ? 'bundled' : 'individual')}
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleResetFilters}
-                className="whitespace-nowrap flex items-center gap-2"
-                id='reset-filters'
-              >
-                <XCircle className="h-4 w-4" />
-                Reset Filters
-              </Button>
+
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-600">
+                Bundled
+              </Label>
+              <Switch
+                id={`${id}-bundle-view-toggle`}
+                checked={bundleView === 'bundled'}
+                onCheckedChange={(checked) => setBundleView(checked ? 'bundled' : 'individual')}
+              />
             </div>
-          </div>
-        </ReflectionContainer>
-        <h2 className="text-xl font-semibold mt-6 mb-2">
-          Tickets
-        </h2>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className="text-gray-500 hover:text-gray-700 shrink-0"
+              id='reset-filters'
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Reset
+            </Button>
+            </div>
+          </ReflectionContainer>
+        </div>
+
+        <div className="p-6">
         {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
         {isLoadingMore ? (
           <Spinner size="md" className="h-32 w-full" />
@@ -1396,6 +1406,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             />
           </>
         )}
+        </div>
       </div>
 
       <QuickAddTicket

@@ -474,7 +474,18 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     visibleColumnIds,
   ]);
 
-  const handleRowClick = (row: Row<T>) => {
+  const handleRowClick = (e: React.MouseEvent, row: Row<T>) => {
+    // Prevent row click when clicking on interactive elements like dropdowns, buttons, etc.
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('[role="menu"]') ||
+      target.closest('[role="menuitem"]') ||
+      target.closest('[data-radix-collection-item]') ||
+      target.closest('button') ||
+      target.closest('[data-state]') // Radix dropdown trigger
+    ) {
+      return;
+    }
     if (onRowClick) {
       onRowClick(row.original);
     }
@@ -595,7 +606,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 return (
                   <tr
                     key={`row_${rowId}`}
-                    onClick={() => handleRowClick(row)}
+                    onClick={(e) => handleRowClick(e, row)}
                     className={`
                     ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
                     ${onRowClick ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-default'}

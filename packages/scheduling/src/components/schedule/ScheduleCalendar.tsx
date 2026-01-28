@@ -461,6 +461,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   };
 
   const handleEventResize = async ({ event, start, end }: any) => {
+    const originalStart = new Date(event.scheduled_start);
+    const originalEnd = new Date(event.scheduled_end);
+
     const updatedEvent = {
       ...event,
       scheduled_start: start,
@@ -468,13 +471,20 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       assigned_user_ids: event.assigned_user_ids,
       ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
     };
+
+    // Update local state immediately for responsive UI
     updateEventLocally(updatedEvent);
+
     const result = await updateScheduleEntry(event.entry_id, updatedEvent);
-    if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
-      await fetchEvents();
-    } else if (!result.success) {
-      console.error("Resize failed, reverting UI potentially needed or fetchEvents anyway");
-      await fetchEvents();
+
+    if (!result.success) {
+      console.error("Resize failed, reverting UI");
+      // Revert to original on failure
+      updateEventLocally({
+        ...event,
+        scheduled_start: originalStart,
+        scheduled_end: originalEnd
+      });
     }
   };
 
@@ -715,28 +725,32 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   // Custom resize handler
   const handleResizeStart = useCallback((e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => {
     e.stopPropagation();
-    
+
     // Only allow resize for primary events (events assigned to the focused technician)
     if (!focusedTechnicianId || !event.assigned_user_ids.includes(focusedTechnicianId)) {
       console.log("Prevented resize of comparison event.");
       return;
     }
-    
+
     const startY = e.clientY;
     const initialStart = new Date(event.scheduled_start);
     const initialEnd = new Date(event.scheduled_end);
-    
+
+    // Track the last valid times during drag
+    let lastValidStart = new Date(initialStart);
+    let lastValidEnd = new Date(initialEnd);
+
     const handleResizeMove = (moveEvent: globalThis.MouseEvent) => {
       moveEvent.preventDefault();
-      
+
       // Calculate time difference based on vertical movement
       // Assuming 20px = 15 minutes (adjust as needed)
       const deltaY = moveEvent.clientY - startY;
       const deltaMinutes = Math.round(deltaY / 20) * 15;
-      
+
       let newStart = new Date(initialStart);
       let newEnd = new Date(initialEnd);
-      
+
       if (direction === 'top') {
         newStart = new Date(initialStart.getTime() + deltaMinutes * 60000);
         if (newEnd.getTime() - newStart.getTime() < 15 * 60000) {
@@ -748,67 +762,63 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           return; // Prevent events shorter than 15 minutes
         }
       }
-      
+
+      // Store the last valid times
+      lastValidStart = direction === 'top' ? newStart : new Date(event.scheduled_start);
+      lastValidEnd = direction === 'bottom' ? newEnd : new Date(event.scheduled_end);
+
       // Create a temporary updated event for UI update
       const updatedEvent: IScheduleEntry = {
         ...event,
-        scheduled_start: direction === 'top' ? newStart : new Date(event.scheduled_start),
-        scheduled_end: direction === 'bottom' ? newEnd : new Date(event.scheduled_end)
+        scheduled_start: lastValidStart,
+        scheduled_end: lastValidEnd
       };
-      
+
       // Update the event locally for immediate feedback
       updateEventLocally(updatedEvent);
     };
-    
-    const handleResizeEnd = async (finalEvent: globalThis.MouseEvent) => {
+
+    const handleResizeEnd = async () => {
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeEnd);
-      
-      // Calculate final position based on last mouse position
-      const deltaY = finalEvent.clientY - startY;
-      const deltaMinutes = Math.round(deltaY / 20) * 15;
-      
-      let finalStart = new Date(initialStart);
-      let finalEnd = new Date(initialEnd);
-      
-      if (direction === 'top') {
-        finalStart = new Date(initialStart.getTime() + deltaMinutes * 60000);
-        if (finalEnd.getTime() - finalStart.getTime() < 15 * 60000) {
-          // Revert if too short
-          await fetchEvents();
-          return;
-        }
-      } else {
-        finalEnd = new Date(initialEnd.getTime() + deltaMinutes * 60000);
-        if (finalEnd.getTime() - finalStart.getTime() < 15 * 60000) {
-          // Revert if too short
-          await fetchEvents();
-          return;
-        }
+
+      // Check if there was any valid change
+      const hasChanged = lastValidStart.getTime() !== initialStart.getTime() ||
+                        lastValidEnd.getTime() !== initialEnd.getTime();
+
+      if (!hasChanged) {
+        // No valid change, nothing to save
+        return;
       }
-      
-      // Save the final changes to the server
+
+      // Save the final changes to the server using last valid times
       const updatedEvent = {
         ...event,
-        scheduled_start: finalStart,
-        scheduled_end: finalEnd,
+        scheduled_start: lastValidStart,
+        scheduled_end: lastValidEnd,
         assigned_user_ids: event.assigned_user_ids,
         ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
       };
-      
+
+      // Update local state immediately for responsive UI
+      updateEventLocally(updatedEvent as IScheduleEntry);
+
       const result = await updateScheduleEntry(event.entry_id, updatedEvent);
-      
-      if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
-        await fetchEvents();
-      } else if (!result.success) {
+
+      if (!result.success) {
         console.error("Resize failed, reverting UI");
-        await fetchEvents();
+        // Revert to original on failure
+        updateEventLocally({
+          ...event,
+          scheduled_start: initialStart,
+          scheduled_end: initialEnd
+        });
       }
     };
-    
+
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeEnd);
-  }, [focusedTechnicianId, events, updateEventLocally, updateScheduleEntry, fetchEvents]);
+  }, [focusedTechnicianId, events, updateEventLocally, updateScheduleEntry]);
 
   // Event component for the calendar
   const EventComponent = useCallback(({ event }: { event: any }) => {

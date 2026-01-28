@@ -8,6 +8,8 @@ export interface ExtProxyUserInfo {
   user_name: string;
   user_type: string;
   client_name: string;
+  /** For client portal users, the client_id they are associated with */
+  client_id?: string;
 }
 
 /**
@@ -25,6 +27,27 @@ async function getTenantClientName(tenantId: string): Promise<string> {
     console.error('[auth] Failed to look up tenant client_name:', error);
     return '';
   }
+}
+
+/**
+ * Look up user's client_id from their contact association.
+ * Returns undefined if user doesn't have a contact or contact doesn't have a client.
+ * Throws on database errors to allow caller to handle appropriately.
+ */
+async function getUserClientId(userId: string, tenantId: string): Promise<string | undefined> {
+  const knex = await getAdminConnection();
+  // Single JOIN query with tenant in join predicate (Citus best practice)
+  const result = await knex('users as u')
+    .select('c.client_id')
+    .join('contacts as c', function() {
+      this.on('c.contact_name_id', '=', 'u.contact_id')
+          .andOn('c.tenant', '=', 'u.tenant');
+    })
+    .where('u.user_id', userId)
+    .where('u.tenant', tenantId)
+    .first();
+
+  return result?.client_id || undefined;
 }
 
 /**
@@ -58,12 +81,20 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   const tenantId = user.tenant || '';
   const clientName = tenantId ? await getTenantClientName(tenantId) : '';
 
-  const userInfo = {
-    user_id: user.user_id || user.id || '',
+  // Look up user's client_id if they are a client portal user
+  const userId = user.user_id || user.id || '';
+  const userType = user.user_type || 'internal';
+  const clientId = (userType === 'client' && userId && tenantId)
+    ? await getUserClientId(userId, tenantId)
+    : undefined;
+
+  const userInfo: ExtProxyUserInfo = {
+    user_id: userId,
     user_email: user.email || '',
     user_name: user.name || user.username || '',
-    user_type: user.user_type || 'internal',
+    user_type: userType,
     client_name: clientName,
+    client_id: clientId,
   };
 
   console.log('[ext-proxy auth] Returning user info', {

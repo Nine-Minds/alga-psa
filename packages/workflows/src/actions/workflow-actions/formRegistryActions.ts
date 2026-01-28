@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { getFormRegistry } from '@shared/workflow/core/formRegistry';
 import { getFormValidationService } from '@shared/workflow/core/formValidationService';
@@ -19,23 +20,25 @@ import type { ITag } from '@alga-psa/types';
 /**
  * Register a new form
  */
-export async function registerFormAction(
+export const registerFormAction = withAuth(async (
+  user,
+  { tenant },
   params: FormRegistrationParams,
   tags?: string[]
-): Promise<string> {
+): Promise<string> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    const userId = undefined; // We don't have access to userId from createTenantKnex
-    
+    const { knex } = await createTenantKnex();
+    const userId = user?.user_id;
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     // Register the form
     const formId = await formRegistry.register(knex, tenant, params, userId);
-    
+
     // Add tags if provided
     if (tags && tags.length > 0) {
       await Promise.all(
@@ -48,23 +51,26 @@ export async function registerFormAction(
         )
       );
     }
-    
+
     return formId;
   } catch (error) {
     console.error('Error registering form:', error);
     throw error;
   }
-}
+});
+
 /**
  * Register a new system form definition
  */
-export async function registerSystemWorkflowFormDefinitionAction(
+export const registerSystemWorkflowFormDefinitionAction = withAuth(async (
+  user,
+  { tenant },
   params: FormRegistrationParams,
   tags?: string[]
-): Promise<string> {
+): Promise<string> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    const userId = undefined; // We don't have access to userId from createTenantKnex
+    const { knex } = await createTenantKnex();
+    const userId = user?.user_id;
 
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -110,17 +116,19 @@ export async function registerSystemWorkflowFormDefinitionAction(
     console.error('Error registering system form definition:', error);
     throw error;
   }
-}
+});
 
 /**
  * Get a form by ID and version
  */
-export async function getFormAction(
+export const getFormAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string, // This is the task_definition_id
   version?: string
-): Promise<FormWithSchema | null> {
+): Promise<FormWithSchema | null> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -193,39 +201,41 @@ export async function getFormAction(
     console.error(`Error getting form for task_definition_id ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Update a form
  */
-export async function updateFormAction(
+export const updateFormAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string,
   version: string,
   updates: FormUpdateParams,
   tags?: string[]
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     // Update the form
     const success = await formRegistry.updateForm(knex, tenant, formId, version, updates);
-    
+
     // Update tags if provided
     if (tags) {
       // Get existing tags
       const existingTags = await findTagsByEntityId(formId, 'workflow_form');
-      
+
       // Delete existing tags
       await Promise.all(
         existingTags.map(tag => deleteTag(tag.tag_id))
       );
-      
+
       // Add new tags
       await Promise.all(
         tags.map(tagText =>
@@ -237,35 +247,37 @@ export async function updateFormAction(
         )
       );
     }
-    
+
     return success;
   } catch (error) {
     console.error(`Error updating form ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Create a new version of a form
  */
-export async function createNewVersionAction(
+export const createNewVersionAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string,
   newVersion: string,
   updates: FormUpdateParams = {},
   tags?: string[]
-): Promise<string> {
+): Promise<string> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     // Create new version
     const result = await formRegistry.createNewVersion(knex, tenant, formId, newVersion, updates);
-    
+
     // Add tags if provided
     if (tags && tags.length > 0) {
       await Promise.all(
@@ -278,89 +290,95 @@ export async function createNewVersionAction(
         )
       );
     }
-    
+
     return result;
   } catch (error) {
     console.error(`Error creating new version for form ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Update form status
  */
-export async function updateFormStatusAction(
+export const updateFormStatusAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string,
   version: string,
   status: FormStatus
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     return formRegistry.updateStatus(knex, tenant, formId, version, status);
   } catch (error) {
     console.error(`Error updating status for form ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Delete a form
  */
-export async function deleteFormAction(
+export const deleteFormAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string,
   version: string
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     // Delete the form
     const success = await formRegistry.deleteForm(knex, tenant, formId, version);
-    
+
     // Delete tags
     const tags = await findTagsByEntityId(formId, 'workflow_form');
     await Promise.all(
       tags.map(tag => deleteTag(tag.tag_id))
     );
-    
+
     return success;
   } catch (error) {
     console.error(`Error deleting form ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Search for forms
  */
-export async function searchFormsAction(
+export const searchFormsAction = withAuth(async (
+  _user,
+  { tenant },
   searchParams: FormSearchParams,
   pagination: {
     limit?: number;
     offset?: number;
   } = {}
-): Promise<{ total: number; forms: IFormDefinition[]; tags?: Record<string, ITag[]> }> {
+): Promise<{ total: number; forms: IFormDefinition[]; tags?: Record<string, ITag[]> }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     // Search for forms
     const { total, forms } = await formRegistry.searchForms(
       knex,
@@ -368,69 +386,74 @@ export async function searchFormsAction(
       { ...searchParams, tenant },
       pagination
     );
-    
+
     // Get tags for all forms
     const formIds = forms.map(form => form.form_id);
     const tags: Record<string, ITag[]> = {};
-    
+
     if (formIds.length > 0) {
       const allTags = await Promise.all(
         formIds.map(id => findTagsByEntityId(id, 'workflow_form'))
       );
-      
+
       formIds.forEach((id, index) => {
         tags[id] = allTags[index];
       });
     }
-    
+
     return { total, forms, tags };
   } catch (error) {
     console.error('Error searching forms:', error);
     throw error;
   }
-}
+});
 
 /**
  * Get all versions of a form
  */
-export async function getAllVersionsAction(
+export const getAllVersionsAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string
-): Promise<IFormDefinition[]> {
+): Promise<IFormDefinition[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     return formRegistry.getAllVersions(knex, tenant, formId);
   } catch (error) {
     console.error(`Error getting versions for form ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Get all form categories
  */
-export async function getAllCategoriesAction(): Promise<string[]> {
+export const getAllCategoriesAction = withAuth(async (
+  _user,
+  { tenant }
+): Promise<string[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     return formRegistry.getAllCategories(knex, tenant);
   } catch (error) {
     console.error('Error getting form categories:', error);
     throw error;
   }
-}
+});
 
 /**
  * Get all form tags
@@ -448,31 +471,35 @@ export async function getAllFormTagsAction(): Promise<string[]> {
 /**
  * Validate form data
  */
-export async function validateFormDataAction(
+export const validateFormDataAction = withAuth(async (
+  _user,
+  { tenant },
   formId: string,
   data: Record<string, any>,
   version?: string
-): Promise<{ valid: boolean; errors?: Array<{ path: string; message: string }> }> {
+): Promise<{ valid: boolean; errors?: Array<{ path: string; message: string }> }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex } = await createTenantKnex();
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     return formRegistry.validateFormData(knex, tenant, formId, data, version);
   } catch (error) {
     console.error(`Error validating form data for ${formId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Compose a form from multiple form definitions
  */
-export async function composeFormAction(
+export const composeFormAction = withAuth(async (
+  user,
+  { tenant },
   baseFormId: string,
   extensionFormIds: string[],
   overrides: {
@@ -484,17 +511,17 @@ export async function composeFormAction(
     defaultValues?: Record<string, any>;
   } = {},
   tags?: string[]
-): Promise<string> {
+): Promise<string> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    const userId = undefined; // We don't have access to userId from createTenantKnex
-    
+    const { knex } = await createTenantKnex();
+    const userId = user?.user_id;
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
+
     // Compose the form
     const composedForm = await formRegistry.composeForm(
       knex,
@@ -503,7 +530,7 @@ export async function composeFormAction(
       extensionFormIds,
       overrides
     );
-    
+
     // Register the composed form
     const formId = await formRegistry.register(
       knex,
@@ -521,7 +548,7 @@ export async function composeFormAction(
       },
       userId
     );
-    
+
     // Add tags if provided
     if (tags && tags.length > 0) {
       await Promise.all(
@@ -534,13 +561,13 @@ export async function composeFormAction(
         )
       );
     }
-    
+
     return formId;
   } catch (error) {
     console.error('Error composing form:', error);
     throw error;
   }
-}
+});
 
 /**
  * Generate a unique form ID

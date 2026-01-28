@@ -31,6 +31,9 @@ interface StatusColumnProps {
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
+  searchQuery?: string;
+  searchCaseSensitive?: boolean;
+  searchWholeWord?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -67,6 +70,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   projectTreeData,
   animatingTasks,
   avatarUrls = {},
+  searchQuery = '',
+  searchCaseSensitive = false,
+  searchWholeWord = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -335,7 +341,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           </span>
         </div>
       </div>
-      <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef}>
+      <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef} data-kanban-column-tasks="true">
         {sortedTasks.map((task): React.JSX.Element => {
           const taskType = taskTypes.find(t => t.type_key === task.task_type_key);
           return (
@@ -354,6 +360,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               taskTags={taskTags[task.task_id] || []}
               documentCount={taskDocumentCounts[task.task_id]}
               isAnimating={animatingTasks.has(task.task_id)}
+              searchQuery={searchQuery}
+              searchCaseSensitive={searchCaseSensitive}
+              searchWholeWord={searchWholeWord}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
               onDragStart={onDragStart}

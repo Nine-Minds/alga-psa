@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import type { EntityType } from '@alga-psa/shared/services/numberingService';
 
@@ -18,8 +19,8 @@ export interface UpdateResponse {
   settings?: NumberSettings;
 }
 
-export async function getNumberSettings(entityType: EntityType): Promise<NumberSettings> {
-  const { knex: db, tenant } = await createTenantKnex();
+export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: EntityType): Promise<NumberSettings> => {
+  const { knex: db } = await createTenantKnex();
   const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
     return await trx('next_number')
       .where('entity_type', entityType)
@@ -27,14 +28,16 @@ export async function getNumberSettings(entityType: EntityType): Promise<NumberS
       .first();
   });
   return settings;
-}
+});
 
-export async function updateNumberSettings(
+export const updateNumberSettings = withAuth(async (
+  _user,
+  { tenant },
   entityType: EntityType,
   updates: Partial<NumberSettings>
-): Promise<UpdateResponse> {
-  const { knex: db, tenant } = await createTenantKnex();
-  
+): Promise<UpdateResponse> => {
+  const { knex: db } = await createTenantKnex();
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get current settings if they exist
@@ -117,7 +120,12 @@ export async function updateNumberSettings(
     console.error(`Error updating ${entityType} number settings:`, error);
     return { success: false, error: 'Failed to update number settings' };
   }
-}
+});
+
+// Check if user can edit numbering settings
+export const canEditNumberingSettings = withAuth(async (user): Promise<boolean> => {
+  return hasPermission(user, 'settings', 'update');
+});
 
 // Legacy support
 export const getTicketNumberSettings = async () => await getNumberSettings('TICKET');

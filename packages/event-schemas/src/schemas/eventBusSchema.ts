@@ -1,9 +1,5 @@
 import { z } from 'zod';
 import {
-  companyCreatedEventPayloadSchema,
-  companyUpdatedEventPayloadSchema,
-} from './domain/companyEventSchemas';
-import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
   inboundEmailReceivedEventPayloadSchema,
@@ -158,10 +154,6 @@ import {
 
 // Define event types
 export const EVENT_TYPES = [
-  // Company
-  'COMPANY_CREATED',
-  'COMPANY_UPDATED',
-
   // Tickets (existing + legacy)
   'TICKET_CREATED',
   'TICKET_UPDATED',
@@ -764,9 +756,6 @@ const InboundEmailReceivedPayloadSchema = z.union([
 
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
-  COMPANY_CREATED: companyCreatedEventPayloadSchema,
-  COMPANY_UPDATED: companyUpdatedEventPayloadSchema,
-
   // Tickets (existing + legacy)
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,

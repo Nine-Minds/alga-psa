@@ -27,6 +27,10 @@ import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
+// Static import for StripeConnectionSettings using the modular pattern
+// The bundler alias @product/billing/entry resolves to EE or OSS version at build time
+import { StripeConnectionSettings } from '@product/billing/entry';
+
 // Dynamic import for NinjaOne (EE feature)
 const NinjaOneIntegrationSettings = dynamic(
   () => import('@ee/components/settings/integrations/NinjaOneIntegrationSettings'),
@@ -37,42 +41,6 @@ const NinjaOneIntegrationSettings = dynamic(
           <div className="flex flex-col items-center justify-center gap-2">
             <Spinner size="md" />
             <span className="text-sm text-muted-foreground">Loading NinjaOne integration settings...</span>
-          </div>
-        </CardContent>
-      </Card>
-    ),
-    ssr: false,
-  }
-);
-
-// Dynamic import for StripeConnectionSettings using the packages pattern
-// The webpack alias @product/billing/entry will resolve to either EE or OSS version
-// Note: @product/billing/entry is a webpack alias resolved at build time, not a real package
-const productBillingEntry = '@product/billing/entry';
-const StripeConnectionSettings = dynamic(
-  () => (import(productBillingEntry) as Promise<any>).then((mod) => {
-    const StripeConnectionSettingsExport = mod.StripeConnectionSettings;
-    const result = StripeConnectionSettingsExport();
-
-    // EE version: result is a Promise that resolves to the module
-    // OSS version: result is JSX directly
-    if (result instanceof Promise || (result && typeof result === 'object' && 'then' in result && typeof (result as any).then === 'function')) {
-      // EE: unwrap the promise and get the component
-      return (result as unknown as Promise<any>).then(componentModule => ({
-        default: componentModule.default || componentModule.StripeConnectionSettings || componentModule
-      }));
-    } else {
-      // OSS: result is JSX, wrap it in a component function
-      return Promise.resolve({ default: () => result });
-    }
-  }),
-  {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading Stripe settings...</span>
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,4 @@
 import { ZodTypeAny } from 'zod';
-import { companyCreatedEventPayloadSchema, companyUpdatedEventPayloadSchema } from './companyEventSchemas';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -170,8 +169,6 @@ import {
 
 export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   // Existing/already-present
-  'payload.CompanyCreated.v1': companyCreatedEventPayloadSchema,
-  'payload.CompanyUpdated.v1': companyUpdatedEventPayloadSchema,
   'payload.TicketCreated.v1': ticketCreatedEventPayloadSchema,
   'payload.TicketUpdated.v1': ticketUpdatedEventPayloadSchema,
   'payload.TicketClosed.v1': ticketClosedEventPayloadSchema,

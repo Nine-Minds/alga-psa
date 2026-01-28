@@ -8,6 +8,7 @@ import {
   sleep,
   workflowInfo,
   uuid4,
+  executeChild,
 } from '@temporalio/workflow';
 import type * as activities from '../activities/tenant-deletion-activities';
 import type {
@@ -19,13 +20,21 @@ import type {
   RollbackDeletionSignal,
   ConfirmationType,
 } from '../types/tenant-deletion-types.js';
+import type {
+  TenantExportWorkflowInput,
+  TenantExportWorkflowResult,
+} from '../types/tenant-export-types.js';
+import { tenantExportWorkflow } from './tenant-export-workflow.js';
 
 // Activity proxies with appropriate timeouts
 const {
+  validateTenantDeletion,
   deactivateAllTenantUsers,
   reactivateTenantUsers,
   tagClientAsCanceled,
   removeClientCanceledTag,
+  deactivateMasterTenantClient,
+  reactivateMasterTenantClient,
   collectTenantStats,
   getTenantName,
   recordPendingDeletion,
@@ -107,10 +116,73 @@ export async function tenantDeletionWorkflow(
       deletionId,
     });
 
+    // Step 0: CRITICAL - Validate tenant can be deleted (not master tenant)
+    state.step = 'validating_tenant';
+    log.info('Validating tenant deletion is allowed', { tenantId: input.tenantId });
+    const validation = await validateTenantDeletion(input.tenantId);
+
+    if (!validation.valid) {
+      log.error('Tenant deletion validation failed', {
+        tenantId: input.tenantId,
+        isMasterTenant: validation.isMasterTenant,
+        error: validation.error,
+      });
+      throw new Error(validation.error || 'Tenant deletion validation failed');
+    }
+
+    log.info('Tenant deletion validation passed', {
+      tenantId: input.tenantId,
+      managementTenantId: validation.managementTenantId,
+    });
+
     // Step 1: Get tenant info
     state.step = 'getting_tenant_info';
     state.tenantName = await getTenantName(input.tenantId);
     log.info('Got tenant name', { tenantName: state.tenantName });
+
+    // Step 1.5: Export tenant data BEFORE any modifications (as child workflow)
+    state.step = 'exporting_data';
+    log.info('Starting tenant data export workflow before deletion', { tenantId: input.tenantId });
+
+    try {
+      const exportInput: TenantExportWorkflowInput = {
+        tenantId: input.tenantId,
+        requestedBy: input.triggeredBy || 'tenant-deletion-workflow',
+        reason: `Pre-deletion export for deletion ID: ${deletionId}`,
+      };
+
+      // Execute export as child workflow - allows longer timeout and independent tracking
+      const exportResult = await executeChild(tenantExportWorkflow, {
+        workflowId: `tenant-export-deletion-${deletionId}`,
+        args: [exportInput],
+        // Allow up to 1 hour for large tenant exports
+        workflowExecutionTimeout: '1 hour',
+      });
+
+      if (exportResult.success) {
+        state.exportId = exportResult.exportId;
+        state.exportBucket = exportResult.bucket;
+        state.exportS3Key = exportResult.s3Key;
+        state.exportFileSizeBytes = exportResult.fileSizeBytes;
+        log.info('Tenant data export workflow completed successfully', {
+          exportId: exportResult.exportId,
+          s3Key: exportResult.s3Key,
+          fileSizeBytes: exportResult.fileSizeBytes,
+          tableCount: exportResult.tableCount,
+          recordCount: exportResult.recordCount,
+        });
+      } else {
+        // Export failed, but we continue - log warning
+        log.warn('Tenant data export workflow failed (continuing with deletion)', {
+          error: exportResult.error,
+        });
+      }
+    } catch (exportError) {
+      // Export workflow failed entirely - log but continue with deletion
+      log.warn('Tenant data export workflow threw error (continuing with deletion)', {
+        error: exportError instanceof Error ? exportError.message : 'Unknown error',
+      });
+    }
 
     // Step 2: Deactivate all users
     state.step = 'deactivating_users';
@@ -138,13 +210,26 @@ export async function tenantDeletionWorkflow(
     log.info('Tagging client as Canceled');
     await tagClientAsCanceled(input.tenantId);
 
+    // Step 3.5: Deactivate client and contacts in management tenant
+    state.step = 'deactivating_master_client';
+    log.info('Deactivating client and contacts in master tenant');
+    const deactivateResult = await deactivateMasterTenantClient(input.tenantId);
+    if (deactivateResult.clientDeactivated) {
+      log.info('Master tenant client deactivated', {
+        clientId: deactivateResult.clientId,
+        contactsDeactivated: deactivateResult.contactsDeactivated,
+      });
+    } else {
+      log.warn('Could not deactivate master tenant client (may not exist)');
+    }
+
     // Step 4: Collect tenant statistics
     state.step = 'collecting_stats';
     log.info('Collecting tenant statistics');
     state.stats = await collectTenantStats(input.tenantId);
     log.info('Stats collected', { stats: state.stats });
 
-    // Step 5: Record pending deletion in database
+    // Step 5: Record pending deletion in database (including export info)
     state.step = 'recording_pending_deletion';
     await recordPendingDeletion({
       deletionId,
@@ -155,8 +240,15 @@ export async function tenantDeletionWorkflow(
       workflowId,
       workflowRunId: firstExecutionRunId,
       stats: state.stats,
+      exportId: state.exportId,
+      exportBucket: state.exportBucket,
+      exportS3Key: state.exportS3Key,
+      exportFileSizeBytes: state.exportFileSizeBytes,
     });
-    log.info('Pending deletion recorded');
+    log.info('Pending deletion recorded', {
+      exportId: state.exportId,
+      exportS3Key: state.exportS3Key,
+    });
 
     // Step 6: Wait for confirmation signal or 90 days timeout
     state.step = 'awaiting_confirmation';
@@ -327,13 +419,17 @@ async function handleRollback(
     rolledBackBy: rollbackSignal.rolledBackBy,
   });
 
-  // Reactivate users
+  // Reactivate users in the deleted tenant
   log.info('Reactivating users');
   await reactivateTenantUsers(tenantId);
 
-  // Remove canceled tag
+  // Remove canceled tag from client in master tenant
   log.info('Removing Canceled tag');
   await removeClientCanceledTag(tenantId);
+
+  // Reactivate client and contacts in master tenant
+  log.info('Reactivating client and contacts in master tenant');
+  await reactivateMasterTenantClient(tenantId);
 
   // Update database
   await updateDeletionStatus({

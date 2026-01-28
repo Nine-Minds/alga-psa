@@ -2,8 +2,20 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
+// build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const parsePositiveInt = (value) => {
+  if (value == null) return undefined;
+  const n = Number.parseInt(String(value), 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+
+const truthyEnv = (value) => {
+  const v = String(value ?? '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+};
 
 let webpack = null;
 try {
@@ -14,6 +26,7 @@ try {
 
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+console.log('[next.config] isEE:', isEE, { EDITION: process.env.EDITION, NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION });
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
@@ -146,10 +159,15 @@ class EditionBuildDiagnosticsPlugin {
 }
 
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS);
+const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
+    // Propagate edition to client-side code
+    // When EDITION=ee, set NEXT_PUBLIC_EDITION=enterprise for client components
+    NEXT_PUBLIC_EDITION: isEE ? 'enterprise' : (process.env.NEXT_PUBLIC_EDITION || 'community'),
   },
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
@@ -182,6 +200,27 @@ const nextConfig = {
 	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
 	      '@alga-psa/event-schemas': '../packages/event-schemas/src',
 	      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+	      // Documents package
+	      '@alga-psa/documents': '../packages/documents/src',
+	      '@alga-psa/documents/': '../packages/documents/src/',
+	      '@alga-psa/documents/storage/StorageService': '../packages/documents/src/storage/StorageService.ts',
+	      // Reference data package
+	      '@alga-psa/reference-data': '../packages/reference-data/src',
+	      '@alga-psa/reference-data/': '../packages/reference-data/src/',
+	      '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
+	      '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
+	      // Billing package
+	      '@alga-psa/billing': '../packages/billing/src',
+	      '@alga-psa/billing/': '../packages/billing/src/',
+	      '@alga-psa/billing/actions': '../packages/billing/src/actions/index.ts',
+	      '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
+	      '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
+	      '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+	      // Projects package
+	      '@alga-psa/projects': '../packages/projects/src',
+	      '@alga-psa/projects/': '../packages/projects/src/',
+	      '@alga-psa/projects/actions': '../packages/projects/src/actions/index.ts',
+	      '@alga-psa/projects/components': '../packages/projects/src/components/index.ts',
 	      // DB package (use source files for Turbopack dev/HMR)
 	      '@alga-psa/db': '../packages/db/src/index.ts',
 	      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
@@ -307,6 +346,10 @@ const nextConfig = {
 	    '@alga-psa/integrations',
 	    '@alga-psa/client-portal',
 	    '@alga-psa/event-schemas',
+	    '@alga-psa/documents',
+	    '@alga-psa/reference-data',
+	    '@alga-psa/billing',
+	    '@alga-psa/projects',
 	    // Product feature packages (only those needed in this app)
 	    '@product/extensions',
     '@product/settings-extensions',
@@ -342,7 +385,7 @@ const nextConfig = {
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
-    const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
     console.log('[next.config] edition', isEE ? 'enterprise' : 'community', {
       cwd: process.cwd(),
       dirname: __dirname,
@@ -698,31 +741,67 @@ const nextConfig = {
       }
     }
     
-    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
-    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
-    if (isEE) {
-      if (!webpack) {
-        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
-      } else {
-        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
-        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
-        config.plugins = config.plugins || [];
-        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
-          try {
-            const req = resource.request || '';
-            if (ceEmptyRegex.test(req)) {
-              const rel = req.substring(ceEmptyPrefix.length);
-              const mapped = path.join(eeSrcRoot, rel);
-              if (process.env.LOG_MODULE_RESOLUTION === '1') {
-                console.log('[replace:EE]', { from: req, to: mapped });
+	    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
+	    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
+	    if (isEE) {
+	      if (!webpack) {
+	        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
+	      } else {
+	        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
+	        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+	        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
+	        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
+	        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+	        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+	        config.plugins = config.plugins || [];
+	        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
+	          try {
+	            const req = resource.request || '';
+	            // IMPORTANT:
+	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
+	            // Our tsconfig maps `@ee/* -> packages/ee/src/*` (CE stubs) and relies on webpack to override
+	            // to `ee/server/src` in EE builds.
+	            //
+	            // In practice, JsConfigPathsPlugin can resolve the stub path first when the stub file exists,
+	            // producing "hybrid" EE builds where some `@ee/*` imports fall back to real EE code (when no
+	            // stub exists), but many resolve to CE stubs (when the stub does exist).
+	            //
+	            // To force consistency, rewrite `@ee/*` specifiers to the EE source root *before* resolution.
+	            if (req === '@ee') {
+	              resource.request = eeSrcRoot.slice(0, -path.sep.length);
+	              return;
+	            }
+	            if (req.startsWith('@ee/')) {
+	              const rel = req.substring('@ee/'.length);
+	              const mapped = path.join(eeSrcRoot, rel);
+	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+	                console.log('[replace:EE:@ee]', { from: req, to: mapped });
+	              }
+	              resource.request = mapped;
+	              return;
+	            }
+	            // Replace src/empty paths
+	            if (ceEmptyRegex.test(req)) {
+	              const rel = req.substring(ceEmptyPrefix.length);
+	              const mapped = path.join(eeSrcRoot, rel);
+	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE:empty]', { from: req, to: mapped });
               }
               resource.request = mapped;
             }
-          } catch {}
-        }));
-      }
-    }
+            // Replace packages/ee/src paths (CE stubs from workspace packages)
+            else if (cePackagesEeRegex.test(req)) {
+              const rel = req.substring(cePackagesEePrefix.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE:packages]', { from: req, to: mapped });
+              }
+	              resource.request = mapped;
+	            }
+	          } catch {}
+	        }));
+	      }
+	    }
 
   // Conditionally enable verbose resolution logging for EE/CE module paths
   if (process.env.LOG_MODULE_RESOLUTION === '1') {
@@ -779,6 +858,10 @@ const nextConfig = {
     },
     // Increase middleware body size limit for extension installs
     proxyClientMaxBodySize: '100mb',
+    // Next build "Collecting page data" uses a worker pool sized from this value.
+    // In large repos, the default (often == host CPU count) can cause OOMs in CI.
+    ...(buildCpus ? { cpus: buildCpus } : {}),
+    ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
   },
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {

@@ -34,7 +34,7 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -42,6 +42,11 @@ import { useUserPreference } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
+const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
+
+// Auto-scroll configuration for drag operations
+const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
+const MAX_SCROLL_SPEED = 20; // Maximum scroll speed in pixels per frame
 
 interface ProjectDetailProps {
   project: IProject;
@@ -53,6 +58,8 @@ interface ProjectDetailProps {
   assignedUser?: IUserWithRoles;
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
+  initialPhaseId?: string | null;
+  onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
 export default function ProjectDetail({
@@ -64,7 +71,9 @@ export default function ProjectDetail({
   contact,
   assignedUser,
   onTagsUpdate,
-  initialTaskId
+  initialTaskId,
+  initialPhaseId,
+  onUrlUpdate
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
 
@@ -79,6 +88,19 @@ export default function ProjectDetail({
     {
       defaultValue: 'kanban',
       localStorageKey: PROJECT_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Phases panel visibility state with persistence (default: visible)
+  const {
+    value: isPhasesPanelVisible,
+    setValue: setIsPhasesPanelVisible,
+  } = useUserPreference<boolean>(
+    PROJECT_PHASES_PANEL_VISIBLE_SETTING,
+    {
+      defaultValue: true,
+      localStorageKey: PROJECT_PHASES_PANEL_VISIBLE_SETTING,
       debounceMs: 300
     }
   );
@@ -159,25 +181,38 @@ export default function ProjectDetail({
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
   
-  // Auto-select the first phase when the project has phases (but not when opening a specific task)
+  // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
     // Don't auto-select if we have an initialTaskId - that case is handled separately
     if (initialTaskId) return;
 
     // Only auto-select if we have phases but none is selected yet
     if (projectPhases.length > 0 && !selectedPhase) {
-      // Sort phases by order_key to get the first one
+      // Sort phases by order_key
       const sortedPhases = [...projectPhases].sort((a, b) => {
         const aKey = a.order_key || 'zzz';
         const bKey = b.order_key || 'zzz';
         return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
       });
 
-      const firstPhase = sortedPhases[0];
-      setSelectedPhase(firstPhase);
-      setCurrentPhase(firstPhase);
+      // If we have an initialPhaseId from URL, use that phase
+      let phaseToSelect = sortedPhases[0];
+      if (initialPhaseId) {
+        const phaseFromUrl = projectPhases.find(p => p.phase_id === initialPhaseId);
+        if (phaseFromUrl) {
+          phaseToSelect = phaseFromUrl;
+        }
+      }
+
+      setSelectedPhase(phaseToSelect);
+      setCurrentPhase(phaseToSelect);
+
+      // Update URL if we selected a phase and no phaseId was in the URL
+      if (!initialPhaseId && onUrlUpdate) {
+        onUrlUpdate(phaseToSelect.phase_id, null);
+      }
     }
-  }, [projectPhases, initialTaskId]); // Intentionally exclude selectedPhase to avoid re-triggering
+  }, [projectPhases, initialTaskId, initialPhaseId]); // Intentionally exclude selectedPhase to avoid re-triggering
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -216,6 +251,9 @@ export default function ProjectDetail({
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchWholeWord, setSearchWholeWord] = useState<boolean>(false);
+  const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
   const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
@@ -223,12 +261,32 @@ export default function ProjectDetail({
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
     let tasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
-    
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+      tasks = tasks.filter(task => {
+        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const taskDescription = searchCaseSensitive
+          ? (task.description ?? '')
+          : (task.description?.toLowerCase() ?? '');
+
+        if (searchWholeWord) {
+          // Use word boundary regex for whole word matching
+          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+        } else {
+          return taskName.includes(query) || taskDescription.includes(query);
+        }
+      });
+    }
+
     // Apply priority filter
     if (selectedPriorityFilter !== 'all') {
       tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
     }
-    
+
     // Apply tag filter
     if (selectedTaskTags.length > 0) {
       tasks = tasks.filter(task => {
@@ -237,9 +295,9 @@ export default function ProjectDetail({
         return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
       });
     }
-    
+
     return tasks;
-  }, [projectTasks, selectedPhase, selectedPriorityFilter, selectedTaskTags, taskTags]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -263,16 +321,22 @@ export default function ProjectDetail({
     fetchTaskCounts();
   }, [project.project_id]);
 
-  const [scrollInterval, setScrollInterval] = useState<NodeJS.Timeout | null>(null);
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
+  const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
+    horizontal: 0,
+    vertical: 0,
+    column: null
+  });
 
   useEffect(() => {
     return () => {
-      if (scrollInterval) {
-        clearInterval(scrollInterval);
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
       }
     };
-  }, [scrollInterval]);
+  }, []);
 
   // Lazy load list view data when switching to list mode
   const loadListViewData = useCallback(async () => {
@@ -498,15 +562,13 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies } = await getTasksForPhase(selectedPhase.phase_id);
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems } = await getTasksForPhase(selectedPhase.phase_id);
 
-        // Add checklist items to tasks
-        const tasksWithChecklists = await Promise.all(
-          tasks.map(async (task) => {
-            const checklistItems = await getTaskChecklistItems(task.task_id);
-            return { ...task, checklist_items: checklistItems };
-          })
-        );
+        // Add checklist items to tasks from batch-loaded data
+        const tasksWithChecklists = tasks.map((task) => ({
+          ...task,
+          checklist_items: checklistItems[task.task_id] || []
+        }));
 
         setProjectTasks(tasksWithChecklists);
         setPhaseTicketLinks(ticketLinks);
@@ -586,6 +648,11 @@ export default function ProjectDetail({
           setSelectedPhase(taskPhase);
           setCurrentPhase(taskPhase);
         }
+
+        // Update URL to include phaseId if it wasn't already there
+        if (onUrlUpdate && !initialPhaseId) {
+          onUrlUpdate(taskPhase.phase_id, initialTaskId);
+        }
       } catch (error) {
         console.error('Error loading task from notification:', error);
         toast.error('Failed to load task');
@@ -593,7 +660,7 @@ export default function ProjectDetail({
     };
 
     loadTaskAndSelectPhase();
-  }, [initialTaskId, projectPhases]);
+  }, [initialTaskId, projectPhases, initialPhaseId, onUrlUpdate]);
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
@@ -657,10 +724,12 @@ export default function ProjectDetail({
     document.body.classList.remove('dragging-task');
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
-    
-    if (scrollInterval) {
-      clearInterval(scrollInterval);
-      setScrollInterval(null);
+
+    // Reset scroll speeds and clear interval
+    scrollSpeedsRef.current = { horizontal: 0, vertical: 0, column: null };
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
     }
   };
 
@@ -751,42 +820,91 @@ export default function ProjectDetail({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    
-    const mouseY = e.clientY;
-    const viewportHeight = window.innerHeight;
-    const topThreshold = viewportHeight * 0.3; // Start scrolling at top 30%
-    const bottomThreshold = viewportHeight * 0.7; // Start scrolling at bottom 30%
-    const edgeThreshold = 100; // Pixels from very edge for max speed
-    const maxScrollSpeed = 25;
 
-    if (scrollInterval) {
-      clearInterval(scrollInterval);
-      setScrollInterval(null);
+    // kanbanBoardRef points to .kanbanContainer which is the horizontal scroll container
+    const kanbanContainer = kanbanBoardRef.current;
+    if (!kanbanContainer) return;
+
+    const containerRect = kanbanContainer.getBoundingClientRect();
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // Check if mouse is within the container bounds
+    if (mouseX < containerRect.left || mouseX > containerRect.right ||
+        mouseY < containerRect.top || mouseY > containerRect.bottom) {
+      // Stop scrolling if outside bounds
+      scrollSpeedsRef.current = { horizontal: 0, vertical: 0, column: null };
+      return;
     }
 
-    // Calculate scroll speed based on distance from edges
-    if (mouseY < topThreshold) {
-      const distance = Math.max(mouseY - edgeThreshold, 0);
-      const speed = Math.min(maxScrollSpeed, maxScrollSpeed * (1 - distance / (topThreshold - edgeThreshold)));
-      
-      const newInterval = setInterval(() => {
-        window.scrollBy({
-          top: -speed,
-          behavior: 'auto' // Use auto for smoother continuous scrolling
-        });
-      }, 16); // 60fps
-      setScrollInterval(newInterval);
-    } else if (mouseY > bottomThreshold) {
-      const distance = Math.max((viewportHeight - mouseY) - edgeThreshold, 0);
-      const speed = Math.min(maxScrollSpeed, maxScrollSpeed * (1 - distance / (viewportHeight - bottomThreshold - edgeThreshold)));
-      
-      const newInterval = setInterval(() => {
-        window.scrollBy({
-          top: speed,
-          behavior: 'auto' // Use auto for smoother continuous scrolling
-        });
-      }, 16); // 60fps
-      setScrollInterval(newInterval);
+    // Calculate horizontal scroll (for kanban container)
+    let horizontalScrollSpeed = 0;
+    const leftEdge = containerRect.left + SCROLL_THRESHOLD;
+    const rightEdge = containerRect.right - SCROLL_THRESHOLD;
+
+    if (mouseX < leftEdge) {
+      // Near left edge - scroll left
+      const distance = leftEdge - mouseX;
+      horizontalScrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+    } else if (mouseX > rightEdge) {
+      // Near right edge - scroll right
+      const distance = mouseX - rightEdge;
+      horizontalScrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+    }
+
+    // Find the column being dragged over and calculate vertical scroll
+    let verticalScrollSpeed = 0;
+    let targetColumn: HTMLElement | null = null;
+
+    // Find the kanban tasks containers using data attribute (more reliable than CSS classes)
+    const columns = kanbanContainer.querySelectorAll('[data-kanban-column-tasks="true"]');
+    columns.forEach((column) => {
+      const columnRect = column.getBoundingClientRect();
+      if (mouseX >= columnRect.left && mouseX <= columnRect.right &&
+          mouseY >= columnRect.top && mouseY <= columnRect.bottom) {
+        targetColumn = column as HTMLElement;
+
+        const topEdge = columnRect.top + SCROLL_THRESHOLD;
+        const bottomEdge = columnRect.bottom - SCROLL_THRESHOLD;
+
+        if (mouseY < topEdge) {
+          // Near top edge - scroll up
+          const distance = topEdge - mouseY;
+          verticalScrollSpeed = -Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        } else if (mouseY > bottomEdge) {
+          // Near bottom edge - scroll down
+          const distance = mouseY - bottomEdge;
+          verticalScrollSpeed = Math.min(MAX_SCROLL_SPEED, (distance / SCROLL_THRESHOLD) * MAX_SCROLL_SPEED);
+        }
+      }
+    });
+
+    // Update scroll speeds in ref (the interval reads from this)
+    scrollSpeedsRef.current = {
+      horizontal: horizontalScrollSpeed,
+      vertical: verticalScrollSpeed,
+      column: targetColumn
+    };
+
+    // Start interval if not already running and we need to scroll
+    if (!scrollIntervalRef.current && (horizontalScrollSpeed !== 0 || verticalScrollSpeed !== 0)) {
+      scrollIntervalRef.current = setInterval(() => {
+        const { horizontal, vertical, column } = scrollSpeedsRef.current;
+        const container = kanbanBoardRef.current;
+
+        if (container && horizontal !== 0) {
+          container.scrollLeft += horizontal;
+        }
+        if (column && vertical !== 0) {
+          column.scrollTop += vertical;
+        }
+
+        // Stop interval if both speeds are 0
+        if (horizontal === 0 && vertical === 0 && scrollIntervalRef.current) {
+          clearInterval(scrollIntervalRef.current);
+          scrollIntervalRef.current = null;
+        }
+      }, 16); // ~60fps
     }
   };
 
@@ -1042,14 +1160,22 @@ export default function ProjectDetail({
     setDefaultStatus(null);
     setIsAddingTask(false);
     setSelectedTask(null);
-  }, []);
+    // Update URL to remove taskId while keeping phaseId
+    if (onUrlUpdate && selectedPhase) {
+      onUrlUpdate(selectedPhase.phase_id, null);
+    }
+  }, [onUrlUpdate, selectedPhase]);
 
   const handlePhaseAdded = useCallback((newPhase: IProjectPhase) => {
     setProjectPhases((prevPhases) => [...prevPhases, newPhase]);
     setSelectedPhase(newPhase);
     setCurrentPhase(newPhase);
+    // Update URL with new phase
+    if (onUrlUpdate) {
+      onUrlUpdate(newPhase.phase_id, null);
+    }
     toast.success('New phase added successfully!');
-  }, []);
+  }, [onUrlUpdate]);
 
   const handleAddCard = useCallback((status: ProjectStatus) => {
     if (!selectedPhase) {
@@ -1143,11 +1269,16 @@ export default function ProjectDetail({
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
     console.log('Using cached project tree data for edit task dialog');
-    
+
     setSelectedTask(task);
-    setCurrentPhase(phases.find(phase => phase.phase_id === task.phase_id) || null);
+    const taskPhase = phases.find(phase => phase.phase_id === task.phase_id) || null;
+    setCurrentPhase(taskPhase);
     setShowQuickAdd(true);
-  }, [phases]);
+    // Update URL with task and phase
+    if (onUrlUpdate && taskPhase) {
+      onUrlUpdate(taskPhase.phase_id, task.task_id);
+    }
+  }, [phases, onUrlUpdate]);
 
   const handleAssigneeChange = async (taskId: string, newAssigneeId: string | null, newTaskName?: string) => {
     try {
@@ -1283,6 +1414,10 @@ export default function ProjectDetail({
   const handlePhaseSelect = (phase: IProjectPhase) => {
     setSelectedPhase(phase);
     setCurrentPhase(phase);
+    // Update URL with new phase selection
+    if (onUrlUpdate) {
+      onUrlUpdate(phase.phase_id, null);
+    }
   };
 
   const handleDeletePhaseClick = (phase: IProjectPhase) => {
@@ -1408,6 +1543,215 @@ export default function ProjectDetail({
     }
   };
 
+  // Render the sticky header with title, view switcher, search, and filters
+  const renderHeader = () => {
+    const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
+
+    if (viewMode === 'list') {
+      return (
+        <div className="mb-4 space-y-3 flex-shrink-0">
+          {/* Top row: Title + View Switcher */}
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Task List</h2>
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={setViewMode}
+              options={[
+                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                { value: 'list', label: 'List', icon: List }
+              ]}
+            />
+          </div>
+
+          {/* Bottom row: Search + Filters */}
+          <div className="flex items-center gap-4">
+            {/* Search Input with Options */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="task-search-list"
+                  type="text"
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearchWholeWord(!searchWholeWord)}
+                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                  searchWholeWord
+                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Whole word"
+              >
+                Word
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
+                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                  searchCaseSensitive
+                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Case sensitive"
+              >
+                Aa
+              </button>
+            </div>
+
+            {/* Tag Filter */}
+            <TagFilter
+              tags={allTaskTags}
+              selectedTags={selectedTaskTags}
+              onToggleTag={(tag) => {
+                setSelectedTaskTags(prev =>
+                  prev.includes(tag)
+                    ? prev.filter(t => t !== tag)
+                    : [...prev, tag]
+                );
+              }}
+              onClearTags={() => setSelectedTaskTags([])}
+            />
+
+            {/* Priority Filter */}
+            <CustomSelect
+              value={selectedPriorityFilter}
+              onValueChange={setSelectedPriorityFilter}
+              options={[
+                { value: 'all', label: 'All Priorities' },
+                ...priorities.map(p => ({
+                  value: p.priority_id,
+                  label: p.priority_name,
+                  color: p.color
+                }))
+              ]}
+              className="w-40"
+              placeholder="Priority"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Kanban view header
+    return (
+      <div className="mb-4 space-y-3 flex-shrink-0">
+        {/* Top row: Title + View Switcher */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold">
+              {selectedPhase ? `Kanban Board: ${selectedPhase.phase_name}` : 'Kanban Board'}
+            </h2>
+            {selectedPhase?.description && (
+              <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
+            )}
+          </div>
+          <ViewSwitcher
+            currentView={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+              { value: 'list', label: 'List', icon: List }
+            ]}
+          />
+        </div>
+
+        {/* Bottom row: Search + Filters + Completion */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Search Input with Options */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="task-search-kanban"
+                  type="text"
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearchWholeWord(!searchWholeWord)}
+                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                  searchWholeWord
+                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Whole word"
+              >
+                Word
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
+                className={`px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+                  searchCaseSensitive
+                    ? 'bg-[rgb(var(--color-primary-100))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))]'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Case sensitive"
+              >
+                Aa
+              </button>
+            </div>
+
+            {/* Tag Filter */}
+            <TagFilter
+              tags={allTaskTags}
+              selectedTags={selectedTaskTags}
+              onToggleTag={(tag) => {
+                setSelectedTaskTags(prev =>
+                  prev.includes(tag)
+                    ? prev.filter(t => t !== tag)
+                    : [...prev, tag]
+                );
+              }}
+              onClearTags={() => setSelectedTaskTags([])}
+            />
+
+            {/* Priority Filter */}
+            <CustomSelect
+              value={selectedPriorityFilter}
+              onValueChange={setSelectedPriorityFilter}
+              options={[
+                { value: 'all', label: 'All Priorities' },
+                ...priorities.map(p => ({
+                  value: p.priority_id,
+                  label: p.priority_name,
+                  color: p.color
+                }))
+              ]}
+              className="w-40"
+              placeholder="Priority"
+            />
+          </div>
+
+          {/* Completion Stats */}
+          {selectedPhase && (
+            <div className="flex items-center gap-2">
+              <DonutChart
+                percentage={completionPercentage}
+                tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
+              />
+              <span className="text-sm font-medium text-gray-600">
+                {completedTasksCount} / {filteredTasks.length} Done
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render the scrollable content (kanban board or list view)
   const renderContent = () => {
     // List view rendering
     if (viewMode === 'list') {
@@ -1428,92 +1772,47 @@ export default function ProjectDetail({
       }
 
       return (
-        <div className="flex flex-col h-full">
-          <div className="mb-4">
-            <div className="flex justify-end items-center gap-4">
-                {/* Tag Filter */}
-                <TagFilter
-                  tags={allTaskTags}
-                  selectedTags={selectedTaskTags}
-                  onToggleTag={(tag) => {
-                    setSelectedTaskTags(prev =>
-                      prev.includes(tag)
-                        ? prev.filter(t => t !== tag)
-                        : [...prev, tag]
-                    );
-                  }}
-                  onClearTags={() => setSelectedTaskTags([])}
-                />
-
-                {/* Priority Filter */}
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
-                  <CustomSelect
-                    value={selectedPriorityFilter}
-                    onValueChange={setSelectedPriorityFilter}
-                    options={[
-                      { value: 'all', label: 'All Priorities' },
-                      ...priorities.map(p => ({
-                        value: p.priority_id,
-                        label: p.priority_name,
-                        color: p.color
-                      }))
-                    ]}
-                    className="w-48"
-                    placeholder="Select priority"
-                  />
-                </div>
-
-                {/* View Switcher - rightmost */}
-                <ViewSwitcher
-                  currentView={viewMode}
-                  onChange={setViewMode}
-                  options={[
-                    { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                    { value: 'list', label: 'List', icon: List }
-                  ]}
-                />
-            </div>
-          </div>
-          <TaskListView
-            phases={listViewData.phases}
-            tasks={listViewData.tasks}
-            statuses={listViewData.statuses}
-            taskResources={listViewData.taskResources}
-            taskTags={listViewData.taskTags}
-            taskDependencies={listViewData.taskDependencies}
-            checklistItems={Object.entries(listViewData.checklistItems).reduce((acc, [taskId, items]) => {
-              acc[taskId] = {
-                total: items.length,
-                completed: items.filter(item => item.completed).length,
-                items: items.map(item => ({ item_name: item.item_name, completed: item.completed }))
-              };
-              return acc;
-            }, {} as Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>)}
-            documentCounts={{}}
-            onTaskClick={handleTaskSelected}
-            onTaskDelete={handleDeleteTaskClick}
-            onTaskDuplicate={handleDuplicateTaskClick}
-            onTaskMove={handleListViewTaskMove}
-            onAddPhase={() => setShowPhaseQuickAdd(true)}
-            onAddTask={(phaseId) => {
-              const phase = listViewData.phases.find(p => p.phase_id === phaseId);
-              if (phase) {
-                setCurrentPhase(phase);
-                setShowQuickAdd(true);
-              }
-            }}
-            onTaskTagsChange={handleTaskTagsChange}
-            onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
-            users={users}
-            selectedPriorityFilter={selectedPriorityFilter}
-            selectedTaskTags={selectedTaskTags}
-          />
-        </div>
+        <TaskListView
+          phases={listViewData.phases}
+          tasks={listViewData.tasks}
+          statuses={listViewData.statuses}
+          taskResources={listViewData.taskResources}
+          taskTags={listViewData.taskTags}
+          taskDependencies={listViewData.taskDependencies}
+          checklistItems={Object.entries(listViewData.checklistItems).reduce((acc, [taskId, items]) => {
+            acc[taskId] = {
+              total: items.length,
+              completed: items.filter(item => item.completed).length,
+              items: items.map(item => ({ item_name: item.item_name, completed: item.completed }))
+            };
+            return acc;
+          }, {} as Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>)}
+          documentCounts={{}}
+          onTaskClick={handleTaskSelected}
+          onTaskDelete={handleDeleteTaskClick}
+          onTaskDuplicate={handleDuplicateTaskClick}
+          onTaskMove={handleListViewTaskMove}
+          onAddPhase={() => setShowPhaseQuickAdd(true)}
+          onAddTask={(phaseId) => {
+            const phase = listViewData.phases.find(p => p.phase_id === phaseId);
+            if (phase) {
+              setCurrentPhase(phase);
+              setShowQuickAdd(true);
+            }
+          }}
+          onTaskTagsChange={handleTaskTagsChange}
+          onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
+          users={users}
+          selectedPriorityFilter={selectedPriorityFilter}
+          selectedTaskTags={selectedTaskTags}
+          searchQuery={searchQuery}
+          searchWholeWord={searchWholeWord}
+          searchCaseSensitive={searchCaseSensitive}
+        />
       );
     }
 
-    // Kanban view rendering (existing)
+    // Kanban view rendering
     if (!selectedPhase) {
       return (
         <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
@@ -1529,119 +1828,46 @@ export default function ProjectDetail({
       );
     }
 
-    const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
-
     return (
-      <div className="flex flex-col h-full">
-        <div className="mb-4">
-          <div className="flex justify-between items-center gap-4">
-            {/* Section 1: Kanban Board Title */}
-            <div>
-              <h2 className="text-xl font-bold mb-1">Kanban Board: {selectedPhase.phase_name}</h2>
-              {selectedPhase.description && (
-                <p className="text-sm text-gray-600">{selectedPhase.description}</p>
-              )}
-            </div>
-            
-            {/* Section 2: Tag Filter, Priority Filter, Donut Chart and ViewSwitcher (rightmost) */}
-            <div className="flex items-center gap-4">
-              {/* Tag Filter */}
-              <TagFilter
-                tags={allTaskTags}
-                selectedTags={selectedTaskTags}
-                onToggleTag={(tag) => {
-                  setSelectedTaskTags(prev =>
-                    prev.includes(tag)
-                      ? prev.filter(t => t !== tag)
-                      : [...prev, tag]
-                  );
-                }}
-                onClearTags={() => setSelectedTaskTags([])}
-              />
-
-              {/* Priority Filter */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
-                <CustomSelect
-                  value={selectedPriorityFilter}
-                  onValueChange={setSelectedPriorityFilter}
-                  options={[
-                    { value: 'all', label: 'All Priorities' },
-                    ...priorities.map(p => ({
-                      value: p.priority_id,
-                      label: p.priority_name,
-                      color: p.color
-                    }))
-                  ]}
-                  className="w-48"
-                  placeholder="Select priority"
-                />
-              </div>
-
-              {/* Donut Chart */}
-              <div className="flex items-center justify-end space-x-2">
-                <DonutChart
-                  percentage={completionPercentage}
-                  tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
-                />
-                <span className="text-sm font-semibold text-gray-600">
-                  {completedTasksCount} / {filteredTasks.length} Done
-                </span>
-              </div>
-
-              {/* View Switcher - rightmost */}
-              <ViewSwitcher
-                currentView={viewMode}
-                onChange={setViewMode}
-                options={[
-                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                  { value: 'list', label: 'List', icon: List }
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-        <div className={styles.kanbanWrapper}>
-          {!selectedPhase ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-gray-500">Please select a phase to view tasks</div>
-            </div>
-          ) : isLoadingTasks ? (
-            <KanbanBoardSkeleton />
-          ) : (
-            <KanbanBoard
-              tasks={projectTasks}
-              phaseTasks={filteredTasks}
-              users={users}
-              taskTypes={taskTypes}
-              statuses={projectStatuses}
-              isAddingTask={isAddingTask}
-              selectedPhase={!!selectedPhase}
-              ticketLinks={phaseTicketLinks}
-              taskResources={phaseTaskResources}
-              taskDependencies={phaseTaskDependencies}
-              taskTags={taskTags}
-              taskDocumentCounts={taskDocumentCounts}
-              allTaskTags={allTaskTags}
-              projectTreeData={projectTreeData} // Pass project tree data
-              animatingTasks={animatingTasks}
-              avatarUrls={avatarUrls}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onAddCard={handleAddCard}
-              onTaskSelected={handleTaskSelected}
-              onAssigneeChange={handleAssigneeChange}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onReorderTasks={handleReorderTasks}
-              onMoveTaskClick={handleMoveTaskClick}
-              onDuplicateTaskClick={handleDuplicateTaskClick}
-              onEditTaskClick={handleTaskSelected}
-              onDeleteTaskClick={handleDeleteTaskClick}
-              onTaskTagsChange={handleTaskTagsChange}
-            />
-          )}
-        </div>
+      <div className={styles.kanbanWrapper}>
+        {isLoadingTasks ? (
+          <KanbanBoardSkeleton />
+        ) : (
+          <KanbanBoard
+            tasks={projectTasks}
+            phaseTasks={filteredTasks}
+            users={users}
+            taskTypes={taskTypes}
+            statuses={projectStatuses}
+            isAddingTask={isAddingTask}
+            selectedPhase={!!selectedPhase}
+            ticketLinks={phaseTicketLinks}
+            taskResources={phaseTaskResources}
+            taskDependencies={phaseTaskDependencies}
+            taskTags={taskTags}
+            taskDocumentCounts={taskDocumentCounts}
+            allTaskTags={allTaskTags}
+            projectTreeData={projectTreeData}
+            animatingTasks={animatingTasks}
+            avatarUrls={avatarUrls}
+            searchQuery={searchQuery}
+            searchCaseSensitive={searchCaseSensitive}
+            searchWholeWord={searchWholeWord}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onAddCard={handleAddCard}
+            onTaskSelected={handleTaskSelected}
+            onAssigneeChange={handleAssigneeChange}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onReorderTasks={handleReorderTasks}
+            onMoveTaskClick={handleMoveTaskClick}
+            onDuplicateTaskClick={handleDuplicateTaskClick}
+            onEditTaskClick={handleTaskSelected}
+            onDeleteTaskClick={handleDeleteTaskClick}
+            onTaskTagsChange={handleTaskTagsChange}
+          />
+        )}
       </div>
     );
   };
@@ -1654,51 +1880,69 @@ export default function ProjectDetail({
         onDragOver={handleDragOver}
       >
         <div className={styles.contentWrapper}>
-          {/* Hide phase panel when in list view */}
+          {/* Phases panel - collapsible in kanban view */}
           {viewMode === 'kanban' && (
-            <div className={styles.phasesList}>
-              <ProjectPhases
-              phases={projectPhases}
-              selectedPhase={selectedPhase}
-              isAddingTask={isAddingTask}
-              editingPhaseId={editingPhaseId}
-              editingPhaseName={editingPhaseName}
-              editingPhaseDescription={editingPhaseDescription}
-              editingStartDate={editingStartDate}
-              editingEndDate={editingEndDate}
-              phaseTaskCounts={phaseTaskCounts}
-              phaseDropTarget={phaseDropTarget}
-              taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass new state
-              animatingPhases={animatingPhases}
-              onPhaseSelect={handlePhaseSelect}
-              onAddTask={() => {
-                if (!selectedPhase) {
-                  toast.error('Please select a phase before adding a task.');
-                  return;
-                }
-                setCurrentPhase(selectedPhase);
-                setShowQuickAdd(true);
-              }}
-              onAddPhase={() => setShowPhaseQuickAdd(true)}
-              onEditPhase={handleEditPhase}
-              onSavePhase={handleSavePhase}
-              onCancelEdit={handleCancelEdit}
-              onDeletePhase={handleDeletePhaseClick}
-              onEditingPhaseNameChange={setEditingPhaseName}
-              onEditingPhaseDescriptionChange={setEditingPhaseDescription}
-              onEditingStartDateChange={setEditingStartDate}
-              onEditingEndDateChange={setEditingEndDate}
-              onDragOver={handlePhaseDragOver}
-              onDragLeave={handlePhaseDragLeave}
-              onDrop={handlePhaseDropZone}
-              onDragStart={handlePhaseDragStart}
-              onDragEnd={handlePhaseDragEnd}
-              onImport={() => setShowImportDialog(true)}
-            />
-          </div>
+            <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
+              {/* Toggle button */}
+              <button
+                onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
+                className={styles.phasesPanelToggle}
+                title={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+                aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+              >
+                <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Phases panel content */}
+              <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
+                <ProjectPhases
+                  phases={projectPhases}
+                  selectedPhase={selectedPhase}
+                  isAddingTask={isAddingTask}
+                  editingPhaseId={editingPhaseId}
+                  editingPhaseName={editingPhaseName}
+                  editingPhaseDescription={editingPhaseDescription}
+                  editingStartDate={editingStartDate}
+                  editingEndDate={editingEndDate}
+                  phaseTaskCounts={phaseTaskCounts}
+                  phaseDropTarget={phaseDropTarget}
+                  taskDraggingOverPhaseId={taskDraggingOverPhaseId}
+                  animatingPhases={animatingPhases}
+                  onPhaseSelect={handlePhaseSelect}
+                  onAddTask={() => {
+                    if (!selectedPhase) {
+                      toast.error('Please select a phase before adding a task.');
+                      return;
+                    }
+                    setCurrentPhase(selectedPhase);
+                    setShowQuickAdd(true);
+                  }}
+                  onAddPhase={() => setShowPhaseQuickAdd(true)}
+                  onEditPhase={handleEditPhase}
+                  onSavePhase={handleSavePhase}
+                  onCancelEdit={handleCancelEdit}
+                  onDeletePhase={handleDeletePhaseClick}
+                  onEditingPhaseNameChange={setEditingPhaseName}
+                  onEditingPhaseDescriptionChange={setEditingPhaseDescription}
+                  onEditingStartDateChange={setEditingStartDate}
+                  onEditingEndDateChange={setEditingEndDate}
+                  onDragOver={handlePhaseDragOver}
+                  onDragLeave={handlePhaseDragLeave}
+                  onDrop={handlePhaseDropZone}
+                  onDragStart={handlePhaseDragStart}
+                  onDragEnd={handlePhaseDragEnd}
+                  onImport={() => setShowImportDialog(true)}
+                />
+              </div>
+            </div>
           )}
-          <div className={styles.kanbanContainer}>
-            {renderContent()}
+          <div className={styles.kanbanArea}>
+            {/* Sticky header - stays fixed when scrolling */}
+            {renderHeader()}
+            {/* Scrollable content area */}
+            <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
+              {renderContent()}
+            </div>
           </div>
         </div>
       </div>
