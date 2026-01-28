@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.466Z",
+  "workflows": [
+    {
+      "key": "fixture.invoice-written-off-note",
+      "metadata": {
+        "name": "Fixture: Invoice Written Off Note",
+        "description": "Send an in-app notification when the event fires (INVOICE_WRITTEN_OFF).",
+        "payloadSchemaRef": "payload.InvoiceWrittenOff.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.InvoiceWrittenOff.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "INVOICE_WRITTEN_OFF"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.InvoiceWrittenOff.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "7d485401-20f7-e22c-9054-f11f1453e19a",
+          "version": 1,
+          "name": "Fixture: Invoice Written Off Note",
+          "description": "Send an in-app notification when the event fires (INVOICE_WRITTEN_OFF).",
+          "payloadSchemaRef": "payload.InvoiceWrittenOff.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "INVOICE_WRITTEN_OFF"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture invoice-written-off-note]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture invoice-written-off-note] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture invoice-written-off-note] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.invoice-written-off-note:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "7d485401-20f7-e22c-9054-f11f1453e19a",
+            "version": 1,
+            "name": "Fixture: Invoice Written Off Note",
+            "description": "Send an in-app notification when the event fires (INVOICE_WRITTEN_OFF).",
+            "payloadSchemaRef": "payload.InvoiceWrittenOff.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "INVOICE_WRITTEN_OFF"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture invoice-written-off-note]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture invoice-written-off-note] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture invoice-written-off-note] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.invoice-written-off-note:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

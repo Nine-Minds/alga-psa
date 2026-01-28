@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:56:14.255Z",
+  "workflows": [
+    {
+      "key": "fixture.project-task-completed-send-email",
+      "metadata": {
+        "name": "Fixture: Project Task Completed Note Email",
+        "description": "Send an in-app notification when the event fires (PROJECT_TASK_COMPLETED).",
+        "payloadSchemaRef": "payload.ProjectTaskCompleted.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskCompleted.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_TASK_COMPLETED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectTaskCompleted.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "2a7e66d7-f450-53e6-a1b0-beeb0a3b30f3",
+          "version": 1,
+          "name": "Fixture: Project Task Completed Note Email",
+          "description": "Send an in-app notification when the event fires (PROJECT_TASK_COMPLETED).",
+          "payloadSchemaRef": "payload.ProjectTaskCompleted.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_TASK_COMPLETED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-task-completed-send-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-task-completed-send-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-task-completed-send-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.projectId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture project-task-completed-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "2a7e66d7-f450-53e6-a1b0-beeb0a3b30f3",
+            "version": 1,
+            "name": "Fixture: Project Task Completed Note Email",
+            "description": "Send an in-app notification when the event fires (PROJECT_TASK_COMPLETED).",
+            "payloadSchemaRef": "payload.ProjectTaskCompleted.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_TASK_COMPLETED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-task-completed-send-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-task-completed-send-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-task-completed-send-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.projectId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture project-task-completed-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

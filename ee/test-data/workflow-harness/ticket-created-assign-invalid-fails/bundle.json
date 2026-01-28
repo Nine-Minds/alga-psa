@@ -1,0 +1,138 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-assign-invalid-fails",
+      "metadata": {
+        "name": "Fixture: Ticket Created → Assign Invalid (Expected FAIL)",
+        "description": "Negative fixture: assign to an invalid user id; run should FAIL with a clear ActionError.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.find", "version": 1 },
+          { "actionId": "tickets.assign", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f140",
+          "version": 1,
+          "name": "Fixture: Ticket Created → Assign Invalid (Expected FAIL)",
+          "description": "Negative fixture: assign to an invalid user id; run should FAIL with a clear ActionError.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+          "steps": [
+            { "id": "state-negative", "type": "state.set", "config": { "state": "NEGATIVE" } },
+            {
+              "id": "load-ticket",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.find",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "include": { "attributes": true }
+                },
+                "saveAs": "vars.lookup"
+              }
+            },
+            {
+              "id": "assign-bad-user",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.badAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_bad_assignee_user_id" }
+                }
+              }
+            },
+            {
+              "id": "assign-ticket",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.assign",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "assignee": { "type": "user", "id": { "$expr": "vars.badAssigneeUserId" } },
+                  "reason": "fixture negative invalid user"
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f140",
+            "version": 1,
+            "name": "Fixture: Ticket Created → Assign Invalid (Expected FAIL)",
+            "description": "Negative fixture: assign to an invalid user id; run should FAIL with a clear ActionError.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+            "steps": [
+              { "id": "state-negative", "type": "state.set", "config": { "state": "NEGATIVE" } },
+              {
+                "id": "load-ticket",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.find",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "include": { "attributes": true }
+                  },
+                  "saveAs": "vars.lookup"
+                }
+              },
+              {
+                "id": "assign-bad-user",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.badAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_bad_assignee_user_id" }
+                  }
+                }
+              },
+              {
+                "id": "assign-ticket",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.assign",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "assignee": { "type": "user", "id": { "$expr": "vars.badAssigneeUserId" } },
+                    "reason": "fixture negative invalid user"
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

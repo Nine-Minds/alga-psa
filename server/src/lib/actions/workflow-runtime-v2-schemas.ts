@@ -91,6 +91,26 @@ export const WorkflowIdInput = z.object({
   workflowId: z.string().min(1)
 });
 
+const pageNumber = z.preprocess(
+  (val) => (val === undefined || val === null || val === '' ? 1 : Number(val)),
+  z.number().int().positive()
+);
+
+const pageSizeNumber = z.preprocess(
+  (val) => (val === undefined || val === null || val === '' ? 20 : Number(val)),
+  z.number().int().positive().max(200)
+);
+
+export const ListWorkflowDefinitionsPagedInput = z.object({
+  page: pageNumber.default(1),
+  pageSize: pageSizeNumber.default(20),
+  search: z.string().optional(),
+  status: z.enum(['all', 'active', 'draft', 'paused']).optional(),
+  trigger: z.enum(['all', 'event', 'scheduled', 'manual']).optional(),
+  sortBy: z.enum(['name', 'status', 'updated_at', 'created_at']).optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional()
+});
+
 export const GetLatestWorkflowRunInput = z.object({
   workflowId: z.string().min(1),
   eventType: z.string().min(1).optional()

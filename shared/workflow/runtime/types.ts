@@ -1,11 +1,15 @@
 import { z } from 'zod';
 
 export const exprSchema = z.object({
-  $expr: z.string().optional().default('')  // Allow undefined/empty for drafts; runtime validates
-}).passthrough().transform((val) => {
-  // Normalize: keep only $expr, discard other keys (like empty string keys from corrupted data)
-  return { $expr: val.$expr ?? '' };
-});
+  // Allow empty expressions for drafts, but require the `$expr` key to be present so we can
+  // reliably distinguish expression objects from literal objects in input mappings.
+  $expr: z.string().optional()
+}).passthrough()
+  .refine((val) => Object.prototype.hasOwnProperty.call(val, '$expr'), { message: '$expr is required' })
+  .transform((val) => {
+    // Normalize: keep only $expr, discard other keys (like empty string keys from corrupted data)
+    return { $expr: val.$expr ?? '' };
+  });
 
 export type Expr = z.infer<typeof exprSchema>;
 

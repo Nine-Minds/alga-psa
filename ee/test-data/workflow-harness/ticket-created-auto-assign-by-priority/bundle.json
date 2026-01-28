@@ -1,0 +1,216 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-auto-assign-by-priority",
+      "metadata": {
+        "name": "Fixture: Ticket Created → Auto Assign by Priority",
+        "description": "Lookup the created ticket attributes and auto-assign when fixture_priority=high; add a comment describing the result.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.find", "version": 1 },
+          { "actionId": "tickets.assign", "version": 1 },
+          { "actionId": "tickets.add_comment", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.if", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f110",
+          "version": 1,
+          "name": "Fixture: Ticket Created → Auto Assign by Priority",
+          "description": "Lookup the created ticket attributes and auto-assign when fixture_priority=high; add a comment describing the result.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+          "steps": [
+            { "id": "state-auto-assign", "type": "state.set", "config": { "state": "AUTO_ASSIGN" } },
+            {
+              "id": "load-ticket",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.find",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "include": { "attributes": true }
+                },
+                "saveAs": "vars.lookup"
+              }
+            },
+            {
+              "id": "assign-fixture-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.fixturePriority": { "$expr": "vars.lookup.ticket.attributes.fixture_priority" },
+                  "vars.fixtureAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_assignee_user_id" }
+                }
+              }
+            },
+            {
+              "id": "if-high-priority",
+              "type": "control.if",
+              "condition": { "$expr": "vars.fixturePriority == 'high'" },
+              "then": [
+                {
+                  "id": "assign-ticket",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.assign",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": { "$expr": "payload.ticketId" },
+                      "assignee": { "type": "user", "id": { "$expr": "vars.fixtureAssigneeUserId" } },
+                      "reason": "fixture_priority=high"
+                    }
+                  }
+                },
+                {
+                  "id": "comment-assigned",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": { "$expr": "payload.ticketId" },
+                      "body": {
+                        "$expr": "'[fixture ticket-created-auto-assign-by-priority] assigned_to=' & vars.fixtureAssigneeUserId"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                { "id": "return-after-assign", "type": "control.return" }
+              ],
+              "else": [
+                {
+                  "id": "comment-skipped",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": { "$expr": "payload.ticketId" },
+                      "body": { "$expr": "'[fixture ticket-created-auto-assign-by-priority] skipped'" },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                { "id": "return-after-skip", "type": "control.return" }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f110",
+            "version": 1,
+            "name": "Fixture: Ticket Created → Auto Assign by Priority",
+            "description": "Lookup the created ticket attributes and auto-assign when fixture_priority=high; add a comment describing the result.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+            "steps": [
+              { "id": "state-auto-assign", "type": "state.set", "config": { "state": "AUTO_ASSIGN" } },
+              {
+                "id": "load-ticket",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.find",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "include": { "attributes": true }
+                  },
+                  "saveAs": "vars.lookup"
+                }
+              },
+              {
+                "id": "assign-fixture-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.fixturePriority": { "$expr": "vars.lookup.ticket.attributes.fixture_priority" },
+                    "vars.fixtureAssigneeUserId": { "$expr": "vars.lookup.ticket.attributes.fixture_assignee_user_id" }
+                  }
+                }
+              },
+              {
+                "id": "if-high-priority",
+                "type": "control.if",
+                "condition": { "$expr": "vars.fixturePriority == 'high'" },
+                "then": [
+                  {
+                    "id": "assign-ticket",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.assign",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": { "$expr": "payload.ticketId" },
+                        "assignee": { "type": "user", "id": { "$expr": "vars.fixtureAssigneeUserId" } },
+                        "reason": "fixture_priority=high"
+                      }
+                    }
+                  },
+                  {
+                    "id": "comment-assigned",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": { "$expr": "payload.ticketId" },
+                        "body": {
+                          "$expr": "'[fixture ticket-created-auto-assign-by-priority] assigned_to=' & vars.fixtureAssigneeUserId"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  { "id": "return-after-assign", "type": "control.return" }
+                ],
+                "else": [
+                  {
+                    "id": "comment-skipped",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": { "$expr": "payload.ticketId" },
+                        "body": { "$expr": "'[fixture ticket-created-auto-assign-by-priority] skipped'" },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  { "id": "return-after-skip", "type": "control.return" }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

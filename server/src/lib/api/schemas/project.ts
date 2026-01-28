@@ -22,6 +22,7 @@ export const projectStatusSchema = z.union([
 // Create project schema
 export const createProjectSchema = z.object({
   client_id: uuidSchema,
+  project_number: z.string().min(1).max(50).optional(),
   project_name: z.string().min(1, 'Project name is required').max(255),
   description: z.string().optional(),
   start_date: dateSchema.optional(),
@@ -67,6 +68,7 @@ export const projectListQuerySchema = createListQuerySchema(projectFilterSchema)
 export const projectResponseSchema = z.object({
   project_id: uuidSchema,
   client_id: uuidSchema,
+  project_number: z.string(),
   project_name: z.string(),
   description: z.string().nullable(),
   start_date: dateSchema.nullable(),

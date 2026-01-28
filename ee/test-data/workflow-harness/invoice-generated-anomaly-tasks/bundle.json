@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.453Z",
+  "workflows": [
+    {
+      "key": "fixture.invoice-generated-anomaly-tasks",
+      "metadata": {
+        "name": "Fixture: Invoice Generated Anomaly Tasks",
+        "description": "Send an in-app notification when the event fires (INVOICE_GENERATED).",
+        "payloadSchemaRef": "payload.InvoiceGenerated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.InvoiceGenerated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "INVOICE_GENERATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.InvoiceGenerated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "d35d3485-7e5f-3d51-a5f9-b27e47caf87b",
+          "version": 1,
+          "name": "Fixture: Invoice Generated Anomaly Tasks",
+          "description": "Send an in-app notification when the event fires (INVOICE_GENERATED).",
+          "payloadSchemaRef": "payload.InvoiceGenerated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "INVOICE_GENERATED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture invoice-generated-anomaly-tasks]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture invoice-generated-anomaly-tasks] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture invoice-generated-anomaly-tasks] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.invoice-generated-anomaly-tasks:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "d35d3485-7e5f-3d51-a5f9-b27e47caf87b",
+            "version": 1,
+            "name": "Fixture: Invoice Generated Anomaly Tasks",
+            "description": "Send an in-app notification when the event fires (INVOICE_GENERATED).",
+            "payloadSchemaRef": "payload.InvoiceGenerated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "INVOICE_GENERATED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture invoice-generated-anomaly-tasks]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture invoice-generated-anomaly-tasks] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture invoice-generated-anomaly-tasks] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.invoice-generated-anomaly-tasks:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

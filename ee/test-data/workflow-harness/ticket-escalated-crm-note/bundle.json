@@ -1,0 +1,147 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-escalated-crm-note",
+      "metadata": {
+        "name": "Fixture: Ticket Escalated → CRM Note",
+        "description": "On escalation, create a CRM activity note and notify a manager.",
+        "payloadSchemaRef": "payload.TicketEscalated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketEscalated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_ESCALATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "crm.create_activity_note", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketEscalated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f112",
+          "version": 1,
+          "name": "Fixture: Ticket Escalated → CRM Note",
+          "description": "Creates CRM note and sends internal notification.",
+          "payloadSchemaRef": "payload.TicketEscalated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_ESCALATED" },
+          "steps": [
+            { "id": "state-escalated", "type": "state.set", "config": { "state": "ESCALATED" } },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-escalated-crm-note]'" },
+                  "vars.note": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" },
+                  "vars.title": { "$expr": "'[fixture ticket-escalated-crm-note] Ticket escalated'" },
+                  "vars.body": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "create-crm-note",
+              "type": "action.call",
+              "config": {
+                "actionId": "crm.create_activity_note",
+                "version": 1,
+                "inputMapping": {
+                  "target": { "$expr": "{\"type\": \"client\", \"id\": payload.fixtureClientId}" },
+                  "body": { "$expr": "vars.note" },
+                  "visibility": "internal"
+                }
+              }
+            },
+            {
+              "id": "notify-manager",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
+                  "title": { "$expr": "vars.title" },
+                  "body": { "$expr": "vars.body" },
+                  "severity": "warning",
+                  "dedupe_key": { "$expr": "'fixture.ticket-escalated-crm-note:notify:' & payload.ticketId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f112",
+            "version": 1,
+            "name": "Fixture: Ticket Escalated → CRM Note",
+            "description": "Creates CRM note and sends internal notification.",
+            "payloadSchemaRef": "payload.TicketEscalated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_ESCALATED" },
+            "steps": [
+              { "id": "state-escalated", "type": "state.set", "config": { "state": "ESCALATED" } },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-escalated-crm-note]'" },
+                    "vars.note": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" },
+                    "vars.title": { "$expr": "'[fixture ticket-escalated-crm-note] Ticket escalated'" },
+                    "vars.body": { "$expr": "'[fixture ticket-escalated-crm-note] ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "create-crm-note",
+                "type": "action.call",
+                "config": {
+                  "actionId": "crm.create_activity_note",
+                  "version": 1,
+                  "inputMapping": {
+                    "target": { "$expr": "{\"type\": \"client\", \"id\": payload.fixtureClientId}" },
+                    "body": { "$expr": "vars.note" },
+                    "visibility": "internal"
+                  }
+                }
+              },
+              {
+                "id": "notify-manager",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
+                    "title": { "$expr": "vars.title" },
+                    "body": { "$expr": "vars.body" },
+                    "severity": "warning",
+                    "dedupe_key": { "$expr": "'fixture.ticket-escalated-crm-note:notify:' & payload.ticketId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

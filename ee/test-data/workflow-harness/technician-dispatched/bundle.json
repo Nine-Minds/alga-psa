@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.638Z",
+  "workflows": [
+    {
+      "key": "fixture.technician-dispatched",
+      "metadata": {
+        "name": "Fixture: Technician Dispatched",
+        "description": "Send an in-app notification when the event fires (TECHNICIAN_DISPATCHED).",
+        "payloadSchemaRef": "payload.TechnicianDispatched.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TechnicianDispatched.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TECHNICIAN_DISPATCHED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TechnicianDispatched.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "da431d8c-26d6-e43d-e774-6e8ecd2b6153",
+          "version": 1,
+          "name": "Fixture: Technician Dispatched",
+          "description": "Send an in-app notification when the event fires (TECHNICIAN_DISPATCHED).",
+          "payloadSchemaRef": "payload.TechnicianDispatched.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TECHNICIAN_DISPATCHED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture technician-dispatched]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture technician-dispatched] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture technician-dispatched] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.technician-dispatched:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "da431d8c-26d6-e43d-e774-6e8ecd2b6153",
+            "version": 1,
+            "name": "Fixture: Technician Dispatched",
+            "description": "Send an in-app notification when the event fires (TECHNICIAN_DISPATCHED).",
+            "payloadSchemaRef": "payload.TechnicianDispatched.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TECHNICIAN_DISPATCHED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture technician-dispatched]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture technician-dispatched] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture technician-dispatched] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.technician-dispatched:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

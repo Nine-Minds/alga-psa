@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.490Z",
+  "workflows": [
+    {
+      "key": "fixture.project-closed-notify-stakeholders",
+      "metadata": {
+        "name": "Fixture: Project Closed Notify Stakeholders",
+        "description": "Send an in-app notification when the event fires (PROJECT_CLOSED).",
+        "payloadSchemaRef": "payload.ProjectClosed.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectClosed.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_CLOSED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectClosed.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "f5cbfd7b-16c6-622a-b22f-6d0f0763d352",
+          "version": 1,
+          "name": "Fixture: Project Closed Notify Stakeholders",
+          "description": "Send an in-app notification when the event fires (PROJECT_CLOSED).",
+          "payloadSchemaRef": "payload.ProjectClosed.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_CLOSED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-closed-notify-stakeholders]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-closed-notify-stakeholders] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-closed-notify-stakeholders] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-closed-notify-stakeholders:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "f5cbfd7b-16c6-622a-b22f-6d0f0763d352",
+            "version": 1,
+            "name": "Fixture: Project Closed Notify Stakeholders",
+            "description": "Send an in-app notification when the event fires (PROJECT_CLOSED).",
+            "payloadSchemaRef": "payload.ProjectClosed.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_CLOSED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-closed-notify-stakeholders]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-closed-notify-stakeholders] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-closed-notify-stakeholders] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-closed-notify-stakeholders:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:09:36.193Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-foreach-assign-with-errors",
+      "metadata": {
+        "name": "Fixture: Ticket Created Foreach Onitemerror Continue",
+        "description": "For each generated item, send an in-app notification (TICKET_CREATED).",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.forEach"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "17225387-cd9f-2e36-59aa-68410d1f266f",
+          "version": 1,
+          "name": "Fixture: Ticket Created Foreach Onitemerror Continue",
+          "description": "For each generated item, send an in-app notification (TICKET_CREATED).",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_CREATED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-created-foreach-assign-with-errors]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-foreach-assign-with-errors] ForEach notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-created-foreach-assign-with-errors] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "for-each-item",
+              "type": "control.forEach",
+              "items": {
+                "$expr": "[{ \"i\": 0, \"userId\": payload.fixtureNotifyUserId }, { \"i\": 1, \"userId\": payload.fixtureNotifyUserId }]"
+              },
+              "itemVar": "item",
+              "body": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-foreach-assign-with-errors]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                }
+              ],
+              "onItemError": "continue"
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "17225387-cd9f-2e36-59aa-68410d1f266f",
+            "version": 1,
+            "name": "Fixture: Ticket Created Foreach Onitemerror Continue",
+            "description": "For each generated item, send an in-app notification (TICKET_CREATED).",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_CREATED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-created-foreach-assign-with-errors]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-created-foreach-assign-with-errors] ForEach notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-created-foreach-assign-with-errors] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "for-each-item",
+                "type": "control.forEach",
+                "items": {
+                  "$expr": "[{ \"i\": 0, \"userId\": payload.fixtureNotifyUserId }, { \"i\": 1, \"userId\": payload.fixtureNotifyUserId }]"
+                },
+                "itemVar": "item",
+                "body": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-foreach-assign-with-errors]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  }
+                ],
+                "onItemError": "continue"
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,202 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:09:36.207Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-response-send-reminder-email",
+      "metadata": {
+        "name": "Fixture: Ticket Response Awaiting Reply Reminder",
+        "description": "Send an in-app notification when the event fires (TICKET_RESPONSE_STATE_CHANGED).",
+        "payloadSchemaRef": "payload.TicketResponseStateChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketResponseStateChanged.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_RESPONSE_STATE_CHANGED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketResponseStateChanged.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "430cc5d9-459d-0730-a797-2d2a3ea40370",
+          "version": 1,
+          "name": "Fixture: Ticket Response Awaiting Reply Reminder",
+          "description": "Send an in-app notification when the event fires (TICKET_RESPONSE_STATE_CHANGED).",
+          "payloadSchemaRef": "payload.TicketResponseStateChanged.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_RESPONSE_STATE_CHANGED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-response-send-reminder-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-response-send-reminder-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-response-send-reminder-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-response-send-reminder-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "430cc5d9-459d-0730-a797-2d2a3ea40370",
+            "version": 1,
+            "name": "Fixture: Ticket Response Awaiting Reply Reminder",
+            "description": "Send an in-app notification when the event fires (TICKET_RESPONSE_STATE_CHANGED).",
+            "payloadSchemaRef": "payload.TicketResponseStateChanged.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_RESPONSE_STATE_CHANGED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-response-send-reminder-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-response-send-reminder-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-response-send-reminder-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-response-send-reminder-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T20:01:23.268Z",
+  "workflows": [
+    {
+      "key": "fixture.schedule-entry-updated-send-email",
+      "metadata": {
+        "name": "Fixture: Schedule Entry Updated Email Note",
+        "description": "Send an in-app notification when the event fires (SCHEDULE_ENTRY_UPDATED).",
+        "payloadSchemaRef": "payload.ScheduleEntryUpdated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ScheduleEntryUpdated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "SCHEDULE_ENTRY_UPDATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ScheduleEntryUpdated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "0aabb982-6995-1d21-3835-f0c2d3df6ea3",
+          "version": 1,
+          "name": "Fixture: Schedule Entry Updated Email Note",
+          "description": "Send an in-app notification when the event fires (SCHEDULE_ENTRY_UPDATED).",
+          "payloadSchemaRef": "payload.ScheduleEntryUpdated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "SCHEDULE_ENTRY_UPDATED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture schedule-entry-updated-send-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture schedule-entry-updated-send-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture schedule-entry-updated-send-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.entryId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture schedule-entry-updated-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "0aabb982-6995-1d21-3835-f0c2d3df6ea3",
+            "version": 1,
+            "name": "Fixture: Schedule Entry Updated Email Note",
+            "description": "Send an in-app notification when the event fires (SCHEDULE_ENTRY_UPDATED).",
+            "payloadSchemaRef": "payload.ScheduleEntryUpdated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "SCHEDULE_ENTRY_UPDATED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture schedule-entry-updated-send-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture schedule-entry-updated-send-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture schedule-entry-updated-send-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.entryId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture schedule-entry-updated-send-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

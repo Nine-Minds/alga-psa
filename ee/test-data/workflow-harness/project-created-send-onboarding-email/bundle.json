@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:56:14.251Z",
+  "workflows": [
+    {
+      "key": "fixture.project-created-send-onboarding-email",
+      "metadata": {
+        "name": "Fixture: Project Created Onboarding Email",
+        "description": "Send an in-app notification when the event fires (PROJECT_CREATED).",
+        "payloadSchemaRef": "payload.ProjectCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "41a69b61-f365-c744-d114-5f24dfe8a2ed",
+          "version": 1,
+          "name": "Fixture: Project Created Onboarding Email",
+          "description": "Send an in-app notification when the event fires (PROJECT_CREATED).",
+          "payloadSchemaRef": "payload.ProjectCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_CREATED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-created-send-onboarding-email]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-created-send-onboarding-email] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-created-send-onboarding-email] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.projectId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture project-created-send-onboarding-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "41a69b61-f365-c744-d114-5f24dfe8a2ed",
+            "version": 1,
+            "name": "Fixture: Project Created Onboarding Email",
+            "description": "Send an in-app notification when the event fires (PROJECT_CREATED).",
+            "payloadSchemaRef": "payload.ProjectCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_CREATED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-created-send-onboarding-email]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-created-send-onboarding-email] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-created-send-onboarding-email] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.projectId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture project-created-send-onboarding-email]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

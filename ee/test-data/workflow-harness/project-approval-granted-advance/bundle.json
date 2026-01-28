@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.475Z",
+  "workflows": [
+    {
+      "key": "fixture.project-approval-granted-advance",
+      "metadata": {
+        "name": "Fixture: Project Approval Granted Advance",
+        "description": "Send an in-app notification when the event fires (PROJECT_APPROVAL_GRANTED).",
+        "payloadSchemaRef": "payload.ProjectApprovalGranted.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectApprovalGranted.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_APPROVAL_GRANTED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectApprovalGranted.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "079fef56-a5c5-9d9d-e68a-9914f8c3a0ab",
+          "version": 1,
+          "name": "Fixture: Project Approval Granted Advance",
+          "description": "Send an in-app notification when the event fires (PROJECT_APPROVAL_GRANTED).",
+          "payloadSchemaRef": "payload.ProjectApprovalGranted.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_APPROVAL_GRANTED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-approval-granted-advance]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-approval-granted-advance] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-approval-granted-advance] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-approval-granted-advance:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "079fef56-a5c5-9d9d-e68a-9914f8c3a0ab",
+            "version": 1,
+            "name": "Fixture: Project Approval Granted Advance",
+            "description": "Send an in-app notification when the event fires (PROJECT_APPROVAL_GRANTED).",
+            "payloadSchemaRef": "payload.ProjectApprovalGranted.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_APPROVAL_GRANTED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-approval-granted-advance]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-approval-granted-advance] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-approval-granted-advance] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-approval-granted-advance:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.423Z",
+  "workflows": [
+    {
+      "key": "fixture.appointment-request-approved",
+      "metadata": {
+        "name": "Fixture: Appointment Request Approved",
+        "description": "Send an in-app notification when the event fires (APPOINTMENT_REQUEST_APPROVED).",
+        "payloadSchemaRef": "payload.AppointmentRequestApproved.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.AppointmentRequestApproved.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "APPOINTMENT_REQUEST_APPROVED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.AppointmentRequestApproved.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "e296be01-3a5a-60b8-624b-a4a310412220",
+          "version": 1,
+          "name": "Fixture: Appointment Request Approved",
+          "description": "Send an in-app notification when the event fires (APPOINTMENT_REQUEST_APPROVED).",
+          "payloadSchemaRef": "payload.AppointmentRequestApproved.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "APPOINTMENT_REQUEST_APPROVED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture appointment-request-approved]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture appointment-request-approved] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture appointment-request-approved] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.appointment-request-approved:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "e296be01-3a5a-60b8-624b-a4a310412220",
+            "version": 1,
+            "name": "Fixture: Appointment Request Approved",
+            "description": "Send an in-app notification when the event fires (APPOINTMENT_REQUEST_APPROVED).",
+            "payloadSchemaRef": "payload.AppointmentRequestApproved.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "APPOINTMENT_REQUEST_APPROVED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture appointment-request-approved]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture appointment-request-approved] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture appointment-request-approved] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.appointment-request-approved:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

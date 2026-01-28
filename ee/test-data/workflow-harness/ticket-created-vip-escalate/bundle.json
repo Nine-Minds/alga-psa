@@ -1,0 +1,252 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:09:36.204Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-vip-escalate",
+      "metadata": {
+        "name": "Fixture: Ticket Created → VIP Notify",
+        "description": "If the created ticket is marked VIP via fixture attribute, send an in-app notification to dispatch.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.find",
+            "version": 1
+          },
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.if",
+          "control.return",
+          "state.set",
+          "transform.assign"
+        ],
+        "schemaRefs": [
+          "payload.TicketCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f120",
+          "version": 1,
+          "name": "Fixture: Ticket Created → VIP Notify",
+          "description": "If the created ticket is marked VIP via fixture attribute, send an in-app notification to dispatch.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_CREATED"
+          },
+          "steps": [
+            {
+              "id": "state-vip",
+              "type": "state.set",
+              "config": {
+                "state": "VIP"
+              }
+            },
+            {
+              "id": "load-ticket",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.find",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": {
+                    "$expr": "payload.ticketId"
+                  },
+                  "include": {
+                    "attributes": true
+                  }
+                },
+                "saveAs": "vars.lookup"
+              }
+            },
+            {
+              "id": "assign-fixture-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.fixtureIsVip": {
+                    "$expr": "vars.lookup.ticket.attributes.fixture_is_vip ? vars.lookup.ticket.attributes.fixture_is_vip : true"
+                  },
+                  "vars.fixtureNotifyUserId": {
+                    "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id ? vars.lookup.ticket.attributes.fixture_notify_user_id : payload.fixtureNotifyUserId"
+                  },
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-created-vip-escalate]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-created-vip-escalate] VIP ticket created'"
+                  },
+                  "vars.body": {
+                    "$expr": "'ticketId=' & payload.ticketId"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-vip",
+              "type": "control.if",
+              "condition": {
+                "$expr": "vars.fixtureIsVip"
+              },
+              "then": [
+                {
+                  "id": "notify-dispatch",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-vip-escalate]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f120",
+            "version": 1,
+            "name": "Fixture: Ticket Created → VIP Notify",
+            "description": "If the created ticket is marked VIP via fixture attribute, send an in-app notification to dispatch.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_CREATED"
+            },
+            "steps": [
+              {
+                "id": "state-vip",
+                "type": "state.set",
+                "config": {
+                  "state": "VIP"
+                }
+              },
+              {
+                "id": "load-ticket",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.find",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": {
+                      "$expr": "payload.ticketId"
+                    },
+                    "include": {
+                      "attributes": true
+                    }
+                  },
+                  "saveAs": "vars.lookup"
+                }
+              },
+              {
+                "id": "assign-fixture-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                  "vars.fixtureIsVip": {
+                    "$expr": "vars.lookup.ticket.attributes.fixture_is_vip ? vars.lookup.ticket.attributes.fixture_is_vip : true"
+                  },
+                  "vars.fixtureNotifyUserId": {
+                    "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_id ? vars.lookup.ticket.attributes.fixture_notify_user_id : payload.fixtureNotifyUserId"
+                  },
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-created-vip-escalate]'"
+                  },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-created-vip-escalate] VIP ticket created'"
+                    },
+                    "vars.body": {
+                      "$expr": "'ticketId=' & payload.ticketId"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-vip",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "vars.fixtureIsVip"
+                },
+                "then": [
+                  {
+                    "id": "notify-dispatch",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-created-vip-escalate]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

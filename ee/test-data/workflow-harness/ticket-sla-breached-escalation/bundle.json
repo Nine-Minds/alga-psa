@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.726Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-sla-breached-escalation",
+      "metadata": {
+        "name": "Fixture: Ticket Sla Breached Escalation",
+        "description": "Send an in-app notification when the event fires (TICKET_SLA_STAGE_BREACHED).",
+        "payloadSchemaRef": "payload.TicketSlaStageBreached.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketSlaStageBreached.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_SLA_STAGE_BREACHED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketSlaStageBreached.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "e0d6bc5a-0191-b921-6f4e-703b3338a278",
+          "version": 1,
+          "name": "Fixture: Ticket Sla Breached Escalation",
+          "description": "Send an in-app notification when the event fires (TICKET_SLA_STAGE_BREACHED).",
+          "payloadSchemaRef": "payload.TicketSlaStageBreached.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_SLA_STAGE_BREACHED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-sla-breached-escalation]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-sla-breached-escalation] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-sla-breached-escalation] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-sla-breached-escalation:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "e0d6bc5a-0191-b921-6f4e-703b3338a278",
+            "version": 1,
+            "name": "Fixture: Ticket Sla Breached Escalation",
+            "description": "Send an in-app notification when the event fires (TICKET_SLA_STAGE_BREACHED).",
+            "payloadSchemaRef": "payload.TicketSlaStageBreached.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_SLA_STAGE_BREACHED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-sla-breached-escalation]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-sla-breached-escalation] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-sla-breached-escalation] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-sla-breached-escalation:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

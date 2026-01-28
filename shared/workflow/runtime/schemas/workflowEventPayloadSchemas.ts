@@ -5,6 +5,10 @@ import {
   inboundEmailReceivedEventPayloadSchema,
 } from './emailWorkflowSchemas';
 import {
+  appointmentRequestApprovedEventPayloadSchema,
+  appointmentRequestCancelledEventPayloadSchema,
+  appointmentRequestCreatedEventPayloadSchema,
+  appointmentRequestDeclinedEventPayloadSchema,
   appointmentAssignedEventPayloadSchema,
   appointmentCanceledEventPayloadSchema,
   appointmentCompletedEventPayloadSchema,
@@ -14,6 +18,9 @@ import {
   capacityThresholdReachedEventPayloadSchema,
   scheduleBlockCreatedEventPayloadSchema,
   scheduleBlockDeletedEventPayloadSchema,
+  scheduleEntryCreatedEventPayloadSchema,
+  scheduleEntryDeletedEventPayloadSchema,
+  scheduleEntryUpdatedEventPayloadSchema,
   technicianArrivedEventPayloadSchema,
   technicianCheckedOutEventPayloadSchema,
   technicianDispatchedEventPayloadSchema,
@@ -23,8 +30,11 @@ import {
   projectApprovalGrantedEventPayloadSchema,
   projectApprovalRejectedEventPayloadSchema,
   projectApprovalRequestedEventPayloadSchema,
+  projectAssignedEventPayloadSchema,
+  projectClosedEventPayloadSchema,
   projectCreatedEventPayloadSchema,
   projectStatusChangedEventPayloadSchema,
+  projectTaskAdditionalAgentAssignedEventPayloadSchema,
   projectTaskAssignedEventPayloadSchema,
   projectTaskCompletedEventPayloadSchema,
   projectTaskCreatedEventPayloadSchema,
@@ -32,7 +42,10 @@ import {
   projectTaskDependencyUnblockedEventPayloadSchema,
   projectTaskStatusChangedEventPayloadSchema,
   projectUpdatedEventPayloadSchema,
+  taskCommentAddedEventPayloadSchema,
+  taskCommentUpdatedEventPayloadSchema,
 } from './projectEventSchemas';
+import { timeEntryApprovedEventPayloadSchema, timeEntrySubmittedEventPayloadSchema } from './timeEventSchemas';
 import {
   contractCreatedEventPayloadSchema,
   contractRenewalUpcomingEventPayloadSchema,
@@ -126,11 +139,13 @@ import {
   mediaProcessingSucceededEventPayloadSchema,
 } from './assetMediaEventSchemas';
 import {
+  ticketAdditionalAgentAssignedEventPayloadSchema,
   ticketApprovalGrantedEventPayloadSchema,
   ticketApprovalRejectedEventPayloadSchema,
   ticketApprovalRequestedEventPayloadSchema,
   ticketAssignedEventPayloadSchema,
   ticketClosedEventPayloadSchema,
+  ticketCommentAddedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
@@ -169,6 +184,8 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.TicketStatusChanged.v1': ticketStatusChangedEventPayloadSchema,
   'payload.TicketPriorityChanged.v1': ticketPriorityChangedEventPayloadSchema,
   'payload.TicketAssigned.v1': ticketAssignedEventPayloadSchema,
+  'payload.TicketAdditionalAgentAssigned.v1': ticketAdditionalAgentAssignedEventPayloadSchema,
+  'payload.TicketCommentAdded.v1': ticketCommentAddedEventPayloadSchema,
   'payload.TicketUnassigned.v1': ticketUnassignedEventPayloadSchema,
   'payload.TicketReopened.v1': ticketReopenedEventPayloadSchema,
   'payload.TicketMerged.v1': ticketMergedEventPayloadSchema,
@@ -188,6 +205,13 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.TicketApprovalRejected.v1': ticketApprovalRejectedEventPayloadSchema,
 
   // Scheduling
+  'payload.AppointmentRequestCreated.v1': appointmentRequestCreatedEventPayloadSchema,
+  'payload.AppointmentRequestApproved.v1': appointmentRequestApprovedEventPayloadSchema,
+  'payload.AppointmentRequestDeclined.v1': appointmentRequestDeclinedEventPayloadSchema,
+  'payload.AppointmentRequestCancelled.v1': appointmentRequestCancelledEventPayloadSchema,
+  'payload.ScheduleEntryCreated.v1': scheduleEntryCreatedEventPayloadSchema,
+  'payload.ScheduleEntryUpdated.v1': scheduleEntryUpdatedEventPayloadSchema,
+  'payload.ScheduleEntryDeleted.v1': scheduleEntryDeletedEventPayloadSchema,
   'payload.AppointmentCreated.v1': appointmentCreatedEventPayloadSchema,
   'payload.AppointmentRescheduled.v1': appointmentRescheduledEventPayloadSchema,
   'payload.AppointmentCanceled.v1': appointmentCanceledEventPayloadSchema,
@@ -203,10 +227,13 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.TechnicianCheckedOut.v1': technicianCheckedOutEventPayloadSchema,
 
   // Projects
+  'payload.ProjectAssigned.v1': projectAssignedEventPayloadSchema,
+  'payload.ProjectClosed.v1': projectClosedEventPayloadSchema,
   'payload.ProjectUpdated.v1': projectUpdatedEventPayloadSchema,
   'payload.ProjectStatusChanged.v1': projectStatusChangedEventPayloadSchema,
   'payload.ProjectTaskCreated.v1': projectTaskCreatedEventPayloadSchema,
   'payload.ProjectTaskAssigned.v1': projectTaskAssignedEventPayloadSchema,
+  'payload.ProjectTaskAdditionalAgentAssigned.v1': projectTaskAdditionalAgentAssignedEventPayloadSchema,
   'payload.ProjectTaskStatusChanged.v1': projectTaskStatusChangedEventPayloadSchema,
   'payload.ProjectTaskCompleted.v1': projectTaskCompletedEventPayloadSchema,
   'payload.ProjectTaskDependencyBlocked.v1': projectTaskDependencyBlockedEventPayloadSchema,
@@ -214,6 +241,12 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.ProjectApprovalRequested.v1': projectApprovalRequestedEventPayloadSchema,
   'payload.ProjectApprovalGranted.v1': projectApprovalGrantedEventPayloadSchema,
   'payload.ProjectApprovalRejected.v1': projectApprovalRejectedEventPayloadSchema,
+  'payload.TaskCommentAdded.v1': taskCommentAddedEventPayloadSchema,
+  'payload.TaskCommentUpdated.v1': taskCommentUpdatedEventPayloadSchema,
+
+  // Time
+  'payload.TimeEntrySubmitted.v1': timeEntrySubmittedEventPayloadSchema,
+  'payload.TimeEntryApproved.v1': timeEntryApprovedEventPayloadSchema,
 
   // Billing
   'payload.InvoiceSent.v1': invoiceSentEventPayloadSchema,

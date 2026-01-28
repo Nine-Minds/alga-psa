@@ -1,0 +1,202 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T18:28:02.984Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-approval-requested-create-task",
+      "metadata": {
+        "name": "Fixture: Ticket Approval Requested Notify",
+        "description": "Send an in-app notification when the event fires (TICKET_APPROVAL_REQUESTED).",
+        "payloadSchemaRef": "payload.TicketApprovalRequested.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketApprovalRequested.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_APPROVAL_REQUESTED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "tickets.add_comment",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketApprovalRequested.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "c5bc04c4-cd43-5aa7-f20e-88326e0b3bf7",
+          "version": 1,
+          "name": "Fixture: Ticket Approval Requested Notify",
+          "description": "Send an in-app notification when the event fires (TICKET_APPROVAL_REQUESTED).",
+          "payloadSchemaRef": "payload.TicketApprovalRequested.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_APPROVAL_REQUESTED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-approval-requested-create-task]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-approval-requested-create-task] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-approval-requested-create-task] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.add_comment",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "body": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture ticket-approval-requested-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      },
+                      "visibility": "internal"
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "c5bc04c4-cd43-5aa7-f20e-88326e0b3bf7",
+            "version": 1,
+            "name": "Fixture: Ticket Approval Requested Notify",
+            "description": "Send an in-app notification when the event fires (TICKET_APPROVAL_REQUESTED).",
+            "payloadSchemaRef": "payload.TicketApprovalRequested.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_APPROVAL_REQUESTED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-approval-requested-create-task]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-approval-requested-create-task] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-approval-requested-create-task] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.add_comment",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "body": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture ticket-approval-requested-create-task]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        },
+                        "visibility": "internal"
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

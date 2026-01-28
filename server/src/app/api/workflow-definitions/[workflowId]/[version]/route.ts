@@ -5,11 +5,12 @@ import {
   updateWorkflowDefinitionDraftAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 
-export async function GET(_req: NextRequest, { params }: { params: { workflowId: string; version: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ workflowId: string; version: string }> }) {
   try {
+    const resolvedParams = await params;
     const record = await getWorkflowDefinitionVersionAction({
-      workflowId: params.workflowId,
-      version: params.version
+      workflowId: resolvedParams.workflowId,
+      version: resolvedParams.version
     });
     return NextResponse.json(record);
   } catch (error) {
@@ -17,11 +18,12 @@ export async function GET(_req: NextRequest, { params }: { params: { workflowId:
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { workflowId: string; version: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ workflowId: string; version: string }> }) {
   try {
+    const resolvedParams = await params;
     const body = await req.json();
     const updated = await updateWorkflowDefinitionDraftAction({
-      workflowId: params.workflowId,
+      workflowId: resolvedParams.workflowId,
       definition: body?.definition ?? body
     });
     return NextResponse.json(updated);

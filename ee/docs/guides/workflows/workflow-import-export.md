@@ -45,11 +45,11 @@ Import runs all database writes in a single transaction and rolls back on any er
 
 Create/upsert policies:
 - **Create-only (default):** if a workflow with the same `key` already exists, import fails.
-- **Force overwrite (opt-in):** if `force=true`, import deletes the existing workflow (matched by `key`) and recreates it with a new `workflow_id`.
+- **Force overwrite (opt-in):** if `force=true`, import overwrites the existing workflow (matched by `key`) in place, preserving `workflow_id`. Published versions are replaced to match the bundle.
 
 ## Fidelity scope (v1)
 Import/export aims to preserve functional workflow behavior and operational settings (draft + published versions + trigger + payload schema configuration + operational flags).
 
 Not preserved:
 - Audit fields (`created_at`, `updated_at`, `published_at`, actor ids)
-- Database ids (including version ids); `workflow_id` is always regenerated on import
+- Database ids (including version ids); `workflow_id` is generated when creating new workflows (and preserved when overwriting by `key`)

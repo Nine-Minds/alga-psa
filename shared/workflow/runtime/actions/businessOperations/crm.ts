@@ -40,7 +40,15 @@ export function registerCrmActions(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Activity Note', category: 'Business Operations', description: 'Create a CRM activity note (interaction)' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'interaction', action: 'create' });
+      const permissionResource =
+        input.target.type === 'client'
+          ? 'client'
+          : input.target.type === 'contact'
+            ? 'contact'
+            : input.target.type === 'ticket'
+              ? 'ticket'
+              : 'project';
+      await requirePermission(ctx, tx, { resource: permissionResource, action: 'update' });
 
       // Policy: client_visible notes require a client/contact/ticket target (project visibility support is tenant-dependent).
       if (input.visibility === 'client_visible' && input.target.type === 'project') {
@@ -116,4 +124,3 @@ export function registerCrmActions(): void {
     })
   });
 }
-

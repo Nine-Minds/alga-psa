@@ -1,0 +1,149 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-reopened-notify-tech",
+      "metadata": {
+        "name": "Fixture: Ticket Reopened → Notify Tech",
+        "description": "On reopen, add an internal note and notify the assigned technician.",
+        "payloadSchemaRef": "payload.TicketReopened.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketReopened.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_REOPENED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.add_comment", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketReopened.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f111",
+          "version": 1,
+          "name": "Fixture: Ticket Reopened → Notify Tech",
+          "description": "Adds internal comment + notifies tech on reopen.",
+          "payloadSchemaRef": "payload.TicketReopened.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_REOPENED" },
+          "steps": [
+            { "id": "state-reopened", "type": "state.set", "config": { "state": "REOPENED" } },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-reopened-notify-tech]'" },
+                  "vars.comment": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" },
+                  "vars.title": { "$expr": "'[fixture ticket-reopened-notify-tech] Ticket reopened'" },
+                  "vars.body": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "add-internal-note",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.add_comment",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "body": { "$expr": "vars.comment" },
+                  "visibility": "internal",
+                  "idempotency_key": { "$expr": "'fixture.ticket-reopened-notify-tech:comment:' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "notify-tech",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
+                  "title": { "$expr": "vars.title" },
+                  "body": { "$expr": "vars.body" },
+                  "severity": "info",
+                  "dedupe_key": { "$expr": "'fixture.ticket-reopened-notify-tech:notify:' & payload.ticketId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f111",
+            "version": 1,
+            "name": "Fixture: Ticket Reopened → Notify Tech",
+            "description": "Adds internal comment + notifies tech on reopen.",
+            "payloadSchemaRef": "payload.TicketReopened.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_REOPENED" },
+            "steps": [
+              { "id": "state-reopened", "type": "state.set", "config": { "state": "REOPENED" } },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-reopened-notify-tech]'" },
+                    "vars.comment": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" },
+                    "vars.title": { "$expr": "'[fixture ticket-reopened-notify-tech] Ticket reopened'" },
+                    "vars.body": { "$expr": "'[fixture ticket-reopened-notify-tech] ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "add-internal-note",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.add_comment",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "body": { "$expr": "vars.comment" },
+                    "visibility": "internal",
+                    "idempotency_key": { "$expr": "'fixture.ticket-reopened-notify-tech:comment:' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "notify-tech",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
+                    "title": { "$expr": "vars.title" },
+                    "body": { "$expr": "vars.body" },
+                    "severity": "info",
+                    "dedupe_key": { "$expr": "'fixture.ticket-reopened-notify-tech:notify:' & payload.ticketId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

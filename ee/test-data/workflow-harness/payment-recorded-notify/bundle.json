@@ -1,0 +1,116 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.payment-recorded-notify",
+      "metadata": {
+        "name": "Fixture: Payment Recorded → Notify",
+        "description": "Send an in-app notification when a payment is recorded.",
+        "payloadSchemaRef": "payload.PaymentRecorded.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.PaymentRecorded.v1",
+        "trigger": { "type": "event", "eventName": "PAYMENT_RECORDED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [{ "actionId": "notifications.send_in_app", "version": 1 }],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.PaymentRecorded.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f310",
+          "version": 1,
+          "name": "Fixture: Payment Recorded → Notify",
+          "description": "Send an in-app notification when a payment is recorded.",
+          "payloadSchemaRef": "payload.PaymentRecorded.v1",
+          "trigger": { "type": "event", "eventName": "PAYMENT_RECORDED" },
+          "steps": [
+            { "id": "state-payment", "type": "state.set", "config": { "state": "PAYMENT" } },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture payment-recorded-notify]'" },
+                  "vars.title": { "$expr": "'[fixture payment-recorded-notify] Payment recorded'" },
+                  "vars.body": { "$expr": "'paymentId=' & payload.paymentId & ' amount=' & payload.amount & ' ' & payload.currency" }
+                }
+              }
+            },
+            {
+              "id": "notify",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                  "title": { "$expr": "vars.title" },
+                  "body": { "$expr": "vars.body" },
+                  "severity": "info",
+                  "dedupe_key": { "$expr": "'fixture.payment-recorded-notify:' & payload.paymentId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f310",
+            "version": 1,
+            "name": "Fixture: Payment Recorded → Notify",
+            "description": "Send an in-app notification when a payment is recorded.",
+            "payloadSchemaRef": "payload.PaymentRecorded.v1",
+            "trigger": { "type": "event", "eventName": "PAYMENT_RECORDED" },
+            "steps": [
+              { "id": "state-payment", "type": "state.set", "config": { "state": "PAYMENT" } },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture payment-recorded-notify]'" },
+                    "vars.title": { "$expr": "'[fixture payment-recorded-notify] Payment recorded'" },
+                    "vars.body": { "$expr": "'paymentId=' & payload.paymentId & ' amount=' & payload.amount & ' ' & payload.currency" }
+                  }
+                }
+              },
+              {
+                "id": "notify",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                    "title": { "$expr": "vars.title" },
+                    "body": { "$expr": "vars.body" },
+                    "severity": "info",
+                    "dedupe_key": { "$expr": "'fixture.payment-recorded-notify:' & payload.paymentId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

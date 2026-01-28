@@ -1,0 +1,250 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.471Z",
+  "workflows": [
+    {
+      "key": "fixture.payment-failed-email-trycatch",
+      "metadata": {
+        "name": "Fixture: Payment Failed Email Trycatch",
+        "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PAYMENT_FAILED).",
+        "payloadSchemaRef": "payload.PaymentFailed.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.PaymentFailed.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PAYMENT_FAILED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.tryCatch"
+        ],
+        "schemaRefs": [
+          "payload.PaymentFailed.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "4ad7a06c-48ba-5ad0-b69b-3eceb6344dba",
+          "version": 1,
+          "name": "Fixture: Payment Failed Email Trycatch",
+          "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PAYMENT_FAILED).",
+          "payloadSchemaRef": "payload.PaymentFailed.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PAYMENT_FAILED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture payment-failed-email-trycatch]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture payment-failed-email-trycatch] Try/Catch notify'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "try-notify",
+              "type": "control.tryCatch",
+              "captureErrorAs": "caught",
+              "try": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureBadUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture payment-failed-email-trycatch] Try'"
+                      },
+                      "body": {
+                        "$expr": "'[fixture payment-failed-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' attempt=try'"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.payment-failed-email-trycatch:' & payload.fixtureDedupeKey & ':try'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-try",
+                  "type": "control.return"
+                }
+              ],
+              "catch": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture payment-failed-email-trycatch] Fallback'"
+                      },
+                      "body": {
+                        "$expr": "'[fixture payment-failed-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' error=' & coalesce(vars.caught.message, 'unknown')"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.payment-failed-email-trycatch:' & payload.fixtureDedupeKey & ':catch'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-catch",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "4ad7a06c-48ba-5ad0-b69b-3eceb6344dba",
+            "version": 1,
+            "name": "Fixture: Payment Failed Email Trycatch",
+            "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PAYMENT_FAILED).",
+            "payloadSchemaRef": "payload.PaymentFailed.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PAYMENT_FAILED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture payment-failed-email-trycatch]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture payment-failed-email-trycatch] Try/Catch notify'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "try-notify",
+                "type": "control.tryCatch",
+                "captureErrorAs": "caught",
+                "try": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureBadUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture payment-failed-email-trycatch] Try'"
+                        },
+                        "body": {
+                          "$expr": "'[fixture payment-failed-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' attempt=try'"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.payment-failed-email-trycatch:' & payload.fixtureDedupeKey & ':try'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-try",
+                    "type": "control.return"
+                  }
+                ],
+                "catch": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture payment-failed-email-trycatch] Fallback'"
+                        },
+                        "body": {
+                          "$expr": "'[fixture payment-failed-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' error=' & coalesce(vars.caught.message, 'unknown')"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.payment-failed-email-trycatch:' & payload.fixtureDedupeKey & ':catch'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-catch",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

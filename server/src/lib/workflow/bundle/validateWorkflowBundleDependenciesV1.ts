@@ -20,7 +20,9 @@ export const validateWorkflowBundleDependenciesV1 = (bundle: WorkflowBundleV1): 
 
   for (const wf of bundle.workflows) {
     const missingActions = wf.dependencies.actions.filter((a) => !actionRegistry.get(a.actionId, a.version));
-    const missingNodeTypes = wf.dependencies.nodeTypes.filter((t) => !nodeRegistry.get(t));
+    // Control blocks (control.if/control.tryCatch/control.return/etc.) are built into the runtime
+    // and are not registered as node types. Do not treat them as missing dependencies.
+    const missingNodeTypes = wf.dependencies.nodeTypes.filter((t) => !t.startsWith('control.') && !nodeRegistry.get(t));
     const missingSchemaRefs = wf.dependencies.schemaRefs.filter((ref) => !schemaRegistry.has(ref));
 
     if (missingActions.length || missingNodeTypes.length || missingSchemaRefs.length) {
@@ -55,4 +57,3 @@ export const validateWorkflowBundleDependenciesV1 = (bundle: WorkflowBundleV1): 
     }
   });
 };
-

@@ -1,0 +1,177 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.contract-created-onboarding-task",
+      "metadata": {
+        "name": "Fixture: Contract Created → Onboarding Task + Notify",
+        "description": "Create an onboarding task and a CRM note, and notify an owner when a contract is created.",
+        "payloadSchemaRef": "payload.ContractCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ContractCreated.v1",
+        "trigger": { "type": "event", "eventName": "CONTRACT_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "projects.create_task", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 },
+          { "actionId": "crm.create_activity_note", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.ContractCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f320",
+          "version": 1,
+          "name": "Fixture: Contract Created → Onboarding Task + Notify",
+          "description": "Create an onboarding task and a CRM note, and notify an owner when a contract is created.",
+          "payloadSchemaRef": "payload.ContractCreated.v1",
+          "trigger": { "type": "event", "eventName": "CONTRACT_CREATED" },
+          "steps": [
+            { "id": "state-contract", "type": "state.set", "config": { "state": "CONTRACT_ONBOARDING" } },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture contract-created-onboarding-task]'" },
+                  "vars.taskTitle": { "$expr": "vars.marker & ' Contract onboarding ' & payload.contractId" },
+                  "vars.notifyTitle": { "$expr": "vars.marker & ' Contract created'" },
+                  "vars.notifyBody": { "$expr": "'contractId=' & payload.contractId" },
+                  "vars.noteBody": { "$expr": "vars.marker & ' contractId=' & payload.contractId" }
+                }
+              }
+            },
+            {
+              "id": "create-onboarding-task",
+              "type": "action.call",
+              "config": {
+                "actionId": "projects.create_task",
+                "version": 1,
+                "inputMapping": {
+                  "project_id": { "$expr": "payload.fixtureProjectId" },
+                  "title": { "$expr": "vars.taskTitle" }
+                }
+              }
+            },
+            {
+              "id": "create-crm-note",
+              "type": "action.call",
+              "config": {
+                "actionId": "crm.create_activity_note",
+                "version": 1,
+                "inputMapping": {
+                  "target": { "$expr": "{ \"type\": \"client\", \"id\": payload.clientId }" },
+                  "body": { "$expr": "vars.noteBody" },
+                  "visibility": "internal",
+                  "category": "Workflow Fixture"
+                }
+              }
+            },
+            {
+              "id": "notify-owner",
+              "type": "action.call",
+              "config": {
+                "actionId": "notifications.send_in_app",
+                "version": 1,
+                "inputMapping": {
+                  "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                  "title": { "$expr": "vars.notifyTitle" },
+                  "body": { "$expr": "vars.notifyBody" },
+                  "severity": "info",
+                  "dedupe_key": { "$expr": "'fixture.contract-created-onboarding-task:' & payload.contractId" }
+                }
+              }
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f320",
+            "version": 1,
+            "name": "Fixture: Contract Created → Onboarding Task + Notify",
+            "description": "Create an onboarding task and a CRM note, and notify an owner when a contract is created.",
+            "payloadSchemaRef": "payload.ContractCreated.v1",
+            "trigger": { "type": "event", "eventName": "CONTRACT_CREATED" },
+            "steps": [
+              { "id": "state-contract", "type": "state.set", "config": { "state": "CONTRACT_ONBOARDING" } },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture contract-created-onboarding-task]'" },
+                    "vars.taskTitle": { "$expr": "vars.marker & ' Contract onboarding ' & payload.contractId" },
+                    "vars.notifyTitle": { "$expr": "vars.marker & ' Contract created'" },
+                    "vars.notifyBody": { "$expr": "'contractId=' & payload.contractId" },
+                    "vars.noteBody": { "$expr": "vars.marker & ' contractId=' & payload.contractId" }
+                  }
+                }
+              },
+              {
+                "id": "create-onboarding-task",
+                "type": "action.call",
+                "config": {
+                  "actionId": "projects.create_task",
+                  "version": 1,
+                  "inputMapping": {
+                    "project_id": { "$expr": "payload.fixtureProjectId" },
+                    "title": { "$expr": "vars.taskTitle" }
+                  }
+                }
+              },
+              {
+                "id": "create-crm-note",
+                "type": "action.call",
+                "config": {
+                  "actionId": "crm.create_activity_note",
+                  "version": 1,
+                  "inputMapping": {
+                    "target": { "$expr": "{ \"type\": \"client\", \"id\": payload.clientId }" },
+                    "body": { "$expr": "vars.noteBody" },
+                    "visibility": "internal",
+                    "category": "Workflow Fixture"
+                  }
+                }
+              },
+              {
+                "id": "notify-owner",
+                "type": "action.call",
+                "config": {
+                  "actionId": "notifications.send_in_app",
+                  "version": 1,
+                  "inputMapping": {
+                    "recipients": { "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }" },
+                    "title": { "$expr": "vars.notifyTitle" },
+                    "body": { "$expr": "vars.notifyBody" },
+                    "severity": "info",
+                    "dedupe_key": { "$expr": "'fixture.contract-created-onboarding-task:' & payload.contractId" }
+                  }
+                }
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}
+

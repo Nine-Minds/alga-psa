@@ -77,17 +77,17 @@ const JoinNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
 const statusStyles = (status?: string | null) => {
   switch ((status ?? '').toUpperCase()) {
     case 'STARTED':
-      return 'ring-2 ring-cyan-200 border-cyan-200';
+      return 'ring-2 ring-cyan-200';
     case 'SUCCEEDED':
-      return 'ring-1 ring-green-200 border-green-200';
+      return 'ring-1 ring-green-200';
     case 'FAILED':
-      return 'ring-2 ring-red-200 border-red-200';
+      return 'ring-2 ring-red-200';
     case 'RETRY_SCHEDULED':
-      return 'ring-1 ring-yellow-200 border-yellow-200';
+      return 'ring-1 ring-yellow-200';
     case 'CANCELED':
-      return 'border-gray-200';
+      return '';
     default:
-      return 'border-gray-200';
+      return '';
   }
 };
 
@@ -99,7 +99,7 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
   const subtitleMono = stepType === 'action.call' || stepType === 'control.if' || stepType === 'state.set';
   return (
     <div
-      className={`relative bg-white border rounded-md ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
+      className={`relative bg-white rounded-md border-r border-t border-b border-[rgb(var(--color-border-200))] ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
       style={{ width: 260, height: 72, borderLeftWidth: 4, boxSizing: 'border-box' }}
     >
       <Handle
@@ -168,7 +168,9 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
           className={[
             'flex items-center justify-center',
             'rounded-md border shadow-sm bg-white',
-            snapshot.isDraggingOver ? 'border-primary-400 ring-2 ring-primary-200' : 'border-gray-200',
+            snapshot.isDraggingOver
+              ? 'border-[rgb(var(--color-primary-400))] ring-2 ring-[rgb(var(--color-primary-200))]'
+              : 'border-[rgb(var(--color-border-200))]',
             'cursor-copy'
           ].join(' ')}
           style={{ width: 30, height: 30, boxSizing: 'border-box' }}

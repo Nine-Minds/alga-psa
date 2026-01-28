@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.652Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-comment-added-customer-notify",
+      "metadata": {
+        "name": "Fixture: Ticket Comment Added Customer Notify",
+        "description": "Send an in-app notification when the event fires (TICKET_COMMENT_ADDED).",
+        "payloadSchemaRef": "payload.TicketCommentAdded.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCommentAdded.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_COMMENT_ADDED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketCommentAdded.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "a5e2b3e8-2b52-2994-eead-246bd462f981",
+          "version": 1,
+          "name": "Fixture: Ticket Comment Added Customer Notify",
+          "description": "Send an in-app notification when the event fires (TICKET_COMMENT_ADDED).",
+          "payloadSchemaRef": "payload.TicketCommentAdded.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_COMMENT_ADDED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-comment-added-customer-notify]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-comment-added-customer-notify] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-comment-added-customer-notify] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-comment-added-customer-notify:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "a5e2b3e8-2b52-2994-eead-246bd462f981",
+            "version": 1,
+            "name": "Fixture: Ticket Comment Added Customer Notify",
+            "description": "Send an in-app notification when the event fires (TICKET_COMMENT_ADDED).",
+            "payloadSchemaRef": "payload.TicketCommentAdded.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_COMMENT_ADDED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-comment-added-customer-notify]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-comment-added-customer-notify] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-comment-added-customer-notify] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-comment-added-customer-notify:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

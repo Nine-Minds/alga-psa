@@ -1,0 +1,148 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-status-waiting-on-customer-reminder",
+      "metadata": {
+        "name": "Fixture: Ticket Status → Waiting Reminder",
+        "description": "When status changes to Waiting on Customer, wait for a follow-up event and send a reminder email.",
+        "payloadSchemaRef": "payload.TicketStatusChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketStatusChanged.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_STATUS_CHANGED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [{ "actionId": "email.send", "version": 1 }],
+        "nodeTypes": ["action.call", "control.if", "control.return", "event.wait", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketStatusChanged.v1", "payload.TicketTimeEntryAdded.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f110",
+          "version": 1,
+          "name": "Fixture: Ticket Status → Waiting Reminder",
+          "description": "Waits for a follow-up event, then sends reminder email.",
+          "payloadSchemaRef": "payload.TicketStatusChanged.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_STATUS_CHANGED" },
+          "steps": [
+            { "id": "state-waiting-reminder", "type": "state.set", "config": { "state": "WAITING_REMINDER" } },
+            {
+              "id": "if-waiting",
+              "type": "control.if",
+              "condition": { "$expr": "payload.newStatusId == payload.fixtureWaitingStatusId" },
+              "then": [
+                {
+                  "id": "wait-for-time-entry",
+                  "type": "event.wait",
+                  "config": {
+                    "eventName": "TICKET_TIME_ENTRY_ADDED",
+                    "correlationKey": { "$expr": "payload.ticketId" },
+                    "timeoutMs": 5000
+                  }
+                },
+                {
+                  "id": "assign-vars",
+                  "type": "transform.assign",
+                  "config": {
+                    "assign": {
+                      "vars.marker": { "$expr": "'[fixture ticket-status-waiting-on-customer-reminder]'" },
+                      "vars.subject": { "$expr": "vars.marker & ' Reminder: waiting on customer'" },
+                      "vars.text": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                    }
+                  }
+                },
+                {
+                  "id": "send-reminder",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "email.send",
+                    "version": 1,
+                    "inputMapping": {
+                      "to": { "$expr": "[{\"email\": payload.fixtureRequesterEmail}]" },
+                      "subject": { "$expr": "vars.subject" },
+                      "text": { "$expr": "vars.text" },
+                      "idempotency_key": { "$expr": "'fixture.ticket-status-waiting-on-customer-reminder:email:' & payload.ticketId" }
+                    }
+                  }
+                },
+                { "id": "done", "type": "control.return" }
+              ],
+              "else": [{ "id": "skip", "type": "control.return" }]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f110",
+            "version": 1,
+            "name": "Fixture: Ticket Status → Waiting Reminder",
+            "description": "Waits for a follow-up event, then sends reminder email.",
+            "payloadSchemaRef": "payload.TicketStatusChanged.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_STATUS_CHANGED" },
+            "steps": [
+              { "id": "state-waiting-reminder", "type": "state.set", "config": { "state": "WAITING_REMINDER" } },
+              {
+                "id": "if-waiting",
+                "type": "control.if",
+                "condition": { "$expr": "payload.newStatusId == payload.fixtureWaitingStatusId" },
+                "then": [
+                  {
+                    "id": "wait-for-time-entry",
+                    "type": "event.wait",
+                    "config": {
+                      "eventName": "TICKET_TIME_ENTRY_ADDED",
+                      "correlationKey": { "$expr": "payload.ticketId" },
+                      "timeoutMs": 5000
+                    }
+                  },
+                  {
+                    "id": "assign-vars",
+                    "type": "transform.assign",
+                    "config": {
+                      "assign": {
+                        "vars.marker": { "$expr": "'[fixture ticket-status-waiting-on-customer-reminder]'" },
+                        "vars.subject": { "$expr": "vars.marker & ' Reminder: waiting on customer'" },
+                        "vars.text": { "$expr": "vars.marker & ' ticketId=' & payload.ticketId" }
+                      }
+                    }
+                  },
+                  {
+                    "id": "send-reminder",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "email.send",
+                      "version": 1,
+                      "inputMapping": {
+                        "to": { "$expr": "[{\"email\": payload.fixtureRequesterEmail}]" },
+                        "subject": { "$expr": "vars.subject" },
+                        "text": { "$expr": "vars.text" },
+                        "idempotency_key": { "$expr": "'fixture.ticket-status-waiting-on-customer-reminder:email:' & payload.ticketId" }
+                      }
+                    }
+                  },
+                  { "id": "done", "type": "control.return" }
+                ],
+                "else": [{ "id": "skip", "type": "control.return" }]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

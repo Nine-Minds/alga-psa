@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.526Z",
+  "workflows": [
+    {
+      "key": "fixture.project-task-assigned-missing-assignee",
+      "metadata": {
+        "name": "Fixture: Project Task Assigned Missing Assignee",
+        "description": "Send an in-app notification when the event fires (PROJECT_TASK_ASSIGNED).",
+        "payloadSchemaRef": "payload.ProjectTaskAssigned.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskAssigned.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_TASK_ASSIGNED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.ProjectTaskAssigned.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "85bf08a6-0c6b-1268-6786-4666c3d6f69e",
+          "version": 1,
+          "name": "Fixture: Project Task Assigned Missing Assignee",
+          "description": "Send an in-app notification when the event fires (PROJECT_TASK_ASSIGNED).",
+          "payloadSchemaRef": "payload.ProjectTaskAssigned.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_TASK_ASSIGNED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-task-assigned-missing-assignee]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-task-assigned-missing-assignee] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture project-task-assigned-missing-assignee] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-task-assigned-missing-assignee:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "85bf08a6-0c6b-1268-6786-4666c3d6f69e",
+            "version": 1,
+            "name": "Fixture: Project Task Assigned Missing Assignee",
+            "description": "Send an in-app notification when the event fires (PROJECT_TASK_ASSIGNED).",
+            "payloadSchemaRef": "payload.ProjectTaskAssigned.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_TASK_ASSIGNED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-task-assigned-missing-assignee]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-task-assigned-missing-assignee] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture project-task-assigned-missing-assignee] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-task-assigned-missing-assignee:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

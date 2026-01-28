@@ -91,7 +91,11 @@ export function compileExpression(expr: Expr): CompiledExpression {
 }
 
 function normalizeExpressionSource(source: string): string {
-  return source.replace(
+  // JSONata uses `=` / `!=` for equality checks; many authors intuitively write `==`.
+  // Normalize `==` to `=` for compatibility with workflow fixtures and designer output.
+  const normalized = source.replace(/==/g, '=');
+
+  return normalized.replace(
     /(^|[^.$A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)(?=\s*\()/g,
     (match, prefix, name: string) => {
       if (!allowedFunctions.has(name)) {

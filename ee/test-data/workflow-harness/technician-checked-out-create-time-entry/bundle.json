@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T20:01:41.399Z",
+  "workflows": [
+    {
+      "key": "fixture.technician-checked-out-create-time-entry",
+      "metadata": {
+        "name": "Fixture: Technician Checked Out",
+        "description": "Send an in-app notification when the event fires (TECHNICIAN_CHECKED_OUT).",
+        "payloadSchemaRef": "payload.TechnicianCheckedOut.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TechnicianCheckedOut.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TECHNICIAN_CHECKED_OUT"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TechnicianCheckedOut.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "dcd00f43-5ad4-8c17-26a6-78e4b046a9b0",
+          "version": 1,
+          "name": "Fixture: Technician Checked Out",
+          "description": "Send an in-app notification when the event fires (TECHNICIAN_CHECKED_OUT).",
+          "payloadSchemaRef": "payload.TechnicianCheckedOut.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TECHNICIAN_CHECKED_OUT"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture technician-checked-out-create-time-entry]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture technician-checked-out-create-time-entry] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture technician-checked-out-create-time-entry] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.appointmentId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture technician-checked-out-create-time-entry]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "dcd00f43-5ad4-8c17-26a6-78e4b046a9b0",
+            "version": 1,
+            "name": "Fixture: Technician Checked Out",
+            "description": "Send an in-app notification when the event fires (TECHNICIAN_CHECKED_OUT).",
+            "payloadSchemaRef": "payload.TechnicianCheckedOut.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TECHNICIAN_CHECKED_OUT"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture technician-checked-out-create-time-entry]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture technician-checked-out-create-time-entry] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture technician-checked-out-create-time-entry] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.appointmentId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture technician-checked-out-create-time-entry]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

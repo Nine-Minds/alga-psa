@@ -1,0 +1,165 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-created-notify-multiple",
+      "metadata": {
+        "name": "Fixture: Ticket Created → Notify Multiple",
+        "description": "For each recipient user id (from ticket fixture attributes), send an in-app notification.",
+        "payloadSchemaRef": "payload.TicketCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketCreated.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.find", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.forEach", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketCreated.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f123",
+          "version": 1,
+          "name": "Fixture: Ticket Created → Notify Multiple",
+          "description": "For each recipient user id (from ticket fixture attributes), send an in-app notification.",
+          "payloadSchemaRef": "payload.TicketCreated.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+          "steps": [
+            { "id": "state-notify", "type": "state.set", "config": { "state": "NOTIFY" } },
+            {
+              "id": "load-ticket",
+              "type": "action.call",
+              "config": {
+                "actionId": "tickets.find",
+                "version": 1,
+                "inputMapping": {
+                  "ticket_id": { "$expr": "payload.ticketId" },
+                  "include": { "attributes": true }
+                },
+                "saveAs": "vars.lookup"
+              }
+            },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-created-notify-multiple]'" },
+                  "vars.recipients": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_ids" },
+                  "vars.title": { "$expr": "'[fixture ticket-created-notify-multiple] Ticket created'" },
+                  "vars.body": { "$expr": "'ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "for-each-recipient",
+              "type": "control.forEach",
+              "items": { "$expr": "vars.recipients" },
+              "itemVar": "recipientUserId",
+              "body": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": { "$expr": "{ \"user_ids\": [vars.recipientUserId] }" },
+                      "title": { "$expr": "vars.title" },
+                      "body": { "$expr": "vars.body" },
+                      "severity": "info",
+                      "dedupe_key": { "$expr": "'fixture.ticket-created-notify-multiple:' & payload.ticketId & ':' & vars.recipientUserId" }
+                    }
+                  }
+                }
+              ],
+              "onItemError": "fail"
+            },
+            { "id": "done", "type": "control.return" }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f123",
+            "version": 1,
+            "name": "Fixture: Ticket Created → Notify Multiple",
+            "description": "For each recipient user id (from ticket fixture attributes), send an in-app notification.",
+            "payloadSchemaRef": "payload.TicketCreated.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+            "steps": [
+              { "id": "state-notify", "type": "state.set", "config": { "state": "NOTIFY" } },
+              {
+                "id": "load-ticket",
+                "type": "action.call",
+                "config": {
+                  "actionId": "tickets.find",
+                  "version": 1,
+                  "inputMapping": {
+                    "ticket_id": { "$expr": "payload.ticketId" },
+                    "include": { "attributes": true }
+                  },
+                  "saveAs": "vars.lookup"
+                }
+              },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-created-notify-multiple]'" },
+                    "vars.recipients": { "$expr": "vars.lookup.ticket.attributes.fixture_notify_user_ids" },
+                    "vars.title": { "$expr": "'[fixture ticket-created-notify-multiple] Ticket created'" },
+                    "vars.body": { "$expr": "'ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "for-each-recipient",
+                "type": "control.forEach",
+                "items": { "$expr": "vars.recipients" },
+                "itemVar": "recipientUserId",
+                "body": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": { "$expr": "{ \"user_ids\": [vars.recipientUserId] }" },
+                        "title": { "$expr": "vars.title" },
+                        "body": { "$expr": "vars.body" },
+                        "severity": "info",
+                        "dedupe_key": { "$expr": "'fixture.ticket-created-notify-multiple:' & payload.ticketId & ':' & vars.recipientUserId" }
+                      }
+                    }
+                  }
+                ],
+                "onItemError": "fail"
+              },
+              { "id": "done", "type": "control.return" }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

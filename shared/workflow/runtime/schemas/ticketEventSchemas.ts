@@ -279,3 +279,28 @@ export const ticketApprovalRejectedEventPayloadSchema = BaseDomainEventPayloadSc
 }).describe('Payload for TICKET_APPROVAL_REJECTED');
 
 export type TicketApprovalRejectedEventPayload = z.infer<typeof ticketApprovalRejectedEventPayloadSchema>;
+
+// ---------------------------------------------------------------------------
+// Legacy ticket events (still used in harness fixtures)
+// ---------------------------------------------------------------------------
+
+export const ticketCommentAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  commentId: z.string().uuid().optional(),
+  visibility: z.enum(['public', 'internal']).optional(),
+  authorId: z.string().uuid().optional(),
+  authorType: z.enum(['user', 'contact']).optional(),
+  createdAt: z.string().datetime().optional(),
+}).describe('Payload for TICKET_COMMENT_ADDED');
+
+export type TicketCommentAddedEventPayload = z.infer<typeof ticketCommentAddedEventPayloadSchema>;
+
+export const ticketAdditionalAgentAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  primaryAgentId: userIdSchema,
+  additionalAgentId: userIdSchema,
+  assignedByUserId: userIdSchema.optional(),
+  assignedAt: z.string().datetime().optional(),
+}).describe('Payload for TICKET_ADDITIONAL_AGENT_ASSIGNED');
+
+export type TicketAdditionalAgentAssignedEventPayload = z.infer<typeof ticketAdditionalAgentAssignedEventPayloadSchema>;

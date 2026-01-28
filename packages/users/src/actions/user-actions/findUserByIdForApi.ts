@@ -6,7 +6,7 @@
  */
 
 import { Knex } from 'knex';
-import { getConnection } from '@alga-psa/db';
+import { getConnection, runWithTenant } from '@alga-psa/db';
 import { IUserWithRoles } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
 import { getUserAvatarUrl } from '../../lib/avatarUtils';
@@ -20,33 +20,35 @@ export async function findUserByIdForApi(
   tenantId: string
 ): Promise<IUserWithRoles | null> {
   try {
-    const knex = await getConnection(tenantId);
-    
-    // Get user with their basic info
-    const user = await knex('users')
-      .where({ 
-        user_id: userId,
-        tenant: tenantId,
-        is_inactive: false
-      })
-      .first();
-    
-    if (!user) {
-      console.log(`User ${userId} not found in tenant ${tenantId}`);
-      return null;
-    }
+    return await runWithTenant(tenantId, async () => {
+      const knex = await getConnection(tenantId);
 
-    // Get user roles
-    const roles = await User.getUserRoles(knex, userId);
-    
-    // Get avatar URL
-    const avatarUrl = await getUserAvatarUrl(userId, tenantId);
+      // Get user with their basic info
+      const user = await knex('users')
+        .where({ 
+          user_id: userId,
+          tenant: tenantId,
+          is_inactive: false
+        })
+        .first();
 
-    return {
-      ...user,
-      roles,
-      avatarUrl
-    };
+      if (!user) {
+        console.log(`User ${userId} not found in tenant ${tenantId}`);
+        return null;
+      }
+
+      // Get user roles
+      const roles = await User.getUserRoles(knex, userId);
+
+      // Get avatar URL
+      const avatarUrl = await getUserAvatarUrl(userId, tenantId);
+
+      return {
+        ...user,
+        roles,
+        avatarUrl
+      };
+    });
   } catch (error) {
     console.error(`Failed to find user ${userId} in tenant ${tenantId}:`, error);
     throw error;

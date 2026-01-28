@@ -1,0 +1,200 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T19:57:59.654Z",
+  "workflows": [
+    {
+      "key": "fixture.invoice-finalized-send-to-customer",
+      "metadata": {
+        "name": "Fixture: Invoice Finalized Email",
+        "description": "Send an in-app notification when the event fires (INVOICE_FINALIZED).",
+        "payloadSchemaRef": "payload.InvoiceFinalized.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.InvoiceFinalized.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "INVOICE_FINALIZED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.InvoiceFinalized.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "9c2cae43-92dc-d65c-7663-87d2d2180b7d",
+          "version": 1,
+          "name": "Fixture: Invoice Finalized Email",
+          "description": "Send an in-app notification when the event fires (INVOICE_FINALIZED).",
+          "payloadSchemaRef": "payload.InvoiceFinalized.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "INVOICE_FINALIZED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture invoice-finalized-send-to-customer]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture invoice-finalized-send-to-customer] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture invoice-finalized-send-to-customer] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.create_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "project_id": {
+                        "$expr": "payload.invoiceId"
+                      },
+                      "title": {
+                        "$expr": "(vars.marker ? vars.marker : '[fixture invoice-finalized-send-to-customer]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "9c2cae43-92dc-d65c-7663-87d2d2180b7d",
+            "version": 1,
+            "name": "Fixture: Invoice Finalized Email",
+            "description": "Send an in-app notification when the event fires (INVOICE_FINALIZED).",
+            "payloadSchemaRef": "payload.InvoiceFinalized.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "INVOICE_FINALIZED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture invoice-finalized-send-to-customer]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture invoice-finalized-send-to-customer] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture invoice-finalized-send-to-customer] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.create_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "project_id": {
+                          "$expr": "payload.invoiceId"
+                        },
+                        "title": {
+                          "$expr": "(vars.marker ? vars.marker : '[fixture invoice-finalized-send-to-customer]') & ' ' & (vars.body ? vars.body : (vars.title ? vars.title : ''))"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

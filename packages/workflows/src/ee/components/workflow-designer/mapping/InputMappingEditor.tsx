@@ -443,6 +443,32 @@ function getDisplayValue(value: MappingValue | undefined): string {
 }
 
 /**
+ * Determine whether a mapping value is effectively "set" (not just present).
+ * Used to highlight required fields that are missing values.
+ */
+function isMappingValueSet(value: MappingValue | undefined, fieldType?: string): boolean {
+  if (value === undefined) return false;
+  if (value === null) return true;
+
+  if (typeof value === 'object') {
+    if ('$expr' in value) {
+      return Boolean((value as Expr).$expr?.trim());
+    }
+    if ('$secret' in value) {
+      return Boolean((value as { $secret: string }).$secret?.trim());
+    }
+    return true;
+  }
+
+  if (typeof value === 'string') {
+    // Treat empty strings as "unset" so required string fields can be flagged.
+    return fieldType === 'string' ? value.trim().length > 0 : true;
+  }
+
+  return true;
+}
+
+/**
  * Editor for a single mapping field
  */
 const MappingFieldEditor: React.FC<{
@@ -463,6 +489,10 @@ const MappingFieldEditor: React.FC<{
   const editorRef = useRef<ExpressionEditorHandle>(null);
 
   const idPrefix = `mapping-${stepId}-${field.name}`;
+  const isMissingRequired = useMemo(
+    () => Boolean(field.required) && !isMappingValueSet(value, field.type),
+    [field.required, field.type, value]
+  );
 
   // Sync valueType when value prop changes externally
   useEffect(() => {
@@ -612,8 +642,24 @@ const MappingFieldEditor: React.FC<{
           disabled={disabled}
         >
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <span>{field.name}</span>
-          {field.required && <Badge className="text-xs bg-red-100 text-red-700">required</Badge>}
+          <span className="flex items-center gap-1">
+            {field.name}
+            {field.required && (
+              <span
+                className="text-[11px] text-gray-500"
+                aria-hidden
+                title="Required"
+              >
+                *
+              </span>
+            )}
+          </span>
+          {isMissingRequired && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-red-600" title="Required field is missing a value">
+              <AlertTriangle className="w-3 h-3" />
+              Missing
+            </span>
+          )}
           {compatibilityBadge && (
             <Badge
               className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
@@ -974,6 +1020,13 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     };
   }, [targetFields, value]);
 
+  const missingRequiredCount = useMemo(() => {
+    return targetFields.filter((field) => {
+      if (!field.required) return false;
+      return !isMappingValueSet(value[field.name], field.type);
+    }).length;
+  }, [targetFields, value]);
+
   // §17.3.3 - Auto-mapping suggestions
   const suggestions = useMemo(() =>
     findAutoMappingSuggestions(targetFields, fieldOptions, value),
@@ -1087,6 +1140,15 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">Input Mapping</Label>
         <div className="flex items-center gap-3">
+          <div className="text-xs text-gray-500" title="Fields marked with * are required">
+            <span className="text-[11px] text-gray-500" aria-hidden>*</span> required
+          </div>
+          {missingRequiredCount > 0 && (
+            <div className="text-xs text-red-600 flex items-center gap-1" title="Required fields are missing values">
+              <AlertTriangle className="w-3 h-3" />
+              {missingRequiredCount} missing
+            </div>
+          )}
           {/* §17.3.3 - Auto-map button */}
           {suggestions.length > 0 && (
             <Button
@@ -1182,15 +1244,16 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
 
           {showUnmapped && (
             <div className="space-y-1 pl-5" role="group" aria-label="Unmapped fields">
-              {unmappedFields.map((field, idx) => {
-                const suggestion = suggestionMap.get(field.name);
-                const isDropTarget = dndState.isDragging;
-                const isActiveDropTarget = dndState.dropTarget === field.name;
+                  {unmappedFields.map((field, idx) => {
+                    const suggestion = suggestionMap.get(field.name);
+                    const isDropTarget = dndState.isDragging;
+                    const isActiveDropTarget = dndState.dropTarget === field.name;
+                    const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
 
-                // §19.2 - Calculate type compatibility for drop feedback
-                const dropCompatibility = dndState.draggedItem?.type && field.type
-                  ? getTypeCompatibility(dndState.draggedItem.type, field.type)
-                  : null;
+                    // §19.2 - Calculate type compatibility for drop feedback
+                    const dropCompatibility = dndState.draggedItem?.type && field.type
+                      ? getTypeCompatibility(dndState.draggedItem.type, field.type)
+                      : null;
 
                 const dropClasses = isActiveDropTarget && dropCompatibility
                   ? getCompatibilityClasses(dropCompatibility)
@@ -1242,7 +1305,13 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       )}
                       <span className="text-sm text-gray-700">{field.name}</span>
                       {field.required && (
-                        <Badge className="text-xs bg-red-100 text-red-700">required</Badge>
+                        <span
+                          className={`text-[11px] ${isMissingRequired ? 'text-red-600' : 'text-gray-500'}`}
+                          aria-hidden
+                          title={isMissingRequired ? 'Required field is missing a value' : 'Required'}
+                        >
+                          *
+                        </span>
                       )}
                       <span className="text-xs text-gray-400">{field.type}</span>
                       {/* §17.3.3 - Show suggestion indicator */}

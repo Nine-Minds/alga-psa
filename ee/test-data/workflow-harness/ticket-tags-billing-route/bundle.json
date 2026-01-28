@@ -1,0 +1,161 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-26T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-tags-billing-route",
+      "metadata": {
+        "name": "Fixture: Ticket Tags → Billing Route",
+        "description": "If billing tag added, route ticket to billing status and notify.",
+        "payloadSchemaRef": "payload.TicketTagsChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketTagsChanged.v1",
+        "trigger": { "type": "event", "eventName": "TICKET_TAGS_CHANGED" },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          { "actionId": "tickets.update_fields", "version": 1 },
+          { "actionId": "notifications.send_in_app", "version": 1 }
+        ],
+        "nodeTypes": ["action.call", "control.if", "control.return", "state.set", "transform.assign"],
+        "schemaRefs": ["payload.TicketTagsChanged.v1"]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f114",
+          "version": 1,
+          "name": "Fixture: Ticket Tags → Billing Route",
+          "description": "Updates ticket status and notifies when billing tag is added.",
+          "payloadSchemaRef": "payload.TicketTagsChanged.v1",
+          "trigger": { "type": "event", "eventName": "TICKET_TAGS_CHANGED" },
+          "steps": [
+            { "id": "state-billing", "type": "state.set", "config": { "state": "BILLING_ROUTE" } },
+            {
+              "id": "assign-vars",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": { "$expr": "'[fixture ticket-tags-billing-route]'" },
+                  "vars.title": { "$expr": "'[fixture ticket-tags-billing-route] Billing tag added'" },
+                  "vars.body": { "$expr": "'[fixture ticket-tags-billing-route] ticketId=' & payload.ticketId" }
+                }
+              }
+            },
+            {
+              "id": "if-billing-tag",
+              "type": "control.if",
+              "condition": { "$expr": "payload.addedTagIds[0] = payload.fixtureBillingTagId" },
+              "then": [
+                {
+                  "id": "route-to-billing",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.update_fields",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": { "$expr": "payload.ticketId" },
+                      "patch": { "$expr": "{\"status_id\": payload.fixtureBillingStatusId}" },
+                      "idempotency_key": { "$expr": "'fixture.ticket-tags-billing-route:update:' & payload.ticketId" }
+                    }
+                  }
+                },
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
+                      "title": { "$expr": "vars.title" },
+                      "body": { "$expr": "vars.body" },
+                      "severity": "info",
+                      "dedupe_key": { "$expr": "'fixture.ticket-tags-billing-route:notify:' & payload.ticketId" }
+                    }
+                  }
+                },
+                { "id": "done", "type": "control.return" }
+              ],
+              "else": [{ "id": "skip", "type": "control.return" }]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f114",
+            "version": 1,
+            "name": "Fixture: Ticket Tags → Billing Route",
+            "description": "Updates ticket status and notifies when billing tag is added.",
+            "payloadSchemaRef": "payload.TicketTagsChanged.v1",
+            "trigger": { "type": "event", "eventName": "TICKET_TAGS_CHANGED" },
+            "steps": [
+              { "id": "state-billing", "type": "state.set", "config": { "state": "BILLING_ROUTE" } },
+              {
+                "id": "assign-vars",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": { "$expr": "'[fixture ticket-tags-billing-route]'" },
+                    "vars.title": { "$expr": "'[fixture ticket-tags-billing-route] Billing tag added'" },
+                    "vars.body": { "$expr": "'[fixture ticket-tags-billing-route] ticketId=' & payload.ticketId" }
+                  }
+                }
+              },
+              {
+                "id": "if-billing-tag",
+                "type": "control.if",
+                "condition": { "$expr": "payload.addedTagIds[0] = payload.fixtureBillingTagId" },
+                "then": [
+                  {
+                    "id": "route-to-billing",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "tickets.update_fields",
+                      "version": 1,
+                      "inputMapping": {
+                        "ticket_id": { "$expr": "payload.ticketId" },
+                        "patch": { "$expr": "{\"status_id\": payload.fixtureBillingStatusId}" },
+                        "idempotency_key": { "$expr": "'fixture.ticket-tags-billing-route:update:' & payload.ticketId" }
+                      }
+                    }
+                  },
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": { "$expr": "{\"user_ids\": [payload.fixtureNotifyUserId]}" },
+                        "title": { "$expr": "vars.title" },
+                        "body": { "$expr": "vars.body" },
+                        "severity": "info",
+                        "dedupe_key": { "$expr": "'fixture.ticket-tags-billing-route:notify:' & payload.ticketId" }
+                      }
+                    }
+                  },
+                  { "id": "done", "type": "control.return" }
+                ],
+                "else": [{ "id": "skip", "type": "control.return" }]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

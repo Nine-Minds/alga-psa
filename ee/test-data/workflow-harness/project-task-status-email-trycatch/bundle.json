@@ -1,0 +1,250 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.601Z",
+  "workflows": [
+    {
+      "key": "fixture.project-task-status-email-trycatch",
+      "metadata": {
+        "name": "Fixture: Project Task Status Email Trycatch",
+        "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PROJECT_TASK_STATUS_CHANGED).",
+        "payloadSchemaRef": "payload.ProjectTaskStatusChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskStatusChanged.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_TASK_STATUS_CHANGED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.tryCatch"
+        ],
+        "schemaRefs": [
+          "payload.ProjectTaskStatusChanged.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "d2093208-7ec3-5dab-f20e-65af893b9904",
+          "version": 1,
+          "name": "Fixture: Project Task Status Email Trycatch",
+          "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PROJECT_TASK_STATUS_CHANGED).",
+          "payloadSchemaRef": "payload.ProjectTaskStatusChanged.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_TASK_STATUS_CHANGED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture project-task-status-email-trycatch]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture project-task-status-email-trycatch] Try/Catch notify'"
+                  }
+                }
+              }
+            },
+            {
+              "id": "try-notify",
+              "type": "control.tryCatch",
+              "captureErrorAs": "caught",
+              "try": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureBadUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture project-task-status-email-trycatch] Try'"
+                      },
+                      "body": {
+                        "$expr": "'[fixture project-task-status-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' attempt=try'"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-task-status-email-trycatch:' & payload.fixtureDedupeKey & ':try'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-try",
+                  "type": "control.return"
+                }
+              ],
+              "catch": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "'[fixture project-task-status-email-trycatch] Fallback'"
+                      },
+                      "body": {
+                        "$expr": "'[fixture project-task-status-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' error=' & coalesce(vars.caught.message, 'unknown')"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.project-task-status-email-trycatch:' & payload.fixtureDedupeKey & ':catch'"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-catch",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "d2093208-7ec3-5dab-f20e-65af893b9904",
+            "version": 1,
+            "name": "Fixture: Project Task Status Email Trycatch",
+            "description": "Exercise try/catch by attempting an invalid notification, then sending a fallback (PROJECT_TASK_STATUS_CHANGED).",
+            "payloadSchemaRef": "payload.ProjectTaskStatusChanged.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_TASK_STATUS_CHANGED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture project-task-status-email-trycatch]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture project-task-status-email-trycatch] Try/Catch notify'"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "try-notify",
+                "type": "control.tryCatch",
+                "captureErrorAs": "caught",
+                "try": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureBadUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture project-task-status-email-trycatch] Try'"
+                        },
+                        "body": {
+                          "$expr": "'[fixture project-task-status-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' attempt=try'"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-task-status-email-trycatch:' & payload.fixtureDedupeKey & ':try'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-try",
+                    "type": "control.return"
+                  }
+                ],
+                "catch": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "'[fixture project-task-status-email-trycatch] Fallback'"
+                        },
+                        "body": {
+                          "$expr": "'[fixture project-task-status-email-trycatch] dedupe=' & payload.fixtureDedupeKey & ' error=' & coalesce(vars.caught.message, 'unknown')"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.project-task-status-email-trycatch:' & payload.fixtureDedupeKey & ':catch'"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-catch",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

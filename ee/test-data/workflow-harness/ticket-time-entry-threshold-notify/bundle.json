@@ -1,0 +1,214 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-01-27T02:06:59.731Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-time-entry-threshold-notify",
+      "metadata": {
+        "name": "Fixture: Ticket Time Entry Threshold Notify",
+        "description": "Send an in-app notification when the event fires (TICKET_TIME_ENTRY_ADDED).",
+        "payloadSchemaRef": "payload.TicketTimeEntryAdded.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketTimeEntryAdded.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_TIME_ENTRY_ADDED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "notifications.send_in_app",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set",
+          "transform.assign",
+          "control.if"
+        ],
+        "schemaRefs": [
+          "payload.TicketTimeEntryAdded.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "cfd1318d-ae85-544c-d8bb-fa3b9e97b9ba",
+          "version": 1,
+          "name": "Fixture: Ticket Time Entry Threshold Notify",
+          "description": "Send an in-app notification when the event fires (TICKET_TIME_ENTRY_ADDED).",
+          "payloadSchemaRef": "payload.TicketTimeEntryAdded.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_TIME_ENTRY_ADDED"
+          },
+          "steps": [
+            {
+              "id": "state-fixture",
+              "type": "state.set",
+              "config": {
+                "state": "FIXTURE"
+              }
+            },
+            {
+              "id": "assign-text",
+              "type": "transform.assign",
+              "config": {
+                "assign": {
+                  "vars.marker": {
+                    "$expr": "'[fixture ticket-time-entry-threshold-notify]'"
+                  },
+                  "vars.title": {
+                    "$expr": "'[fixture ticket-time-entry-threshold-notify] Notify'"
+                  },
+                  "vars.body": {
+                    "$expr": "'[fixture ticket-time-entry-threshold-notify] dedupe=' & payload.fixtureDedupeKey"
+                  }
+                }
+              }
+            },
+            {
+              "id": "if-notify",
+              "type": "control.if",
+              "condition": {
+                "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+              },
+              "then": [
+                {
+                  "id": "notify",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "notifications.send_in_app",
+                    "version": 1,
+                    "inputMapping": {
+                      "recipients": {
+                        "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                      },
+                      "title": {
+                        "$expr": "vars.title"
+                      },
+                      "body": {
+                        "$expr": "vars.body"
+                      },
+                      "severity": "info",
+                      "dedupe_key": {
+                        "$expr": "'fixture.ticket-time-entry-threshold-notify:' & payload.fixtureDedupeKey"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "return-after-notify",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "return-after-skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "cfd1318d-ae85-544c-d8bb-fa3b9e97b9ba",
+            "version": 1,
+            "name": "Fixture: Ticket Time Entry Threshold Notify",
+            "description": "Send an in-app notification when the event fires (TICKET_TIME_ENTRY_ADDED).",
+            "payloadSchemaRef": "payload.TicketTimeEntryAdded.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_TIME_ENTRY_ADDED"
+            },
+            "steps": [
+              {
+                "id": "state-fixture",
+                "type": "state.set",
+                "config": {
+                  "state": "FIXTURE"
+                }
+              },
+              {
+                "id": "assign-text",
+                "type": "transform.assign",
+                "config": {
+                  "assign": {
+                    "vars.marker": {
+                      "$expr": "'[fixture ticket-time-entry-threshold-notify]'"
+                    },
+                    "vars.title": {
+                      "$expr": "'[fixture ticket-time-entry-threshold-notify] Notify'"
+                    },
+                    "vars.body": {
+                      "$expr": "'[fixture ticket-time-entry-threshold-notify] dedupe=' & payload.fixtureDedupeKey"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "if-notify",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "(payload.fixtureMode ? payload.fixtureMode : 'notify') = 'notify'"
+                },
+                "then": [
+                  {
+                    "id": "notify",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "notifications.send_in_app",
+                      "version": 1,
+                      "inputMapping": {
+                        "recipients": {
+                          "$expr": "{ \"user_ids\": [payload.fixtureNotifyUserId] }"
+                        },
+                        "title": {
+                          "$expr": "vars.title"
+                        },
+                        "body": {
+                          "$expr": "vars.body"
+                        },
+                        "severity": "info",
+                        "dedupe_key": {
+                          "$expr": "'fixture.ticket-time-entry-threshold-notify:' & payload.fixtureDedupeKey"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "return-after-notify",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "return-after-skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

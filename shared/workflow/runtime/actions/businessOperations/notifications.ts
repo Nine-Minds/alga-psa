@@ -40,8 +40,6 @@ export function registerNotificationActions(): void {
     idempotency: { mode: 'actionProvided', key: (input: any, ctx: ActionContext) => input.dedupe_key ? String(input.dedupe_key) : actionProvidedKey(input, ctx) },
     ui: { label: 'Send In-App Notification', category: 'Business Operations', description: 'Create internal_notifications records for users' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'notification', action: 'manage' });
-
       const explicitUserIds = Array.isArray(input.recipients?.user_ids) ? input.recipients.user_ids : [];
       const roleIds = Array.isArray(input.recipients?.role_ids) ? input.recipients.role_ids : [];
       const roleNames = Array.isArray(input.recipients?.role_names) ? input.recipients.role_names : [];
@@ -119,4 +117,3 @@ export function registerNotificationActions(): void {
     })
   });
 }
-

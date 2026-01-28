@@ -54,6 +54,13 @@ exports.seed = async function(knex) {
         { resource: 'workflow', action: 'manage', msp: true, client: false, description: 'Manage workflows' },
         { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows' },
         { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows' },
+
+        // Email permissions
+        { resource: 'email', action: 'process', msp: true, client: false, description: 'Process outbound email' },
+
+        // Notification permissions
+        { resource: 'notification', action: 'read', msp: true, client: false, description: 'Read notifications' },
+        { resource: 'notification', action: 'manage', msp: true, client: false, description: 'Manage notifications' },
         
         // Invoice permissions
         { resource: 'invoice', action: 'create', msp: true, client: false, description: 'Create invoices' },

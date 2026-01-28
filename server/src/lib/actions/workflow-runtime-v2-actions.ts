@@ -41,6 +41,7 @@ import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
   GetWorkflowDefinitionVersionInput,
+  ListWorkflowDefinitionsPagedInput,
   PublishWorkflowDefinitionInput,
   RunIdInput,
   RunActionInput,
@@ -894,6 +895,134 @@ export const listWorkflowDefinitionsAction = withAuth(async (user, { tenant }) =
   return enrichedRecords.filter((record) => record.is_visible !== false);
 });
 
+export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = ListWorkflowDefinitionsPagedInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
+
+  const pageSize = parsed.pageSize;
+  const page = parsed.page;
+  const offset = (page - 1) * pageSize;
+
+  const search = typeof parsed.search === 'string' ? parsed.search.trim() : '';
+  const status = parsed.status ?? 'all';
+  const trigger = parsed.trigger ?? 'all';
+  const sortBy = parsed.sortBy ?? 'updated_at';
+  const sortDirection = parsed.sortDirection ?? 'desc';
+
+  const applyVisibilityFilter = (qb: any) => {
+    if (!canAdmin) {
+      qb.whereRaw('coalesce(wd.is_visible, true) = true');
+    }
+  };
+
+  const applyFilters = (qb: any) => {
+    applyVisibilityFilter(qb);
+
+    if (search) {
+      qb.andWhere(function whereSearch(this: any) {
+        this.whereRaw('wd.name ilike ?', [`%${search}%`]).orWhereRaw('wd.description ilike ?', [`%${search}%`]);
+      });
+    }
+
+    if (status !== 'all') {
+      if (status === 'paused') {
+        qb.andWhereRaw('coalesce(wd.is_paused, false) = true');
+      } else if (status === 'active') {
+        qb.andWhereIn('wd.status', ['active', 'published']).andWhereRaw('coalesce(wd.is_paused, false) = false');
+      } else if (status === 'draft') {
+        qb.andWhere('wd.status', 'draft').andWhereRaw('coalesce(wd.is_paused, false) = false');
+      }
+    }
+
+    if (trigger !== 'all') {
+      const eventNameExpr = "coalesce(wd.trigger->>'eventName', '')";
+      const scheduledExpr = `lower(${eventNameExpr}) like '%schedule%' or lower(${eventNameExpr}) like '%cron%'`;
+      if (trigger === 'manual') {
+        qb.andWhereRaw(`${eventNameExpr} = ''`);
+      } else if (trigger === 'scheduled') {
+        qb.andWhereRaw(`${eventNameExpr} <> '' and (${scheduledExpr})`);
+      } else if (trigger === 'event') {
+        qb.andWhereRaw(`${eventNameExpr} <> '' and not (${scheduledExpr})`);
+      }
+    }
+  };
+
+  const countQuery = knex('workflow_definitions as wd');
+  applyFilters(countQuery);
+  const countRow = await countQuery.count<{ count: number | string }[]>({ count: '*' }).first();
+  const totalItems = countRow?.count == null ? 0 : Number(countRow.count);
+
+  const versionsSubquery = knex('workflow_definition_versions')
+    .select('workflow_id')
+    .max('version as published_version')
+    .groupBy('workflow_id')
+    .as('pv');
+
+  const itemsQuery = knex('workflow_definitions as wd')
+    .select('wd.*')
+    .select(knex.raw('pv.published_version as published_version'))
+    .leftJoin(versionsSubquery, 'pv.workflow_id', 'wd.workflow_id');
+
+  applyFilters(itemsQuery);
+
+  if (sortBy === 'name') {
+    itemsQuery.orderByRaw(`lower(wd.name) ${sortDirection}`);
+  } else if (sortBy === 'created_at') {
+    itemsQuery.orderBy('wd.created_at', sortDirection);
+  } else if (sortBy === 'status') {
+    itemsQuery.orderByRaw(
+      `case
+        when coalesce(wd.is_paused, false) then 'paused'
+        when wd.status in ('active', 'published') then 'active'
+        else coalesce(wd.status, '')
+      end ${sortDirection}`
+    );
+  } else {
+    itemsQuery.orderBy('wd.updated_at', sortDirection);
+  }
+  itemsQuery.orderBy('wd.workflow_id', 'asc');
+
+  const rows = await itemsQuery.limit(pageSize).offset(offset);
+  const items = (rows as any[]).map((row) => ({
+    ...row,
+    published_version: row.published_version == null ? null : Number(row.published_version)
+  }));
+
+  // Aggregate counts (unfiltered, but respecting visibility rules).
+  const countBase = knex('workflow_definitions as wd');
+  applyVisibilityFilter(countBase);
+
+  const totalRow = await countBase.clone().count<{ count: number | string }[]>({ count: '*' }).first();
+  const activeRow = await countBase.clone()
+    .whereIn('wd.status', ['active', 'published'])
+    .andWhereRaw('coalesce(wd.is_paused, false) = false')
+    .count<{ count: number | string }[]>({ count: '*' })
+    .first();
+  const draftRow = await countBase.clone()
+    .where('wd.status', 'draft')
+    .andWhereRaw('coalesce(wd.is_paused, false) = false')
+    .count<{ count: number | string }[]>({ count: '*' })
+    .first();
+  const pausedRow = await countBase.clone()
+    .whereRaw('coalesce(wd.is_paused, false) = true')
+    .count<{ count: number | string }[]>({ count: '*' })
+    .first();
+
+  return {
+    items,
+    totalItems,
+    counts: {
+      total: totalRow?.count == null ? 0 : Number(totalRow.count),
+      active: activeRow?.count == null ? 0 : Number(activeRow.count),
+      draft: draftRow?.count == null ? 0 : Number(draftRow.count),
+      paused: pausedRow?.count == null ? 0 : Number(pausedRow.count)
+    }
+  };
+});
+
 export const listWorkflowDefinitionVersionsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = WorkflowIdInput.parse(input);
   const { knex } = await createTenantKnex();
@@ -918,7 +1047,7 @@ export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, in
   const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
-  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force });
+  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force, actorUserId: user.user_id });
 });
 
 export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -1200,7 +1329,16 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     await requireWorkflowPermission(user, 'admin', knex);
   }
 
-  const definition = { ...(parsed.definition as any ?? workflow.draft_definition), id: parsed.workflowId };
+  const maxVersionRow = await knex('workflow_definition_versions')
+    .where({ workflow_id: parsed.workflowId })
+    .max('version as max_version')
+    .first() as { max_version: number | string | null } | undefined;
+  const maxPublishedVersion = maxVersionRow?.max_version == null ? null : Number(maxVersionRow.max_version);
+  const expectedNextVersion = (maxPublishedVersion ?? 0) + 1;
+  const requestedVersion = parsed.version;
+  const versionToPublish = requestedVersion < expectedNextVersion ? expectedNextVersion : requestedVersion;
+
+  const definition = { ...(parsed.definition as any ?? workflow.draft_definition), id: parsed.workflowId, version: versionToPublish };
   if (!definition) {
     return throwHttpError(400, 'No definition to publish');
   }
@@ -1253,21 +1391,36 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     return { ok: false, errors: validation.errors, warnings: validation.warnings };
   }
 
-  const record = await WorkflowDefinitionVersionModelV2.create(knex, {
-    workflow_id: parsed.workflowId,
-    version: parsed.version,
-    definition_json: definition,
-    payload_schema_json: payloadSchemaJson as Record<string, unknown> | null,
-    validation_status: validation.status,
-    validation_errors: validation.errors,
-    validation_warnings: validation.warnings,
-    validated_at: new Date().toISOString(),
-    published_by: user.user_id,
-    published_at: new Date().toISOString()
-  });
+  let record: WorkflowDefinitionVersionRecord;
+  try {
+    record = await WorkflowDefinitionVersionModelV2.create(knex, {
+      workflow_id: parsed.workflowId,
+      version: versionToPublish,
+      definition_json: definition,
+      payload_schema_json: payloadSchemaJson as Record<string, unknown> | null,
+      validation_status: validation.status,
+      validation_errors: validation.errors,
+      validation_warnings: validation.warnings,
+      validated_at: new Date().toISOString(),
+      published_by: user.user_id,
+      published_at: new Date().toISOString()
+    });
+  } catch (err: any) {
+    if (err?.code === '23505' && err?.constraint === 'workflow_definition_versions_workflow_version_unique') {
+      return throwHttpError(409, `Workflow version ${versionToPublish} already exists. Refresh and retry.`);
+    }
+    throw err;
+  }
 
+  const nextDraftVersion = versionToPublish + 1;
+  const nextDraftDefinition = { ...definition, version: nextDraftVersion };
   await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
     status: 'published',
+    draft_definition: nextDraftDefinition,
+    draft_version: nextDraftVersion,
+    name: definition.name,
+    description: definition.description ?? null,
+    trigger: definition.trigger ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
     payload_schema_provenance: payloadSchemaProvenance,
     validation_status: validation.status,
@@ -2552,7 +2705,10 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   const triggered = await WorkflowDefinitionModelV2.list(knex);
   const matching = triggered.filter(
-    (workflow) => workflow.trigger?.eventName === parsed.eventName && workflow.status === 'published'
+    (workflow) =>
+      workflow.trigger?.eventName === parsed.eventName
+      && workflow.status === 'published'
+      && workflow.is_paused !== true
   );
 
   const startedRuns: string[] = [];

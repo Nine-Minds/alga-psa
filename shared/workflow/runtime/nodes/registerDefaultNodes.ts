@@ -5,6 +5,7 @@ import { resolveExpressions } from '../utils/expressionResolver';
 import { resolveInputMapping, noOpSecretResolver } from '../utils/mappingResolver';
 import { applyAssignments } from '../utils/assignmentUtils';
 import type { Envelope, InputMapping } from '../types';
+import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
 import { getFormValidationService } from '../../core/formValidationService';
 
@@ -119,16 +120,15 @@ export function registerDefaultNodes(): void {
       env.vars.eventName = ctx.resumeEvent.name;
 
       if (config.assign) {
-        const resolvedAssign: Record<string, unknown> = {};
         for (const [path, expr] of Object.entries(config.assign)) {
-          resolvedAssign[path] = await resolveExpressions(expr, {
+          const resolved = await resolveExpressions(expr, {
             payload: env.payload,
             vars: env.vars,
             meta: env.meta,
             error: env.error
           });
+          env = applyAssignments(env, { [path]: resolved });
         }
-        env = applyAssignments(env, resolvedAssign);
       }
       return env;
     },
@@ -143,16 +143,16 @@ export function registerDefaultNodes(): void {
     id: 'transform.assign',
     configSchema: transformAssignSchema,
     handler: async (env, config) => {
-      const resolvedAssign: Record<string, unknown> = {};
       for (const [path, expr] of Object.entries(config.assign)) {
-        resolvedAssign[path] = await resolveExpressions(expr, {
+        const resolved = await resolveExpressions(expr, {
           payload: env.payload,
           vars: env.vars,
           meta: env.meta,
           error: env.error
         });
+        env = applyAssignments(env, { [path]: resolved });
       }
-      return applyAssignments(env, resolvedAssign);
+      return env;
     },
     ui: {
       label: 'Assign',
@@ -165,36 +165,59 @@ export function registerDefaultNodes(): void {
     id: 'action.call',
     configSchema: actionCallSchema,
     handler: async (env, config, ctx) => {
-      const exprContext = ctxToExpr(env);
-      let resolvedArgs: unknown;
+      try {
+        const exprContext = ctxToExpr(env);
+        let resolvedArgs: unknown;
 
-      // Resolve inputMapping to action arguments
-      const redactionPaths: string[] = [];
-      resolvedArgs = await resolveInputMapping(config.inputMapping ?? {}, {
-        expressionContext: exprContext,
-        secretResolver: ctx.secretResolver ?? noOpSecretResolver,
-        workflowRunId: ctx.runId,
-        redactionPaths
-      });
-
-      // Add resolved secret paths to envelope meta for redaction
-      if (redactionPaths.length > 0 && env.meta.redactions) {
-        env.meta.redactions.push(...redactionPaths.map(p => `args${p}`));
-      } else if (redactionPaths.length > 0) {
-        env.meta.redactions = redactionPaths.map(p => `args${p}`);
-      }
-
-      const idempotencyKey = config.idempotencyKey
-        ? String(await resolveExpressions(config.idempotencyKey, exprContext))
-        : undefined;
-
-      const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
-      if (config.saveAs) {
-        return applyAssignments(env, {
-          [normalizeAssignmentPath(config.saveAs)]: output
+        // Resolve inputMapping to action arguments
+        const redactionPaths: string[] = [];
+        resolvedArgs = await resolveInputMapping(config.inputMapping ?? {}, {
+          expressionContext: exprContext,
+          secretResolver: ctx.secretResolver ?? noOpSecretResolver,
+          workflowRunId: ctx.runId,
+          redactionPaths
         });
+
+        // Add resolved secret paths to envelope meta for redaction
+        if (redactionPaths.length > 0 && env.meta.redactions) {
+          env.meta.redactions.push(...redactionPaths.map(p => `args${p}`));
+        } else if (redactionPaths.length > 0) {
+          env.meta.redactions = redactionPaths.map(p => `args${p}`);
+        }
+
+        const idempotencyKey = config.idempotencyKey
+          ? String(await resolveExpressions(config.idempotencyKey, exprContext))
+          : undefined;
+
+        const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
+        if (config.saveAs) {
+          return applyAssignments(env, {
+            [normalizeAssignmentPath(config.saveAs)]: output
+          });
+        }
+        return env;
+      } catch (error: any) {
+        // Preserve structured runtime errors if they already match our shape.
+        if (typeof error === 'object' && error !== null && 'category' in error) {
+          throw error;
+        }
+        let raw: unknown;
+        try {
+          raw = safeSerialize(error);
+        } catch {
+          raw = String(error);
+        }
+        throw {
+          category: 'ActionError',
+          code: 'INTERNAL_ERROR',
+          message: 'action.call failed',
+          details: error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : { raw },
+          nodePath: ctx.stepPath,
+          at: new Date().toISOString()
+        };
       }
-      return env;
     },
     ui: {
       label: 'Call Action',
