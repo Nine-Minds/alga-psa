@@ -18,7 +18,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from '@alga-psa/tags/components';
-import { ResponseStateDisplay } from '../ResponseStateSelect';
+import { ResponseStateSelect } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
@@ -703,10 +703,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             </div>
             <div>
-              <ResponseStateDisplay
+              <h5 className="font-bold mb-2">Response State</h5>
+              <ResponseStateSelect
                 value={((pendingChanges.response_state ?? ticket.response_state) || null) as TicketResponseState}
                 onValueChange={(value) => handlePendingChange('response_state', value)}
-                editable={true}
               />
             </div>
             <div>
