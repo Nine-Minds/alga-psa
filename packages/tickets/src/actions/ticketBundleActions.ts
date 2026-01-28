@@ -492,9 +492,12 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
         'tickets.ticket_number',
         'tickets.title',
         'tickets.client_id',
-        'companies.company_name as client_name'
+        'clients.client_name'
       )
-      .leftJoin('companies', 'tickets.client_id', 'companies.company_id')
+      .leftJoin('clients', function() {
+        this.on('tickets.client_id', 'clients.client_id')
+          .andOn('tickets.tenant', 'clients.tenant');
+      })
       .where({ 
         'tickets.tenant': tenant,
         'tickets.board_id': data.boardId 
