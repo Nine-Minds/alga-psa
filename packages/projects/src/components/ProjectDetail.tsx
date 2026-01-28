@@ -255,6 +255,14 @@ export default function ProjectDetail({
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
   const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
   const [primaryAgentOnly, setPrimaryAgentOnly] = useState<boolean>(false);
+
+  // Reset primaryAgentOnly when agent selection changes away from exactly one agent
+  const handleAgentFilterChange = (newValues: string[]) => {
+    setSelectedAgentFilter(newValues);
+    if (newValues.length !== 1) {
+      setPrimaryAgentOnly(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchWholeWord, setSearchWholeWord] = useState<boolean>(false);
   const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
@@ -1663,7 +1671,7 @@ export default function ProjectDetail({
                 <MultiUserPicker
                   id="task-agent-filter-list"
                   values={selectedAgentFilter}
-                  onValuesChange={setSelectedAgentFilter}
+                  onValuesChange={handleAgentFilterChange}
                   users={users}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
@@ -1793,7 +1801,7 @@ export default function ProjectDetail({
                 <MultiUserPicker
                   id="task-agent-filter-kanban"
                   values={selectedAgentFilter}
-                  onValuesChange={setSelectedAgentFilter}
+                  onValuesChange={handleAgentFilterChange}
                   users={users}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
