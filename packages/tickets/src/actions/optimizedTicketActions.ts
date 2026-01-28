@@ -12,6 +12,7 @@ import type {
   ITicketCategory,
   ITicketResource,
   IDocument,
+  TicketResponseState,
 } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
@@ -50,6 +51,57 @@ function getEmailEventChannel(): string {
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
+
+async function updateTicketResponseStateFromComment(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  authorType: 'internal' | 'client' | 'unknown',
+  isInternal: boolean,
+  userId: string | null
+): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
+  const ticket = await trx('tickets')
+    .select('response_state')
+    .where({ ticket_id: ticketId, tenant })
+    .first();
+
+  const previousState = (ticket?.response_state || null) as TicketResponseState;
+  let newState: TicketResponseState = previousState;
+
+  if (isInternal) {
+    return { previousState, newState };
+  }
+
+  if (authorType === 'internal') {
+    newState = 'awaiting_client';
+  } else if (authorType === 'client') {
+    newState = 'awaiting_internal';
+  }
+
+  if (newState !== previousState) {
+    await trx('tickets')
+      .where({ ticket_id: ticketId, tenant })
+      .update({ response_state: newState });
+
+    try {
+      await publishEvent({
+        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+        payload: {
+          tenantId: tenant,
+          ticketId,
+          userId,
+          previousState,
+          newState,
+          trigger: 'comment',
+        },
+      });
+    } catch (eventError) {
+      console.error('[updateTicketResponseStateFromComment] Failed to publish event:', eventError);
+    }
+  }
+
+  return { previousState, newState };
 }
 
 // Helper function to safely convert dates
@@ -1566,6 +1618,12 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     try {
+    const authorType: 'internal' | 'client' | 'unknown' =
+      user.user_type === 'client' ? 'client' : 'internal';
+
+    if (isInternal && authorType !== 'internal') {
+      throw new Error('Only MSP users can create internal comments');
+    }
 
     // Verify ticket exists
     const ticket = await trx('tickets')
@@ -1595,13 +1653,23 @@ export const addTicketCommentWithCache = withAuth(async (
       tenant,
       ticket_id: ticketId,
       user_id: user.user_id,
-      author_type: 'internal',
+      author_type: authorType,
       note: content,
-      is_internal: isInternal,
+      is_internal: authorType === 'internal' ? isInternal : false,
       is_resolution: isResolution,
       markdown_content: markdownContent, // Add markdown content
       created_at: new Date().toISOString()
     }).returning('*');
+
+    // Update ticket response state based on comment visibility and author (F005-F008)
+    await updateTicketResponseStateFromComment(
+      trx,
+      tenant,
+      ticketId,
+      authorType,
+      authorType === 'internal' ? isInternal : false,
+      user.user_id ?? null
+    );
 
     // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
     if (!isInternal) {
@@ -1669,7 +1737,8 @@ export const addTicketCommentWithCache = withAuth(async (
           id: newComment.comment_id,
           content: content,
           author: `${user.first_name} ${user.last_name}`,
-          isInternal
+          isInternal,
+          authorType,
         }
       }
     });

@@ -54,6 +54,7 @@ import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
+import { ResponseStateBadge } from '../ResponseStateBadge';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import {
     addChildrenToBundleAction,
@@ -691,6 +692,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     isInternal,
                     isResolution
                 );
+
+                // Optimistically update the response state in UI to match server behavior:
+                // - Internal note: no change
+                // - Client-visible comment from internal user (MSP portal): awaiting client
+                if (!isInternal) {
+                    setTicket((prev: any) => ({
+                        ...prev,
+                        response_state: 'awaiting_client'
+                    }));
+                }
 
                 // Refresh comments to ensure immediate UI update
                 if (ticket.ticket_id) {
@@ -1331,12 +1342,20 @@ const handleClose = () => {
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-5 min-w-0 flex-1">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                         {/* Only show the Back button if NOT in a drawer, using BackNav */}
                         {!isInDrawer && (
                             <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
                         )}
                         <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
+                        {ticket.response_state ? (
+                            <ResponseStateBadge
+                                responseState={ticket.response_state}
+                                size="sm"
+                                showTooltip={false}
+                                className="flex-shrink-0"
+                            />
+                        ) : null}
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
