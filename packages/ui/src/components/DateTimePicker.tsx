@@ -10,9 +10,8 @@ import { Calendar } from './Calendar';
 import { cn } from '../lib/utils';
 import '../styles/calendar.css';
 
-export interface DateTimePickerProps {
+interface DateTimePickerBaseProps {
   value?: Date;
-  onChange: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -22,8 +21,6 @@ export interface DateTimePickerProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
-  /** Whether the value can be cleared */
-  clearable?: boolean;
   /** Minimum allowed date */
   minDate?: Date;
   /** Maximum allowed date */
@@ -33,6 +30,20 @@ export interface DateTimePickerProps {
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
 }
+
+interface DateTimePickerClearableProps extends DateTimePickerBaseProps {
+  /** Whether the value can be cleared */
+  clearable: true;
+  onChange: (date: Date | undefined) => void;
+}
+
+interface DateTimePickerNonClearableProps extends DateTimePickerBaseProps {
+  /** Whether the value can be cleared */
+  clearable?: false;
+  onChange: (date: Date) => void;
+}
+
+export type DateTimePickerProps = DateTimePickerClearableProps | DateTimePickerNonClearableProps;
 
 export function DateTimePicker({
   value,
@@ -56,7 +67,7 @@ export function DateTimePicker({
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearable) {
       e.preventDefault();
-      onChange(undefined);
+      (onChange as (date: Date | undefined) => void)(undefined);
     }
   }, [value, disabled, clearable, onChange]);
 
@@ -188,13 +199,13 @@ export function DateTimePicker({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onChange(undefined);
+                  (onChange as (date: Date | undefined) => void)(undefined);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     e.stopPropagation();
-                    onChange(undefined);
+                    (onChange as (date: Date | undefined) => void)(undefined);
                   }
                 }}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"

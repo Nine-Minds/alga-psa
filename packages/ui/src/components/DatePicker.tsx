@@ -9,9 +9,8 @@ import { DatePickerComponent } from '../ui-reflection/types';
 import { Calendar } from './Calendar';
 import '../styles/calendar.css';
 
-export interface DatePickerProps {
+interface DatePickerBaseProps {
   value?: Date;
-  onChange: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -21,11 +20,23 @@ export interface DatePickerProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
-  /** Whether the value can be cleared */
-  clearable?: boolean;
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
 }
+
+interface DatePickerClearableProps extends DatePickerBaseProps {
+  /** Whether the value can be cleared */
+  clearable: true;
+  onChange: (date: Date | undefined) => void;
+}
+
+interface DatePickerNonClearableProps extends DatePickerBaseProps {
+  /** Whether the value can be cleared */
+  clearable?: false;
+  onChange: (date: Date) => void;
+}
+
+export type DatePickerProps = DatePickerClearableProps | DatePickerNonClearableProps;
 
 export function DatePicker({
   value,
@@ -42,16 +53,17 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
 
   const handleClear = React.useCallback(() => {
-    onChange(undefined);
+    // handleClear is only passed to Calendar when clearable is true
+    (onChange as (date: Date | undefined) => void)(undefined);
     setOpen(false);
   }, [onChange]);
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled) {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearable) {
       e.preventDefault();
-      onChange(undefined);
+      (onChange as (date: Date | undefined) => void)(undefined);
     }
-  }, [value, disabled, onChange]);
+  }, [value, disabled, clearable, onChange]);
 
   // Register with UI reflection system if id is provided
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<DatePickerComponent>({
@@ -102,13 +114,13 @@ export function DatePicker({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onChange(undefined);
+                (onChange as (date: Date | undefined) => void)(undefined);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   e.stopPropagation();
-                  onChange(undefined);
+                  (onChange as (date: Date | undefined) => void)(undefined);
                 }
               }}
               className="mr-2 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -133,8 +145,9 @@ export function DatePicker({
                   if (date) {
                     onChange(new Date(date)); // Ensure we pass a new Date object
                     setOpen(false);
-                  } else {
-                    onChange(undefined);
+                  } else if (clearable) {
+                    // Only allow clearing when clearable is true
+                    (onChange as (date: Date | undefined) => void)(undefined);
                   }
                 }}
                 onClear={clearable ? handleClear : undefined}
