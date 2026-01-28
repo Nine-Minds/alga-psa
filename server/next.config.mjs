@@ -6,6 +6,17 @@ import fs from 'fs';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const parsePositiveInt = (value) => {
+  if (value == null) return undefined;
+  const n = Number.parseInt(String(value), 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+
+const truthyEnv = (value) => {
+  const v = String(value ?? '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+};
+
 let webpack = null;
 try {
   webpack = require('next/dist/compiled/webpack/webpack').webpack;
@@ -147,6 +158,8 @@ class EditionBuildDiagnosticsPlugin {
 }
 
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS);
+const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
   env: {
@@ -819,6 +832,10 @@ const nextConfig = {
     },
     // Increase middleware body size limit for extension installs
     proxyClientMaxBodySize: '100mb',
+    // Next build "Collecting page data" uses a worker pool sized from this value.
+    // In large repos, the default (often == host CPU count) can cause OOMs in CI.
+    ...(buildCpus ? { cpus: buildCpus } : {}),
+    ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
   },
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
