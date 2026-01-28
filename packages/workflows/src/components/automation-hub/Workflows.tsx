@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input'; // Assuming WorkflowDataWithSystemFlag is exported from here
 import { Label } from '@alga-psa/ui/components/Label';
@@ -32,6 +35,7 @@ import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from '../workflow-editor/WorkflowEditorComponent';
 import TestWorkflowModal from '../workflow-editor/TestWorkflowModal';
 import WorkflowVersionsDialog from '../workflow-editor/WorkflowVersionsDialog';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 
 
 // Type for workflow data with events
@@ -54,17 +58,33 @@ interface WorkflowsProps {
 
 export default function Workflows({ workflowId }: WorkflowsProps) {
   const router = useRouter();
+  const [workflowAutomationEnabled, setWorkflowAutomationEnabled] = useState<boolean | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowWithEvents[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showInactive, setShowInactive] = useState<boolean>(false);
   
+  useEffect(() => {
+    const loadWorkflowAutomationEnabled = async () => {
+      try {
+        const enabled = await isExperimentalFeatureEnabled('workflowAutomation');
+        setWorkflowAutomationEnabled(enabled);
+      } catch (error) {
+        console.error('[Workflows] Failed to check workflowAutomation feature flag', error);
+        setWorkflowAutomationEnabled(false);
+      }
+    };
+
+    void loadWorkflowAutomationEnabled();
+  }, []);
+
   // Effect to reload workflows when showInactive changes
   useEffect(() => {
     console.log(`showInactive changed to: ${showInactive}`);
+    if (workflowAutomationEnabled !== true) return;
     if (workflowId) return; // Don't reload if we're in editor mode
     loadWorkflows();
-  }, [showInactive, workflowId]);
+  }, [showInactive, workflowId, workflowAutomationEnabled]);
   const [activatingVersion, setActivatingVersion] = useState<{workflowId: string, versionId: string} | null>(null);
   const [showEditor, setShowEditor] = useState<boolean>(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
@@ -74,13 +94,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
 
   // Handle workflowId if provided
   useEffect(() => {
+    if (workflowAutomationEnabled !== true) return;
     if (workflowId) {
       setSelectedWorkflowId(workflowId);
       setShowEditor(true);
     } else {
       loadWorkflows();
     }
-  }, [workflowId]);
+  }, [workflowId, workflowAutomationEnabled]);
   
   // Load workflows from server
   const loadWorkflows = async () => {
@@ -108,6 +129,46 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
       setLoading(false);
     }
   };
+
+  if (workflowAutomationEnabled === null) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator layout="stacked" text="Loading workflow automation..." spinnerProps={{ size: 'md' }} />
+      </div>
+    );
+  }
+
+  if (!workflowAutomationEnabled) {
+    return (
+      <Card className="p-6">
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Workflow Automation</h2>
+            <p className="text-sm text-gray-600">
+              This feature is experimental and is not enabled for your tenant.
+            </p>
+          </div>
+          <Alert
+            variant="warning"
+            className="text-[rgba(255,174,0,1)] [&>svg]:text-[rgba(255,174,0,1)]"
+          >
+            <AlertTitle>Experimental</AlertTitle>
+            <AlertDescription>
+              Enable Workflow Automation in Settings to access workflow automation features.
+            </AlertDescription>
+          </Alert>
+          <div className="flex items-center gap-3">
+            <Button id="enable-workflow-automation" asChild>
+              <Link href="/msp/settings?tab=experimental-features">Go to Experimental Features</Link>
+            </Button>
+            <Link href="/msp/settings?tab=experimental-features" className="text-sm text-primary-600 hover:underline">
+              Open settings
+            </Link>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   // Filter by status/search - let DataTable handle sorting
   const filteredWorkflows = workflows

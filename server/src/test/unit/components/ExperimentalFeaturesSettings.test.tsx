@@ -12,7 +12,7 @@ import ExperimentalFeaturesSettings from '../../../components/settings/general/E
 import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
-  getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false }),
+  getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false, workflowAutomation: false }),
   updateExperimentalFeatures: vi.fn(),
 }));
 
@@ -29,7 +29,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it("shows 'AI Assistant' name and description", async () => {
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
 
     render(
       <UIStateProvider
@@ -76,7 +76,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('renders experimental features warning banner', async () => {
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
 
     render(
       <UIStateProvider
@@ -97,7 +97,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('calls updateExperimentalFeatures() with current toggle states on save', async () => {
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
     vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
 
     render(
@@ -129,12 +129,12 @@ describe('ExperimentalFeaturesSettings', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(updateExperimentalFeatures).toHaveBeenCalledWith({ aiAssistant: true });
+      expect(updateExperimentalFeatures).toHaveBeenCalledWith({ aiAssistant: true, workflowAutomation: false });
     });
   });
 
   it('shows success feedback after saving', async () => {
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
     vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
 
     render(
@@ -173,7 +173,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('updates local state when toggled', async () => {
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
 
     render(
       <UIStateProvider
@@ -201,7 +201,7 @@ describe('ExperimentalFeaturesSettings', () => {
   });
 
   it('loads current settings on mount', async () => {
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: true });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: true, workflowAutomation: false });
 
     render(
       <UIStateProvider
@@ -247,6 +247,10 @@ describe('ExperimentalFeaturesSettings', () => {
       '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
     );
     expect(toggle).toBeTruthy();
-    expect(screen.getAllByRole('switch')).toHaveLength(1);
+    const workflowAutomationToggle = document.querySelector(
+      '[data-automation-id="experimental-feature-toggle-workflowAutomation"]'
+    );
+    expect(workflowAutomationToggle).toBeTruthy();
+    expect(screen.getAllByRole('switch')).toHaveLength(2);
   });
 });

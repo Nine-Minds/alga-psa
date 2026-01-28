@@ -89,7 +89,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
     );
 
-    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false });
+    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false, workflowAutomation: false });
     expect(createTenantKnexMock).toHaveBeenCalled();
   });
 
@@ -99,6 +99,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       settings: {
         experimentalFeatures: {
           aiAssistant: true,
+          workflowAutomation: true,
         },
       },
     };
@@ -107,7 +108,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
     );
 
-    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true });
+    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true, workflowAutomation: true });
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
   });
 });
@@ -200,6 +201,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     expect(parsedSettings).toEqual({
       experimentalFeatures: {
         aiAssistant: true,
+        workflowAutomation: false,
       },
     });
 
@@ -239,6 +241,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
       },
       experimentalFeatures: {
         aiAssistant: true,
+        workflowAutomation: false,
       },
     });
   });

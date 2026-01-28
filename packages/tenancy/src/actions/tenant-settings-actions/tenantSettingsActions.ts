@@ -20,10 +20,12 @@ export interface TenantSettings {
 
 export interface ExperimentalFeatures {
   aiAssistant: boolean;
+  workflowAutomation: boolean;
 }
 
 const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
   aiAssistant: false,
+  workflowAutomation: false,
 };
 
 function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
@@ -34,6 +36,7 @@ function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
   const record = value as Record<string, unknown>;
   return {
     aiAssistant: record.aiAssistant === true,
+    workflowAutomation: record.workflowAutomation === true,
   };
 }
 
