@@ -14,6 +14,7 @@ try {
 
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+console.log('[next.config] isEE:', isEE, { EDITION: process.env.EDITION, NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION });
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
@@ -185,6 +186,10 @@ const nextConfig = {
 	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
 	      '@alga-psa/event-schemas': '../packages/event-schemas/src',
 	      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+	      // Documents package
+	      '@alga-psa/documents': '../packages/documents/src',
+	      '@alga-psa/documents/': '../packages/documents/src/',
+	      '@alga-psa/documents/storage/StorageService': '../packages/documents/src/storage/StorageService.ts',
 	      // DB package (use source files for Turbopack dev/HMR)
 	      '@alga-psa/db': '../packages/db/src/index.ts',
 	      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
@@ -310,6 +315,7 @@ const nextConfig = {
 	    '@alga-psa/integrations',
 	    '@alga-psa/client-portal',
 	    '@alga-psa/event-schemas',
+	    '@alga-psa/documents',
 	    // Product feature packages (only those needed in this app)
 	    '@product/extensions',
     '@product/settings-extensions',

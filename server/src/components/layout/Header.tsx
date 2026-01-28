@@ -25,7 +25,7 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlAction } from '@alga-psa/users/actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
@@ -290,8 +290,10 @@ export default function Header({
       const user = await getCurrentUser();
       if (user) {
         setUserData(user);
-        // getCurrentUser already includes avatarUrl
-        setAvatarUrl(user.avatarUrl ?? null);
+
+        // Fetch avatar URL separately (getCurrentUser doesn't include it to avoid circular deps)
+        const avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
+        setAvatarUrl(avatarUrl);
 
         const hasAccountPermission = await checkAccountManagementPermission();
         setCanManageAccount(hasAccountPermission);
