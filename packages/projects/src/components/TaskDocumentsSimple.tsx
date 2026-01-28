@@ -67,6 +67,8 @@ interface TaskDocumentsSimpleProps {
   // Pending mode props (for task creation)
   pendingDocuments?: PendingTaskDocument[];
   onPendingDocumentsChange?: (docs: PendingTaskDocument[]) => void;
+  // Edit mode session tracking - notify parent when documents are added during edit session
+  onDocumentAdded?: (doc: PendingTaskDocument) => void;
 }
 
 export default function TaskDocumentsSimple({
@@ -74,7 +76,8 @@ export default function TaskDocumentsSimple({
   initialDocuments,
   onDocumentCreated,
   pendingDocuments,
-  onPendingDocumentsChange
+  onPendingDocumentsChange,
+  onDocumentAdded
 }: TaskDocumentsSimpleProps) {
   // Pending mode is active when we don't have a taskId yet (task creation)
   const isPendingMode = !taskId;
@@ -307,6 +310,12 @@ export default function TaskDocumentsSimple({
         };
         onPendingDocumentsChange?.([...(pendingDocuments || []), newPendingDoc]);
       } else {
+        // In edit mode, notify parent about the new document for session tracking
+        onDocumentAdded?.({
+          document_id: result.document_id,
+          document_name: newDocumentName,
+          type: 'block'
+        });
         await handleDocumentMutation();
       }
 
@@ -551,6 +560,14 @@ export default function TaskDocumentsSimple({
                     };
                     onPendingDocumentsChange?.([...(pendingDocuments || []), newPendingDoc]);
                   } else {
+                    // In edit mode, notify parent about the new document for session tracking
+                    onDocumentAdded?.({
+                      document_id: result.document.document_id,
+                      document_name: result.document.document_name,
+                      type: 'uploaded',
+                      mime_type: result.document.mime_type,
+                      file_id: result.document.file_id
+                    });
                     await handleDocumentMutation();
                   }
                 }
@@ -679,6 +696,18 @@ export default function TaskDocumentsSimple({
               }));
               onPendingDocumentsChange?.([...(pendingDocuments || []), ...newPendingDocs]);
             } else {
+              // In edit mode, notify parent about the linked documents for session tracking
+              if (selectedDocs && selectedDocs.length > 0) {
+                selectedDocs.forEach(doc => {
+                  onDocumentAdded?.({
+                    document_id: doc.document_id,
+                    document_name: doc.document_name,
+                    type: 'linked',
+                    mime_type: doc.mime_type,
+                    file_id: doc.file_id
+                  });
+                });
+              }
               await handleDocumentMutation();
             }
           }}

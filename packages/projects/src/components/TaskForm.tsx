@@ -46,7 +46,7 @@ import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
-import { createDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
+import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
@@ -100,6 +100,8 @@ export default function TaskForm({
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showDocumentCleanupConfirm, setShowDocumentCleanupConfirm] = useState(false);
+  const [isDeletingDocuments, setIsDeletingDocuments] = useState(false);
   const [tempTaskId] = useState<string>(`temp-${Date.now()}`);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Convert from minutes to hours for display
@@ -111,6 +113,8 @@ export default function TaskForm({
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
   const [pendingDocuments, setPendingDocuments] = useState<PendingTaskDocument[]>([]);
+  // Track documents added during edit session (for cleanup on cancel)
+  const [sessionAddedDocuments, setSessionAddedDocuments] = useState<PendingTaskDocument[]>([]);
 
   // Ref to prevent race conditions when rapidly adding/removing agents
   const isProcessingAgentsRef = useRef(false);
@@ -657,6 +661,9 @@ export default function TaskForm({
       if (!originalTicketIds.has(id)) return true;
     }
 
+    // Check if documents were added during this edit session
+    if (sessionAddedDocuments.length > 0) return true;
+
     return false;
   };
 
@@ -685,11 +692,52 @@ export default function TaskForm({
 
   const handleCancelConfirm = () => {
     setShowCancelConfirm(false);
-    onClose();
+    // Check for NEW documents (uploaded or created) that need cleanup prompt
+    // Linked documents already existed in the system, so they don't need cleanup
+    const docsToCleanup = mode === 'create' ? pendingDocuments : sessionAddedDocuments;
+    const newDocsToCleanup = docsToCleanup.filter(d => d.type === 'uploaded' || d.type === 'block');
+    if (newDocsToCleanup.length > 0) {
+      setShowDocumentCleanupConfirm(true);
+    } else {
+      onClose();
+    }
   };
 
   const handleCancelDismiss = () => {
     setShowCancelConfirm(false);
+  };
+
+  const handleDocumentCleanupKeep = () => {
+    // Keep documents in the system, just close the form
+    setShowDocumentCleanupConfirm(false);
+    onClose();
+  };
+
+  const handleDocumentCleanupDelete = async () => {
+    setIsDeletingDocuments(true);
+    try {
+      // Only process uploaded and created documents - linked docs are ignored
+      const docsToDelete = mode === 'create'
+        ? pendingDocuments.filter(d => d.type === 'uploaded' || d.type === 'block')
+        : sessionAddedDocuments.filter(d => d.type === 'uploaded' || d.type === 'block');
+
+      for (const doc of docsToDelete) {
+        try {
+          if (mode === 'edit' && task?.task_id) {
+            // In edit mode, first remove the association from the task
+            await removeDocumentAssociations(task.task_id, 'project_task', [doc.document_id]);
+          }
+          // Delete the document from the system
+          await deleteDocument(doc.document_id, currentUserId);
+        } catch (error) {
+          console.error(`Failed to delete document ${doc.document_id}:`, error);
+        }
+      }
+    } finally {
+      setIsDeletingDocuments(false);
+      setShowDocumentCleanupConfirm(false);
+      onClose();
+    }
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -1301,6 +1349,7 @@ export default function TaskForm({
               taskId={mode === 'edit' && task ? task.task_id : undefined}
               pendingDocuments={mode === 'create' ? pendingDocuments : undefined}
               onPendingDocumentsChange={mode === 'create' ? setPendingDocuments : undefined}
+              onDocumentAdded={mode === 'edit' ? (doc) => setSessionAddedDocuments(prev => [...prev, doc]) : undefined}
             />
           </div>
 
@@ -1385,10 +1434,48 @@ export default function TaskForm({
         isOpen={showCancelConfirm}
         onClose={handleCancelDismiss}
         onConfirm={handleCancelConfirm}
-        title="Cancel Edit"
+        title={mode === 'create' ? "Cancel Task Creation" : "Cancel Edit"}
         message="Are you sure you want to cancel? Any unsaved changes will be lost."
         confirmLabel="Discard changes"
         cancelLabel="Continue editing"
+      />
+
+      {/* Document cleanup confirmation - shown when canceling with new documents (uploaded/created) */}
+      <ConfirmationDialog
+        isOpen={showDocumentCleanupConfirm}
+        onClose={() => setShowDocumentCleanupConfirm(false)}
+        onConfirm={handleDocumentCleanupDelete}
+        onCancel={handleDocumentCleanupKeep}
+        title="Keep Uploaded Documents?"
+        message={(() => {
+          const allDocs = mode === 'create' ? pendingDocuments : sessionAddedDocuments;
+          // Only show uploaded and created documents - linked docs don't need cleanup
+          const docsToShow = allDocs.filter(d => d.type === 'uploaded' || d.type === 'block');
+
+          return (
+            <div>
+              <p>You have {docsToShow.length} document{docsToShow.length !== 1 ? 's' : ''} that {docsToShow.length !== 1 ? 'were' : 'was'} {docsToShow.some(d => d.type === 'block') && docsToShow.some(d => d.type === 'uploaded') ? 'uploaded or created' : docsToShow.some(d => d.type === 'block') ? 'created' : 'uploaded'}:</p>
+              <ul className="list-disc list-inside mt-2 text-sm">
+                {docsToShow.slice(0, 5).map(doc => (
+                  <li key={doc.document_id} className="truncate">
+                    {doc.document_name}
+                    <span className="text-gray-400 ml-1">
+                      ({doc.type === 'block' ? 'created' : 'uploaded'})
+                    </span>
+                  </li>
+                ))}
+                {docsToShow.length > 5 && (
+                  <li className="text-gray-500">...and {docsToShow.length - 5} more</li>
+                )}
+              </ul>
+              <p className="mt-3">Would you like to keep these in the Documents section or delete them?</p>
+            </div>
+          );
+        })()}
+        confirmLabel={isDeletingDocuments ? "Deleting..." : "Delete documents"}
+        cancelLabel="Continue editing"
+        thirdButtonLabel="Keep documents"
+        isConfirming={isDeletingDocuments}
       />
 
       <ConfirmationDialog
