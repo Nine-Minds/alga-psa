@@ -1494,18 +1494,13 @@ const handleClose = () => {
                                                                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                                                                         onClick={() => handleSelectSearchResult(result)}
                                                                     >
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="text-sm font-medium text-gray-900">
+                                                                        <div className="min-w-0">
+                                                                            <span className="text-sm text-blue-600">
                                                                                 {result.ticket_number}
                                                                             </span>
-                                                                            {result.client_name && (
-                                                                                <span className="text-xs text-gray-500 ml-2">
-                                                                                    {result.client_name}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="text-xs text-gray-600 truncate">
-                                                                            {result.title}
+                                                                            <div className="text-xs text-gray-500 truncate">
+                                                                                {(result.client_name ? `${result.client_name} · ` : '')}{result.title}
+                                                                            </div>
                                                                         </div>
                                                                     </li>
                                                                 ))}
