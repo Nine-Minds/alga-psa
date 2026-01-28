@@ -2150,7 +2150,7 @@ const WorkflowDesigner: React.FC = () => {
           setInferredSchemaStatus('error');
           return;
         }
-        const entry = await getEventCatalogEntryByEventType({ eventType: eventName, tenant: user.tenant });
+        const entry = await getEventCatalogEntryByEventType(eventName);
         const ref = (entry as any)?.payload_schema_ref;
         const normalizedRef = typeof ref === 'string' ? ref : null;
         setInferredSchemaRef(normalizedRef);

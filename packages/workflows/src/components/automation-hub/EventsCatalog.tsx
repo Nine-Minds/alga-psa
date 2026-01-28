@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCurrentTenant } from '@alga-psa/tenancy/actions';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Bell, Search, Filter, Plus, MoreVertical } from 'lucide-react';
@@ -53,22 +52,17 @@ export default function EventsCatalog() {
         setIsLoading(true);
         
         // Load events
-        const tenant = await getCurrentTenant();
-        const eventsData = await getEventCatalogEntries({ tenant: tenant || '' });
+        const eventsData = await getEventCatalogEntries();
         setEvents(eventsData);
         setFilteredEvents(eventsData);
         // Load categories
-        const categoriesData = await getEventCategories({ tenant: tenant || '' });
+        const categoriesData = await getEventCategories();
         setCategories(categoriesData);
         
         // Load attachments for each event
         const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
         for (const event of eventsData) {
-          const attachments = await getWorkflowEventAttachmentsForEventType({
-            eventType: event.event_type,
-            tenant: tenant || '',
-            isActive: true
-          });
+          const attachments = await getWorkflowEventAttachmentsForEventType(event.event_type, true);
           attachmentsMap[event.event_id] = attachments;
         }
         setEventAttachments(attachmentsMap);
@@ -119,8 +113,7 @@ export default function EventsCatalog() {
     // Refresh data if needed
     if (refreshData) {
       setIsLoading(true);
-      getCurrentTenant().then((tenant) => {
-        getEventCatalogEntries({ tenant: tenant || '' })
+      getEventCatalogEntries()
         .then(eventsData => {
           setEvents(eventsData);
           setFilteredEvents(eventsData);
@@ -129,11 +122,7 @@ export default function EventsCatalog() {
           const loadAttachments = async () => {
             const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
             for (const event of eventsData) {
-              const attachments = await getWorkflowEventAttachmentsForEventType({
-                eventType: event.event_type,
-                tenant: tenant || '',
-                isActive: true
-              });
+              const attachments = await getWorkflowEventAttachmentsForEventType(event.event_type, true);
               attachmentsMap[event.event_id] = attachments;
             }
             setEventAttachments(attachmentsMap);
@@ -147,7 +136,6 @@ export default function EventsCatalog() {
           toast.error('Failed to refresh events data');
           setIsLoading(false);
         });
-      });
     }
   };
   
@@ -165,27 +153,19 @@ export default function EventsCatalog() {
       setIsLoading(true);
       
       // Delete the attachment
-      const tenant = await getCurrentTenant();
-      await deleteWorkflowEventAttachment({
-        attachmentId: selectedAttachment.attachment_id,
-        tenant: tenant || ''
-      });
+      await deleteWorkflowEventAttachment(selectedAttachment.attachment_id);
       
       toast.success('Workflow detached successfully');
       
       // Refresh data
-      const eventsData = await getEventCatalogEntries({ tenant: tenant || '' });
+      const eventsData = await getEventCatalogEntries();
       setEvents(eventsData);
       setFilteredEvents(eventsData);
       
       // Refresh attachments for each event
       const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
       for (const event of eventsData) {
-        const attachments = await getWorkflowEventAttachmentsForEventType({
-          eventType: event.event_type,
-          tenant: tenant || '',
-          isActive: true
-        });
+        const attachments = await getWorkflowEventAttachmentsForEventType(event.event_type, true);
         attachmentsMap[event.event_id] = attachments;
       }
       setEventAttachments(attachmentsMap);
@@ -205,30 +185,20 @@ export default function EventsCatalog() {
       setIsLoading(true);
       
       // Update the attachment
-      const tenant = await getCurrentTenant();
-      await updateWorkflowEventAttachment({
-        attachmentId: attachment.attachment_id,
-        tenant: tenant || '',
-        data: {
-          is_active: !attachment.is_active
-        }
-      });
+      await updateWorkflowEventAttachment(attachment.attachment_id, { is_active: !attachment.is_active });
       
       toast.success(`Workflow ${attachment.is_active ? 'deactivated' : 'activated'} successfully`);
       
       // Refresh data
-      const eventsData = await getEventCatalogEntries({ tenant: tenant || '' });
+      const eventsData = await getEventCatalogEntries();
       setEvents(eventsData);
       setFilteredEvents(eventsData);
       
       // Refresh attachments for each event
       const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
       for (const event of eventsData) {
-        const attachments = await getWorkflowEventAttachmentsForEventType({
-          eventType: event.event_type,
-          tenant: tenant || ''
-          // Get all attachments, both active and inactive
-        });
+        // Get all attachments, both active and inactive
+        const attachments = await getWorkflowEventAttachmentsForEventType(event.event_type);
         attachmentsMap[event.event_id] = attachments;
       }
       setEventAttachments(attachmentsMap);
