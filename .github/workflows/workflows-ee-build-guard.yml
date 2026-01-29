@@ -1,0 +1,59 @@
+name: EE Workflows Build Guard
+
+on:
+  pull_request:
+    paths:
+      - server/**
+      - ee/server/**
+      - packages/workflows/**
+      - scripts/guard-ee-workflows-next-build.mjs
+      - .github/workflows/workflows-ee-build-guard.yml
+  push:
+    branches:
+      - main
+    paths:
+      - server/**
+      - ee/server/**
+      - packages/workflows/**
+      - scripts/guard-ee-workflows-next-build.mjs
+      - .github/workflows/workflows-ee-build-guard.yml
+
+jobs:
+  ee-workflows-build-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: |
+          if ! npm ci; then
+            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
+            npm install --legacy-peer-deps
+          fi
+
+      - name: Provide build-time env
+        run: |
+          cp .env.example server/.env
+
+      - name: Build server (EE)
+        env:
+          EDITION: ee
+          NEXT_PUBLIC_EDITION: enterprise
+          NODE_OPTIONS: '--max-old-space-size=8192'
+        run: npm -w server run build:enterprise
+
+      - name: Guard: no OSS workflows stub in EE output
+        run: node scripts/guard-ee-workflows-next-build.mjs server/.next
+

@@ -51,6 +51,9 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Expanded `server/src/types/external-modules.d.ts` typing for `@alga-psa/workflows/entry` (named `DnDFlow` + default export) so TS remains happy without a `paths` mapping.
 - Confirmed workflow UI loader continues to import `@alga-psa/workflows/entry` (no legacy paths), with a CE stub fallback to `@/empty/workflows/entry`.
 - Set `experimental.externalDir: true` in `server/next.config.mjs` to ensure the server app can compile aliased EE sources under `../ee/server/src/**` (including the new workflows entry).
+- Added CI guard to prevent “hybrid” EE builds:
+  - Script: `scripts/guard-ee-workflows-next-build.mjs` (scans `server/.next/server` for the legacy OSS stub string).
+  - Workflow: `.github/workflows/workflows-ee-build-guard.yml` (runs an EE `next build` and then the guard script).
 
 ## Commands / runbooks
 
