@@ -62,3 +62,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 
 - Search for entry usage: `rg -n "@alga-psa/workflows/entry" -S .`
 - Verify build artifact doesn’t contain OSS stub string (EE build): `rg -n "Workflow designer requires Enterprise Edition" .next/server -S`
+
+## Test checklist
+
+- T001: Covered by `scripts/guard-ee-workflows-next-build.mjs` + `.github/workflows/workflows-ee-build-guard.yml`.
