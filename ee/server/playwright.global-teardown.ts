@@ -22,8 +22,11 @@ async function globalTeardown() {
   console.log('🗑️  Stopping Playwright workflow deps...');
   try {
     const projectRoot = path.resolve(__dirname, '../..');
+    const envFile = fs.existsSync(path.resolve(__dirname, '.env'))
+      ? 'ee/server/.env'
+      : 'ee/server/.env.test';
     execSync(
-      'docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env down -v',
+      `docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${envFile} down -v`,
       { cwd: projectRoot, stdio: 'inherit' }
     );
     console.log('✅ Playwright workflow deps stopped and removed');

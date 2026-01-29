@@ -4,6 +4,9 @@ import { resolvePlaywrightBaseUrl } from '../integration/helpers/playwrightAuthS
 export class WorkflowDesignerPage {
   readonly page: Page;
   readonly header: Locator;
+  readonly listHeader: Locator;
+  readonly designerTab: Locator;
+  readonly workflowListCreateButton: Locator;
   readonly newWorkflowButton: Locator;
   readonly saveDraftButton: Locator;
   readonly publishButton: Locator;
@@ -28,7 +31,10 @@ export class WorkflowDesignerPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.header = page.getByRole('heading', { name: 'Workflow Designer' });
+    this.header = page.getByRole('heading', { name: 'Workflows' });
+    this.listHeader = page.getByRole('heading', { name: 'Workflows' });
+    this.designerTab = page.getByRole('tab', { name: 'Designer' });
+    this.workflowListCreateButton = page.locator('#workflow-list-create-btn');
     this.newWorkflowButton = page.locator('#workflow-designer-create');
     this.saveDraftButton = page.locator('#workflow-designer-save');
     this.publishButton = page.locator('#workflow-designer-publish');
@@ -57,7 +63,7 @@ export class WorkflowDesignerPage {
 
   async goto(baseUrl?: string): Promise<void> {
     const targetBaseUrl = baseUrl ?? resolvePlaywrightBaseUrl();
-    const url = `${targetBaseUrl}/msp/workflows`;
+    const url = `${targetBaseUrl}/msp/workflows?tab=designer`;
 
     const startedAt = Date.now();
     let lastError: unknown = null;
@@ -83,6 +89,7 @@ export class WorkflowDesignerPage {
 
   async waitForLoaded(): Promise<void> {
     await expect(this.header).toBeVisible({ timeout: 30_000 });
+    await expect(this.newWorkflowButton).toBeVisible({ timeout: 30_000 });
   }
 
   async waitForReady(): Promise<void> {

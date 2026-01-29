@@ -4,7 +4,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 
 ## Status (as of 2026-01-29)
 
-This plan is **not fully implemented** in the current repo state. Several notes below were previously written as-if completed, but the referenced files/scripts do not exist and the build wiring still points at `packages/workflows/src/**`.
+This plan is **partially implemented** in the current repo state.
 
 Use `features.json` and `tests.json` as the source of truth for what is actually implemented vs still pending.
 
@@ -20,7 +20,8 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 
 ## What still needs doing (high level)
 
-- Add a CI guard (EE build) that fails if `.next/server/**` contains the OSS stub string.
+- Remove legacy `packages/workflows/src/{ee,oss}/**` dirs (after entry migration) once safe.
+- Complete tests checklist (`tests.json`) to lock in regression coverage.
 
 ## Implementation log
 
@@ -34,3 +35,8 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: `ee/server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
 - 2026-01-29: Verified EE build works with new entry wiring: `EDITION=enterprise NEXT_PUBLIC_EDITION=enterprise npm -w server run build`.
 - 2026-01-29: Added EE build guard script + CI workflow: `scripts/guard-ee-workflows-next-build.mjs` and `.github/workflows/workflows-ee-build-guard.yml`.
+- 2026-01-29: Added Playwright smoke test asserting `/msp/workflows` renders the designer (not the CE stub): `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
+- 2026-01-29: Playwright plumbing updates to make the smoke test runnable in CI/dev without local secrets:
+  - `ee/server/playwright.config.ts`: force `NODE_ENV=test` and load env from `.env`/`.env.test`/`.env.example`.
+  - `shared/core/getSecret.ts`: resilient `getSecret()` fallback when `@alga-psa/core/server` can't be imported (Playwright boot path).
+  - `ee/server/src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts`: simplified URL-scoped auth cookies (fixes `Invalid cookie fields`).
