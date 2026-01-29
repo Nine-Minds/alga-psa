@@ -22,7 +22,7 @@
   { "id": "F051", "description": "Ensure `transpilePackages` / module resolution includes new EE workflow UI location", "implemented": true },
 
   { "id": "F060", "description": "Add CI check: EE `next build` output must not contain OSS stub workflow strings", "implemented": true },
-  { "id": "F061", "description": "Add automated UI smoke test (Playwright or equivalent) that workflows page loads without EE-only stub in EE builds", "implemented": false },
+  { "id": "F061", "description": "Add automated UI smoke test (Playwright or equivalent) that workflows page loads without EE-only stub in EE builds", "implemented": true },
 
   { "id": "F070", "description": "Update docs/notes describing how workflow EE selection works post-migration", "implemented": false },
   { "id": "F071", "description": "Remove legacy `packages/workflows/src/ee/**` and `packages/workflows/src/oss/**` shims after stabilization window", "implemented": false }

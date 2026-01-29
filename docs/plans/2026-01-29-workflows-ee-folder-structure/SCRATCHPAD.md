@@ -54,6 +54,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Added CI guard to prevent “hybrid” EE builds:
   - Script: `scripts/guard-ee-workflows-next-build.mjs` (scans `server/.next/server` for the legacy OSS stub string).
   - Workflow: `.github/workflows/workflows-ee-build-guard.yml` (runs an EE `next build` and then the guard script).
+- Added Playwright smoke coverage for EE workflows entry selection: `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
 
 ## Commands / runbooks
 
