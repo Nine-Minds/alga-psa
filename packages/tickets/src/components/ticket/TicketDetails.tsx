@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import {
     ITicket,
     IComment,
@@ -66,92 +67,6 @@ import {
     searchEligibleChildTicketsAction,
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
-
-function ContactDrawerContent({
-    contactNameId,
-    clientId,
-    clientName,
-}: {
-    contactNameId: string;
-    clientId?: string | null;
-    clientName?: string | null;
-}) {
-    const [isLoading, setIsLoading] = useState(false);
-    const [contact, setContact] = useState<IContact | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        const load = async () => {
-            setIsLoading(true);
-            setErrorMessage(null);
-            try {
-                const result = await getContactByContactNameId(contactNameId);
-                if (cancelled) return;
-                setContact(result);
-                if (!result) {
-                    setErrorMessage('Contact not found.');
-                }
-            } catch (e) {
-                if (cancelled) return;
-                setErrorMessage(e instanceof Error ? e.message : 'Failed to load contact.');
-            } finally {
-                if (!cancelled) setIsLoading(false);
-            }
-        };
-        void load();
-        return () => {
-            cancelled = true;
-        };
-    }, [contactNameId]);
-
-    const derivedName =
-        contact?.full_name ??
-        ((contact as any)?.name as string | undefined) ??
-        [((contact as any)?.first_name as string | undefined), ((contact as any)?.last_name as string | undefined)]
-            .filter(Boolean)
-            .join(' ');
-    const displayName = derivedName && derivedName.trim().length > 0 ? derivedName : 'Contact';
-
-    const email = contact?.email ?? ((contact as any)?.email_address as string | undefined) ?? null;
-    const phone = contact?.phone_number ?? ((contact as any)?.phone as string | undefined) ?? null;
-
-    return (
-        <div className="space-y-3">
-            <div className="text-lg font-semibold">{displayName}</div>
-            {clientName ? <div className="text-sm text-gray-600">{clientName}</div> : null}
-            {isLoading ? <div className="text-sm text-gray-500">Loading…</div> : null}
-            {!isLoading && errorMessage ? <div className="text-sm text-red-600">{errorMessage}</div> : null}
-            {!isLoading && !errorMessage ? (
-                <div className="space-y-1">
-                    {email ? <div className="text-sm text-gray-600">{email}</div> : null}
-                    {phone ? <div className="text-sm text-gray-600">{phone}</div> : null}
-                </div>
-            ) : null}
-            <div className="flex flex-col gap-2">
-                <Button
-                    id="ticket-details-open-contact"
-                    type="button"
-                    variant="outline"
-                    onClick={() => window.open(`/msp/contacts/${contactNameId}`, '_blank', 'noopener,noreferrer')}
-                >
-                    Open Contact <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-                {clientId ? (
-                    <Button
-                        id="ticket-details-open-contact-client"
-                        type="button"
-                        variant="outline"
-                        onClick={() => window.open(`/msp/clients/${clientId}`, '_blank', 'noopener,noreferrer')}
-                    >
-                        Open Client <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                ) : null}
-            </div>
-        </div>
-    );
-}
-
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -353,7 +268,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
     // NOTE: ITIL categories are now managed through the unified category system
 
-    const { openDrawer, closeDrawer } = useDrawer();
+    const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
@@ -627,23 +542,43 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleContactClick = () => {
+    const handleContactClick = async () => {
         const contactNameId = ticket.contact_name_id || contactInfo?.contact_name_id;
         if (!contactNameId) {
             openDrawer(<div className="text-sm text-gray-600">No contact selected.</div>);
             return;
         }
 
-        openDrawer(
-            <ContactDrawerContent
-                contactNameId={contactNameId}
-                clientId={client?.client_id ?? null}
-                clientName={client?.client_name ?? null}
-            />,
-            undefined,
-            undefined,
-            '420px'
-        );
+        openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+        try {
+            const contact = await getContactByContactNameId(contactNameId);
+            if (!contact) {
+                replaceDrawer(<div className="p-4 text-sm text-gray-600">Contact not found.</div>);
+                return;
+            }
+
+            const minimalClients =
+                clients.length > 0 ? clients : client ? [client] : [];
+
+            replaceDrawer(
+                <ContactDetailsView
+                    id={`${id}-contact-details`}
+                    initialContact={contact}
+                    clients={minimalClients}
+                    isInDrawer={true}
+                    userId={userId}
+                    quickView={true}
+                    showDocuments={false}
+                    showInteractions={true}
+                    clientReadOnly={true}
+                />,
+                undefined,
+                '900px'
+            );
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to load contact.';
+            replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
+        }
     };
 
   const handleAgentClick = (userId: string) => {
