@@ -723,7 +723,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         <TicketMaterialsCard
           ticketId={ticket.ticket_id}
           clientId={ticket.client_id}
-          currencyCode={client?.default_currency_code || 'USD'}
         />
       )}
 
