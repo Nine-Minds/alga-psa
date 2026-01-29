@@ -252,42 +252,47 @@ export class PlaywrightAuthSessionHelper {
       salt: this.primaryCookieName,
     });
 
-    const issuedAtSeconds = Math.floor(Date.now() / 1000);
-    const expiresAtSeconds = issuedAtSeconds + maxAgeSeconds;
-
     const context = this.page.context();
     const cookies: Array<Parameters<typeof context.addCookies>[0][number]> = [];
 
-    for (const url of this.cookieHosts) {
-      for (const name of this.cookieNames) {
-        cookies.push({
-          name,
-          value: token,
-          url,
-          httpOnly: true,
-          secure: this.isHttps,
-          sameSite: 'Lax',
-          expires: expiresAtSeconds,
-        });
-      }
+    // Playwright is strict about cookie shapes; prefer a minimal set of URL-scoped cookies
+    // to avoid invalid domain/secure combinations when running on non-standard hosts/ports.
+    const parsedBaseUrl = new URL(this.baseUrl);
+    parsedBaseUrl.pathname = '/';
+    parsedBaseUrl.search = '';
+    parsedBaseUrl.hash = '';
+    const cookieUrl = parsedBaseUrl.toString();
+
+    for (const name of this.cookieNames) {
+      cookies.push({
+        name,
+        value: token,
+        url: cookieUrl,
+      });
     }
 
-    for (const domain of this.cookieDomains) {
-      for (const name of this.cookieNames) {
-        cookies.push({
-          name,
-          value: token,
-          domain,
-          path: '/',
-          httpOnly: true,
-          secure: this.isHttps,
-          sameSite: 'Lax',
-          expires: expiresAtSeconds,
-        });
-      }
+    try {
+      await context.addCookies(cookies);
+    } catch (error) {
+      console.error('[Playwright Auth] Failed to set cookies', {
+        baseUrl: this.baseUrl,
+        cookieUrl,
+        cookieCount: cookies.length,
+        cookies: cookies.map((cookie) => ({
+          name: cookie.name,
+          valueType: typeof cookie.value,
+          valueLength: typeof cookie.value === 'string' ? cookie.value.length : null,
+          url: 'url' in cookie ? (cookie as any).url : undefined,
+          domain: 'domain' in cookie ? (cookie as any).domain : undefined,
+          path: 'path' in cookie ? (cookie as any).path : undefined,
+          expires: 'expires' in cookie ? (cookie as any).expires : undefined,
+          httpOnly: 'httpOnly' in cookie ? (cookie as any).httpOnly : undefined,
+          secure: 'secure' in cookie ? (cookie as any).secure : undefined,
+          sameSite: 'sameSite' in cookie ? (cookie as any).sameSite : undefined,
+        })),
+      });
+      throw error;
     }
-
-    await context.addCookies(cookies);
 
     console.log('[Playwright Auth] Valid session JWT cookie set');
   }

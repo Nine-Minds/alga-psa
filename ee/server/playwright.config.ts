@@ -1,11 +1,29 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'path';
 import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
 
-// Load environment variables from the correct path
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+function loadPlaywrightEnv(): string | null {
+  const candidates = ['.env', '.env.test', '.env.example']
+    .map((filename) => path.resolve(__dirname, filename))
+    .filter((candidate) => fs.existsSync(candidate));
+
+  const selected = candidates[0] ?? null;
+  if (!selected) {
+    console.warn(`[Playwright] couldn't find env file: ${path.resolve(__dirname, '.env')}`);
+    return null;
+  }
+
+  dotenv.config({ path: selected });
+  return selected;
+}
+
+loadPlaywrightEnv();
+const dockerComposeEnvFile = fs.existsSync(path.resolve(__dirname, '.env'))
+  ? 'ee/server/.env'
+  : 'ee/server/.env.test';
 
 // Playwright runs should be self-contained and must not depend on developer filesystem secrets.
 process.env.SECRET_READ_CHAIN = process.env.SECRET_READ_CHAIN || 'env';
@@ -42,7 +60,9 @@ process.env.DB_DIRECT_PORT = process.env.DB_DIRECT_PORT || directDbPort;
 process.env.PLAYWRIGHT_DB_HOST = process.env.PLAYWRIGHT_DB_HOST || directDbHost;
 process.env.PLAYWRIGHT_DB_PORT = process.env.PLAYWRIGHT_DB_PORT || directDbPort;
 
-process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+// Playwright runs should be deterministic and not inherit a developer's NODE_ENV,
+// since it affects auth cookie naming and other runtime branches.
+process.env.NODE_ENV = 'test';
 
 function runPortProbe(start: number, span: number, strict: boolean): { success: boolean; port?: number; error?: string } {
 const script = `const net = require('net');
@@ -345,9 +365,9 @@ export default defineConfig({
     // Reset DB once per session before starting the dev server.
     command:
       'cd ../../' +
-      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env up -d --wait --wait-timeout 60 postgres-playwright redis-playwright` +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --wait --wait-timeout 60 postgres-playwright redis-playwright` +
       ' && node --import tsx/esm scripts/bootstrap-playwright-db.ts' +
-      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env up -d --build workflow-worker-playwright` +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --build workflow-worker-playwright` +
       ' && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: resolvedBaseUrl,
     // Default to starting a fresh server (we also need to bring up dockerized deps + reset the DB).
@@ -377,6 +397,8 @@ export default defineConfig({
       NEXT_PUBLIC_EXTERNAL_APP_URL: resolvedBaseUrl,
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
+      // Playwright Redis deps run without auth; override any developer env so node-redis won't AUTH.
+      REDIS_PASSWORD: '',
       // Explicitly set DB config for Playwright - override server/.env settings
       DB_HOST: process.env.PLAYWRIGHT_DB_HOST || process.env.DB_HOST || 'localhost',
       DB_PORT: process.env.PLAYWRIGHT_DB_PORT || process.env.DB_PORT || '5439',

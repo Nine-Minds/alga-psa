@@ -65,7 +65,7 @@ export class WorkflowDesignerPage {
 
   async goto(baseUrl?: string): Promise<void> {
     const targetBaseUrl = baseUrl ?? resolvePlaywrightBaseUrl();
-    const url = `${targetBaseUrl}/msp/workflows`;
+    const url = `${targetBaseUrl}/msp/workflows?tab=designer`;
 
     const startedAt = Date.now();
     let lastError: unknown = null;
@@ -91,6 +91,7 @@ export class WorkflowDesignerPage {
 
   async waitForLoaded(): Promise<void> {
     await expect(this.header).toBeVisible({ timeout: 30_000 });
+    await expect(this.newWorkflowButton).toBeVisible({ timeout: 30_000 });
   }
 
   async waitForReady(): Promise<void> {
