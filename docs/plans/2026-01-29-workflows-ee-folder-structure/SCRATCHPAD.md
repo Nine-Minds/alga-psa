@@ -26,3 +26,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 
 - 2026-01-29: Added canonical EE workflows entrypoint at `ee/server/src/workflows/entry.tsx` exporting `DnDFlow` from `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`.
 - 2026-01-29: Rewired `@alga-psa/workflows/entry` aliasing to concrete EE/CE files, added CE stub at `server/src/empty/workflows/entry.tsx`, removed TS `paths` mapping for `@alga-psa/workflows/entry`, and deleted legacy package entrypoints under `packages/workflows/src/{entry.ts,ee/entry.tsx,oss/entry.tsx}`.
+- 2026-01-29: CE stub entrypoint is now `server/src/empty/workflows/entry.tsx` (export: `DnDFlow`).
