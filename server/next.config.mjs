@@ -302,8 +302,8 @@ const nextConfig = {
         ? '@alga-psa/client-portal/domain-settings/ee/entry'
         : '@alga-psa/client-portal/domain-settings/oss/entry',
       '@alga-psa/workflows/entry': isEE
-        ? '../packages/workflows/src/ee/entry'
-        : '../packages/workflows/src/oss/entry',
+        ? '../ee/server/src/workflows/entry'
+        : './src/empty/workflows/entry',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -453,8 +453,8 @@ const nextConfig = {
         ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
-        ? path.join(__dirname, '../packages/workflows/src/ee/entry.tsx')
-        : path.join(__dirname, '../packages/workflows/src/oss/entry.tsx'),
+        ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
+        : path.join(__dirname, 'src/empty/workflows/entry.tsx'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
         : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),

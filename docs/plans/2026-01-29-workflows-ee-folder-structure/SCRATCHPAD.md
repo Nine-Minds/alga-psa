@@ -12,19 +12,17 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 
 - Workflow UI entrypoint uses `@alga-psa/workflows/entry` which is dynamically imported by `packages/workflows/src/components/WorkflowComponentLoader.ts`.
 - `server/next.config.mjs` aliases `@alga-psa/workflows/entry` to:
-  - EE: `../packages/workflows/src/ee/entry(.tsx)`
-  - CE: `../packages/workflows/src/oss/entry(.tsx)`
-- `server/tsconfig.json` and `ee/server/tsconfig.json` both map `@alga-psa/workflows/entry` -> `packages/workflows/src/entry` (which re-exports the OSS stub), which is the root cause class for “hybrid” builds.
-- OSS stub string to guard against lives in `packages/workflows/src/oss/entry.tsx`:
+  - EE: `../ee/server/src/workflows/entry(.tsx)`
+  - CE: `server/src/empty/workflows/entry(.tsx)`
+- `server/tsconfig.json` and `ee/server/tsconfig.json` no longer map `@alga-psa/workflows/entry` via `compilerOptions.paths` (to avoid JsConfigPathsPlugin “hybrid” resolution).
+- OSS/CE stub string to guard against lives in `server/src/empty/workflows/entry.tsx`:
   - `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.`
 
 ## What still needs doing (high level)
 
-- Create a canonical CE stub entry under `server/src/empty/**` (e.g. `server/src/empty/workflows/entry.tsx`) exporting the stub UI.
-- Update Next webpack + turbopack aliasing to point `@alga-psa/workflows/entry` at those concrete files.
-- Remove TS `paths` mapping for `@alga-psa/workflows/entry` from both `server/tsconfig.json` and `ee/server/tsconfig.json`.
 - Add a CI guard (EE build) that fails if `.next/server/**` contains the OSS stub string.
 
 ## Implementation log
 
 - 2026-01-29: Added canonical EE workflows entrypoint at `ee/server/src/workflows/entry.tsx` exporting `DnDFlow` from `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`.
+- 2026-01-29: Rewired `@alga-psa/workflows/entry` aliasing to concrete EE/CE files, added CE stub at `server/src/empty/workflows/entry.tsx`, removed TS `paths` mapping for `@alga-psa/workflows/entry`, and deleted legacy package entrypoints under `packages/workflows/src/{entry.ts,ee/entry.tsx,oss/entry.tsx}`.

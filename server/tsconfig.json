@@ -277,9 +277,6 @@
       "@product/ext-proxy/*": [
         "../packages/product-ext-proxy/*"
       ],
-      "@alga-psa/workflows/entry": [
-        "../packages/workflows/src/entry"
-      ],
       "@product/extensions/entry": [
         "../packages/product-extensions/oss/entry"
       ],
