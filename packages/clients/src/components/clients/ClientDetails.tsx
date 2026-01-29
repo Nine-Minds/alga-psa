@@ -228,6 +228,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     boardOptions: IBoard[];
     categories: ITicketCategory[];
     tags?: string[];
+    users?: IUser[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
@@ -555,7 +556,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           priorityOptions: options.priorityOptions,
           boardOptions: options.boardOptions,
           categories: options.categories,
-          tags: options.tags
+          tags: options.tags,
+          users: options.users
         });
       } catch (error) {
         console.error('Error fetching ticket form options:', error);
@@ -940,7 +942,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
-            <ClientTickets 
+            <ClientTickets
               clientId={client.client_id}
               clientName={client.client_name}
               initialBoards={ticketFormOptions.boardOptions}
@@ -948,6 +950,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}
               initialTags={ticketFormOptions.tags || []}
+              initialUsers={ticketFormOptions.users || []}
             />
           ) : (
             <div className="flex justify-center items-center h-32">

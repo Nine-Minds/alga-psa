@@ -5,7 +5,7 @@ import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { IInteraction } from '@alga-psa/types';
-import { IUserWithRoles } from '@alga-psa/types';
+import { IUserWithRoles, IUser } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -213,6 +213,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     boardOptions: IBoard[];
     categories: ITicketCategory[];
     tags?: string[];
+    users?: IUser[];
   } | null>(null);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [countryCode, setCountryCode] = useState(() => {
@@ -289,7 +290,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           priorityOptions: options.priorityOptions,
           boardOptions: options.boardOptions,
           categories: options.categories,
-          tags: options.tags
+          tags: options.tags,
+          users: options.users
         });
       } catch (error) {
         console.error('Error fetching ticket form options:', error);
@@ -750,7 +752,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
-            <ContactTickets 
+            <ContactTickets
               contactId={editedContact.contact_name_id}
               contactName={editedContact.full_name}
               clientId={editedContact.client_id || ''}
@@ -760,6 +762,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}
               initialTags={ticketFormOptions.tags || []}
+              initialUsers={ticketFormOptions.users || []}
             />
           ) : (
             <div className="flex justify-center items-center h-32">

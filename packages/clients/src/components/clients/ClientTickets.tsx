@@ -25,6 +25,7 @@ import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { TagFilter } from '@alga-psa/ui/components';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 
 interface ClientTicketsProps {
   clientId: string;
@@ -34,6 +35,7 @@ interface ClientTicketsProps {
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
   initialTags?: string[];
+  initialUsers?: IUser[];
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -56,7 +58,8 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   initialStatuses = [],
   initialPriorities = [],
   initialCategories = [],
-  initialTags = []
+  initialTags = [],
+  initialUsers = []
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +84,8 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -131,23 +136,25 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
         boardFilterState: boardFilterState,
         showOpenOnly: selectedStatus === 'open',
         tags: selectedTags.length > 0 ? selectedTags : undefined,
+        assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+        includeUnassigned: includeUnassigned,
       };
 
       const result = await getTicketsForListWithCursor(filters, cursor);
-      
+
       if (resetTickets) {
         setTickets(result.tickets);
       } else {
         setTickets(prev => [...prev, ...result.tickets]);
       }
-      
+
       setNextCursor(result.nextCursor);
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [clientId, currentUser, selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags]);
+  }, [clientId, currentUser, selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags, selectedAssignees, includeUnassigned]);
 
   // Load tickets when filters change
   useEffect(() => {
@@ -311,6 +318,8 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
     setSearchQuery('');
     setBoardFilterState('active');
     setSelectedTags([]);
+    setSelectedAssignees([]);
+    setIncludeUnassigned(false);
   }, []);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
@@ -383,6 +392,21 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}
               placeholder="All Priorities"
+            />
+          )}
+
+          {initialUsers.length > 0 && (
+            <MultiUserPicker
+              id="client-tickets-assignee-filter"
+              users={initialUsers}
+              values={selectedAssignees}
+              onValuesChange={setSelectedAssignees}
+              filterMode={true}
+              includeUnassigned={includeUnassigned}
+              onUnassignedChange={setIncludeUnassigned}
+              placeholder="All Assignees"
+              showSearch={true}
+              compactDisplay={true}
             />
           )}
 
