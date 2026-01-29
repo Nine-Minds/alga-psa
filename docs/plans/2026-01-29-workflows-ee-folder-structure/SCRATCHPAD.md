@@ -28,3 +28,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: Rewired `@alga-psa/workflows/entry` aliasing to concrete EE/CE files, added CE stub at `server/src/empty/workflows/entry.tsx`, removed TS `paths` mapping for `@alga-psa/workflows/entry`, and deleted legacy package entrypoints under `packages/workflows/src/{entry.ts,ee/entry.tsx,oss/entry.tsx}`.
 - 2026-01-29: CE stub entrypoint is now `server/src/empty/workflows/entry.tsx` (export: `DnDFlow`).
 - 2026-01-29: Webpack alias for `@alga-psa/workflows/entry` now targets the canonical EE/CE entry files (no package entrypoints).
+- 2026-01-29: Turbopack resolveAlias for `@alga-psa/workflows/entry` now targets the canonical EE/CE entry files.
