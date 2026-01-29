@@ -23,7 +23,7 @@ import {
   duplicateTaskToPhase,
   getTaskDependencies
 } from '../actions/projectTaskActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
 import { QuickAddTagPicker, TagManager } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
@@ -1164,6 +1164,7 @@ export default function TaskForm({
                       !(task?.task_id ? taskResources : tempTaskResources)
                         .some(r => r.additional_user_id === u.user_id)
                     )}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   />
                 </div>
                 <div>
@@ -1180,6 +1181,7 @@ export default function TaskForm({
                     <MultiUserPicker
                       id="task-additional-agents"
                       values={(task?.task_id ? taskResources : tempTaskResources).map(r => r.additional_user_id)}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                       onValuesChange={async (newUserIds) => {
                         // Prevent race conditions from rapid clicks
                         if (isProcessingAgentsRef.current) {

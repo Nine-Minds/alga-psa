@@ -18,17 +18,17 @@ import {
   XeroInvoiceLinePayload,
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
-} from '@alga-psa/integrations/lib/xero/xeroClientService';
+} from '../../xero/xeroClientService';
 import { createTenantKnex } from '@alga-psa/db';
-import { AccountingMappingResolver, MappingResolution } from '../../../services/accountingMappingResolver';
+import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { AppError } from '@alga-psa/core';
 import {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload
-} from '../../../services/companySync';
-import { XeroCompanyAdapter } from '../../../services/companySync/adapters/xeroCompanyAdapter';
-import { KnexInvoiceMappingRepository } from '../../../repositories/invoiceMappingRepository';
+} from '../../services/companySync';
+import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
   const reference = poNumber ? `${baseReference} | PO ${poNumber}` : baseReference;

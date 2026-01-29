@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { getActionRegistry, TransactionIsolationLevel } from '@alga-psa/shared/workflow/core';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
-import { submitWorkflowEventAction } from '@alga-psa/workflows/actions/workflow-event-actions';
+import { submitWorkflowEventAction } from './workflow-event-actions';
 import { withAuth } from '@alga-psa/auth';
 
 
@@ -21,14 +21,14 @@ export async function processInvoiceEvent(executionId: string | undefined, event
   if (!executionId) {
     throw new Error('Execution ID is required');
   }
-  
+
   // Submit the event using the workflow event action
   const result = await submitWorkflowEventAction({
     execution_id: executionId,
     event_name: eventName,
     payload
   });
-  
+
   return result;
 }
 
@@ -123,4 +123,3 @@ export const rejectInvoice = withAuth(async (
     reason: reason || 'No reason provided'
   });
 });
-

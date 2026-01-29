@@ -14,16 +14,16 @@ import {
   PendingTaxImportRecord
 } from './accountingExportAdapter';
 import { createTenantKnex } from '@alga-psa/db';
-import { AccountingMappingResolver, MappingResolution } from '../../../services/accountingMappingResolver';
-import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
+import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
+import { QboClientService } from '../../qbo/qboClientService';
+import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '../../qbo/types';
 import {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload
-} from '../../../services/companySync';
-import { QuickBooksOnlineCompanyAdapter } from '../../../services/companySync/adapters/quickBooksCompanyAdapter';
-import { KnexInvoiceMappingRepository } from '../../../repositories/invoiceMappingRepository';
+} from '../../services/companySync';
+import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
 type DbInvoice = {
   invoice_id: string;

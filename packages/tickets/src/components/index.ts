@@ -19,7 +19,7 @@ export { default as DisplaySettings } from './settings/DisplaySettings';
 export { default as AgentScheduleDrawer } from './ticket/AgentScheduleDrawer';
 export * from './ticket/AgentScheduleDrawerStyles';
 export { default as CommentItem } from './ticket/CommentItem';
-export { default as TicketAppointmentRequests } from './ticket/TicketAppointmentRequests';
+export { default as TicketAppointmentRequests, type ITicketAppointmentRequest } from './ticket/TicketAppointmentRequests';
 export { default as TicketConversation } from './ticket/TicketConversation';
 export { default as TicketDetails } from './ticket/TicketDetails';
 export { TicketDetailsSkeleton } from './ticket/TicketDetailsSkeleton';

@@ -1,7 +1,7 @@
 import {
   XeroClientService,
   NormalizedCompanyPayload
-} from '@alga-psa/integrations/lib/xero/xeroClientService';
+} from '../../../lib/xero/xeroClientService';
 import { AppError } from '@alga-psa/core';
 import type {
   AccountingCompanyAdapter,

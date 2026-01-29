@@ -7,39 +7,32 @@
   "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     },
     "./actions": {
-      "types": "./src/actions/index.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./src/actions/index.ts",
+      "types": "./src/actions/index.ts"
     },
     "./actions/*": {
-      "types": "./src/actions/*.ts",
-      "import": "./dist/actions/*.mjs",
-      "require": "./dist/actions/*.js"
+      "import": "./src/actions/*.ts",
+      "types": "./src/actions/*.ts"
     },
     "./hooks": {
-      "types": "./src/hooks/index.ts",
-      "import": "./dist/hooks/index.mjs",
-      "require": "./dist/hooks/index.js"
+      "import": "./src/hooks/index.ts",
+      "types": "./src/hooks/index.ts"
     },
     "./hooks/*": {
-      "types": "./src/hooks/*.ts",
-      "import": "./dist/hooks/*.mjs",
-      "require": "./dist/hooks/*.js"
+      "import": "./src/hooks/*.ts",
+      "types": "./src/hooks/*.ts"
     },
     "./components": {
-      "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./src/components/index.ts",
+      "types": "./src/components/index.ts"
     },
     "./components/*": {
-      "types": "./src/components/*.tsx",
-      "import": "./dist/components/*.mjs",
-      "require": "./dist/components/*.js"
+      "import": "./src/components/*.tsx",
+      "types": "./src/components/*.tsx"
     }
   },
   "scripts": {
@@ -52,7 +45,8 @@
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
-    "@alga-psa/ui": "*"
+    "@alga-psa/ui": "*",
+    "swr": "^2.3.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

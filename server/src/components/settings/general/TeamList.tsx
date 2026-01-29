@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createTeam, deleteTeam } from '@alga-psa/teams/actions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -99,6 +99,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
             value={selectedManagerId}
             onValueChange={setSelectedManagerId}
             users={allUsers}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             buttonWidth="full"
             size="sm"
             placeholder="Select a manager"

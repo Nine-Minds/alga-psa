@@ -17,7 +17,7 @@ import {
   revokeSessionAction,
   type SessionWithUser,
 } from '@alga-psa/auth/actions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   Monitor,
@@ -265,6 +265,7 @@ export default function AdminSessionManagement() {
                 value={selectedUser}
                 onValueChange={setSelectedUser}
                 users={users}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 buttonWidth="fit"
                 placeholder="All Users"
                 userTypeFilter={null}

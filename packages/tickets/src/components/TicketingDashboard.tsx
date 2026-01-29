@@ -1214,6 +1214,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               users={initialUsers}
               values={selectedAssignees}
               onValuesChange={setSelectedAssignees}
+              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
               filterMode={true}
               includeUnassigned={includeUnassigned}
               onUnassignedChange={setIncludeUnassigned}

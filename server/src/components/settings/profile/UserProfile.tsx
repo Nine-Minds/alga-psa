@@ -16,6 +16,7 @@ import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
+import { useUserAvatar, invalidateUserAvatar } from '@alga-psa/users/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
 import {
@@ -24,12 +25,9 @@ import {
   updateUserPreferenceAction
 } from '@alga-psa/notifications/actions';
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
-import { PasswordChangeForm } from '@alga-psa/users/components';
-import { ApiKeysSetup } from '@alga-psa/auth/components';
-import { UserAvatarUpload } from '@alga-psa/users/components';
-import { SessionManagement } from '@alga-psa/auth/components';
+import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
+import { ApiKeysSetup, SessionManagement } from '@alga-psa/auth/components';
 import { toast } from 'react-hot-toast';
-import { getUserAvatarUrlAction } from '@alga-psa/users/actions';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
@@ -63,8 +61,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Use SWR hook for avatar - automatically syncs with Header
+  const { avatarUrl } = useUserAvatar(user?.user_id, user?.tenant);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [countryCode, setCountryCode] = useState('US');
@@ -124,10 +124,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-        
-        // Get user avatar URL
-        const userAvatarUrl = await getUserAvatarUrlAction(currentUser.user_id, currentUser.tenant);
-        setAvatarUrl(userAvatarUrl);
 
         // Load countries for phone input
         const countriesData = await getAllCountries();
@@ -293,7 +289,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
               userId={user.user_id}
               userName={`${user.first_name} ${user.last_name}`}
               avatarUrl={avatarUrl}
-              onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+              onAvatarChange={() => invalidateUserAvatar(user.user_id, user.tenant)}
               className="mb-4"
               size="xl"
             />

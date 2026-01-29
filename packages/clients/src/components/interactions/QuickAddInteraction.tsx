@@ -24,6 +24,7 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
@@ -635,6 +636,7 @@ export function QuickAddInteraction({
                         users={users}
                         value={selectedUserId}
                         onValueChange={setSelectedUserId}
+                        getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                         placeholder="Select User"
                         buttonWidth="fit"
                       />

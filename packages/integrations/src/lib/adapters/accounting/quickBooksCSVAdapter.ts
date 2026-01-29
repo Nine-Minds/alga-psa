@@ -20,8 +20,8 @@ import {
   PendingTaxImportRecord
 } from './accountingExportAdapter';
 import { createTenantKnex } from '@alga-psa/db';
-import { AccountingMappingResolver } from '../../../services/accountingMappingResolver';
-import { KnexInvoiceMappingRepository } from '../../../repositories/invoiceMappingRepository';
+import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
 /**
  * Database types for invoices and charges

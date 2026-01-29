@@ -205,6 +205,21 @@ const ProjectTaskModel = {
       const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
+        // Delete task dependencies (both as predecessor and successor)
+        await trx('project_task_dependencies')
+          .where(function() {
+            this.where('predecessor_task_id', taskId)
+              .orWhere('successor_task_id', taskId);
+          })
+          .andWhere('tenant', tenant)
+          .del();
+
+        // Delete task comments
+        await trx('project_task_comments')
+          .where('task_id', taskId)
+          .andWhere('tenant', tenant)
+          .del();
+
         await trx('task_resources')
           .where('task_id', taskId)
           .andWhere('tenant', tenant)
@@ -213,10 +228,10 @@ const ProjectTaskModel = {
           .where('task_id', taskId)
           .andWhere('tenant', tenant)
           .del();
-        
+
         // Delete task tags
         await deleteEntityTags(trx, taskId, 'project_task');
-        
+
         await trx<IProjectTask>('project_tasks')
           .where('task_id', taskId)
           .andWhere('tenant', tenant)

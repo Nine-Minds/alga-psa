@@ -791,6 +791,7 @@ export default function TemplateTaskListView({
                                                 a.user_id === u.user_id
                                               )
                                             )}
+                                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                                           />
                                         ) : (
                                           (() => {

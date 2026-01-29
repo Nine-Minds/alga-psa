@@ -25,7 +25,8 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
-import { getCurrentUser, getUserAvatarUrlAction } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { useUserAvatar, useContactAvatar } from '@alga-psa/users/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
@@ -281,19 +282,27 @@ export default function Header({
   setRightSidebarOpen: _setRightSidebarOpen,
 }: HeaderProps) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
+
+  // Use SWR hooks for avatar - only one will be active based on user type
+  const { avatarUrl: userAvatarUrl } = useUserAvatar(
+    userData?.user_type !== 'client' ? userData?.user_id : undefined,
+    userData?.user_type !== 'client' ? userData?.tenant : undefined
+  );
+  const { avatarUrl: contactAvatarUrl } = useContactAvatar(
+    userData?.user_type === 'client' ? userData?.contact_id ?? undefined : undefined,
+    userData?.user_type === 'client' ? userData?.tenant : undefined
+  );
+
+  // Select the appropriate avatar URL based on user type
+  const avatarUrl = userData?.user_type === 'client' ? contactAvatarUrl : userAvatarUrl;
 
   useEffect(() => {
     const fetchUserData = async () => {
       const user = await getCurrentUser();
       if (user) {
         setUserData(user);
-
-        // Fetch avatar URL separately (getCurrentUser doesn't include it to avoid circular deps)
-        const avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
-        setAvatarUrl(avatarUrl);
 
         const hasAccountPermission = await checkAccountManagementPermission();
         setCanManageAccount(hasAccountPermission);

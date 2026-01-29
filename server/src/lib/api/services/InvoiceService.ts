@@ -35,7 +35,7 @@ import { PDFGenerationService, createPDFGenerationService } from '../../../servi
 import { StorageService } from '../../storage/StorageService';
 
 // Import workflow actions
-import { approveInvoice, rejectInvoice, processInvoiceEvent } from '@alga-psa/billing/actions/invoiceWorkflowActions';
+import { approveInvoice, rejectInvoice, processInvoiceEvent } from '@alga-psa/workflows/actions/invoiceWorkflowActions';
 
 // Import schemas and interfaces
 import {

@@ -9,8 +9,8 @@ import {
   AccountingExportDocument
 } from './accountingExportAdapter';
 import { createTenantKnex } from '@alga-psa/db';
-import { AccountingMappingResolver } from '../../../services/accountingMappingResolver';
-import { KnexInvoiceMappingRepository } from '../../../repositories/invoiceMappingRepository';
+import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError } from '@alga-psa/core';
 import { unparseCSV } from '@alga-psa/core';
 

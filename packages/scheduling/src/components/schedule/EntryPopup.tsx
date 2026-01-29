@@ -19,6 +19,7 @@ import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -720,6 +721,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     users={users}
                     value={assignedTechnicianId}
                     onValueChange={setAssignedTechnicianId}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                     placeholder="Select technician"
                     userTypeFilter="internal"
                     buttonWidth="full"
@@ -874,6 +876,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   value={entryData.assigned_user_ids?.[0] || currentUserId}
                   onValueChange={(userId) => handleAssignedUsersChange([userId])}
                   users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   // Disable if loading OR if user lacks permission to assign others
                   disabled={loading || !canModifyAssignment}
                 />
