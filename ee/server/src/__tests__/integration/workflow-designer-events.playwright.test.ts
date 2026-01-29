@@ -152,9 +152,9 @@ async function openEventsTab(page: Page, tenantId: string): Promise<void> {
   await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForLoadState('networkidle', { timeout: 30_000 });
   await page.goto(`${TEST_CONFIG.baseUrl}/msp/workflows`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await page.locator('#workflow-designer-tabs-trigger-2').click();
+  await page.getByRole('tab', { name: 'Events' }).click();
   await page.locator('#workflow-events-name').waitFor({ state: 'visible', timeout: 20_000 });
-  await expect(page.getByText('Loading events...')).toHaveCount(0);
+  await waitForEventsLoaded(page);
 }
 
 async function selectFromCustomSelect(page: Page, containerId: string, optionText: string) {
@@ -212,9 +212,9 @@ test.describe('Workflow Designer UI - events tab', () => {
 
       await openEventsTab(page, tenantId);
       await expect(page.getByText('workflow.matched')).toBeVisible();
-      await expect(page.locator('tbody').getByText('matched', { exact: true })).toBeVisible();
+      await expect(page.locator('tbody').getByText('Matched', { exact: true })).toBeVisible();
       await expect(page.getByText('workflow.error')).toBeVisible();
-      await expect(page.locator('tbody').getByText('error', { exact: true })).toBeVisible();
+      await expect(page.locator('tbody').getByText('Error', { exact: true })).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
@@ -530,7 +530,7 @@ test.describe('Workflow Designer UI - events tab', () => {
     }
   });
 
-  test('events load more appends additional results', async ({ page }) => {
+  test('events pagination shows additional results', async ({ page }) => {
     test.setTimeout(180000);
     const db = createTestDbConnection();
     const tenantData = await createTenantAndLogin(db, page, {
@@ -556,8 +556,9 @@ test.describe('Workflow Designer UI - events tab', () => {
       await openEventsTab(page, tenantId);
       const rows = page.locator('tbody tr');
       await expect.poll(async () => rows.count()).toBe(25);
-      await page.locator('#workflow-events-load-more').click();
-      await expect.poll(async () => rows.count()).toBe(30);
+      await page.locator('#workflow-events-table-pagination-next-btn').click();
+      await waitForEventsLoaded(page);
+      await expect.poll(async () => rows.count()).toBe(5);
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();

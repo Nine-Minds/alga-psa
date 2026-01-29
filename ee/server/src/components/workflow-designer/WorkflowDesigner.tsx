@@ -28,6 +28,7 @@ import {
 } from './pipeline/PipelineComponents';
 
 import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -38,19 +39,18 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { analytics } from '@/lib/analytics/client';
+import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
-import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
-import { getCurrentUser, getCurrentUserPermissions } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
-import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@/lib/actions/workflow-event-catalog-v2-actions';
+import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@alga-psa/workflows/actions';
 import {
   createWorkflowDefinitionAction,
   getWorkflowSchemaAction,
@@ -64,7 +64,7 @@ import {
   publishWorkflowDefinitionAction,
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
-} from '@/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 
 import type {
   WorkflowDefinition,
@@ -441,6 +441,81 @@ const buildDataContext = (
     }
   };
 
+  const assignedVars = new Map<string, { lastStepId: string; lastStepName: string; nestedPaths: string[][] }>();
+
+  const recordAssignedVarPath = (assignmentPath: string, step: Step) => {
+    if (!assignmentPath.startsWith('vars.')) return;
+
+    const remainder = assignmentPath.slice('vars.'.length);
+    const parts = remainder.split('.').filter(Boolean);
+    if (parts.length === 0) return;
+
+    const rootName = parts[0]!;
+    const nested = parts.slice(1);
+
+    const nodeStep = step as NodeStep;
+    const defaultName = step.type === 'transform.assign' ? 'Assign' : step.type;
+    const stepName = nodeStep.name || defaultName;
+
+    const existing = assignedVars.get(rootName) ?? {
+      lastStepId: step.id,
+      lastStepName: stepName,
+      nestedPaths: []
+    };
+
+    existing.lastStepId = step.id;
+    existing.lastStepName = stepName;
+    if (nested.length > 0) {
+      existing.nestedPaths.push(nested);
+    }
+
+    assignedVars.set(rootName, existing);
+  };
+
+  const buildAssignedVarSchema = (nestedPaths: string[][]): JsonSchema => {
+    if (!nestedPaths.length) {
+      return {};
+    }
+
+    const root: JsonSchema = { type: 'object', properties: {} };
+
+    const ensureObjectProperty = (schema: JsonSchema, key: string): JsonSchema => {
+      schema.properties ??= {};
+      const existing = schema.properties[key] as JsonSchema | undefined;
+      if (existing && typeof existing === 'object') {
+        if (normalizeSchemaType(existing) !== 'object') {
+          schema.properties[key] = { type: 'object', properties: {} };
+        } else {
+          (schema.properties[key] as JsonSchema).properties ??= {};
+        }
+      } else {
+        schema.properties[key] = { type: 'object', properties: {} };
+      }
+      return schema.properties[key] as JsonSchema;
+    };
+
+    const ensureLeafProperty = (schema: JsonSchema, key: string) => {
+      schema.properties ??= {};
+      if (!(key in schema.properties)) {
+        schema.properties[key] = {};
+      }
+    };
+
+    for (const pathParts of nestedPaths) {
+      let cursor = root;
+      pathParts.forEach((segment, idx) => {
+        const isLeaf = idx === pathParts.length - 1;
+        if (isLeaf) {
+          ensureLeafProperty(cursor, segment);
+        } else {
+          cursor = ensureObjectProperty(cursor, segment);
+        }
+      });
+    }
+
+    return root;
+  };
+
   // Walk through steps to build context up to currentStepId
   // Returns the block context if the target step is found
   const walkSteps = (steps: Step[], stopAtId: string, blockCtx: BlockContext): BlockContext | null => {
@@ -497,6 +572,16 @@ const buildDataContext = (
         }
       }
 
+      // Collect vars assignments from assign-style steps that occur before the current step.
+      if (step.type === 'transform.assign' || step.type === 'event.wait') {
+        const config = (step as NodeStep).config as { assign?: Record<string, { $expr: string }> } | undefined;
+        if (config?.assign) {
+          for (const path of Object.keys(config.assign)) {
+            recordAssignedVarPath(path, step);
+          }
+        }
+      }
+
       // Walk nested blocks with updated context
       if (step.type === 'control.if') {
         const ifBlock = step as IfBlock;
@@ -542,6 +627,20 @@ const buildDataContext = (
     if (foundBlockCtx.inCatchBlock) {
       context.inCatchBlock = true;
     }
+  }
+
+  // Add workflow vars that were assigned (e.g., via transform.assign) before this step.
+  const existingSaveAs = new Set(context.steps.map((entry) => entry.saveAs));
+  for (const [saveAs, meta] of assignedVars.entries()) {
+    if (existingSaveAs.has(saveAs)) continue;
+    const outputSchema = buildAssignedVarSchema(meta.nestedPaths);
+    context.steps.push({
+      stepId: `${meta.lastStepId}:${saveAs}`,
+      stepName: meta.lastStepName,
+      saveAs,
+      outputSchema,
+      fields: extractSchemaFields(outputSchema, outputSchema)
+    });
   }
 
   return context;
@@ -1341,6 +1440,14 @@ const WorkflowDesigner: React.FC = () => {
   const didApplyNewWorkflowFromQuery = useRef<boolean>(false);
 
   useEffect(() => {
+    const raw = (tabFromQuery ?? '').trim().toLowerCase();
+    if (raw !== 'audit') return;
+    const params = new URLSearchParams(searchParamsString);
+    params.set('tab', 'workflows');
+    router.replace(`/msp/workflows?${params.toString()}`);
+  }, [router, searchParamsString, tabFromQuery]);
+
+  useEffect(() => {
     try {
       const stored = window.localStorage.getItem('workflow-designer:steps-view');
       if (stored === 'list' || stored === 'graph') {
@@ -1598,14 +1705,13 @@ const WorkflowDesigner: React.FC = () => {
     if (raw === 'runs') return 'Runs';
     if (raw === 'events') return 'Events';
     if (raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') return 'Dead Letter';
-    if (raw === 'audit') return 'Audit';
     return null;
   }, [tabFromQuery]);
 
   useEffect(() => {
     if (!tabLabelFromQuery) return;
 
-    const isAdminTab = tabLabelFromQuery === 'Dead Letter' || tabLabelFromQuery === 'Audit';
+    const isAdminTab = tabLabelFromQuery === 'Dead Letter';
     if (isAdminTab && !canAdmin) {
       const params = new URLSearchParams(searchParamsString);
       params.set('tab', 'workflows');
@@ -1625,13 +1731,16 @@ const WorkflowDesigner: React.FC = () => {
           : nextTabLabel === 'Runs' ? 'runs'
             : nextTabLabel === 'Events' ? 'events'
               : nextTabLabel === 'Dead Letter' ? 'dead-letter'
-                : nextTabLabel === 'Audit' ? 'audit'
-                  : null;
+                : null;
 
     if (!tabValue) return;
 
     const params = new URLSearchParams(searchParamsString);
     params.set('tab', tabValue);
+    if (tabValue === 'workflows') {
+      params.delete('workflowId');
+      params.delete('new');
+    }
     const nextParamsString = params.toString();
     if (nextParamsString !== searchParamsString) {
       router.replace(`/msp/workflows?${nextParamsString}`);
@@ -2380,6 +2489,10 @@ const WorkflowDesigner: React.FC = () => {
         });
       } catch {}
       toast.success('Workflow published');
+      if (typeof (data as any)?.publishedVersion === 'number') {
+        const nextDraftVersion = ((data as any).publishedVersion as number) + 1;
+        setActiveDefinition((prev) => (prev ? { ...prev, version: nextDraftVersion } : prev));
+      }
       void loadDefinitions();
     } catch (error) {
       toast.error('Failed to publish workflow');
@@ -4202,14 +4315,6 @@ const WorkflowDesigner: React.FC = () => {
     />
   );
 
-  const auditContent = (
-    <WorkflowDefinitionAudit
-      workflowId={activeWorkflowId}
-      workflowName={activeWorkflowRecord?.name}
-      isActive={activeTab === 'Audit'}
-    />
-  );
-
   const workflowListContent = (
     <WorkflowListV2
       onSelectWorkflow={(workflowId) => {
@@ -4241,7 +4346,7 @@ const WorkflowDesigner: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Workflows</h1>
-            <p className="text-sm text-gray-500">Create, run, and audit workflow automations.</p>
+            <p className="text-sm text-gray-500">Create and run workflow automations.</p>
           </div>
           {activeTab === 'Designer' && (
             <div className="flex items-center gap-2">
@@ -4335,7 +4440,6 @@ const WorkflowDesigner: React.FC = () => {
             { label: 'Runs', content: runListContent },
             { label: 'Events', content: eventListContent },
             ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : []),
-            ...(canAdmin ? [{ label: 'Audit', content: auditContent }] : [])
           ]}
           tabStyles={{
             root: 'h-full min-h-0 flex flex-col',
@@ -4750,6 +4854,11 @@ const StepConfigPanel: React.FC<{
 }) => {
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
   const [showDataContext, setShowDataContext] = useState(false);
+  const [isInputMappingDialogOpen, setIsInputMappingDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setIsInputMappingDialogOpen(false);
+  }, [step.id]);
 
   // Build data context for this step position
   const dataContext = useMemo(() =>
@@ -5139,17 +5248,57 @@ const StepConfigPanel: React.FC<{
       {/* §17 - Input Mapping Panel for action.call steps */}
       {step.type === 'action.call' && selectedAction && actionInputFields.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500 mb-3">
-            Map workflow data to action inputs. Drag fields or click to assign values.
-          </p>
-          <MappingPanel
-            value={inputMapping}
-            onChange={handleInputMappingChange}
-            targetFields={actionInputFields}
-            dataContext={dataContext}
-            fieldOptions={enhancedFieldOptions}
-            stepId={step.id}
-          />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-gray-800">Input Mapping</div>
+              <p className="text-xs text-gray-500 mt-1">
+                Map workflow data to action inputs.
+              </p>
+              <div className="text-xs text-gray-500 mt-1">
+                {Object.keys(inputMapping).length} / {actionInputFields.length} fields mapped
+              </div>
+            </div>
+            <Button
+              id={`workflow-step-input-mapping-open-${step.id}`}
+              variant="outline"
+              size="sm"
+              onClick={() => setIsInputMappingDialogOpen(true)}
+            >
+              Edit mapping
+            </Button>
+          </div>
+
+          <Dialog
+            id={`workflow-step-input-mapping-dialog-${step.id}`}
+            isOpen={isInputMappingDialogOpen}
+            onClose={() => setIsInputMappingDialogOpen(false)}
+            title={`Input Mapping: ${selectedAction.ui?.label ?? selectedAction.id}`}
+            className="max-w-6xl"
+            draggable={false}
+          >
+            <div className="mb-3 text-sm text-gray-600">
+              Map workflow data to action inputs. Drag fields or click to assign values.
+            </div>
+            <MappingPanel
+              value={inputMapping}
+              onChange={handleInputMappingChange}
+              targetFields={actionInputFields}
+              dataContext={dataContext}
+              fieldOptions={enhancedFieldOptions}
+              stepId={step.id}
+              sourceTreeMaxHeight="70vh"
+            />
+
+            <DialogFooter>
+              <Button
+                id={`workflow-step-input-mapping-close-${step.id}`}
+                variant="outline"
+                onClick={() => setIsInputMappingDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </Dialog>
         </div>
       )}
 

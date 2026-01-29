@@ -32,6 +32,7 @@ const START_SIZE = 52;
 const INSERT_SIZE = 30;
 const EDGE_TYPE: Edge['type'] = 'step';
 const EXCLUDE_FROM_LAYOUT = { excludeFromLayout: true } as const;
+const NODE_WRAPPER_STYLE = { padding: 0, border: 'none', background: 'transparent', boxShadow: 'none' } as const;
 
 type InternalNode = Node<WorkflowGraphNodeData> & { width?: number; height?: number };
 
@@ -85,6 +86,7 @@ const buildSequence = (
         id: insertNodeId,
         type: 'workflowInsert',
         position: { x: 0, y: 0 },
+        style: NODE_WRAPPER_STYLE,
         data: {
           kind: 'insert',
           label: '+',
@@ -117,6 +119,7 @@ const buildSequence = (
 	        id: ifNodeId,
 	        type: 'workflowStep',
 	        position: { x: 0, y: 0 },
+	        style: NODE_WRAPPER_STYLE,
 	        data: { kind: 'step', stepId: ifStep.id, stepType: ifStep.type, label, subtitle },
 	        width: STEP_WIDTH,
 	        height: STEP_HEIGHT
@@ -145,6 +148,7 @@ const buildSequence = (
 	          id: joinNodeId,
 	          type: 'workflowJoin',
 	          position: { x: 0, y: 0 },
+	          style: NODE_WRAPPER_STYLE,
 	          data: { kind: 'join', label: 'Join' },
 	          width: JOIN_SIZE,
 	          height: JOIN_SIZE
@@ -183,6 +187,7 @@ const buildSequence = (
 	        id: tcNodeId,
 	        type: 'workflowStep',
 	        position: { x: 0, y: 0 },
+	        style: NODE_WRAPPER_STYLE,
 	        data: { kind: 'step', stepId: tc.id, stepType: tc.type, label, subtitle },
 	        width: STEP_WIDTH,
 	        height: STEP_HEIGHT
@@ -211,6 +216,7 @@ const buildSequence = (
 	          id: joinNodeId,
 	          type: 'workflowJoin',
 	          position: { x: 0, y: 0 },
+	          style: NODE_WRAPPER_STYLE,
 	          data: { kind: 'join', label: 'Join' },
 	          width: JOIN_SIZE,
 	          height: JOIN_SIZE
@@ -250,6 +256,7 @@ const buildSequence = (
         id: loopNodeId,
         type: 'workflowStep',
         position: { x: 0, y: 0 },
+        style: NODE_WRAPPER_STYLE,
         data: { kind: 'step', stepId: loop.id, stepType: loop.type, label, subtitle },
         width: STEP_WIDTH,
         height: STEP_HEIGHT
@@ -258,6 +265,7 @@ const buildSequence = (
         id: afterNodeId,
         type: 'workflowJoin',
         position: { x: 0, y: 0 },
+        style: NODE_WRAPPER_STYLE,
         data: { kind: 'join', label: 'Done' },
         width: JOIN_SIZE,
         height: JOIN_SIZE
@@ -299,6 +307,7 @@ const buildSequence = (
       id: nodeId,
       type: 'workflowStep',
       position: { x: 0, y: 0 },
+      style: NODE_WRAPPER_STYLE,
       data: { kind: 'step', stepId: step.id, stepType: step.type, label, subtitle },
       width: STEP_WIDTH,
       height: STEP_HEIGHT
@@ -369,6 +378,7 @@ export async function buildWorkflowGraph(
     id: startId,
     type: 'workflowStart',
     position: { x: 0, y: 0 },
+    style: NODE_WRAPPER_STYLE,
     data: { kind: 'start', label: 'Start' },
     width: START_SIZE,
     height: START_SIZE

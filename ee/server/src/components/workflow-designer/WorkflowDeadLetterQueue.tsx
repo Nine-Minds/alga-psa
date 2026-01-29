@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
-import { listWorkflowDeadLetterRunsAction } from '@/lib/actions/workflow-runtime-v2-actions';
+import { listWorkflowDeadLetterRunsAction } from '@alga-psa/workflows/actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type DeadLetterRun = {

@@ -20,16 +20,17 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DocumentSelectorProps {
     id: string;
-    entityId: string;
-    entityType: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+    entityId?: string;  // Optional - when not provided, documents are returned without creating associations
+    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
     onDocumentSelected?: (document: IDocument) => Promise<void>;
-    onDocumentsSelected?: () => Promise<void>;
+    onDocumentsSelected?: (documents?: IDocument[]) => Promise<void>;  // Now optionally receives selected documents
     singleSelect?: boolean;
     isOpen: boolean;
     onClose: () => void;
     typeFilter?: string; // Optional filter: 'image', 'application/pdf', 'text', etc.
     title?: string; // Optional custom title
     description?: string; // Optional description text
+    excludeDocumentIds?: string[];  // Documents to exclude from selection (e.g., already pending)
 }
 
 export default function DocumentSelector({
@@ -43,8 +44,13 @@ export default function DocumentSelector({
     onClose,
     typeFilter,
     title,
-    description
+    description,
+    excludeDocumentIds
 }: DocumentSelectorProps): React.JSX.Element {
+    // Pending mode is only when BOTH entityId and entityType are intentionally omitted
+    // If only one is missing, that's likely a bug - we'll show an error
+    const isPendingMode = !entityId && !entityType;
+    const hasPartialEntityInfo = (!entityId && entityType) || (entityId && !entityType);
     const [documents, setDocuments] = useState<IDocument[]>([]);
     const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -70,8 +76,9 @@ export default function DocumentSelector({
             setIsLoading(true);
             setError(null);
 
-            if (!entityId || !entityType) {
-                console.error('Missing required props: entityId or entityType is undefined');
+            // Validate: if only one of entityId/entityType is provided, that's likely a bug
+            if (hasPartialEntityInfo) {
+                console.error('DocumentSelector: Both entityId and entityType must be provided together, or both omitted for pending mode');
                 setError(t('documents.selector.errors.configuration', 'Configuration error: Missing entity information'));
                 setIsLoading(false);
                 return;
@@ -90,22 +97,29 @@ export default function DocumentSelector({
                     {
                         searchTerm: searchTerm,
                         type: typeFilter,
-                        excludeEntityId: entityId,
-                        excludeEntityType: entityType
+                        // Only exclude by entity when not in pending mode
+                        excludeEntityId: isPendingMode ? undefined : entityId,
+                        excludeEntityType: isPendingMode ? undefined : entityType
                     }
                 );
             } else {
                 // Fetch all documents (no folder filter)
                 response = await getAllDocuments({
                     searchTerm: searchTerm,
-                    excludeEntityId: entityId,
-                    excludeEntityType: entityType,
+                    // Only exclude by entity when not in pending mode
+                    excludeEntityId: isPendingMode ? undefined : entityId,
+                    excludeEntityType: isPendingMode ? undefined : entityType,
                     type: typeFilter
                 }, pageToLoad, pageSize);
             }
 
             if (response && Array.isArray(response.documents)) {
-                setDocuments(response.documents);
+                // Filter out excluded document IDs without mutating the original response
+                const filteredDocuments = excludeDocumentIds && excludeDocumentIds.length > 0
+                    ? response.documents.filter((doc: IDocument) => !excludeDocumentIds.includes(doc.document_id))
+                    : response.documents;
+
+                setDocuments(filteredDocuments);
                 setTotalPages(response.totalPages || Math.ceil(response.total / pageSize));
                 setCurrentPage(response.currentPage || pageToLoad);
             } else {
@@ -165,27 +179,26 @@ export default function DocumentSelector({
             const selectedIds = Array.from(selectedDocuments);
             if (selectedIds.length === 0) return;
 
-            // Validate required props before using them
-            if (!entityId || !entityType) {
-                console.error('Missing required props: entityId or entityType is undefined');
-                setError(t('documents.selector.errors.configuration', 'Configuration error: Missing entity information'));
-                setIsSaving(false);
-                return;
-            }
+            const selectedDocs = documents.filter(d => selectedIds.includes(d.document_id));
 
             if (singleSelect && onDocumentSelected) {
-                const selectedDoc = documents.find(d => d.document_id === selectedIds[0]);
+                const selectedDoc = selectedDocs[0];
                 if (selectedDoc) {
                     await onDocumentSelected(selectedDoc);
                 }
             } else if (onDocumentsSelected) {
-                // Create associations for selected documents
-                await createDocumentAssociations(
-                    entityId,
-                    entityType,
-                    selectedIds
-                );
-                await onDocumentsSelected();
+                if (isPendingMode) {
+                    // In pending mode, just return the selected documents without creating associations
+                    await onDocumentsSelected(selectedDocs);
+                } else {
+                    // Create associations for selected documents
+                    await createDocumentAssociations(
+                        entityId!,
+                        entityType!,
+                        selectedIds
+                    );
+                    await onDocumentsSelected(selectedDocs);
+                }
             }
 
             onClose();
@@ -197,14 +210,14 @@ export default function DocumentSelector({
         }
     };
 
-    // Early validation of required props
-    if (!id || !entityId || !entityType) {
-        console.error('DocumentSelector: Missing required props', { id, entityId, entityType });
+    // Early validation of required props - only id is truly required now
+    if (!id) {
+        console.error('DocumentSelector: Missing required props', { id });
         return (
-            <Dialog 
-              isOpen={isOpen} 
-              onClose={onClose} 
-              data-testid="document-selector-dialog" 
+            <Dialog
+              isOpen={isOpen}
+              onClose={onClose}
+              data-testid="document-selector-dialog"
               title={t('documents.selector.configErrorTitle', 'Configuration Error')}
             >
                 <DialogContent>

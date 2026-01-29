@@ -1,95 +1,60 @@
 import { expect, test } from '@playwright/test';
-import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
+import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
 import {
   applyPlaywrightAuthEnvDefaults,
   createTenantAndLogin,
   resolvePlaywrightBaseUrl,
-  type TenantPermissionTuple,
 } from './helpers/playwrightAuthSessionHelper';
+import { ensureSystemEmailWorkflow } from './helpers/workflowSeedHelper';
 import { WorkflowDesignerPage } from '../page-objects/WorkflowDesignerPage';
 
 applyPlaywrightAuthEnvDefaults();
 
-const BASE_URL = resolvePlaywrightBaseUrl();
-const CE_STUB_TEXT = 'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.';
+const TEST_CONFIG = {
+  baseUrl: resolvePlaywrightBaseUrl(),
+};
 
-const WORKFLOW_PERMISSIONS: TenantPermissionTuple[] = [
-  { resource: 'user', action: 'read' },
-  { resource: 'workflow', action: 'read' },
-  { resource: 'workflow', action: 'manage' },
-  { resource: 'workflow', action: 'publish' },
-  { resource: 'workflow', action: 'admin' },
+const ADMIN_PERMISSIONS = [
+  {
+    roleName: 'Admin',
+    permissions: [
+      { resource: 'user', action: 'read' },
+      { resource: 'workflow', action: 'manage' },
+      { resource: 'workflow', action: 'publish' },
+      { resource: 'workflow', action: 'admin' },
+    ],
+  },
 ];
 
-async function enableWorkflowAutomation(db: Knex, tenantId: string): Promise<void> {
-  const now = new Date();
-  const existing = await db('tenant_settings').where({ tenant: tenantId }).first();
-
-  const existingSettings =
-    existing && existing.settings && typeof existing.settings === 'object'
-      ? (existing.settings as Record<string, any>)
-      : {};
-
-  const mergedSettings = {
-    ...existingSettings,
-    experimentalFeatures: {
-      ...(existingSettings.experimentalFeatures ?? {}),
-      workflowAutomation: true,
-    },
-  };
-
-  await db('tenant_settings')
-    .insert({
-      tenant: tenantId,
-      onboarding_completed: true,
-      onboarding_completed_at: now,
-      onboarding_skipped: false,
-      onboarding_data: null,
-      settings: mergedSettings,
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict('tenant')
-    .merge({
-      settings: mergedSettings,
-      updated_at: now,
-    });
-}
-
-test('EE workflows page loads designer (not CE stub)', async ({ page }) => {
+test('EE build: workflows page loads without CE/OSS stub messaging', async ({ page }) => {
   test.setTimeout(180_000);
-  const db = createTestDbConnection();
 
-  const tenantData = await createTenantAndLogin(db, page, {
-    tenantOptions: {
-      companyName: `Workflow UI Smoke ${uuidv4().slice(0, 6)}`,
-    },
-    completeOnboarding: { completedAt: new Date() },
-    permissions: [
-      {
-        roleName: 'Admin',
-        permissions: WORKFLOW_PERMISSIONS,
-      },
-    ],
-  });
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
 
   try {
-    await enableWorkflowAutomation(db, tenantData.tenant.tenantId);
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: { companyName: `EE workflows smoke ${uuidv4().slice(0, 6)}` },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: ADMIN_PERMISSIONS,
+    });
 
-    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await page.waitForLoadState('networkidle', { timeout: 30_000 });
+    await ensureSystemEmailWorkflow(db);
 
     const workflowPage = new WorkflowDesignerPage(page);
-    await workflowPage.goto(BASE_URL);
+    await workflowPage.goto(TEST_CONFIG.baseUrl);
 
-    await workflowPage.clickNewWorkflow();
-    await expect(workflowPage.nameInput).toBeVisible();
-    await expect(page.getByText(CE_STUB_TEXT)).toHaveCount(0);
+    await expect(page.getByText('Workflow designer requires Enterprise Edition. Please upgrade to access this feature.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Enterprise Feature' })).toHaveCount(0);
+    await expect(workflowPage.header).toBeVisible();
   } finally {
-    await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+    if (tenantData) {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+    }
     await db.destroy();
   }
 });
+

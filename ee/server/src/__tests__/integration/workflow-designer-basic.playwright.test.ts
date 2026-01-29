@@ -232,31 +232,27 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
-  test('workflow list shows total count and buttons for each definition', async ({ page }) => {
+  test('workflow list shows counts and can open a workflow', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
     try {
-      const countLabel = page.getByText(/\d+ workflows/);
-      await expect(countLabel).toBeVisible();
+      await workflowPage.workflowsTab.click();
+      await expect(page.getByText(/\d+\s+total/)).toBeVisible();
 
-      const buttons = page.locator('[id^="workflow-designer-open-"]');
-      await expect(buttons.first()).toBeVisible();
-      const buttonCount = await buttons.count();
-      expect(buttonCount).toBeGreaterThan(0);
+      // Sanity check that at least one workflow is present and clickable.
+      const firstWorkflow = page.locator('[id^="workflow-list-open-"]').first();
+      await expect(firstWorkflow).toBeVisible();
+      await firstWorkflow.click();
 
-      await expect.poll(async () => {
-        const labelText = (await countLabel.textContent()) ?? '';
-        const match = labelText.match(/(\d+)\s+workflows/);
-        return match ? Number(match[1]) : null;
-      }).toBe(buttonCount);
+      await expect(page).toHaveURL(/tab=designer/);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
   });
 
-  test('workflow list handles large counts with horizontal scroll', async ({ page }) => {
+  test('workflow list supports searching and opening workflows', async ({ page }) => {
     test.setTimeout(120000);
 
     const db = createTestDbConnection();
@@ -277,18 +273,16 @@ test.describe('Workflow Designer UI - basic', () => {
       await page.waitForLoadState('networkidle', { timeout: 30_000 });
       await workflowPage.goto(TEST_CONFIG.baseUrl);
 
-      const listContainer = page.locator('#workflow-designer-list');
       const lastName = seeded.names[seeded.names.length - 1];
+      await workflowPage.workflowsTab.click();
 
-      await expect(page.getByRole('button', { name: lastName })).toBeVisible();
+      const searchInput = page.getByPlaceholder('Search workflows...');
+      await expect(searchInput).toBeVisible();
+      await searchInput.fill(lastName);
 
-      const hasOverflow = await listContainer.evaluate((el) => el.scrollWidth > el.clientWidth);
-      expect(hasOverflow).toBeTruthy();
-
-      await listContainer.evaluate((el) => {
-        el.scrollLeft = el.scrollWidth;
-      });
-      await page.getByRole('button', { name: lastName }).click();
+      const openLink = page.getByRole('link', { name: lastName, exact: true });
+      await expect(openLink).toBeVisible();
+      await openLink.click();
       await expect(workflowPage.nameInput).toHaveValue(lastName);
     } finally {
       if (seeded?.ids.length) {
@@ -858,14 +852,15 @@ test.describe('Workflow Designer UI - basic', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      await expect(page.getByText('0 workflows')).toBeVisible();
-      await expect(page.locator('[id^="workflow-designer-open-"]')).toHaveCount(0);
-
       await expect(workflowPage.saveDraftButton).toBeDisabled();
       await expect(workflowPage.publishButton).toBeDisabled();
       await expect(workflowPage.nameInput).toHaveValue('');
       await expect(workflowPage.payloadSchemaSelectButton).toHaveCount(0);
       await expect(page.locator('#workflow-settings-save')).toHaveCount(0);
+
+      await workflowPage.workflowsTab.click();
+      await expect(page.getByText('No workflows yet')).toBeVisible();
+      await expect(page.locator('[id^="workflow-list-open-"]')).toHaveCount(0);
     } finally {
       await restoreWorkflowDefinitions(db, snapshot).catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});

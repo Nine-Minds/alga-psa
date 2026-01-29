@@ -1,104 +1,59 @@
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const nextDir = process.argv[2] ?? 'server/.next';
+const serverOutputDir = path.join(nextDir, 'server');
 
-const repoRoot = path.resolve(__dirname, '..');
-const serverDir = path.join(repoRoot, 'server');
-const nextServerDir = path.join(serverDir, '.next', 'server');
-
-const needle = 'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.';
-const needleBytes = Buffer.from(needle, 'utf8');
-
-const legacyEntryCandidates = [
-  path.join(repoRoot, 'packages', 'workflows', 'src', 'entry.ts'),
-  path.join(repoRoot, 'packages', 'workflows', 'src', 'entry.tsx'),
-  path.join(repoRoot, 'packages', 'workflows', 'src', 'ee', 'entry.tsx'),
-  path.join(repoRoot, 'packages', 'workflows', 'src', 'oss', 'entry.tsx'),
+const needles = [
+  'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.',
 ];
 
-function walkFiles(rootDir) {
-  const stack = [rootDir];
+async function walkFiles(dir) {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = [];
 
-  while (stack.length) {
-    const current = stack.pop();
-    const entries = fs.readdirSync(current, { withFileTypes: true });
-    for (const entry of entries) {
-      const entryPath = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(entryPath);
-      } else if (entry.isFile()) {
-        files.push(entryPath);
-      }
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await walkFiles(fullPath)));
+    } else if (entry.isFile()) {
+      files.push(fullPath);
     }
   }
 
   return files;
 }
 
-function scanForNeedle(targetDir) {
-  if (!fs.existsSync(targetDir)) {
-    throw new Error(`Expected directory does not exist: ${targetDir}`);
+async function main() {
+  try {
+    await fs.access(serverOutputDir);
+  } catch {
+    console.error(`[workflows-ee-guard] Missing Next output directory: ${serverOutputDir}`);
+    console.error(`[workflows-ee-guard] Run an EE build first (e.g. in server/: EDITION=ee NEXT_PUBLIC_EDITION=enterprise next build).`);
+    process.exit(2);
   }
 
-  const matches = [];
-  const files = walkFiles(targetDir);
-
+  const files = await walkFiles(serverOutputDir);
   for (const filePath of files) {
-    const contents = fs.readFileSync(filePath);
-    if (contents.includes(needleBytes)) {
-      matches.push(filePath);
+    let contents;
+    try {
+      contents = await fs.readFile(filePath, 'utf8');
+    } catch {
+      continue;
+    }
+
+    for (const needle of needles) {
+      if (contents.includes(needle)) {
+        console.error('[workflows-ee-guard] Found CE/OSS workflows stub string in EE build output.');
+        console.error(`[workflows-ee-guard] needle: ${JSON.stringify(needle)}`);
+        console.error(`[workflows-ee-guard] file: ${filePath}`);
+        process.exit(1);
+      }
     }
   }
 
-  return matches;
+  console.log('[workflows-ee-guard] OK: no CE/OSS workflows stub strings found in .next/server output.');
 }
 
-const args = new Set(process.argv.slice(2));
-const skipBuild = args.has('--skip-build');
+await main();
 
-const legacyHits = legacyEntryCandidates.filter((candidate) => fs.existsSync(candidate));
-if (legacyHits.length) {
-  console.error('\n[guard-ee-workflows-next-build] FAIL: legacy workflows entrypoints still exist (expected deleted)\n');
-  for (const filePath of legacyHits) {
-    console.error(`- ${path.relative(repoRoot, filePath)}`);
-  }
-  process.exit(1);
-}
-
-if (!skipBuild) {
-  fs.rmSync(path.join(serverDir, '.next'), { recursive: true, force: true });
-
-  const build = spawnSync('npm', ['-w', 'server', 'run', 'build'], {
-    cwd: repoRoot,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      EDITION: 'enterprise',
-      NEXT_PUBLIC_EDITION: 'enterprise',
-    },
-  });
-
-  if (typeof build.status === 'number' && build.status !== 0) {
-    process.exit(build.status);
-  }
-
-  if (build.error) {
-    throw build.error;
-  }
-}
-
-const hits = scanForNeedle(nextServerDir);
-if (hits.length) {
-  console.error(`\n[guard-ee-workflows-next-build] FAIL: found workflows CE stub string in EE build output under ${nextServerDir}\n`);
-  for (const filePath of hits) {
-    console.error(`- ${path.relative(repoRoot, filePath)}`);
-  }
-  process.exit(1);
-}
-
-console.log(`[guard-ee-workflows-next-build] OK: no workflows CE stub string found under ${nextServerDir}`);

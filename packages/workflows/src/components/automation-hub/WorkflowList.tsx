@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -172,6 +173,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   const router = useRouter();
   const searchParams = useSearchParams();
   const didUnmount = useRef(false);
+  const searchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize state from URL params
   const [workflows, setWorkflows] = useState<WorkflowDefinitionListItem[]>([]);
@@ -217,7 +219,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
 
   // Update URL when filters change
   const updateUrlParams = (params: Record<string, string | null>) => {
-    const newParams = new URLSearchParams(searchParams.toString());
+    const newParams = new URLSearchParams(window.location.search);
     Object.entries(params).forEach(([key, value]) => {
       if (value && value !== 'all' && value !== '') {
         newParams.set(key, value);
@@ -227,6 +229,13 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     });
     const newUrl = newParams.toString() ? `?${newParams.toString()}` : window.location.pathname;
     router.replace(newUrl, { scroll: false });
+  };
+
+  const clearSearchDebounce = () => {
+    const timer = searchDebounceTimerRef.current;
+    if (!timer) return;
+    clearTimeout(timer);
+    searchDebounceTimerRef.current = null;
   };
 
   // Server-side paging + sorting + filtering
@@ -288,12 +297,19 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
 
   // Debounced URL update + server fetch for search
   useEffect(() => {
+    clearSearchDebounce();
     const timer = setTimeout(() => {
       updateUrlParams({ search: searchTerm });
       setDebouncedSearchTerm(searchTerm);
       setCurrentPage(1);
     }, 300);
-    return () => clearTimeout(timer);
+    searchDebounceTimerRef.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (searchDebounceTimerRef.current === timer) {
+        searchDebounceTimerRef.current = null;
+      }
+    };
   }, [searchTerm]);
 
   const handleSortChange = (newSortBy: string, newSortDirection: 'asc' | 'desc') => {
@@ -303,6 +319,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   };
 
   const handleRowClick = (workflow: WorkflowDefinitionListItem) => {
+    clearSearchDebounce();
     if (onSelectWorkflow) {
       onSelectWorkflow(workflow.workflow_id);
     }
@@ -469,20 +486,31 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
       dataIndex: 'name',
       sortable: true,
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[rgb(var(--color-primary-500))]" />
-            <span className="font-medium text-[rgb(var(--color-text-900))]">{record.name}</span>
-            {record.is_system && (
-              <Badge variant="outline" className="text-xs">System</Badge>
+        <Link
+          href={`/msp/workflows?tab=designer&workflowId=${record.workflow_id}`}
+          id={`workflow-list-open-${record.workflow_id}`}
+          aria-label={record.name}
+          className="block w-full text-left"
+          onClick={(e) => {
+            e.stopPropagation();
+            clearSearchDebounce();
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[rgb(var(--color-primary-500))]" />
+              <span className="font-medium text-[rgb(var(--color-text-900))]">{record.name}</span>
+              {record.is_system && (
+                <Badge variant="outline" className="text-xs">System</Badge>
+              )}
+            </div>
+            {record.description && (
+              <span className="text-sm text-[rgb(var(--color-text-500))] line-clamp-1">
+                {record.description}
+              </span>
             )}
           </div>
-          {record.description && (
-            <span className="text-sm text-[rgb(var(--color-text-500))] line-clamp-1">
-              {record.description}
-            </span>
-          )}
-        </div>
+        </Link>
       )
     },
     {
@@ -638,7 +666,13 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
             <Button id="workflow-list-retry-btn" variant="outline" onClick={() => setRefreshKey((v) => v + 1)}>
               Retry
             </Button>
-            <Button id="workflow-list-create-btn" onClick={onCreateNew}>
+            <Button
+              id="workflow-list-create-btn"
+              onClick={() => {
+                clearSearchDebounce();
+                onCreateNew?.();
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               New Workflow
             </Button>
@@ -666,7 +700,10 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
           </p>
           <Button
             id="create-first-workflow-btn"
-            onClick={onCreateNew}
+            onClick={() => {
+              clearSearchDebounce();
+              onCreateNew?.();
+            }}
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Your First Workflow
@@ -702,7 +739,10 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
           </div>
           <Button
             id="create-workflow-btn"
-            onClick={onCreateNew}
+            onClick={() => {
+              clearSearchDebounce();
+              onCreateNew?.();
+            }}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Workflow
