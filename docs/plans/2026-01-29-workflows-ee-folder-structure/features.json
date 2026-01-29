@@ -5,7 +5,7 @@
 
   { "id": "F010", "description": "Create EE workflow entry file in `ee/server/src/**` exporting `DnDFlow` as expected by loader", "implemented": true },
   { "id": "F011", "description": "Move workflow designer UI components from `packages/workflows/src/ee/**` into `ee/server/src/**`", "implemented": true },
-  { "id": "F012", "description": "Add EE re-export shim (optional) to keep legacy imports working during migration window", "implemented": true },
+  { "id": "F012", "description": "Explicitly choose no re-export shims: remove legacy `packages/workflows/src/{ee,oss}` entrypoints to prevent hybrid builds", "implemented": true },
 
   { "id": "F020", "description": "Create CE workflow stub entry file in `server/src/empty/**` matching export shape", "implemented": true },
   { "id": "F021", "description": "Decide and implement desired CE UX (null, stub message, or route hidden) for workflows page", "implemented": true },

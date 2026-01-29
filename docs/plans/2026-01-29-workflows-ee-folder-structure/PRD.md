@@ -82,12 +82,12 @@ This makes TS happy without allowing TS paths to affect runtime bundling.
 2. **Introduce new CE stub entry file** in `server/src/empty/**` matching the export shape.
 3. Update `server/next.config.mjs` to point `@alga-psa/workflows/entry` at the new locations for both webpack + turbopack.
 4. Remove tsconfig `paths` entry for `@alga-psa/workflows/entry` (and update any dependent tsconfigs, e.g. `ee/server/tsconfig.json`).
-5. Keep `packages/workflows/src/ee/**` temporarily as a re-export shim (optional) to reduce risk, then delete after one release.
+5. **Remove legacy `packages/workflows/src/{ee,oss}` entrypoints** rather than keeping re-export shims, to prevent any accidental “hybrid” resolution paths in future builds.
 6. Add a CI guard for EE builds:
    - After `next build` with EE env, grep `.next/server` for known OSS stub strings and fail if present.
 7. Deploy to HV dev2 and validate:
    - Workflows page loads real designer UI
-   - No EE-only gating dialog appears in EE deployments
+    - No EE-only gating dialog appears in EE deployments
 
 ## Risks
 
