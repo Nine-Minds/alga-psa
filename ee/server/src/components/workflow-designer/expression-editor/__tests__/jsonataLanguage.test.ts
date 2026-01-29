@@ -74,7 +74,7 @@ describe('JSONata Language Definition', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const contextRootRule = rootRules.find(
         rule => Array.isArray(rule) && rule[0].toString().includes('payload')
-      );
+      ) as unknown[] | undefined;
 
       expect(contextRootRule).toBeDefined();
       expect(contextRootRule?.[1]).toBe('variable.predefined');
@@ -103,7 +103,7 @@ describe('JSONata Language Definition', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const constRule = rootRules.find(
         rule => Array.isArray(rule) && rule[0].toString().includes('true|false|null')
-      );
+      ) as unknown[] | undefined;
 
       expect(constRule).toBeDefined();
       expect(constRule?.[1]).toBe('keyword.constant');
@@ -113,7 +113,7 @@ describe('JSONata Language Definition', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const opRule = rootRules.find(
         rule => Array.isArray(rule) && rule[0].toString().includes('and|or|not|in')
-      );
+      ) as unknown[] | undefined;
 
       expect(opRule).toBeDefined();
       expect(opRule?.[1]).toBe('keyword.operator');
@@ -167,7 +167,7 @@ describe('JSONata Language Definition', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const funcRule = rootRules.find(
         rule => Array.isArray(rule) && rule[0].toString().includes('\\$[a-zA-Z_]')
-      );
+      ) as unknown[] | undefined;
 
       expect(funcRule).toBeDefined();
       expect(funcRule?.[1]).toBe('function');
@@ -242,11 +242,15 @@ describe('JSONata Language Definition', () => {
     it('should have tokenizer rules for double-quoted strings', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const stringRule = rootRules.find(
-        rule => Array.isArray(rule) &&
-        rule[0].toString() === '/^"$/' || rule[0].toString().includes('"/')
+        rule => {
+          if (!Array.isArray(rule)) return false;
+          const pattern = rule[0] as { toString: () => string };
+          return pattern.toString() === '/^"$/' || pattern.toString().includes('"/');
+        }
       );
 
-      // Check for string states
+      // Check for string states (stringRule is just used to verify a pattern exists)
+      void stringRule;
       expect(monarchTokensProvider.tokenizer.string_double).toBeDefined();
     });
 
@@ -261,7 +265,7 @@ describe('JSONata Language Definition', () => {
     it('should detect unterminated strings as invalid', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const invalidStringRules = rootRules.filter(
-        rule => Array.isArray(rule) && rule[1] === 'string.invalid'
+        rule => Array.isArray(rule) && (rule as unknown[])[1] === 'string.invalid'
       );
 
       expect(invalidStringRules.length).toBe(3); // double, single, backtick
@@ -270,7 +274,7 @@ describe('JSONata Language Definition', () => {
     it('string states should handle escape sequences', () => {
       const doubleState = monarchTokensProvider.tokenizer.string_double;
       const escapeRule = doubleState.find(
-        rule => Array.isArray(rule) && rule[1] === 'string.escape'
+        rule => Array.isArray(rule) && (rule as unknown[])[1] === 'string.escape'
       );
 
       expect(escapeRule).toBeDefined();
@@ -336,9 +340,12 @@ describe('JSONata Language Definition', () => {
     it('identifier cases should check context roots first', () => {
       const rootRules = monarchTokensProvider.tokenizer.root;
       const identifierRule = rootRules.find(
-        rule => Array.isArray(rule) &&
-        typeof rule[1] === 'object' && 'cases' in (rule[1] as object)
-      );
+        rule => {
+          if (!Array.isArray(rule)) return false;
+          const ruleArr = rule as unknown[];
+          return typeof ruleArr[1] === 'object' && ruleArr[1] !== null && 'cases' in (ruleArr[1] as object);
+        }
+      ) as unknown[] | undefined;
 
       const cases = (identifierRule?.[1] as { cases: Record<string, string> }).cases;
       expect(cases['@contextRoots']).toBe('variable.predefined');

@@ -107,6 +107,28 @@ const getEditorState = () => {
   return window.__EXPR_EDITOR_STATE__;
 };
 
+const WORKFLOW_MAPPING_MIME_TYPE = 'application/x-workflow-mapping';
+
+const extractDropText = (dataTransfer: DataTransfer): string | null => {
+  const mappingData = dataTransfer.getData(WORKFLOW_MAPPING_MIME_TYPE);
+  if (mappingData) {
+    try {
+      const parsed = JSON.parse(mappingData) as { path?: unknown } | null;
+      if (parsed && typeof parsed.path === 'string' && parsed.path.trim()) {
+        return parsed.path.trim();
+      }
+    } catch {
+      // ignore and fall back to plain text
+    }
+  }
+
+  const plain = dataTransfer.getData('text/plain');
+  if (plain && plain.trim()) {
+    return plain.trim();
+  }
+
+  return null;
+};
 
 /**
  * Expression Editor Component
@@ -299,6 +321,58 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
             editor.trigger('keyboard', 'editor.action.triggerSuggest', {});
           }
         );
+
+        // Normalize drag/drop insertion (avoid snippet placeholders like "$0" being inserted).
+        const domNode = editor.getDomNode();
+        if (domNode) {
+          const handleDragOver = (e: DragEvent) => {
+            if (!e.dataTransfer) return;
+            // Ignore file drops
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) return;
+            if (!extractDropText(e.dataTransfer)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          };
+
+          const handleDrop = (e: DragEvent) => {
+            if (!e.dataTransfer) return;
+            // Ignore file drops
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) return;
+            const text = extractDropText(e.dataTransfer);
+            if (!text) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Move cursor to drop location if possible
+            const target = editor.getTargetAtClientPoint(e.clientX, e.clientY);
+            if (target && 'position' in target && target.position) {
+              const pos = target.position;
+              editor.setSelection(new monacoInstance.Selection(pos.lineNumber, pos.column, pos.lineNumber, pos.column));
+            }
+
+            const selection = editor.getSelection();
+            if (!selection) return;
+
+            editor.executeEdits('expression-editor-drop', [
+              {
+                range: selection,
+                // If a snippet placeholder slipped through, strip it.
+                text: text.endsWith('$0') ? text.slice(0, -2) : text,
+                forceMoveMarkers: true,
+              },
+            ]);
+            editor.focus();
+          };
+
+          domNode.addEventListener('dragover', handleDragOver, true);
+          domNode.addEventListener('drop', handleDrop, true);
+
+          editor.onDidDispose(() => {
+            domNode.removeEventListener('dragover', handleDragOver, true);
+            domNode.removeEventListener('drop', handleDrop, true);
+          });
+        }
       },
       [singleLine, onFocus, onBlur, runDiagnostics]
     );

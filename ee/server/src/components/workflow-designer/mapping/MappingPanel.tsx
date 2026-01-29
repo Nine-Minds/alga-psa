@@ -15,7 +15,7 @@ import { InputMappingEditor, type ActionInputField } from './InputMappingEditor'
 import { useMappingDnd } from './useMappingDnd';
 import { useMappingPositions } from './useMappingPositions';
 import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
-import { TypeCompatibility, getTypeCompatibility } from './typeCompatibility';
+import { TypeCompatibility, getTypeCompatibility, inferTypeFromJsonSchema } from './typeCompatibility';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import type { Expr, InputMapping } from '@shared/workflow/runtime';
 import type { ExpressionContext, JsonSchema } from '../expression-editor';
@@ -130,8 +130,17 @@ const buildSourceTypeLookup = (ctx: WorkflowDataContext, payloadRootPath: string
   ctx.payload.forEach(field => addField(field, payloadRootPath));
   ctx.steps.forEach(stepOutput => {
     const basePath = `vars.${stepOutput.saveAs}`;
-    // Ensure the step output root is treated as an object even when schema is missing
-    map.set(basePath, 'object');
+    const outputType = inferTypeFromJsonSchema(stepOutput.outputSchema as JsonSchema);
+    if (outputType) {
+      map.set(basePath, outputType);
+    } else {
+      // Ensure the step output root is treated as an object when schema is missing.
+      // For assigned vars (pseudo-step outputs), leave type undefined to avoid false incompatibility warnings.
+      const isAssignedVar = stepOutput.stepId.includes(':');
+      if (!isAssignedVar) {
+        map.set(basePath, 'object');
+      }
+    }
     stepOutput.fields.forEach(field => addField(field, basePath));
   });
   ctx.globals.meta.forEach(field => addField(field, 'meta'));
