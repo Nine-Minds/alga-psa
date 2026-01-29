@@ -53,6 +53,7 @@ export function TicketList() {
   const [priorityOptions, setPriorityOptions] = useState<{ value: string; label: string }[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedResponseStatus, setSelectedResponseStatus] = useState<'all' | 'awaiting_client' | 'awaiting_internal' | 'none'>('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
@@ -148,6 +149,15 @@ export function TicketList() {
 
       let filteredTickets = [...result];
 
+      if (selectedResponseStatus !== 'all') {
+        filteredTickets = filteredTickets.filter((ticket) => {
+          if (selectedResponseStatus === 'none') {
+            return ticket.response_state == null;
+          }
+          return ticket.response_state === selectedResponseStatus;
+        });
+      }
+
       if (selectedCategories.length > 0) {
         filteredTickets = filteredTickets.filter(ticket => {
           if (selectedCategories.includes('no-category')) {
@@ -215,7 +225,7 @@ export function TicketList() {
       setError(t('tickets.messages.loadingError', 'Failed to load tickets. Please try again.'));
     }
     setLoading(false);
-  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection]);
+  }, [selectedStatus, selectedResponseStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection, t]);
 
   // Load tickets on initial mount and when filters/sorting change
   useEffect(() => {
@@ -259,6 +269,7 @@ export function TicketList() {
   const handleCategorySelect = useCallback((categoryIds: string[], excludedIds: string[]) => {
     setSelectedCategories(categoryIds);
     setExcludedCategories(excludedIds);
+    setCurrentPage(1);
   }, []);
 
   // Handle page size change - reset to page 1
@@ -269,10 +280,12 @@ export function TicketList() {
 
   const handleResetFilters = useCallback(() => {
     setSelectedStatus('all');
+    setSelectedResponseStatus('all');
     setSelectedPriority('all');
     setSelectedCategories([]);
     setExcludedCategories([]);
     setSearchQuery('');
+    setCurrentPage(1);
   }, []);
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
@@ -310,7 +323,7 @@ export function TicketList() {
       width: '20%',
       render: (value: string, record: ITicketListItem) => {
         // Get response_state from the record (F026-F030)
-        const responseState = (record as any).response_state as TicketResponseState | undefined;
+        const responseState = record.response_state as TicketResponseState | undefined;
         return (
           <div className="flex items-center gap-2 flex-wrap">
             <DropdownMenu.Root>
@@ -518,14 +531,35 @@ export function TicketList() {
           <CustomSelect
             options={statusOptions}
             value={selectedStatus}
-            onValueChange={setSelectedStatus}
+            onValueChange={(value) => {
+              setSelectedStatus(value);
+              setCurrentPage(1);
+            }}
             placeholder="Select Status"
+          />
+
+          <CustomSelect
+            options={[
+              { value: 'all', label: t('tickets.filters.allResponseStatuses', 'All Response Statuses') },
+              { value: 'awaiting_client', label: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response') },
+              { value: 'awaiting_internal', label: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response') },
+              { value: 'none', label: t('tickets.responseState.none', 'No Response Pending') },
+            ]}
+            value={selectedResponseStatus}
+            onValueChange={(value) => {
+              setSelectedResponseStatus(value as typeof selectedResponseStatus);
+              setCurrentPage(1);
+            }}
+            placeholder={t('tickets.filters.responseStatus', 'Response Status')}
           />
 
           <CustomSelect
             options={priorityOptions}
             value={selectedPriority}
-            onValueChange={setSelectedPriority}
+            onValueChange={(value) => {
+              setSelectedPriority(value);
+              setCurrentPage(1);
+            }}
             placeholder="All Priorities"
           />
 
@@ -546,7 +580,10 @@ export function TicketList() {
             id="client-portal-search-tickets-input"
             placeholder={t('tickets.filters.search')}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="h-[38px] min-w-[200px] text-sm"
             containerClassName=""
           />
