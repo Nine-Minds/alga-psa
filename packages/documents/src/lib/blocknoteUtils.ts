@@ -550,7 +550,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
     return '<p>[Invalid content format - not an array]</p>';
   }
 
-  const output: string[] = [];
+  let output: string[] = [];
 
 
   function processBlocksRecursive(

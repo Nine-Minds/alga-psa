@@ -161,7 +161,7 @@ export const deleteContactAvatar = withAuth(async (
   }
 
   try {
-    await deleteEntityImage('contact', contactId, tenant);
+    await deleteEntityImage('contact', contactId, currentUser.user_id, tenant);
 
     revalidatePath(`/contacts/${contactId}`);
     revalidatePath('/contacts');
