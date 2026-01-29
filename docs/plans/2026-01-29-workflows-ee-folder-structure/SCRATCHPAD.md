@@ -66,3 +66,4 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 ## Test checklist
 
 - T001: Covered by `scripts/guard-ee-workflows-next-build.mjs` + `.github/workflows/workflows-ee-build-guard.yml`.
+- T002: Covered by `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts` (asserts CE stub text is absent on `/msp/workflows`).

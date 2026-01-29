@@ -1,6 +1,6 @@
 [
   { "id": "T001", "description": "EE build: `next build` with `EDITION=ee` does not contain 'Workflow designer requires Enterprise Edition' in `.next/server/**`", "implemented": true, "featureIds": ["F030", "F031", "F032", "F060"] },
-  { "id": "T002", "description": "EE build: `@alga-psa/workflows/entry` resolves to EE entry file (runtime smoke)", "implemented": false, "featureIds": ["F030", "F031", "F010"] },
+  { "id": "T002", "description": "EE build: `@alga-psa/workflows/entry` resolves to EE entry file (runtime smoke)", "implemented": true, "featureIds": ["F030", "F031", "F010"] },
   { "id": "T003", "description": "CE build: workflows route renders configured CE behavior (null/stub/hidden) and does not crash", "implemented": false, "featureIds": ["F020", "F021"] },
 
   { "id": "T010", "description": "Typecheck: server compiles without TS path mapping for `@alga-psa/workflows/entry` (d.ts provides typings)", "implemented": false, "featureIds": ["F040", "F041", "F042"] },
