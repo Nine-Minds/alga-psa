@@ -1,22 +1,23 @@
 'use client';
 
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import {
+  uploadContactAvatar as uploadContactAvatarAction,
+  deleteContactAvatar as deleteContactAvatarAction
+} from '../../actions/contactAvatarActions';
 
-// Dynamic imports to avoid circular dependency (clients -> client-portal -> clients)
-// The bundler will resolve these paths via the configured aliases
+// Wrapper functions to match the expected signature
 const uploadContactAvatar = async (
   contactId: string,
   formData: FormData
 ): Promise<{ success: boolean; message?: string; imageUrl?: string | null; error?: string }> => {
-  const mod = await import('@alga-psa/client-portal/actions');
-  return mod.uploadContactAvatar(contactId, formData);
+  return uploadContactAvatarAction(contactId, formData);
 };
 
 const deleteContactAvatar = async (
   contactId: string
 ): Promise<{ success: boolean; message?: string; error?: string }> => {
-  const mod = await import('@alga-psa/client-portal/actions');
-  return mod.deleteContactAvatar(contactId);
+  return deleteContactAvatarAction(contactId);
 };
 
 interface ContactAvatarUploadProps {
@@ -43,4 +44,3 @@ export default function ContactAvatarUpload({
     />
   );
 }
-
