@@ -1,0 +1,14 @@
+[
+  { "id": "T001", "description": "EE build: `next build` with `EDITION=ee` does not contain 'Workflow designer requires Enterprise Edition' in `.next/server/**`", "implemented": true, "featureIds": ["F030", "F031", "F032", "F060"] },
+  { "id": "T002", "description": "EE build: `@alga-psa/workflows/entry` resolves to EE entry file (runtime smoke)", "implemented": true, "featureIds": ["F030", "F031", "F010"] },
+  { "id": "T003", "description": "CE build: workflows route renders configured CE behavior (null/stub/hidden) and does not crash", "implemented": true, "featureIds": ["F020", "F021"] },
+
+  { "id": "T010", "description": "Typecheck: server compiles without TS path mapping for `@alga-psa/workflows/entry` (d.ts provides typings)", "implemented": true, "featureIds": ["F040", "F041", "F042"] },
+
+  { "id": "T020", "description": "HV dev2 deploy: workflows page in EE deployment does not show EE-only gating dialog", "implemented": true, "featureIds": ["F030", "F031", "F011", "F061"] },
+  { "id": "T021", "description": "HV dev2 deploy: workflow designer UI loads and renders main surface (basic visibility assertions)", "implemented": true, "featureIds": ["F011", "F061"] },
+
+  { "id": "T030", "description": "Regression: switching build env vars (EDITION/ NEXT_PUBLIC_EDITION) changes selected workflows entry deterministically", "implemented": true, "featureIds": ["F030", "F031"] },
+
+  { "id": "T040", "description": "Removal safety: after deleting legacy `packages/workflows/src/ee/**` shims, EE build still passes and loads workflows UI", "implemented": true, "featureIds": ["F071"] }
+]
