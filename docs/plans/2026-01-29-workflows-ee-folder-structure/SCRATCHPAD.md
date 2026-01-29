@@ -40,3 +40,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
   - `ee/server/playwright.config.ts`: force `NODE_ENV=test` and load env from `.env`/`.env.test`/`.env.example`.
   - `shared/core/getSecret.ts`: resilient `getSecret()` fallback when `@alga-psa/core/server` can't be imported (Playwright boot path).
   - `ee/server/src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts`: simplified URL-scoped auth cookies (fixes `Invalid cookie fields`).
+- 2026-01-29: Removed legacy workflows EE package directory `packages/workflows/src/ee/**` (EE UI is now in `ee/server/src/**`; CE stub is in `server/src/empty/**`).
