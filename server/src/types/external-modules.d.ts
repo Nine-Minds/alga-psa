@@ -23,7 +23,11 @@ declare module '@product/extensions/entry' {
 }
 
 declare module '@alga-psa/workflows/entry' {
-  export const DnDFlow: any;
+  import type { ComponentType } from 'react';
+
+  export const DnDFlow: ComponentType<any>;
+  const _default: ComponentType<any>;
+  export default _default;
 }
 
 declare module '@product/ext-proxy/handler' {

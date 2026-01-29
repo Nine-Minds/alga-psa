@@ -72,7 +72,6 @@
         "server/src/pages/*"
       ],
       "@product/chat/entry": ["packages/product-chat/oss/entry"],
-      "@alga-psa/workflows/entry": ["packages/workflows/src/entry"],
       "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
       "@product/extensions/*": ["packages/product-extensions/*"],
       "@product/ext-proxy/handler": ["../packages/product-ext-proxy/ee/handler"],

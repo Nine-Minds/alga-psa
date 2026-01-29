@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 import {
   exportWorkflowAuditLogsAction,
   listWorkflowAuditLogsAction
-} from '@/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 
 type WorkflowAuditLogRecord = {
   audit_id: string;

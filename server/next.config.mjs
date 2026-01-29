@@ -302,8 +302,8 @@ const nextConfig = {
         ? '@alga-psa/client-portal/domain-settings/ee/entry'
         : '@alga-psa/client-portal/domain-settings/oss/entry',
       '@alga-psa/workflows/entry': isEE
-        ? '../packages/workflows/src/ee/entry'
-        : '../packages/workflows/src/oss/entry',
+        ? '../ee/server/src/workflows/entry'
+        : './src/empty/workflows/entry',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -453,8 +453,8 @@ const nextConfig = {
         ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
-        ? path.join(__dirname, '../packages/workflows/src/ee/entry.tsx')
-        : path.join(__dirname, '../packages/workflows/src/oss/entry.tsx'),
+        ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
+        : path.join(__dirname, 'src/empty/workflows/entry.tsx'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
         : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
@@ -753,10 +753,20 @@ const nextConfig = {
 	        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
 	        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 	        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+	        const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
 	        config.plugins = config.plugins || [];
 	        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
 	          try {
 	            const req = resource.request || '';
+	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
+	            // If the workflows entry specifier gets resolved via tsconfig `paths` before webpack aliasing, an enterprise build
+	            // can accidentally bundle the CE/OSS workflow stub UI ("hybrid" build).
+	            //
+	            // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
+	            if (req === '@alga-psa/workflows/entry') {
+	              resource.request = workflowsEeEntry;
+	              return;
+	            }
 	            // IMPORTANT:
 	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
 	            // Our tsconfig maps `@ee/* -> packages/ee/src/*` (CE stubs) and relies on webpack to override
@@ -853,6 +863,9 @@ const nextConfig = {
     return config;
   },
   experimental: {
+    // We alias certain EE-only modules directly into `../ee/server/src/**` (outside this Next.js app root).
+    // Ensure Next is allowed to import/compile source files from outside `server/`.
+    externalDir: true,
     serverActions: {
       bodySizeLimit: serverActionsBodyLimit,
     },

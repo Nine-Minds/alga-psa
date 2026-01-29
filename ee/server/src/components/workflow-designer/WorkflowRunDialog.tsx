@@ -17,9 +17,9 @@ import {
   listWorkflowSchemaRefsAction,
   listWorkflowDefinitionVersionsAction,
   startWorkflowRunAction
-} from '@/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import {
   filterEventCatalogEntries,
   getSchemaDiffSummary,

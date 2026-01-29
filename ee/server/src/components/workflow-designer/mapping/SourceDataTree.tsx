@@ -563,56 +563,86 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           )}
 
           {/* Vars section (from previous steps) */}
-          {context.vars.length > 0 && (
-            <div>
-              <SectionHeader
-                title="Step Outputs (vars)"
-                icon={<Variable className="w-4 h-4 text-green-600" />}
-                count={context.vars.reduce((acc, v) => acc + countFields(v.fields) + 1, 0)}
-                expanded={expandedSections.vars}
-                onToggle={() => toggleSection('vars')}
-              />
-              {expandedSections.vars && (
-                <div className="mt-1 space-y-1">
-                  {context.vars.map(stepVar => (
-                    <div key={stepVar.stepId} className="border-l-2 border-green-200 ml-2">
-                      <div
-                        onClick={() => !disabled && onSelectField(`vars.${stepVar.saveAs}`)}
-                        className={`
-                          flex items-center gap-2 py-1 px-2 cursor-pointer
-                          ${selectedPath === `vars.${stepVar.saveAs}` ? 'bg-green-100' : 'hover:bg-gray-50'}
-                        `}
-                      >
-                        <Braces className="w-3.5 h-3.5 text-green-600" />
-                        <span className="text-sm font-medium text-gray-800">
-                          vars.{stepVar.saveAs}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ({stepVar.stepName})
-                        </span>
+          <div>
+            <SectionHeader
+              title="Step Outputs (vars)"
+              icon={<Variable className="w-4 h-4 text-green-600" />}
+              count={context.vars.reduce((acc, v) => acc + countFields(v.fields) + 1, 0)}
+              expanded={expandedSections.vars}
+              onToggle={() => toggleSection('vars')}
+            />
+            {expandedSections.vars && (
+              <div className="mt-1 space-y-1">
+                {context.vars.length === 0 ? (
+                  <div className="text-xs text-gray-500 px-2 py-2 ml-4">
+                    No vars yet. Use <span className="font-medium">Save output</span> or an <span className="font-medium">Assign</span> step to populate <code className="font-mono">vars.&lt;name&gt;</code>.
+                  </div>
+                ) : (
+                  context.vars.map(stepVar => {
+                    const stepVarPath = `vars.${stepVar.saveAs}`;
+                    return (
+                      <div key={stepVar.stepId} className="border-l-2 border-green-200 ml-2">
+                        <div
+                          ref={(el) => {
+                            onRegisterRef?.(stepVarPath, el);
+                          }}
+                          onClick={() => !disabled && onSelectField(stepVarPath)}
+                          draggable={!disabled}
+                          onDragStart={(e) => {
+                            if (disabled) return;
+                            const item: DragItem = {
+                              path: stepVarPath,
+                              type: 'object',
+                              name: stepVar.saveAs
+                            };
+                            setDragData(e, item);
+                            dndHandlers.handleDragStart(item);
+                            if (e.currentTarget instanceof HTMLElement) {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              e.dataTransfer.setDragImage(e.currentTarget, rect.width / 2, rect.height / 2);
+                            }
+                          }}
+                          onDragEnd={() => {
+                            dndHandlers.handleDragEnd();
+                          }}
+                          className={`
+                            flex items-center gap-2 py-1 px-2 rounded cursor-pointer group
+                            ${selectedPath === stepVarPath ? 'bg-green-100' : 'hover:bg-gray-50'}
+                            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                            ${!disabled ? 'cursor-grab active:cursor-grabbing' : ''}
+                          `}
+                        >
+                          <Braces className="w-3.5 h-3.5 text-green-600" />
+                          <span className="text-sm font-medium text-gray-800">
+                            {stepVarPath}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({stepVar.stepName})
+                          </span>
+                        </div>
+                        {stepVar.fields.map(field => (
+                          <TreeNode
+                            key={field.path}
+                            field={field}
+                            depth={1}
+                            onSelect={onSelectField}
+                            selectedPath={selectedPath}
+                            disabled={disabled}
+                            searchQuery={searchQuery}
+                            pinnedPaths={pinnedPaths}
+                            onTogglePin={togglePin}
+                            targetType={targetType}
+                            dndHandlers={dndHandlers}
+                            onRegisterRef={onRegisterRef}
+                          />
+                        ))}
                       </div>
-                      {stepVar.fields.map(field => (
-                        <TreeNode
-                          key={field.path}
-                          field={field}
-                          depth={1}
-                          onSelect={onSelectField}
-                          selectedPath={selectedPath}
-                          disabled={disabled}
-                          searchQuery={searchQuery}
-                          pinnedPaths={pinnedPaths}
-                          onTogglePin={togglePin}
-                          targetType={targetType}
-                          dndHandlers={dndHandlers}
-                          onRegisterRef={onRegisterRef}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
 
           {/* forEach context */}
           {context.forEach && (
