@@ -22,8 +22,13 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Keep app import surface stable: `@alga-psa/workflows/entry` remains the specifier.
 - Provide typings via `.d.ts` rather than tsconfig `paths` for runtime-selected specifiers.
 
+## Decisions (2026-01-29)
+
+- Target EE entry file: `ee/server/src/workflows/entry.tsx`.
+- Target EE component placement: use `ee/server/src/components/workflow-designer/**` (and related `workflow-graph`, `workflow-run-studio`) as the canonical EE UI home.
+  - If there are duplicated workflow UI components elsewhere, migrate to the above directories and deprecate old locations.
+
 ## Commands / runbooks
 
 - Search for entry usage: `rg -n "@alga-psa/workflows/entry" -S .`
 - Verify build artifact doesn’t contain OSS stub string (EE build): `rg -n "Workflow designer requires Enterprise Edition" .next/server -S`
-
