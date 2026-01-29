@@ -2,10 +2,12 @@
 
 These checks validate that an **EE deployment** does not ship or render the CE/OSS workflows stub.
 
+Status: this is primarily useful **after** the migration in `PRD.md` is implemented. In the current repo state, the OSS stub lives under `packages/workflows/src/oss/entry.tsx`.
+
 ## T020: EE deployment does not show workflows EE-only stub dialog/message
 
 1. Confirm deployment is Enterprise:
-   - Environment variables: `EDITION=ee` and `NEXT_PUBLIC_EDITION=enterprise`
+   - Environment variables (example): `EDITION=enterprise` and `NEXT_PUBLIC_EDITION=enterprise`
 2. In the running container (or deployed filesystem), verify the server build output does not contain the legacy stub string:
    - Search for: `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.`
    - Target directory: `.next/server/**`

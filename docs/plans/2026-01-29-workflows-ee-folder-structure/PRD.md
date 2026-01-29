@@ -14,6 +14,23 @@ Root cause class: **TS path-based resolution (Next’s JsConfigPathsPlugin) can 
 
 This is confusing operationally and erodes trust: users see EE-only gating dialogs even in Enterprise deployments.
 
+## Status (as of 2026-01-29)
+
+This plan is **not fully implemented** in the current repo state. The repo still primarily runs Workflows UI from `packages/workflows/src/**` via `@alga-psa/workflows/entry`.
+
+### Implemented (in repo today)
+
+- The “stable import surface” exists: Workflows page loads `DynamicWorkflowComponent`, which imports `@alga-psa/workflows/entry` and uses the `DnDFlow` named export.
+- A TS module declaration for `@alga-psa/workflows/entry` exists in `server/src/types/external-modules.d.ts`.
+- Some EE workflow UI code exists under `ee/server/src/components/workflow-designer/**`, but it is **not** currently the authoritative runtime entry.
+
+### Not yet implemented (still outstanding)
+
+- No EE entry file under `ee/server/src/**` (e.g. `ee/server/src/workflows/entry.tsx`) is currently wired in as the `@alga-psa/workflows/entry` target.
+- No CE stub entry file under `server/src/empty/**` (e.g. `server/src/empty/workflows/entry.tsx`) exists; CE uses the package stub at `packages/workflows/src/oss/entry.tsx`.
+- `server/tsconfig.json` and `ee/server/tsconfig.json` still include a `paths` mapping for `@alga-psa/workflows/entry` that points to `packages/workflows/src/entry` (which re-exports the OSS stub), so the “hybrid EE build” risk class remains.
+- No CI build guard or dedicated entry-selection smoke test exists in this repo state (documents in this plan folder describing them are aspirational and must be implemented).
+
 ## User Value
 
 - Enterprise deployments reliably load the real Workflow UI (designer, toggles, run studio).

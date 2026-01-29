@@ -34,6 +34,10 @@ And `packages/workflows/src/entry.ts` re-exports the OSS stub:
 
 - `@alga-psa/workflows/entry` -> `packages/workflows/src/entry`
 
+### Note: duplicate EE UI code exists but is not currently authoritative
+
+There is EE workflow UI code under `ee/server/src/components/workflow-designer/**`, but the Workflows page currently loads the package EE entry (`packages/workflows/src/ee/entry.tsx`) via Next aliases.
+
 ## Failure mode: “hybrid” EE build
 
 Next.js injects a **JsConfigPathsPlugin** based on `tsconfig.json` `paths`. In some cases, that path-based resolution can win/short-circuit before webpack aliasing, causing:
@@ -43,9 +47,8 @@ Next.js injects a **JsConfigPathsPlugin** based on `tsconfig.json` `paths`. In s
 
 Known OSS stub string (used by guard tests later):
 
-- `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.`
+- `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.` (currently in `packages/workflows/src/oss/entry.tsx`)
 
 ## Existing mitigation (in code today)
 
-`server/next.config.mjs` currently includes a `webpack.NormalModuleReplacementPlugin` that rewrites imports of `@alga-psa/workflows/entry` to the EE source file before resolution in enterprise builds. This plan migrates the EE UI into `ee/server/src/**` and removes TS `paths` mappings so this class of issue cannot recur.
-
+The primary mitigation today is the webpack/turbopack aliasing in `server/next.config.mjs`. There is **no** dedicated plugin in `server/next.config.mjs` that rewrites `@alga-psa/workflows/entry` pre-resolution to avoid `tsconfig` path precedence; that is one of the goals of the proposed migration.

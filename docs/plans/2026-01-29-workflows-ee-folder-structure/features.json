@@ -3,27 +3,27 @@
   { "id": "F002", "description": "Define target EE folder structure for workflow UI under `ee/server/src/**`", "implemented": true },
   { "id": "F003", "description": "Define target CE/OSS stub placement under `server/src/empty/**`", "implemented": true },
 
-  { "id": "F010", "description": "Create EE workflow entry file in `ee/server/src/**` exporting `DnDFlow` as expected by loader", "implemented": true },
-  { "id": "F011", "description": "Move workflow designer UI components from `packages/workflows/src/ee/**` into `ee/server/src/**`", "implemented": true },
-  { "id": "F012", "description": "Explicitly choose no re-export shims: remove legacy `packages/workflows/src/{ee,oss}` entrypoints to prevent hybrid builds", "implemented": true },
+  { "id": "F010", "description": "Create EE workflow entry file in `ee/server/src/**` exporting `DnDFlow` as expected by loader", "implemented": true, "notes": "Canonical entry now exists at `ee/server/src/workflows/entry.tsx` (wiring still pending via next.config.mjs aliases)." },
+  { "id": "F011", "description": "Create/sync EE workflow designer UI components under `ee/server/src/**` (canonical EE home)", "implemented": true, "notes": "EE workflow UI code exists under `ee/server/src/components/workflow-designer/**`, but it is not currently the authoritative runtime entry." },
+  { "id": "F012", "description": "Remove legacy `packages/workflows/src/{ee,oss}` entrypoints (no re-export shims) to prevent hybrid builds", "implemented": false, "notes": "Both `packages/workflows/src/ee/**` and `packages/workflows/src/oss/**` still exist and are used by `server/next.config.mjs` aliasing." },
 
-  { "id": "F020", "description": "Create CE workflow stub entry file in `server/src/empty/**` matching export shape", "implemented": true },
-  { "id": "F021", "description": "Decide and implement desired CE UX (null, stub message, or route hidden) for workflows page", "implemented": true },
+  { "id": "F020", "description": "Create CE workflow stub entry file in `server/src/empty/**` matching export shape", "implemented": false, "notes": "No `server/src/empty/workflows/entry.tsx` exists; CE stub is currently `packages/workflows/src/oss/entry.tsx`." },
+  { "id": "F021", "description": "Decide and implement desired CE UX (null, stub message, or route hidden) for workflows page", "implemented": true, "notes": "CE currently renders a visible stub message via `packages/workflows/src/oss/entry.tsx`." },
 
-  { "id": "F030", "description": "Update `server/next.config.mjs` webpack alias: `@alga-psa/workflows/entry` -> EE/CE concrete entry files", "implemented": true },
-  { "id": "F031", "description": "Update `server/next.config.mjs` turbopack alias: `@alga-psa/workflows/entry` -> EE/CE concrete entry files", "implemented": true },
-  { "id": "F032", "description": "Add enterprise build-time guard to prevent JsConfigPathsPlugin resolving the OSS workflow entry in EE", "implemented": true },
+  { "id": "F030", "description": "Update `server/next.config.mjs` webpack alias: `@alga-psa/workflows/entry` -> EE/CE concrete entry files under `ee/server/src/**` and `server/src/empty/**`", "implemented": false, "notes": "Webpack alias currently points to `../packages/workflows/src/{ee,oss}/entry.tsx`." },
+  { "id": "F031", "description": "Update `server/next.config.mjs` turbopack alias: `@alga-psa/workflows/entry` -> EE/CE concrete entry files under `ee/server/src/**` and `server/src/empty/**`", "implemented": false, "notes": "Turbopack alias currently points to `../packages/workflows/src/{ee,oss}/entry`." },
+  { "id": "F032", "description": "Add enterprise build-time guard to prevent JsConfigPathsPlugin resolving the OSS workflow entry in EE (remove TS paths mapping and/or add pre-resolution rewrite)", "implemented": false, "notes": "No dedicated workflows-entry rewrite exists in `server/next.config.mjs`; `tsconfig` still maps `@alga-psa/workflows/entry` to the OSS re-export." },
 
-  { "id": "F040", "description": "Remove TS `paths` mapping for `@alga-psa/workflows/entry` from `server/tsconfig.json`", "implemented": true },
-  { "id": "F041", "description": "Remove/adjust TS `paths` mapping for `@alga-psa/workflows/entry` from `ee/server/tsconfig.json`", "implemented": true },
+  { "id": "F040", "description": "Remove TS `paths` mapping for `@alga-psa/workflows/entry` from `server/tsconfig.json`", "implemented": false, "notes": "`server/tsconfig.json` still maps `@alga-psa/workflows/entry` -> `../packages/workflows/src/entry`." },
+  { "id": "F041", "description": "Remove/adjust TS `paths` mapping for `@alga-psa/workflows/entry` from `ee/server/tsconfig.json`", "implemented": false, "notes": "`ee/server/tsconfig.json` still maps `@alga-psa/workflows/entry` -> `packages/workflows/src/entry`." },
   { "id": "F042", "description": "Provide TS typings for `@alga-psa/workflows/entry` via `server/src/types/*.d.ts`", "implemented": true },
 
-  { "id": "F050", "description": "Update workflow UI loader and any imports to continue using `@alga-psa/workflows/entry` without referencing old paths", "implemented": true },
-  { "id": "F051", "description": "Ensure `transpilePackages` / module resolution includes new EE workflow UI location", "implemented": true },
+  { "id": "F050", "description": "Keep workflow UI loader and app imports using the stable specifier `@alga-psa/workflows/entry`", "implemented": true, "notes": "Loader lives at `packages/workflows/src/components/WorkflowComponentLoader.ts`." },
+  { "id": "F051", "description": "Ensure Next build config can compile/workspace-resolve the new EE workflow UI location under `ee/server/src/**` (externalDir/transpilePackages/etc)", "implemented": false },
 
-  { "id": "F060", "description": "Add CI check: EE `next build` output must not contain OSS stub workflow strings", "implemented": true },
-  { "id": "F061", "description": "Add automated UI smoke test (Playwright or equivalent) that workflows page loads without EE-only stub in EE builds", "implemented": true },
+  { "id": "F060", "description": "Add CI check: EE `next build` output must not contain OSS stub workflow strings", "implemented": false },
+  { "id": "F061", "description": "Add automated UI smoke test (Playwright or equivalent) that workflows page loads without EE-only stub in EE builds", "implemented": false },
 
-  { "id": "F070", "description": "Update docs/notes describing how workflow EE selection works post-migration", "implemented": true },
-  { "id": "F071", "description": "Remove legacy `packages/workflows/src/ee/**` and `packages/workflows/src/oss/**` shims after stabilization window", "implemented": true }
+  { "id": "F070", "description": "Update docs/notes to accurately describe current vs post-migration workflow entry selection", "implemented": true },
+  { "id": "F071", "description": "Remove legacy `packages/workflows/src/ee/**` and `packages/workflows/src/oss/**` shims after stabilization window", "implemented": false }
 ]
