@@ -149,11 +149,14 @@ export function TicketList() {
 
       let filteredTickets = [...result];
 
-      if (selectedResponseStatus !== 'all') {
+      const shouldFilterByResponseStatus =
+        selectedResponseStatus === 'awaiting_client' ||
+        selectedResponseStatus === 'awaiting_internal' ||
+        selectedResponseStatus === 'none';
+
+      if (shouldFilterByResponseStatus) {
         filteredTickets = filteredTickets.filter((ticket) => {
-          if (selectedResponseStatus === 'none') {
-            return ticket.response_state == null;
-          }
+          if (selectedResponseStatus === 'none') return ticket.response_state == null;
           return ticket.response_state === selectedResponseStatus;
         });
       }
@@ -547,7 +550,11 @@ export function TicketList() {
             ]}
             value={selectedResponseStatus}
             onValueChange={(value) => {
-              setSelectedResponseStatus(value as typeof selectedResponseStatus);
+              const nextValue =
+                value === 'awaiting_client' || value === 'awaiting_internal' || value === 'none'
+                  ? value
+                  : 'all';
+              setSelectedResponseStatus(nextValue);
               setCurrentPage(1);
             }}
             placeholder={t('tickets.filters.responseStatus', 'Response Status')}
