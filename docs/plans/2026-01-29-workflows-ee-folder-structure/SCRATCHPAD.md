@@ -50,3 +50,6 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
   - Test: `ee/server/src/__tests__/deploy/workflows-ee-deploy-no-stub.playwright.test.ts`
   - Run (requires env): `DEPLOY_BASE_URL=... DEPLOY_EMAIL=... DEPLOY_PASSWORD=... npx playwright test -c ee/server/playwright.deploy.config.ts`
 - 2026-01-29: Deployment smoke expanded to assert the workflow designer surface renders (basic visibility): checks the Designer tab and `#workflow-designer-create` are visible via `WorkflowDesignerPage.waitForLoaded()`.
+- 2026-01-29: Added deterministic env selection guard for `@alga-psa/workflows/entry` aliasing (EE vs CE) without requiring a full Next build:
+  - Script: `scripts/guard-workflows-entry-edition-selection.mjs`
+  - CI hook: `.github/workflows/workflows-ee-build-guard.yml` runs it before the EE build scan

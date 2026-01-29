@@ -35,6 +35,9 @@ jobs:
             npm install --legacy-peer-deps
           fi
 
+      - name: Workflows entry alias selection must follow edition env
+        run: node scripts/guard-workflows-entry-edition-selection.mjs
+
       - name: EE next build must not contain CE workflows stub
         run: node scripts/guard-ee-workflows-next-build.mjs
         env:
