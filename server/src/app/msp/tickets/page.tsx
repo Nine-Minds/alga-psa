@@ -87,12 +87,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.dueDateTo && typeof params.dueDateTo === 'string') {
       filtersFromURL.dueDateTo = params.dueDateTo;
     }
-    if (params?.responseState && typeof params.responseState === 'string') {
-      const allowedResponseStates = ['all', 'awaiting_client', 'awaiting_internal', 'none'] as const;
-      if ((allowedResponseStates as readonly string[]).includes(params.responseState)) {
-        filtersFromURL.responseState = params.responseState as ITicketListFilters['responseState'];
-      }
-    }
     const allowedSortKeys = [
       'ticket_number',
       'title',
@@ -151,7 +145,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       dueDateFilter: initialFilters.dueDateFilter || undefined,
       dueDateFrom: initialFilters.dueDateFrom || undefined,
       dueDateTo: initialFilters.dueDateTo || undefined,
-      responseState: initialFilters.responseState || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc',
       bundleView: initialFilters.bundleView || 'bundled'

@@ -140,9 +140,6 @@ export default function TicketingDashboardContainer({
     if (filters.dueDateTo) {
       params.set('dueDateTo', filters.dueDateTo);
     }
-    if (filters.responseState && filters.responseState !== 'all') {
-      params.set('responseState', filters.responseState);
-    }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }

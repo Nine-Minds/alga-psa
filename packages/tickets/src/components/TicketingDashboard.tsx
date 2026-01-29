@@ -346,12 +346,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (bundleView && bundleView !== 'bundled') {
       params.set('bundleView', bundleView);
     }
-    if (selectedResponseState && selectedResponseState !== 'all') {
-      params.set('responseState', selectedResponseState);
-    }
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView]);
 
   const isFirstRender = useRef(true);
 
