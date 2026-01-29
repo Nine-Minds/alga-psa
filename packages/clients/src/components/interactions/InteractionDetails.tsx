@@ -31,6 +31,19 @@ interface InteractionDetailsProps {
   isInDrawer?: boolean; // Whether this component is displayed in a drawer
 }
 
+// Helper to format duration from total minutes to "Xh Ym" format
+const formatDuration = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0 && minutes > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (hours > 0) {
+    return `${hours}h`;
+  } else {
+    return `${minutes}m`;
+  }
+};
+
 
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
@@ -322,7 +335,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           <div className="flex items-center">
             <span className="font-semibold">Duration:</span>
             <span className="ml-2">
-              {interaction.duration} minutes
+              {formatDuration(interaction.duration)}
             </span>
           </div>
         )}

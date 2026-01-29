@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { DateTimePickerComponent } from '../ui-reflection/types';
@@ -10,9 +10,8 @@ import { Calendar } from './Calendar';
 import { cn } from '../lib/utils';
 import '../styles/calendar.css';
 
-export interface DateTimePickerProps {
+interface DateTimePickerBaseProps {
   value?: Date;
-  onChange: (date: Date) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -32,6 +31,20 @@ export interface DateTimePickerProps {
   ref?: React.Ref<HTMLDivElement>;
 }
 
+interface DateTimePickerClearableProps extends DateTimePickerBaseProps {
+  /** Whether the value can be cleared */
+  clearable: true;
+  onChange: (date: Date | undefined) => void;
+}
+
+interface DateTimePickerNonClearableProps extends DateTimePickerBaseProps {
+  /** Whether the value can be cleared */
+  clearable?: false;
+  onChange: (date: Date) => void;
+}
+
+export type DateTimePickerProps = DateTimePickerClearableProps | DateTimePickerNonClearableProps;
+
 export function DateTimePicker({
   value,
   onChange,
@@ -41,6 +54,7 @@ export function DateTimePicker({
   id,
   label,
   required,
+  clearable = false,
   minDate,
   maxDate,
   timeFormat = '12h',
@@ -49,6 +63,23 @@ export function DateTimePicker({
   const [open, setOpen] = React.useState(false);
   const hourListRef = React.useRef<HTMLDivElement>(null);
   const minuteListRef = React.useRef<HTMLDivElement>(null);
+
+  // Type-safe helper for clearing - only defined when clearable is true
+  // This avoids repeated type assertions throughout the component
+  const clearValue = React.useMemo(() => {
+    if (clearable) {
+      // Type assertion is safe here because clearable=true means onChange accepts undefined
+      return () => (onChange as (date: Date | undefined) => void)(undefined);
+    }
+    return undefined;
+  }, [clearable, onChange]);
+
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearValue) {
+      e.preventDefault();
+      clearValue();
+    }
+  }, [value, disabled, clearValue]);
 
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value);
   const [selectedHour, setSelectedHour] = React.useState(
@@ -158,6 +189,7 @@ export function DateTimePicker({
           {...automationIdProps}
           disabled={disabled}
           aria-label={label || placeholder}
+          onKeyDown={handleKeyDown}
           className={`
             flex h-10 w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
             file:border-0 file:bg-transparent file:text-sm file:font-medium
@@ -169,7 +201,28 @@ export function DateTimePicker({
           `}
         >
           <span className="flex-1 text-left truncate">{displayValue}</span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {clearValue && value && !disabled && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  clearValue();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearValue();
+                  }
+                }}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </span>
+            )}
             <Clock className="h-4 w-4 opacity-50" />
           </div>
         </Popover.Trigger>

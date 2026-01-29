@@ -31,6 +31,7 @@ interface DialogProps {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  contentClassName?: string;
   title?: string;
   /** Unique identifier for UI reflection system */
   id?: string;
@@ -54,6 +55,7 @@ export function Dialog({
   onClose,
   children,
   className,
+  contentClassName,
   title = '',
   id = 'dialog',
   hideCloseButton = false,
@@ -374,7 +376,9 @@ export function Dialog({
               </>
             )}
           </div>
-          <div className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'}`}>
+          <div
+            className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
+          >
             <ReflectionParentContext.Provider value={updateDialog.id}>
               <ModalityContext.Provider value={{ modal: !disableFocusTrap }}>
                 {children}
