@@ -16,7 +16,7 @@
 
   { "id": "F040", "description": "Remove TS `paths` mapping for `@alga-psa/workflows/entry` from `server/tsconfig.json`", "implemented": true },
   { "id": "F041", "description": "Remove/adjust TS `paths` mapping for `@alga-psa/workflows/entry` from `ee/server/tsconfig.json`", "implemented": true },
-  { "id": "F042", "description": "Provide TS typings for `@alga-psa/workflows/entry` via `server/src/types/*.d.ts`", "implemented": false },
+  { "id": "F042", "description": "Provide TS typings for `@alga-psa/workflows/entry` via `server/src/types/*.d.ts`", "implemented": true },
 
   { "id": "F050", "description": "Update workflow UI loader and any imports to continue using `@alga-psa/workflows/entry` without referencing old paths", "implemented": false },
   { "id": "F051", "description": "Ensure `transpilePackages` / module resolution includes new EE workflow UI location", "implemented": false },

@@ -48,6 +48,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
   - `npm -w server run typecheck` passes relying on `server/src/types/external-modules.d.ts` for module typing.
 - Removed `@alga-psa/workflows/entry` from `ee/server/tsconfig.json` `paths` for the same reason.
   - `npm -w ee/server run typecheck` passes.
+- Expanded `server/src/types/external-modules.d.ts` typing for `@alga-psa/workflows/entry` (named `DnDFlow` + default export) so TS remains happy without a `paths` mapping.
 
 ## Commands / runbooks
 
