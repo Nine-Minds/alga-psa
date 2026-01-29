@@ -25,5 +25,5 @@
   { "id": "F061", "description": "Add automated UI smoke test (Playwright or equivalent) that workflows page loads without EE-only stub in EE builds", "implemented": true },
 
   { "id": "F070", "description": "Update docs/notes describing how workflow EE selection works post-migration", "implemented": true },
-  { "id": "F071", "description": "Remove legacy `packages/workflows/src/ee/**` and `packages/workflows/src/oss/**` shims after stabilization window", "implemented": false }
+  { "id": "F071", "description": "Remove legacy `packages/workflows/src/ee/**` and `packages/workflows/src/oss/**` shims after stabilization window", "implemented": true }
 ]

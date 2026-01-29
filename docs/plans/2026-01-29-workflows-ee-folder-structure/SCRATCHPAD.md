@@ -10,11 +10,12 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 
 ## Key files (current)
 
-- `server/next.config.mjs`: webpack + turbopack aliases for `@alga-psa/workflows/entry` currently point into `packages/workflows/src/{ee,oss}/entry(.tsx)`.
-- `server/tsconfig.json`: `paths` includes `@alga-psa/workflows/entry` -> `packages/workflows/src/entry` (re-exports OSS stub), which can be resolved by Next’s JsConfigPathsPlugin before webpack aliasing.
-- `ee/server/tsconfig.json`: also maps `@alga-psa/workflows/entry` -> `packages/workflows/src/entry`.
-- `packages/workflows/src/entry.ts`: `export * from './oss/entry'`.
-- OSS stub string to guard against: `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.` in `packages/workflows/src/oss/entry.tsx`.
+- `server/next.config.mjs`: webpack + turbopack aliases for `@alga-psa/workflows/entry` point to concrete entry files:
+  - EE: `ee/server/src/workflows/entry.tsx`
+  - CE: `server/src/empty/workflows/entry.tsx`
+- `server/tsconfig.json` + `ee/server/tsconfig.json`: do **not** map `@alga-psa/workflows/entry` (avoid JsConfigPathsPlugin precedence).
+- Typings: `server/src/types/external-modules.d.ts` declares `@alga-psa/workflows/entry`.
+- Legacy OSS stub string to guard against: `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.` (present in `server/src/empty/workflows/entry.tsx` and used by build guards).
 
 ## Decisions / constraints (initial)
 
@@ -34,7 +35,6 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Added EE workflows entry at `ee/server/src/workflows/entry.tsx` exporting `DnDFlow` from `ee/server/src/components/workflow-designer/WorkflowDesigner`.
 - Synced EE workflow designer + graph components from `packages/workflows/src/ee/components/**` into `ee/server/src/components/{workflow-designer,workflow-graph}/**` so the EE UI no longer depends on package-local `src/ee/**` copies.
   - `npm -w ee/server run typecheck` passes after the sync.
-- Added a temporary migration shim in `packages/workflows/src/ee/entry.tsx` that re-exports the canonical EE entry from `ee/server/src/workflows/entry.tsx`.
 - Added CE workflows stub entry at `server/src/empty/workflows/entry.tsx` exporting `DnDFlow` with the legacy OSS stub string (used for build guards).
 - Updated `packages/workflows/src/components/WorkflowComponentLoader.ts` fallback to load `@/empty/workflows/entry` so CE behavior is a visible stub (not a silent `null`) if the primary entry import fails.
 - Updated webpack alias for `@alga-psa/workflows/entry` in `server/next.config.mjs` to point to concrete files:
@@ -56,6 +56,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
   - Workflow: `.github/workflows/workflows-ee-build-guard.yml` (runs an EE `next build` and then the guard script).
 - Added Playwright smoke coverage for EE workflows entry selection: `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
 - Added migration notes doc: `docs/plans/2026-01-29-workflows-ee-folder-structure/POST_MIGRATION_NOTES.md`.
+- Removed legacy workflow entry shims: deleted `packages/workflows/src/{ee,oss}/**` and `packages/workflows/src/entry.ts`.
 
 ## Commands / runbooks
 
