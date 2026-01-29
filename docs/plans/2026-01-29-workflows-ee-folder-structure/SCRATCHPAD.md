@@ -44,3 +44,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: Verified EE build output guard passes (no CE stub string in `server/.next/server/**`): `node scripts/guard-ee-workflows-next-build.mjs`.
 - 2026-01-29: Verified runtime smoke in EE mode via Playwright (`/msp/workflows` loads real UI and does not show CE stub): `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
 - 2026-01-29: Verified CE build includes the workflows stub entry (and build succeeds): `node scripts/guard-ce-workflows-next-build.mjs`.
+- 2026-01-29: Verified `tsc --noEmit` passes without any TS `paths` mapping for `@alga-psa/workflows/entry`: `npm -w server run typecheck` and `npm -w ee/server run typecheck`.
