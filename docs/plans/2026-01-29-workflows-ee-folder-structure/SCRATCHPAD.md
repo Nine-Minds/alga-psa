@@ -40,6 +40,9 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Updated webpack alias for `@alga-psa/workflows/entry` in `server/next.config.mjs` to point to concrete files:
   - EE: `ee/server/src/workflows/entry.tsx`
   - CE: `server/src/empty/workflows/entry.tsx`
+- Updated turbopack alias for `@alga-psa/workflows/entry` in `server/next.config.mjs` to point to:
+  - EE: `../ee/server/src/workflows/entry`
+  - CE: `./src/empty/workflows/entry`
 
 ## Commands / runbooks
 
