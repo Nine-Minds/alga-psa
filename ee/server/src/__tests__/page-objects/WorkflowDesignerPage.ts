@@ -4,6 +4,10 @@ import { resolvePlaywrightBaseUrl } from '../integration/helpers/playwrightAuthS
 export class WorkflowDesignerPage {
   readonly page: Page;
   readonly header: Locator;
+  readonly listHeader: Locator;
+  readonly workflowsTab: Locator;
+  readonly designerTab: Locator;
+  readonly workflowListCreateButton: Locator;
   readonly newWorkflowButton: Locator;
   readonly saveDraftButton: Locator;
   readonly publishButton: Locator;
@@ -28,7 +32,11 @@ export class WorkflowDesignerPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.header = page.getByRole('heading', { name: 'Workflow Designer' });
+    this.header = page.getByRole('heading', { name: 'Workflows' });
+    this.listHeader = page.getByRole('heading', { name: 'Workflows' });
+    this.workflowsTab = page.getByRole('tab', { name: 'Workflows' });
+    this.designerTab = page.getByRole('tab', { name: 'Designer' });
+    this.workflowListCreateButton = page.locator('#workflow-list-create-btn');
     this.newWorkflowButton = page.locator('#workflow-designer-create');
     this.saveDraftButton = page.locator('#workflow-designer-save');
     this.publishButton = page.locator('#workflow-designer-publish');
@@ -167,15 +175,22 @@ export class WorkflowDesignerPage {
   }
 
   async selectWorkflowByName(name: string): Promise<void> {
-    // Use id prefix to find workflow buttons, avoiding "New Workflow" create button
-    const workflowButton = this.page.locator(`button[id^="workflow-designer-open-"]`).filter({ hasText: name });
-    await expect(workflowButton.first()).toBeVisible({ timeout: 15_000 });
-    await workflowButton.first().click();
+    await expect(this.workflowsTab).toBeVisible({ timeout: 30_000 });
+    await this.workflowsTab.click();
+
+    const workflowLink = this.page.getByRole('link', { name, exact: true });
+    await expect(workflowLink.first()).toBeVisible({ timeout: 30_000 });
+    await workflowLink.first().click();
+
+    await expect(this.page).toHaveURL(/tab=designer/, { timeout: 60_000 });
+    await expect(this.nameInput).toHaveValue(name, { timeout: 60_000 });
   }
 
   async waitForWorkflowInList(name: string): Promise<void> {
-    const workflowButton = this.page.locator(`button[id^="workflow-designer-open-"]`).filter({ hasText: name });
-    await expect(workflowButton.first()).toBeVisible({ timeout: 15_000 });
+    await expect(this.workflowsTab).toBeVisible({ timeout: 30_000 });
+    await this.workflowsTab.click();
+    const workflowLink = this.page.getByRole('link', { name, exact: true });
+    await expect(workflowLink.first()).toBeVisible({ timeout: 30_000 });
   }
 
   async selectStepById(stepId: string): Promise<void> {

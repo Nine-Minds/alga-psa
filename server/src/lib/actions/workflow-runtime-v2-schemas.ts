@@ -143,6 +143,18 @@ export const ListWorkflowEventsInput = z.object({
   cursor: optionalNonNegativeInt.default(0)
 });
 
+export const ListWorkflowEventsPagedInput = z.object({
+  page: pageNumber.default(1),
+  pageSize: pageSizeNumber.default(25),
+  eventName: z.string().min(1).optional(),
+  correlationKey: z.string().min(1).optional(),
+  status: z.enum(['all', 'matched', 'unmatched', 'error']).optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  sortBy: z.enum(['created_at', 'processed_at', 'event_name', 'correlation_key', 'status']).optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional()
+});
+
 export const ListWorkflowDeadLetterInput = z.object({
   limit: optionalPositiveInt.default(50),
   cursor: optionalNonNegativeInt.default(0),

@@ -54,6 +54,7 @@ import {
   ListWorkflowRunLogsInput,
   ListWorkflowAuditLogsInput,
   ListWorkflowEventsInput,
+  ListWorkflowEventsPagedInput,
   ListWorkflowDeadLetterInput,
   StartWorkflowRunInput,
   SubmitWorkflowEventInput,
@@ -2835,6 +2836,89 @@ export const listWorkflowEventsAction = withAuth(async (user, { tenant }, input:
   }));
 
   return { events: sanitized, nextCursor };
+});
+
+export const listWorkflowEventsPagedAction = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = ListWorkflowEventsPagedInput.parse(input ?? {});
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const query = knex('workflow_runtime_events').select(
+    'event_id',
+    'tenant_id',
+    'event_name',
+    'correlation_key',
+    'payload',
+    'payload_schema_ref',
+    'schema_ref_conflict',
+    'created_at',
+    'processed_at',
+    'matched_run_id',
+    'matched_wait_id',
+    'matched_step_path',
+    'error_message'
+  );
+
+  if (tenant) {
+    query.where('tenant_id', tenant);
+  }
+  if (parsed.eventName) {
+    query.where('event_name', parsed.eventName);
+  }
+  if (parsed.correlationKey) {
+    query.where('correlation_key', parsed.correlationKey);
+  }
+  if (parsed.from) {
+    query.where('created_at', '>=', parsed.from);
+  }
+  if (parsed.to) {
+    query.where('created_at', '<=', parsed.to);
+  }
+  if (parsed.status && parsed.status !== 'all') {
+    if (parsed.status === 'matched') {
+      query.whereNotNull('matched_run_id');
+    }
+    if (parsed.status === 'unmatched') {
+      query.whereNull('matched_run_id').whereNull('error_message');
+    }
+    if (parsed.status === 'error') {
+      query.whereNotNull('error_message');
+    }
+  }
+
+  const [{ count }] = await query
+    .clone()
+    .clearSelect()
+    .clearOrder()
+    .count('* as count') as unknown as Array<{ count: string | number }>;
+  const totalItems = Number(count ?? 0);
+
+  const sortBy = parsed.sortBy ?? 'created_at';
+  const sortDirection = parsed.sortDirection ?? 'desc';
+
+  if (sortBy === 'status') {
+    query.orderByRaw(
+      `case when error_message is not null then 2 when matched_run_id is not null then 1 else 0 end ${sortDirection}`
+    );
+  } else {
+    query.orderBy(sortBy, sortDirection);
+  }
+  query.orderBy('event_id', 'desc');
+
+  const offset = (parsed.page - 1) * parsed.pageSize;
+  const rows = await query.limit(parsed.pageSize).offset(offset);
+
+  const items = rows.map((event: any) => ({
+    ...event,
+    payload: redactSensitiveValues(event.payload),
+    status: event.error_message
+      ? 'error'
+      : event.matched_run_id
+        ? 'matched'
+        : 'unmatched'
+  }));
+
+  return { items, totalItems };
 });
 
 export async function exportWorkflowEventsAction(input: unknown) {

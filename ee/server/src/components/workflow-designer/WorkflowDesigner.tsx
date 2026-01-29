@@ -43,7 +43,6 @@ import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
-import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
@@ -1441,6 +1440,14 @@ const WorkflowDesigner: React.FC = () => {
   const didApplyNewWorkflowFromQuery = useRef<boolean>(false);
 
   useEffect(() => {
+    const raw = (tabFromQuery ?? '').trim().toLowerCase();
+    if (raw !== 'audit') return;
+    const params = new URLSearchParams(searchParamsString);
+    params.set('tab', 'workflows');
+    router.replace(`/msp/workflows?${params.toString()}`);
+  }, [router, searchParamsString, tabFromQuery]);
+
+  useEffect(() => {
     try {
       const stored = window.localStorage.getItem('workflow-designer:steps-view');
       if (stored === 'list' || stored === 'graph') {
@@ -1698,14 +1705,13 @@ const WorkflowDesigner: React.FC = () => {
     if (raw === 'runs') return 'Runs';
     if (raw === 'events') return 'Events';
     if (raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') return 'Dead Letter';
-    if (raw === 'audit') return 'Audit';
     return null;
   }, [tabFromQuery]);
 
   useEffect(() => {
     if (!tabLabelFromQuery) return;
 
-    const isAdminTab = tabLabelFromQuery === 'Dead Letter' || tabLabelFromQuery === 'Audit';
+    const isAdminTab = tabLabelFromQuery === 'Dead Letter';
     if (isAdminTab && !canAdmin) {
       const params = new URLSearchParams(searchParamsString);
       params.set('tab', 'workflows');
@@ -1725,8 +1731,7 @@ const WorkflowDesigner: React.FC = () => {
           : nextTabLabel === 'Runs' ? 'runs'
             : nextTabLabel === 'Events' ? 'events'
               : nextTabLabel === 'Dead Letter' ? 'dead-letter'
-                : nextTabLabel === 'Audit' ? 'audit'
-                  : null;
+                : null;
 
     if (!tabValue) return;
 
@@ -4310,14 +4315,6 @@ const WorkflowDesigner: React.FC = () => {
     />
   );
 
-  const auditContent = (
-    <WorkflowDefinitionAudit
-      workflowId={activeWorkflowId}
-      workflowName={activeWorkflowRecord?.name}
-      isActive={activeTab === 'Audit'}
-    />
-  );
-
   const workflowListContent = (
     <WorkflowListV2
       onSelectWorkflow={(workflowId) => {
@@ -4349,7 +4346,7 @@ const WorkflowDesigner: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Workflows</h1>
-            <p className="text-sm text-gray-500">Create, run, and audit workflow automations.</p>
+            <p className="text-sm text-gray-500">Create and run workflow automations.</p>
           </div>
           {activeTab === 'Designer' && (
             <div className="flex items-center gap-2">
@@ -4443,7 +4440,6 @@ const WorkflowDesigner: React.FC = () => {
             { label: 'Runs', content: runListContent },
             { label: 'Events', content: eventListContent },
             ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : []),
-            ...(canAdmin ? [{ label: 'Audit', content: auditContent }] : [])
           ]}
           tabStyles={{
             root: 'h-full min-h-0 flex flex-col',

@@ -6,15 +6,16 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
 import {
   exportWorkflowEventsAction,
   getWorkflowEventAction,
   listWorkflowEventSummaryAction,
-  listWorkflowEventsAction
-} from '@alga-psa/workflows/actions';
+  listWorkflowEventsPagedAction
+} from '@/lib/actions/workflow-runtime-v2-actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type WorkflowEventRecord = {
@@ -33,10 +34,7 @@ type WorkflowEventRecord = {
   status: 'matched' | 'unmatched' | 'error';
 };
 
-type WorkflowEventListResponse = {
-  events: WorkflowEventRecord[];
-  nextCursor: number | null;
-};
+type WorkflowEventSortBy = 'created_at' | 'processed_at' | 'event_name' | 'correlation_key' | 'status';
 
 type WorkflowEventDetailResponse = {
   event: WorkflowEventRecord;
@@ -78,10 +76,10 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'error', label: 'Error' }
 ];
 
-const EVENT_STATUS_STYLES: Record<string, string> = {
-  matched: 'bg-green-100 text-green-700',
-  unmatched: 'bg-amber-100 text-amber-700',
-  error: 'bg-red-100 text-red-700'
+const EVENT_STATUS_VARIANTS: Record<WorkflowEventRecord['status'], 'success' | 'warning' | 'error'> = {
+  matched: 'success',
+  unmatched: 'warning',
+  error: 'error'
 };
 
 const DEFAULT_FILTERS: EventFilters = {
@@ -113,8 +111,8 @@ interface WorkflowEventListProps {
 
 const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmin = false }) => {
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<EventFilters>(DEFAULT_FILTERS);
   const [events, setEvents] = useState<WorkflowEventRecord[]>([]);
-  const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<WorkflowEventSummary | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -122,31 +120,45 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
-  const limit = 25;
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
+  const [totalItems, setTotalItems] = useState(0);
+  const [sortBy, setSortBy] = useState<WorkflowEventSortBy>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const fetchEvents = useCallback(
-    async (cursor = 0, append = false, overrideFilters?: EventFilters) => {
-      const activeFilters = overrideFilters ?? filters;
+    async (override?: {
+      page?: number;
+      sortBy?: WorkflowEventSortBy;
+      sortDirection?: 'asc' | 'desc';
+      filters?: EventFilters;
+    }) => {
+      const activeFilters = override?.filters ?? appliedFilters;
+      const page = override?.page ?? currentPage;
+      const nextSortBy = override?.sortBy ?? sortBy;
+      const nextSortDirection = override?.sortDirection ?? sortDirection;
       setIsLoading(true);
       try {
-        const data = (await listWorkflowEventsAction({
+        const data = await listWorkflowEventsPagedAction({
           eventName: activeFilters.eventName || undefined,
           correlationKey: activeFilters.correlationKey || undefined,
-          status: activeFilters.status !== 'all' ? (activeFilters.status as any) : undefined,
+          status: activeFilters.status || 'all',
           from: activeFilters.from || undefined,
           to: activeFilters.to || undefined,
-          limit,
-          cursor
-        })) as WorkflowEventListResponse;
-        setEvents((prev) => (append ? [...prev, ...data.events] : data.events));
-        setNextCursor(data.nextCursor ?? null);
+          page,
+          pageSize,
+          sortBy: nextSortBy,
+          sortDirection: nextSortDirection
+        });
+        setEvents((data as any)?.items ?? []);
+        setTotalItems(Number((data as any)?.totalItems ?? 0));
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Failed to load workflow events');
       } finally {
         setIsLoading(false);
       }
     },
-    [filters]
+    [appliedFilters, currentPage, sortBy, sortDirection]
   );
 
   const fetchSummary = useCallback(
@@ -184,9 +196,10 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
 
   useEffect(() => {
     if (!isActive) return;
-    fetchEvents(0, false);
-    fetchSummary();
-  }, [fetchEvents, fetchSummary, isActive]);
+    setCurrentPage(1);
+    fetchEvents({ page: 1, filters: appliedFilters });
+    fetchSummary(appliedFilters);
+  }, [appliedFilters, fetchEvents, fetchSummary, isActive]);
 
   useEffect(() => {
     if (!selectedEventId) {
@@ -197,13 +210,17 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   }, [fetchEventDetail, selectedEventId]);
 
   const handleApplyFilters = () => {
-    fetchEvents(0, false, filters);
+    setCurrentPage(1);
+    setAppliedFilters(filters);
+    fetchEvents({ page: 1, filters });
     fetchSummary(filters);
   };
 
   const handleResetFilters = () => {
     setFilters(DEFAULT_FILTERS);
-    fetchEvents(0, false, DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    setCurrentPage(1);
+    fetchEvents({ page: 1, filters: DEFAULT_FILTERS });
     fetchSummary(DEFAULT_FILTERS);
   };
 
@@ -241,16 +258,98 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
     }
   }, [eventDetail]);
 
+  const columns: ColumnDefinition<WorkflowEventRecord>[] = useMemo(() => {
+    const statusLabel = (status: WorkflowEventRecord['status']) =>
+      status === 'error' ? 'Error' : status.charAt(0).toUpperCase() + status.slice(1);
+
+    return [
+      {
+        title: 'Event',
+        dataIndex: 'event_name',
+        sortable: true,
+        render: (value: unknown, record: WorkflowEventRecord) => (
+          <div className="min-w-0">
+            <div className="font-medium text-[rgb(var(--color-text-900))] truncate">{record.event_name}</div>
+          </div>
+        )
+      },
+      {
+        title: 'Correlation',
+        dataIndex: 'correlation_key',
+        sortable: true,
+        width: '160px',
+        render: (value: unknown, record: WorkflowEventRecord) => (
+          <div className="font-mono text-xs truncate">{record.correlation_key ?? '—'}</div>
+        )
+      },
+      {
+        title: 'Schema',
+        dataIndex: 'payload_schema_ref',
+        sortable: false,
+        width: '220px',
+        render: (value: unknown, record: WorkflowEventRecord) => (
+            <div className="text-[11px] text-[rgb(var(--color-text-600))] max-w-[260px]">
+              <div className="font-mono truncate">{record.payload_schema_ref ?? '—'}</div>
+              {record.schema_ref_conflict && (
+              <div className="text-[10px] text-[rgb(var(--color-warning-600))]">
+                catalog ≠ submission
+              </div>
+            )}
+          </div>
+        )
+      },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        sortable: true,
+        width: '120px',
+        render: (value: unknown, record: WorkflowEventRecord) => (
+          <Badge variant={EVENT_STATUS_VARIANTS[record.status]}>
+            {statusLabel(record.status)}
+          </Badge>
+        )
+      },
+      {
+        title: 'Matched Run',
+        dataIndex: 'matched_run_id',
+        sortable: false,
+        width: '160px',
+        render: (value: unknown, record: WorkflowEventRecord) => (
+          <div className="font-mono text-xs truncate">{record.matched_run_id ?? '—'}</div>
+        )
+      },
+      {
+        title: 'Payload',
+        dataIndex: 'payload',
+        sortable: false,
+        render: (value: unknown, record: WorkflowEventRecord) => (
+          <div className="text-xs text-[rgb(var(--color-text-600))] max-w-[220px] truncate">
+            {payloadPreview(record.payload)}
+          </div>
+        )
+      },
+      {
+        title: 'Created',
+        dataIndex: 'created_at',
+        sortable: true,
+        width: '180px',
+        render: (value: unknown, record: WorkflowEventRecord) => (
+          <div className="truncate">{formatDateTime(record.created_at)}</div>
+        )
+      }
+    ];
+  }, []);
+
   return (
     <div className="flex h-full gap-4">
-      <div className="flex-1 space-y-3 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col gap-3">
         <Card className="p-4 space-y-3">
           {summary && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <span>Total: {summary.total}</span>
-              <Badge className={EVENT_STATUS_STYLES.matched}>Matched: {summary.matched}</Badge>
-              <Badge className={EVENT_STATUS_STYLES.unmatched}>Unmatched: {summary.unmatched}</Badge>
-              <Badge className={EVENT_STATUS_STYLES.error}>Errors: {summary.error}</Badge>
+              <Badge variant="success">Matched: {summary.matched}</Badge>
+              <Badge variant="warning">Unmatched: {summary.unmatched}</Badge>
+              <Badge variant="error">Errors: {summary.error}</Badge>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -306,78 +405,41 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
           </div>
         </Card>
 
-        <Card className="p-4 overflow-hidden">
-          <div className="overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Correlation</TableHead>
-                  <TableHead>Schema</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Matched Run</TableHead>
-                  <TableHead>Payload</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow
-                    key={event.event_id}
-                    className={selectedEventId === event.event_id ? 'bg-blue-50' : 'cursor-pointer'}
-                    onClick={() => setSelectedEventId(event.event_id)}
-                  >
-                    <TableCell>{event.event_name}</TableCell>
-                    <TableCell className="font-mono text-xs">{event.correlation_key ?? '—'}</TableCell>
-                    <TableCell className="text-[11px] text-gray-600 max-w-[260px]">
-                      <div className="font-mono truncate">{event.payload_schema_ref ?? '—'}</div>
-                      {event.schema_ref_conflict && (
-                        <div className="text-[10px] text-amber-700">
-                          catalog ≠ submission
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={EVENT_STATUS_STYLES[event.status] ?? 'bg-gray-100 text-gray-600'}>
-                        {event.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{event.matched_run_id ?? '—'}</TableCell>
-                    <TableCell className="text-xs text-gray-600 max-w-[220px] truncate">
-                      {payloadPreview(event.payload)}
-                    </TableCell>
-                    <TableCell>{formatDateTime(event.created_at)}</TableCell>
-                  </TableRow>
-                ))}
-                {events.length === 0 && !isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-6">
-                      No workflow events found.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-6">
-                      Loading events...
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          {nextCursor !== null && (
-            <div className="flex justify-center mt-4">
-              <Button
-                id="workflow-events-load-more"
-                variant="outline"
-                onClick={() => fetchEvents(nextCursor, true)}
-                disabled={isLoading}
-              >
-                Load more
-              </Button>
-            </div>
+        <Card className="p-4 flex-1 min-h-0 overflow-y-auto">
+          {isLoading && <div className="text-sm text-gray-500 py-2">Loading events...</div>}
+
+          {!isLoading && events.length === 0 && (
+            <div className="text-center text-sm text-gray-500 py-6">No workflow events found.</div>
           )}
+
+          <DataTable
+            id="workflow-events-table"
+            data={events}
+            columns={columns}
+            pagination={true}
+            currentPage={currentPage}
+            onPageChange={(page) => {
+              setCurrentPage(page);
+              fetchEvents({ page });
+            }}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onRowClick={(row) => setSelectedEventId((row as WorkflowEventRecord).event_id)}
+            rowClassName={(row) =>
+              (row as WorkflowEventRecord).event_id === selectedEventId
+                ? 'bg-[rgb(var(--color-primary-50))]'
+                : ''
+            }
+            manualSorting={true}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSortChange={(nextSortBy, nextSortDirection) => {
+              setSortBy(nextSortBy as WorkflowEventSortBy);
+              setSortDirection(nextSortDirection);
+              setCurrentPage(1);
+              fetchEvents({ page: 1, sortBy: nextSortBy as WorkflowEventSortBy, sortDirection: nextSortDirection });
+            }}
+          />
         </Card>
       </div>
 
@@ -400,9 +462,11 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 <div className="text-xs text-gray-500">Status</div>
                 <Badge
                   id="workflow-event-detail-status"
-                  className={EVENT_STATUS_STYLES[eventDetail.event.status] ?? 'bg-gray-100 text-gray-600'}
+                  variant={EVENT_STATUS_VARIANTS[eventDetail.event.status]}
                 >
-                  {eventDetail.event.status}
+                  {eventDetail.event.status === 'error'
+                    ? 'Error'
+                    : eventDetail.event.status.charAt(0).toUpperCase() + eventDetail.event.status.slice(1)}
                 </Badge>
                 <div className="text-xs text-gray-500">Event name</div>
                 <div className="text-sm">{eventDetail.event.event_name}</div>
