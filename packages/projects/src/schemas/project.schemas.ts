@@ -90,7 +90,9 @@ export const projectTaskSchema = tenantSchema.extend({
   due_date: z.date().nullable(),
   priority_id: z.string().uuid().nullable().optional(),
   service_id: z.string().uuid().nullable().optional(),
-  checklist_items: z.array(z.lazy(() => taskChecklistItemSchema)).optional()
+  checklist_items: z.array(z.lazy(() => taskChecklistItemSchema)).optional(),
+  task_type_key: z.string().optional(),
+  order_key: z.string().nullable().optional()
 });
 
 export const projectTicketLinkSchema = tenantSchema.extend({
