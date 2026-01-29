@@ -70,5 +70,6 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - T003: Covered by `server/src/test/unit/workflowsCeStubEntry.unit.test.tsx` (renders the CE stub entry component).
 - T010: Covered by `server/src/test/unit/workflowsEntryTypingGuard.unit.test.ts` (guards against re-adding tsconfig `paths` + verifies the `.d.ts` module declaration).
 - T030: Covered by `server/src/test/unit/workflowsEntryEnvSwitch.unit.test.ts` (asserts Next config selects EE vs CE workflows entry based on env).
+- T040: Covered by `scripts/guard-no-legacy-workflows-shims.mjs` + `.github/workflows/workflows-ee-build-guard.yml` (fails CI if legacy workflows shim dirs/files reappear or get referenced in source).
 - T020: Manual deploy validation in `docs/plans/2026-01-29-workflows-ee-folder-structure/HV_DEV2_VALIDATION.md`.
 - T021: Manual deploy validation in `docs/plans/2026-01-29-workflows-ee-folder-structure/HV_DEV2_VALIDATION.md`.

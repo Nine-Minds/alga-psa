@@ -10,5 +10,5 @@
 
   { "id": "T030", "description": "Regression: switching build env vars (EDITION/ NEXT_PUBLIC_EDITION) changes selected workflows entry deterministically", "implemented": true, "featureIds": ["F030", "F031"] },
 
-  { "id": "T040", "description": "Removal safety: after deleting legacy `packages/workflows/src/ee/**` shims, EE build still passes and loads workflows UI", "implemented": false, "featureIds": ["F071"] }
+  { "id": "T040", "description": "Removal safety: after deleting legacy `packages/workflows/src/ee/**` shims, EE build still passes and loads workflows UI", "implemented": true, "featureIds": ["F071"] }
 ]
