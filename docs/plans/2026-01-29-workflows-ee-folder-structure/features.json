@@ -4,7 +4,7 @@
   { "id": "F003", "description": "Define target CE/OSS stub placement under `server/src/empty/**`", "implemented": true },
 
   { "id": "F010", "description": "Create EE workflow entry file in `ee/server/src/**` exporting `DnDFlow` as expected by loader", "implemented": true, "notes": "Canonical entry exists at `ee/server/src/workflows/entry.tsx` and is wired via `server/next.config.mjs` aliases." },
-  { "id": "F011", "description": "Create/sync EE workflow designer UI components under `ee/server/src/**` (canonical EE home)", "implemented": true, "notes": "EE workflow UI code exists under `ee/server/src/components/workflow-designer/**`, but it is not currently the authoritative runtime entry." },
+  { "id": "F011", "description": "Create/sync EE workflow designer UI components under `ee/server/src/**` (canonical EE home)", "implemented": true, "notes": "EE workflow UI code lives under `ee/server/src/components/workflow-designer/**` and is loaded via `ee/server/src/workflows/entry.tsx`." },
   { "id": "F012", "description": "Remove legacy `packages/workflows/src/{ee,oss}` entrypoints (no re-export shims) to prevent hybrid builds", "implemented": true, "notes": "Deleted `packages/workflows/src/{entry.ts,ee/entry.tsx,oss/entry.tsx}`; next.config aliasing now targets `ee/server/src/workflows/entry.tsx` and `server/src/empty/workflows/entry.tsx`." },
 
   { "id": "F020", "description": "Create CE workflow stub entry file in `server/src/empty/**` matching export shape", "implemented": true, "notes": "CE stub entry now lives at `server/src/empty/workflows/entry.tsx` exporting `DnDFlow`." },

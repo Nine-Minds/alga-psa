@@ -4,9 +4,9 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 
 ## Status (as of 2026-01-29)
 
-This plan is **partially implemented** in the current repo state.
+This plan is **implemented** in the current repo state (code + guards + smoke tests).
 
-Use `features.json` and `tests.json` as the source of truth for what is actually implemented vs still pending.
+Use `features.json` and `tests.json` as the source of truth for the completion checklist.
 
 ## Current wiring (what the repo actually does today)
 
@@ -20,8 +20,10 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 
 ## What still needs doing (high level)
 
-- Remove legacy `packages/workflows/src/{ee,oss}/**` dirs (after entry migration) once safe.
-- Complete tests checklist (`tests.json`) to lock in regression coverage.
+None required. Optional follow-ups:
+
+- Delete any empty legacy directories under `packages/workflows/src/ee/**` / `packages/workflows/src/oss/**` if they still exist locally (Git does not track empty directories).
+- Expand CI to run the Playwright smoke suite if desired (currently CI runs build guards).
 
 ## Implementation log
 
@@ -40,7 +42,7 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
   - `ee/server/playwright.config.ts`: force `NODE_ENV=test` and load env from `.env`/`.env.test`/`.env.example`.
   - `shared/core/getSecret.ts`: resilient `getSecret()` fallback when `@alga-psa/core/server` can't be imported (Playwright boot path).
   - `ee/server/src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts`: simplified URL-scoped auth cookies (fixes `Invalid cookie fields`).
-- 2026-01-29: Removed legacy workflows EE package directory `packages/workflows/src/ee/**` (EE UI is now in `ee/server/src/**`; CE stub is in `server/src/empty/**`).
+- 2026-01-29: Removed legacy workflows package *entrypoints* under `packages/workflows/src/{entry.ts,ee/entry.tsx,oss/entry.tsx}` (EE UI is now in `ee/server/src/**`; CE stub is in `server/src/empty/**`).
 - 2026-01-29: Verified EE build output guard passes (no CE stub string in `server/.next/server/**`): `node scripts/guard-ee-workflows-next-build.mjs`.
 - 2026-01-29: Verified runtime smoke in EE mode via Playwright (`/msp/workflows` loads real UI and does not show CE stub): `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
 - 2026-01-29: Verified CE build includes the workflows stub entry (and build succeeds): `node scripts/guard-ce-workflows-next-build.mjs`.

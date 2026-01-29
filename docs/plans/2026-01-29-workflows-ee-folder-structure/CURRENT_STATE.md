@@ -1,6 +1,6 @@
-# Current workflow UI entrypoint resolution (pre-migration)
+# Current workflow UI entrypoint resolution (post-migration)
 
-This documents the **current** wiring (before the folder-structure migration described in `PRD.md`) and the failure mode (“hybrid” EE build).
+This documents the **current** wiring (after the folder-structure migration described in `PRD.md`).
 
 ## Current wiring
 
@@ -14,41 +14,31 @@ This documents the **current** wiring (before the folder-structure migration des
 `server/next.config.mjs` defines both:
 
 - **Turbopack** alias (`experimental.turbo.resolveAlias`):
-  - `@alga-psa/workflows/entry` -> `../packages/workflows/src/ee/entry` when `isEE`
-  - `@alga-psa/workflows/entry` -> `../packages/workflows/src/oss/entry` when not EE
+  - `@alga-psa/workflows/entry` -> `../ee/server/src/workflows/entry` when `isEE`
+  - `@alga-psa/workflows/entry` -> `./src/empty/workflows/entry` when not EE
 - **Webpack** alias (`webpack.resolve.alias`):
-  - `@alga-psa/workflows/entry` -> `../packages/workflows/src/ee/entry.tsx` when `isEE`
-  - `@alga-psa/workflows/entry` -> `../packages/workflows/src/oss/entry.tsx` when not EE
+  - `@alga-psa/workflows/entry` -> `../ee/server/src/workflows/entry.tsx` when `isEE`
+  - `@alga-psa/workflows/entry` -> `server/src/empty/workflows/entry.tsx` when not EE
 
 ### TypeScript path mapping (non-authoritative, but affects Next resolution)
 
-`server/tsconfig.json` includes:
-
-- `@alga-psa/workflows/entry` -> `packages/workflows/src/entry`
-
-And `packages/workflows/src/entry.ts` re-exports the OSS stub:
-
-- `export * from './oss/entry';`
-
-`ee/server/tsconfig.json` also maps:
-
-- `@alga-psa/workflows/entry` -> `packages/workflows/src/entry`
+`server/tsconfig.json` and `ee/server/tsconfig.json` do **not** map `@alga-psa/workflows/entry`. TypeScript is satisfied via `server/src/types/external-modules.d.ts`.
 
 ### Note: duplicate EE UI code exists but is not currently authoritative
 
-There is EE workflow UI code under `ee/server/src/components/workflow-designer/**`, but the Workflows page currently loads the package EE entry (`packages/workflows/src/ee/entry.tsx`) via Next aliases.
+There is EE workflow UI code under `ee/server/src/components/workflow-designer/**`, and it is now the canonical runtime implementation through `ee/server/src/workflows/entry.tsx`.
 
 ## Failure mode: “hybrid” EE build
 
-Next.js injects a **JsConfigPathsPlugin** based on `tsconfig.json` `paths`. In some cases, that path-based resolution can win/short-circuit before webpack aliasing, causing:
-
-- EE images (with `EDITION=enterprise` / `NEXT_PUBLIC_EDITION=enterprise`) to ship `.next` output containing OSS stub strings from `packages/workflows/src/oss/entry.tsx`.
-- The deployed EE app then renders the CE/OSS “Enterprise Feature / Please upgrade…” stub UI on workflow surfaces.
+Historically, Next.js injects a **JsConfigPathsPlugin** based on `tsconfig.json` `paths`, which could win before webpack aliasing and cause EE builds to bundle CE stubs (a “hybrid build”).
 
 Known OSS stub string (used by guard tests later):
 
-- `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.` (currently in `packages/workflows/src/oss/entry.tsx`)
+- `Workflow designer requires Enterprise Edition. Please upgrade to access this feature.` (currently in `server/src/empty/workflows/entry.tsx`)
 
 ## Existing mitigation (in code today)
 
-The primary mitigation today is the webpack/turbopack aliasing in `server/next.config.mjs`. There is **no** dedicated plugin in `server/next.config.mjs` that rewrites `@alga-psa/workflows/entry` pre-resolution to avoid `tsconfig` path precedence; that is one of the goals of the proposed migration.
+In addition to deterministic aliasing and removing TS path mappings for `@alga-psa/workflows/entry`, CI guard scripts validate:
+
+- EE build output does **not** contain the stub string: `scripts/guard-ee-workflows-next-build.mjs`
+- CE build output **does** contain the stub string: `scripts/guard-ce-workflows-next-build.mjs`

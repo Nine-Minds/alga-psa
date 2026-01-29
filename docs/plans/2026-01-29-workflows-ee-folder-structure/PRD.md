@@ -8,7 +8,7 @@ In practice, **Enterprise builds can still ship the OSS/CE stub UI** (“Enterpr
 - The app is deployed with EE images, and
 - Runtime env vars indicate Enterprise (`EDITION=enterprise`, `NEXT_PUBLIC_EDITION=enterprise`).
 
-We observed this in the **HV dev2** environment: the deployed `.next` output contained the OSS stub strings from `packages/workflows/src/oss/entry.tsx`, indicating a “hybrid” build.
+We observed this in the **HV dev2** environment: the deployed `.next` output contained the OSS/CE stub strings (historically under `packages/workflows/src/oss/entry.tsx`), indicating a “hybrid” build.
 
 Root cause class: **TS path-based resolution (Next’s JsConfigPathsPlugin) can override/short-circuit webpack aliasing**, meaning the EE/OSS selection is not consistently enforced at build time.
 
@@ -16,20 +16,25 @@ This is confusing operationally and erodes trust: users see EE-only gating dialo
 
 ## Status (as of 2026-01-29)
 
-This plan is **not fully implemented** in the current repo state. The repo still primarily runs Workflows UI from `packages/workflows/src/**` via `@alga-psa/workflows/entry`.
+This plan is **implemented** in the current repo state.
 
 ### Implemented (in repo today)
 
-- The “stable import surface” exists: Workflows page loads `DynamicWorkflowComponent`, which imports `@alga-psa/workflows/entry` and uses the `DnDFlow` named export.
-- A TS module declaration for `@alga-psa/workflows/entry` exists in `server/src/types/external-modules.d.ts`.
-- Some EE workflow UI code exists under `ee/server/src/components/workflow-designer/**`, but it is **not** currently the authoritative runtime entry.
+- The authoritative EE entry is `ee/server/src/workflows/entry.tsx` and exports `DnDFlow`.
+- The authoritative CE stub entry is `server/src/empty/workflows/entry.tsx` and exports `DnDFlow` with the legacy stub text.
+- `server/next.config.mjs` aliases `@alga-psa/workflows/entry` deterministically for both webpack + turbopack.
+- `server/tsconfig.json` and `ee/server/tsconfig.json` no longer map `@alga-psa/workflows/entry`.
+- Typings for `@alga-psa/workflows/entry` are provided via `server/src/types/external-modules.d.ts`.
+- CI/build guards exist to prevent hybrid EE builds and to validate CE builds:
+  - `scripts/guard-workflows-entry-edition-selection.mjs`
+  - `scripts/guard-ee-workflows-next-build.mjs`
+  - `scripts/guard-ce-workflows-next-build.mjs`
+  - `.github/workflows/workflows-ee-build-guard.yml`
+- A UI smoke test exists: `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
 
 ### Not yet implemented (still outstanding)
 
-- No EE entry file under `ee/server/src/**` (e.g. `ee/server/src/workflows/entry.tsx`) is currently wired in as the `@alga-psa/workflows/entry` target.
-- No CE stub entry file under `server/src/empty/**` (e.g. `server/src/empty/workflows/entry.tsx`) exists; CE uses the package stub at `packages/workflows/src/oss/entry.tsx`.
-- `server/tsconfig.json` and `ee/server/tsconfig.json` still include a `paths` mapping for `@alga-psa/workflows/entry` that points to `packages/workflows/src/entry` (which re-exports the OSS stub), so the “hybrid EE build” risk class remains.
-- No CI build guard or dedicated entry-selection smoke test exists in this repo state (documents in this plan folder describing them are aspirational and must be implemented).
+None. Remaining work is optional cleanup (e.g. removing any empty legacy directories under `packages/workflows/src/ee/**` if desired).
 
 ## User Value
 

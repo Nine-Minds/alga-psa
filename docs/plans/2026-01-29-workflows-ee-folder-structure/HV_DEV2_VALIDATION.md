@@ -2,7 +2,7 @@
 
 These checks validate that an **EE deployment** does not ship or render the CE/OSS workflows stub.
 
-Status: this is primarily useful **after** the migration in `PRD.md` is implemented. In the current repo state, the OSS stub lives under `packages/workflows/src/oss/entry.tsx`.
+Status: applies after the migration in `PRD.md` is implemented (it is implemented in the current repo state). The CE stub string lives under `server/src/empty/workflows/entry.tsx` and build guards ensure it is not bundled into EE output.
 
 ## T020: EE deployment does not show workflows EE-only stub dialog/message
 
