@@ -335,149 +335,161 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
 
   return (
     <ReflectionContainer id="contact-tickets" label="Contact Tickets">
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Contact Tickets</h3>
-          <Button
-            id="add-contact-ticket-btn"
-            onClick={() => setIsQuickAddTicketOpen(true)}
-            className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
-          >
-            Add Ticket
-          </Button>
-        </div>
+      <div className="bg-white shadow rounded-lg">
+        {/* Sticky Header and Filters */}
+        <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Contact Tickets</h3>
+            <Button
+              id="add-contact-ticket-btn"
+              onClick={() => setIsQuickAddTicketOpen(true)}
+              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+            >
+              Add Ticket
+            </Button>
+          </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {initialBoards.length > 0 && (
-            <BoardPicker
-              id="contact-tickets-board-picker"
-              boards={initialBoards}
-              selectedBoardId={selectedBoard}
-              onSelect={(boardId) => setSelectedBoard(boardId)}
-              filterState={boardFilterState}
-              onFilterStateChange={setBoardFilterState}
+          {/* Filters */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {initialBoards.length > 0 && (
+              <BoardPicker
+                id="contact-tickets-board-picker"
+                boards={initialBoards}
+                selectedBoardId={selectedBoard}
+                onSelect={(boardId) => setSelectedBoard(boardId)}
+                filterState={boardFilterState}
+                onFilterStateChange={setBoardFilterState}
+              />
+            )}
+
+            {initialStatuses.length > 0 && (
+              <CustomSelect
+                id="contact-tickets-status-select"
+                options={initialStatuses}
+                value={selectedStatus}
+                onValueChange={(value) => setSelectedStatus(value)}
+                placeholder="Select Status"
+              />
+            )}
+
+            {initialPriorities.length > 0 && (
+              <CustomSelect
+                id="contact-tickets-priority-select"
+                options={initialPriorities}
+                value={selectedPriority}
+                onValueChange={(value) => setSelectedPriority(value)}
+                placeholder="All Priorities"
+              />
+            )}
+
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
+            {initialCategories.length > 0 && (
+              <CategoryPicker
+                id="contact-tickets-category-picker"
+                categories={initialCategories}
+                selectedCategories={selectedCategories}
+                excludedCategories={excludedCategories}
+                onSelect={handleCategorySelect}
+                placeholder="Filter by category"
+                multiSelect={true}
+                showExclude={true}
+                showReset={true}
+                allowEmpty={true}
+                className="text-sm min-w-[200px]"
+              />
+            )}
+
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
+            <Input
+              id="contact-tickets-search-input"
+              placeholder="Search tickets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-[38px] min-w-[350px] text-sm"
+              containerClassName=""
             />
-          )}
-          
-          {initialStatuses.length > 0 && (
-            <CustomSelect
-              id="contact-tickets-status-select"
-              options={initialStatuses}
-              value={selectedStatus}
-              onValueChange={(value) => setSelectedStatus(value)}
-              placeholder="Select Status"
-            />
-          )}
-          
-          {initialPriorities.length > 0 && (
-            <CustomSelect
-              id="contact-tickets-priority-select"
-              options={initialPriorities}
-              value={selectedPriority}
-              onValueChange={(value) => setSelectedPriority(value)}
-              placeholder="All Priorities"
-            />
-          )}
-          
-          {initialCategories.length > 0 && (
-            <CategoryPicker
-              id="contact-tickets-category-picker"
-              categories={initialCategories}
-              selectedCategories={selectedCategories}
-              excludedCategories={excludedCategories}
-              onSelect={handleCategorySelect}
-              placeholder="Filter by category"
-              multiSelect={true}
-              showExclude={true}
-              showReset={true}
-              allowEmpty={true}
-              className="text-sm min-w-[200px]"
-            />
-          )}
-          
-          <Input
-            id="contact-tickets-search-input"
-            placeholder="Search tickets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-[38px] min-w-[200px] text-sm"
-          />
-          
-          {allUniqueTags.length > 0 && (
-            <TagFilter
-              tags={allUniqueTags}
-              selectedTags={selectedTags}
-              onToggleTag={(tag: string) => {
-                setSelectedTags(prev =>
-                  prev.includes(tag)
-                    ? prev.filter(t => t !== tag)
-                    : [...prev, tag]
-                );
-              }}
-              onClearTags={() => setSelectedTags([])}
-            />
-          )}
-          
-          <Button
-            id="contact-tickets-reset-filters-btn"
-            variant="outline"
-            onClick={resetFilters}
-            className="whitespace-nowrap flex items-center gap-2"
-          >
-            <XCircle className="h-4 w-4" />
-            Reset Filters
-          </Button>
+
+            {allUniqueTags.length > 0 && (
+              <TagFilter
+                tags={allUniqueTags}
+                selectedTags={selectedTags}
+                onToggleTag={(tag: string) => {
+                  setSelectedTags(prev =>
+                    prev.includes(tag)
+                      ? prev.filter(t => t !== tag)
+                      : [...prev, tag]
+                  );
+                }}
+                onClearTags={() => setSelectedTags([])}
+              />
+            )}
+
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="text-gray-500 hover:text-gray-700 shrink-0"
+              id="contact-tickets-reset-filters-btn"
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Reset
+            </Button>
+          </div>
         </div>
 
         {/* Tickets Table */}
-        {isLoading && tickets.length === 0 ? (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded w-full animate-pulse"></div>
-            ))}
-          </div>
-        ) : tickets.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-600 mb-4">No tickets found for this contact</p>
-          </div>
-        ) : (
-          <>
-            <DataTable
-              id="contact-tickets-table"
-              data={(() => {
-                // Filter tickets by selected tags
-                const filteredTickets = selectedTags.length === 0 
-                  ? tickets 
-                  : tickets.filter(ticket => {
-                      if (!ticket.ticket_id) return false;
-                      const ticketTags = ticketTagsRef.current[ticket.ticket_id] || [];
-                      const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
-                      return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
-                    });
-                
-                return filteredTickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }));
-              })()}
-              columns={columns}
-              pagination={false}
-            />
-            
-            {/* Load More Button */}
-            {nextCursor && (
-              <div className="flex justify-center mt-4">
-                <Button
-                  id="contact-tickets-load-more-btn"
-                  onClick={() => loadTickets(nextCursor)}
-                  disabled={isLoading}
-                  variant="outline"
-                >
-                  {isLoading ? 'Loading...' : 'Load More Tickets'}
-                </Button>
-              </div>
-            )}
-          </>
-        )}
+        <div className="p-6">
+          {isLoading && tickets.length === 0 ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded w-full animate-pulse"></div>
+              ))}
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <p className="text-gray-600 mb-4">No tickets found for this contact</p>
+            </div>
+          ) : (
+            <>
+              <DataTable
+                id="contact-tickets-table"
+                data={(() => {
+                  // Filter tickets by selected tags
+                  const filteredTickets = selectedTags.length === 0
+                    ? tickets
+                    : tickets.filter(ticket => {
+                        if (!ticket.ticket_id) return false;
+                        const ticketTags = ticketTagsRef.current[ticket.ticket_id] || [];
+                        const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
+                        return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
+                      });
+
+                  return filteredTickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }));
+                })()}
+                columns={columns}
+                pagination={false}
+              />
+
+              {/* Load More Button */}
+              {nextCursor && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    id="contact-tickets-load-more-btn"
+                    onClick={() => loadTickets(nextCursor)}
+                    disabled={isLoading}
+                    variant="outline"
+                  >
+                    {isLoading ? 'Loading...' : 'Load More Tickets'}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Delete Confirmation Dialog */}
         <ConfirmationDialog
