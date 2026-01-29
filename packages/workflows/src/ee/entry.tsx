@@ -1,8 +1,5 @@
 'use client';
 
-import WorkflowDesigner from './components/workflow-designer/WorkflowDesigner';
-
-// Named export expected by `@alga-psa/workflows/components/WorkflowComponentLoader`.
-export const DnDFlow = WorkflowDesigner;
-
-export default WorkflowDesigner;
+// Legacy shim: keep the historical `packages/workflows/src/ee/entry.tsx` entrypoint stable during the
+// migration window while the canonical EE Workflow UI moves under `ee/server/src/**`.
+export { DnDFlow, default } from '../../../../ee/server/src/workflows/entry';

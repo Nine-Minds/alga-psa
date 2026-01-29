@@ -34,6 +34,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Added EE workflows entry at `ee/server/src/workflows/entry.tsx` exporting `DnDFlow` from `ee/server/src/components/workflow-designer/WorkflowDesigner`.
 - Synced EE workflow designer + graph components from `packages/workflows/src/ee/components/**` into `ee/server/src/components/{workflow-designer,workflow-graph}/**` so the EE UI no longer depends on package-local `src/ee/**` copies.
   - `npm -w ee/server run typecheck` passes after the sync.
+- Added a temporary migration shim in `packages/workflows/src/ee/entry.tsx` that re-exports the canonical EE entry from `ee/server/src/workflows/entry.tsx`.
 
 ## Commands / runbooks
 
