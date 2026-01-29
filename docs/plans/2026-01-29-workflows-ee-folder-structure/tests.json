@@ -3,7 +3,7 @@
   { "id": "T002", "description": "EE build: `@alga-psa/workflows/entry` resolves to EE entry file (runtime smoke)", "implemented": true, "featureIds": ["F030", "F031", "F010"] },
   { "id": "T003", "description": "CE build: workflows route renders configured CE behavior (null/stub/hidden) and does not crash", "implemented": true, "featureIds": ["F020", "F021"] },
 
-  { "id": "T010", "description": "Typecheck: server compiles without TS path mapping for `@alga-psa/workflows/entry` (d.ts provides typings)", "implemented": false, "featureIds": ["F040", "F041", "F042"] },
+  { "id": "T010", "description": "Typecheck: server compiles without TS path mapping for `@alga-psa/workflows/entry` (d.ts provides typings)", "implemented": true, "featureIds": ["F040", "F041", "F042"] },
 
   { "id": "T020", "description": "HV dev2 deploy: workflows page in EE deployment does not show EE-only gating dialog", "implemented": false, "featureIds": ["F030", "F031", "F011", "F061"] },
   { "id": "T021", "description": "HV dev2 deploy: workflow designer UI loads and renders main surface (basic visibility assertions)", "implemented": false, "featureIds": ["F011", "F061"] },
