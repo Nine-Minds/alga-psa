@@ -53,6 +53,7 @@ import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
+import TaskStatusSelect from './TaskStatusSelect';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -964,9 +965,18 @@ export default function TaskForm({
           </Alert>
         )}
         <div className="space-y-4">
-          {/* Full width Title */}
+          {/* Full width Title with Status dropdown */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Task Name *</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">Task Name *</label>
+              <TaskStatusSelect
+                id="task-status-select"
+                value={selectedStatusId}
+                statuses={projectStatuses}
+                onValueChange={setSelectedStatusId}
+                disabled={isSubmitting}
+              />
+            </div>
             <TextArea
               value={taskName}
               onChange={(e) => {
