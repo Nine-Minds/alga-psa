@@ -11,5 +11,5 @@ export type WorkflowComponentType = ComponentType<WorkflowProps>;
 export const DynamicWorkflowComponent = dynamic<WorkflowProps>(
   () => import('@alga-psa/workflows/entry')
     .then(mod => mod.DnDFlow)
-    .catch(() => import('@/empty/components/flow/DnDFlow').then(mod => mod.default))
+    .catch(() => import('@/empty/workflows/entry').then(mod => mod.DnDFlow))
 );

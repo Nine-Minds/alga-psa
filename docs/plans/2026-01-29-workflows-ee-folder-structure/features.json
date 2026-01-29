@@ -8,7 +8,7 @@
   { "id": "F012", "description": "Add EE re-export shim (optional) to keep legacy imports working during migration window", "implemented": true },
 
   { "id": "F020", "description": "Create CE workflow stub entry file in `server/src/empty/**` matching export shape", "implemented": true },
-  { "id": "F021", "description": "Decide and implement desired CE UX (null, stub message, or route hidden) for workflows page", "implemented": false },
+  { "id": "F021", "description": "Decide and implement desired CE UX (null, stub message, or route hidden) for workflows page", "implemented": true },
 
   { "id": "F030", "description": "Update `server/next.config.mjs` webpack alias: `@alga-psa/workflows/entry` -> EE/CE concrete entry files", "implemented": false },
   { "id": "F031", "description": "Update `server/next.config.mjs` turbopack alias: `@alga-psa/workflows/entry` -> EE/CE concrete entry files", "implemented": false },
