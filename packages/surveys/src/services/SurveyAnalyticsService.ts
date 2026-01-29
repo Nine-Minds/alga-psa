@@ -20,6 +20,12 @@ const CONTACTS_TABLE = 'contacts';
 const USERS_TABLE = 'users';
 const NEGATIVE_RATING_THRESHOLD = 2;
 
+type SurveyTrendRow = {
+  date: Date | string | null;
+  average_rating: string | number | null;
+  response_count: string | number | null;
+};
+
 const SurveyAnalyticsService = {
   async getDashboardMetrics(
     knex: Knex,
@@ -86,14 +92,14 @@ const SurveyAnalyticsService = {
     tenantId: string,
     filters?: SurveyDashboardFilters
   ): Promise<SurveyTrendPoint[]> {
-    const rows = await baseResponseQuery(knex, tenantId, filters)
+    const rows = (await baseResponseQuery(knex, tenantId, filters)
       .select(
         knex.raw("date_trunc('day', sr.submitted_at)::date as date"),
         knex.raw('AVG(sr.rating)::numeric as average_rating'),
         knex.raw('COUNT(sr.response_id) as response_count')
       )
       .groupBy('date')
-      .orderBy('date', 'asc');
+      .orderBy('date', 'asc')) as unknown as SurveyTrendRow[];
 
     return rows.map((row) => ({
       date: formatDate(row.date),
@@ -151,7 +157,7 @@ const SurveyAnalyticsService = {
         this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
       })
       .where('sr.rating', '<=', NEGATIVE_RATING_THRESHOLD)
-      .select([
+      .select(
         'sr.response_id',
         'sr.rating',
         'sr.comment',
@@ -159,8 +165,8 @@ const SurveyAnalyticsService = {
         't.ticket_id',
         't.ticket_number',
         'c.client_name',
-        knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as technician_name"),
-      ])
+        knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as technician_name")
+      )
       .orderBy('sr.rating', 'asc')
       .orderBy('sr.submitted_at', 'desc')
       .limit(limit);
@@ -219,7 +225,7 @@ const SurveyAnalyticsService = {
       .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
         this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
       })
-      .select([
+      .select(
         'sr.response_id',
         'sr.rating',
         'sr.comment',
@@ -228,8 +234,8 @@ const SurveyAnalyticsService = {
         't.ticket_number',
         'c.client_name',
         'ct.full_name as contact_name',
-        knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as technician_name"),
-      ])
+        knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as technician_name")
+      )
       .orderBy('sr.submitted_at', 'desc')
       .limit(pageSize)
       .offset((page - 1) * pageSize);
@@ -319,7 +325,7 @@ const SurveyAnalyticsService = {
       averageRating: toNullableNumber(averageRatingRow?.avg),
       lastResponseAt: lastResponseRow ? formatDateTime(lastResponseRow.submitted_at) : null,
       responseRate,
-      trend: trendRows.map((row) => ({
+      trend: (trendRows as unknown as SurveyTrendRow[]).map((row) => ({
         date: formatDate(row.date),
         averageRating: toNullableNumber(row.average_rating),
         responseCount: toNumber(row.response_count),
