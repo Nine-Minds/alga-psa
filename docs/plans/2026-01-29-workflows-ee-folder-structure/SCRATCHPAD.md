@@ -31,3 +31,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: Turbopack resolveAlias for `@alga-psa/workflows/entry` now targets the canonical EE/CE entry files.
 - 2026-01-29: Removed TS `paths` mapping for `@alga-psa/workflows/entry` (mitigates JsConfigPathsPlugin “hybrid build” risk).
 - 2026-01-29: `server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
+- 2026-01-29: `ee/server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
