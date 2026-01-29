@@ -29,6 +29,10 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
   - If there are duplicated workflow UI components elsewhere, migrate to the above directories and deprecate old locations.
 - Target CE entry file: `server/src/empty/workflows/entry.tsx`.
 
+## Implementation notes
+
+- Added EE workflows entry at `ee/server/src/workflows/entry.tsx` exporting `DnDFlow` from `ee/server/src/components/workflow-designer/WorkflowDesigner`.
+
 ## Commands / runbooks
 
 - Search for entry usage: `rg -n "@alga-psa/workflows/entry" -S .`
