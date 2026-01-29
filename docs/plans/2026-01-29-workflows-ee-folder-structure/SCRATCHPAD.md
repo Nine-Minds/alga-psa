@@ -69,3 +69,4 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - T002: Covered by `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts` (asserts CE stub text is absent on `/msp/workflows`).
 - T003: Covered by `server/src/test/unit/workflowsCeStubEntry.unit.test.tsx` (renders the CE stub entry component).
 - T010: Covered by `server/src/test/unit/workflowsEntryTypingGuard.unit.test.ts` (guards against re-adding tsconfig `paths` + verifies the `.d.ts` module declaration).
+- T020: Manual deploy validation in `docs/plans/2026-01-29-workflows-ee-folder-structure/HV_DEV2_VALIDATION.md`.
