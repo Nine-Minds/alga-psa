@@ -37,6 +37,9 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Added a temporary migration shim in `packages/workflows/src/ee/entry.tsx` that re-exports the canonical EE entry from `ee/server/src/workflows/entry.tsx`.
 - Added CE workflows stub entry at `server/src/empty/workflows/entry.tsx` exporting `DnDFlow` with the legacy OSS stub string (used for build guards).
 - Updated `packages/workflows/src/components/WorkflowComponentLoader.ts` fallback to load `@/empty/workflows/entry` so CE behavior is a visible stub (not a silent `null`) if the primary entry import fails.
+- Updated webpack alias for `@alga-psa/workflows/entry` in `server/next.config.mjs` to point to concrete files:
+  - EE: `ee/server/src/workflows/entry.tsx`
+  - CE: `server/src/empty/workflows/entry.tsx`
 
 ## Commands / runbooks
 
