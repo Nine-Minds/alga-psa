@@ -1,5 +1,6 @@
 // @ts-nocheck
-// TODO: @/empty path alias resolved at build time
+// NOTE: `@alga-psa/workflows/entry` is build-time aliased to EE or CE implementations.
+// If it fails to load for any reason, fall back to the CE stub under `@/empty/workflows/entry`.
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
 

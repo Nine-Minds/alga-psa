@@ -49,6 +49,7 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Removed `@alga-psa/workflows/entry` from `ee/server/tsconfig.json` `paths` for the same reason.
   - `npm -w ee/server run typecheck` passes.
 - Expanded `server/src/types/external-modules.d.ts` typing for `@alga-psa/workflows/entry` (named `DnDFlow` + default export) so TS remains happy without a `paths` mapping.
+- Confirmed workflow UI loader continues to import `@alga-psa/workflows/entry` (no legacy paths), with a CE stub fallback to `@/empty/workflows/entry`.
 
 ## Commands / runbooks
 
