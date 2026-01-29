@@ -1,0 +1,41 @@
+name: Workflows EE Build Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  workflows-ee-build-guard:
+    name: Ensure EE build does not bundle CE workflows stub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: |
+          if ! npm ci; then
+            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
+            npm install --legacy-peer-deps
+          fi
+
+      - name: EE next build must not contain CE workflows stub
+        run: node scripts/guard-ee-workflows-next-build.mjs
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'

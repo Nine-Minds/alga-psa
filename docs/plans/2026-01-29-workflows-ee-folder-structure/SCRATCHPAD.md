@@ -33,3 +33,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: `server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
 - 2026-01-29: `ee/server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
 - 2026-01-29: Verified EE build works with new entry wiring: `EDITION=enterprise NEXT_PUBLIC_EDITION=enterprise npm -w server run build`.
+- 2026-01-29: Added EE build guard script + CI workflow: `scripts/guard-ee-workflows-next-build.mjs` and `.github/workflows/workflows-ee-build-guard.yml`.
