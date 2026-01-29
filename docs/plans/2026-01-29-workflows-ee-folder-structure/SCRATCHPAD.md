@@ -46,6 +46,8 @@ Rolling working memory for implementing `docs/plans/2026-01-29-workflows-ee-fold
 - Updated the EE `NormalModuleReplacementPlugin` guard in `server/next.config.mjs` to rewrite `@alga-psa/workflows/entry` to `ee/server/src/workflows/entry.tsx` (pre-resolution) to prevent tsconfig-paths “hybrid” builds.
 - Removed `@alga-psa/workflows/entry` from `server/tsconfig.json` `paths` to prevent TS/JsConfig path resolution from influencing Next bundling.
   - `npm -w server run typecheck` passes relying on `server/src/types/external-modules.d.ts` for module typing.
+- Removed `@alga-psa/workflows/entry` from `ee/server/tsconfig.json` `paths` for the same reason.
+  - `npm -w ee/server run typecheck` passes.
 
 ## Commands / runbooks
 
