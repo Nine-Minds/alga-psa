@@ -45,3 +45,7 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: Verified runtime smoke in EE mode via Playwright (`/msp/workflows` loads real UI and does not show CE stub): `ee/server/src/__tests__/integration/workflows-ee-entry-smoke.playwright.test.ts`.
 - 2026-01-29: Verified CE build includes the workflows stub entry (and build succeeds): `node scripts/guard-ce-workflows-next-build.mjs`.
 - 2026-01-29: Verified `tsc --noEmit` passes without any TS `paths` mapping for `@alga-psa/workflows/entry`: `npm -w server run typecheck` and `npm -w ee/server run typecheck`.
+- 2026-01-29: Added opt-in Playwright “deployment smoke” coverage for HV dev2 (or any EE deploy) to assert workflows does **not** show the CE gating/stub message:
+  - Config: `ee/server/playwright.deploy.config.ts`
+  - Test: `ee/server/src/__tests__/deploy/workflows-ee-deploy-no-stub.playwright.test.ts`
+  - Run (requires env): `DEPLOY_BASE_URL=... DEPLOY_EMAIL=... DEPLOY_PASSWORD=... npx playwright test -c ee/server/playwright.deploy.config.ts`
