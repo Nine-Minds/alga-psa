@@ -29,6 +29,7 @@ import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import TicketMaterialsCard from './TicketMaterialsCard';
+import { TicketSurveySummaryCard } from '@alga-psa/surveys/components';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 
 interface TicketPropertiesProps {
@@ -723,8 +724,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         <TicketMaterialsCard
           ticketId={ticket.ticket_id}
           clientId={ticket.client_id}
-          currencyCode={client?.default_currency_code || 'USD'}
         />
+      )}
+
+      {surveySummary !== undefined && (
+        <TicketSurveySummaryCard summary={surveySummary} />
       )}
 
     </div>

@@ -313,6 +313,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   }}
                   onBlur={() => {
                     if (index !== 0) return;
+                    // Only format if user actually entered a value
+                    if (primaryInput.trim() === '') {
+                      return;
+                    }
                     const dollars = parseFloat(primaryInput) || 0;
                     const cents = Math.round(dollars * 100);
                     const next = [...prices];

@@ -8,3 +8,4 @@ export { SurveyResponsePage } from './public/SurveyResponsePage';
 export { default as SurveyDashboard } from './dashboard/SurveyDashboard';
 export { default as SurveyResponsesPage } from './responses/SurveyResponsesPage';
 export { default as SurveyAnalyticsPage } from './analytics/SurveyAnalyticsPage';
+export { default as TicketSurveySummaryCard } from './TicketSurveySummaryCard';

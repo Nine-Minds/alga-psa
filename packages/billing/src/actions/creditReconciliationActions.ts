@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, getTenantContext } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,16 +10,29 @@ import { auditLog } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 /**
+ * Helper to get tenant from context, throwing if not available
+ */
+function requireTenant(): string {
+    const tenant = getTenantContext();
+    if (!tenant) {
+        throw new Error('Tenant context is required. Ensure this function is called within runWithTenant() or from an authenticated server action.');
+    }
+    return tenant;
+}
+
+/**
  * Validates a client's credit balance without making automatic corrections
  * Instead, it creates a reconciliation report when discrepancies are found
+ *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ * For background jobs, wrap calls with runWithTenant(tenantId, ...).
+ * For UI server actions, the calling action should be wrapped with withAuth.
  *
  * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report ID if a discrepancy was found
  */
-export const validateCreditBalanceWithoutCorrection = withAuth(async (
-    user,
-    { tenant },
+export async function validateCreditBalanceWithoutCorrection(
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
@@ -29,7 +42,8 @@ export const validateCreditBalanceWithoutCorrection = withAuth(async (
     difference: number;
     reportId?: string;
     lastTransaction?: ITransaction;
-}> => {
+}> {
+    const tenant = requireTenant();
     const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
@@ -227,167 +241,27 @@ export const validateCreditBalanceWithoutCorrection = withAuth(async (
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-});
-
-/**
- * Run credit balance validation for all clients in the tenant or a specific client
- * Creates reconciliation reports for any discrepancies found
- * Also runs credit tracking validations to identify missing or inconsistent entries
- *
- * @param clientId Optional client ID to validate only a specific client
- * @returns Summary of validation results
- */
-export const runScheduledCreditBalanceValidation = withAuth(async (
-    user,
-    { tenant },
-    clientId?: string,
-    userId: string = 'system'
-): Promise<{
-    totalClients: number;
-    balanceValidCount: number;
-    balanceDiscrepancyCount: number;
-    missingTrackingCount: number;
-    inconsistentTrackingCount: number;
-    errorCount: number;
-}> => {
-    const { knex } = await createTenantKnex();
-
-    let clients: { client_id: string }[];
-    const startTime = new Date().toISOString();
-
-    // Create a transaction for audit logging
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Log the start of the validation run
-        await auditLog(
-            trx,
-            {
-                userId,
-                operation: 'credit_validation_run_started',
-                tableName: 'credit_reconciliation_reports',
-                recordId: clientId || 'all',
-                changedData: {},
-                details: {
-                    action: 'Credit validation run started',
-                    client_id: clientId || 'all',
-                    start_time: startTime
-                }
-            }
-        );
-
-        if (clientId) {
-            console.log(`Starting credit balance and tracking validation for client ${clientId} in tenant ${tenant}`);
-
-            // Verify the client exists
-            const client = await trx('clients')
-                .where({ client_id: clientId, tenant })
-                .first();
-
-            if (!client) {
-                throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
-            }
-
-            clients = [{ client_id: clientId }];
-            console.log(`Validating 1 specific client`);
-        } else {
-            console.log(`Starting scheduled credit balance and tracking validation for all clients in tenant ${tenant}`);
-
-            clients = await trx('clients')
-                .where({ tenant })
-                .select('client_id');
-
-            console.log(`Found ${clients.length} clients to validate`);
-        }
-
-        let balanceValidCount = 0;
-        let balanceDiscrepancyCount = 0;
-        let missingTrackingCount = 0;
-        let inconsistentTrackingCount = 0;
-        let errorCount = 0;
-
-        for (const client of clients) {
-            try {
-                // Validate credit balance without making corrections
-                const balanceResult = await validateCreditBalanceWithoutCorrection(client.client_id);
-
-                if (balanceResult.isValid) {
-                    balanceValidCount++;
-                } else {
-                    balanceDiscrepancyCount++;
-                }
-
-                // Log the balance validation result
-                console.log(`Credit balance validation for client ${client.client_id}: ${balanceResult.isValid ? 'Valid' : 'Invalid'}, Expected: ${balanceResult.expectedBalance}, Actual: ${balanceResult.actualBalance}, Difference: ${balanceResult.difference}`);
-
-                // Validate credit tracking entries
-                const trackingResult = await validateAllCreditTracking(client.client_id);
-
-                missingTrackingCount += trackingResult.missingEntries;
-                inconsistentTrackingCount += trackingResult.inconsistentEntries;
-
-                // Log the tracking validation result
-                console.log(`Credit tracking validation for client ${client.client_id}: ${trackingResult.isValid ? 'Valid' : 'Invalid'}, Missing entries: ${trackingResult.missingEntries}, Inconsistent entries: ${trackingResult.inconsistentEntries}`);
-
-            } catch (error) {
-                errorCount++;
-                console.error(`Validation failed for client ${client.client_id}:`, error);
-            }
-        }
-        console.log(`Completed scheduled credit validation for tenant ${tenant}`);
-        console.log(`Results: Balance validation - ${balanceValidCount} valid, ${balanceDiscrepancyCount} discrepancies found`);
-        console.log(`Results: Tracking validation - ${missingTrackingCount} missing entries, ${inconsistentTrackingCount} inconsistent entries`);
-        console.log(`Errors: ${errorCount}`);
-
-        const endTime = new Date().toISOString();
-        const results = {
-            totalClients: clients.length,
-            balanceValidCount,
-            balanceDiscrepancyCount,
-            missingTrackingCount,
-            inconsistentTrackingCount,
-            errorCount
-        };
-
-        // Log the completion of the validation run
-        await auditLog(
-            trx,
-            {
-                userId,
-                operation: 'credit_validation_run_completed',
-                tableName: 'credit_reconciliation_reports',
-                recordId: clientId || 'all',
-                changedData: results,
-                details: {
-                    action: 'Credit validation run completed',
-                    client_id: clientId || 'all',
-                    start_time: startTime,
-                    end_time: endTime,
-                    duration_ms: new Date(endTime).getTime() - new Date(startTime).getTime()
-                }
-            }
-        );
-
-        return results;
-    });
-});
+}
 
 /**
  * Validates credit tracking entries for a client to identify missing entries
  * Creates reconciliation reports for any discrepancies found
  *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ *
  * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
-export const validateCreditTrackingEntries = withAuth(async (
-    user,
-    { tenant },
+export async function validateCreditTrackingEntries(
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
     missingEntries: number;
     reportIds: string[];
-}> => {
+}> {
+    const tenant = requireTenant();
     const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
@@ -486,26 +360,27 @@ export const validateCreditTrackingEntries = withAuth(async (
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-});
+}
 
 /**
  * Validates credit tracking remaining amounts for consistency
  * Creates reconciliation reports for any discrepancies found
  *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ *
  * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
-export const validateCreditTrackingRemainingAmounts = withAuth(async (
-    user,
-    { tenant },
+export async function validateCreditTrackingRemainingAmounts(
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
     inconsistentEntries: number;
     reportIds: string[];
-}> => {
+}> {
+    const tenant = requireTenant();
     const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
@@ -651,19 +526,19 @@ export const validateCreditTrackingRemainingAmounts = withAuth(async (
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-});
+}
 
 /**
  * Run both credit tracking validations for a client
  * This is a convenience function that runs both validateCreditTrackingEntries and validateCreditTrackingRemainingAmounts
  *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ *
  * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
-export const validateAllCreditTracking = withAuth(async (
-    user,
-    { tenant },
+export async function validateAllCreditTracking(
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
@@ -671,7 +546,7 @@ export const validateAllCreditTracking = withAuth(async (
     missingEntries: number;
     inconsistentEntries: number;
     reportIds: string[];
-}> => {
+}> {
     const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
@@ -695,10 +570,157 @@ export const validateAllCreditTracking = withAuth(async (
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-});
+}
+
+/**
+ * Run credit balance validation for all clients in the tenant or a specific client
+ * Creates reconciliation reports for any discrepancies found
+ * Also runs credit tracking validations to identify missing or inconsistent entries
+ *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ * For background jobs, wrap calls with runWithTenant(tenantId, ...).
+ *
+ * @param clientId Optional client ID to validate only a specific client
+ * @param userId The user ID for audit logging (defaults to 'system')
+ * @returns Summary of validation results
+ */
+export async function runScheduledCreditBalanceValidation(
+    clientId?: string,
+    userId: string = 'system'
+): Promise<{
+    totalClients: number;
+    balanceValidCount: number;
+    balanceDiscrepancyCount: number;
+    missingTrackingCount: number;
+    inconsistentTrackingCount: number;
+    errorCount: number;
+}> {
+    const tenant = requireTenant();
+    const { knex } = await createTenantKnex();
+
+    let clients: { client_id: string }[];
+    const startTime = new Date().toISOString();
+
+    // Create a transaction for audit logging
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Log the start of the validation run
+        await auditLog(
+            trx,
+            {
+                userId,
+                operation: 'credit_validation_run_started',
+                tableName: 'credit_reconciliation_reports',
+                recordId: clientId || 'all',
+                changedData: {},
+                details: {
+                    action: 'Credit validation run started',
+                    client_id: clientId || 'all',
+                    start_time: startTime
+                }
+            }
+        );
+
+        if (clientId) {
+            console.log(`Starting credit balance and tracking validation for client ${clientId} in tenant ${tenant}`);
+
+            // Verify the client exists
+            const client = await trx('clients')
+                .where({ client_id: clientId, tenant })
+                .first();
+
+            if (!client) {
+                throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
+            }
+
+            clients = [{ client_id: clientId }];
+            console.log(`Validating 1 specific client`);
+        } else {
+            console.log(`Starting scheduled credit balance and tracking validation for all clients in tenant ${tenant}`);
+
+            clients = await trx('clients')
+                .where({ tenant })
+                .select('client_id');
+
+            console.log(`Found ${clients.length} clients to validate`);
+        }
+
+        let balanceValidCount = 0;
+        let balanceDiscrepancyCount = 0;
+        let missingTrackingCount = 0;
+        let inconsistentTrackingCount = 0;
+        let errorCount = 0;
+
+        for (const client of clients) {
+            try {
+                // Validate credit balance without making corrections
+                const balanceResult = await validateCreditBalanceWithoutCorrection(client.client_id);
+
+                if (balanceResult.isValid) {
+                    balanceValidCount++;
+                } else {
+                    balanceDiscrepancyCount++;
+                }
+
+                // Log the balance validation result
+                console.log(`Credit balance validation for client ${client.client_id}: ${balanceResult.isValid ? 'Valid' : 'Invalid'}, Expected: ${balanceResult.expectedBalance}, Actual: ${balanceResult.actualBalance}, Difference: ${balanceResult.difference}`);
+
+                // Validate credit tracking entries
+                const trackingResult = await validateAllCreditTracking(client.client_id);
+
+                missingTrackingCount += trackingResult.missingEntries;
+                inconsistentTrackingCount += trackingResult.inconsistentEntries;
+
+                // Log the tracking validation result
+                console.log(`Credit tracking validation for client ${client.client_id}: ${trackingResult.isValid ? 'Valid' : 'Invalid'}, Missing entries: ${trackingResult.missingEntries}, Inconsistent entries: ${trackingResult.inconsistentEntries}`);
+
+            } catch (error) {
+                errorCount++;
+                console.error(`Validation failed for client ${client.client_id}:`, error);
+            }
+        }
+        console.log(`Completed scheduled credit validation for tenant ${tenant}`);
+        console.log(`Results: Balance validation - ${balanceValidCount} valid, ${balanceDiscrepancyCount} discrepancies found`);
+        console.log(`Results: Tracking validation - ${missingTrackingCount} missing entries, ${inconsistentTrackingCount} inconsistent entries`);
+        console.log(`Errors: ${errorCount}`);
+
+        const endTime = new Date().toISOString();
+        const results = {
+            totalClients: clients.length,
+            balanceValidCount,
+            balanceDiscrepancyCount,
+            missingTrackingCount,
+            inconsistentTrackingCount,
+            errorCount
+        };
+
+        // Log the completion of the validation run
+        await auditLog(
+            trx,
+            {
+                userId,
+                operation: 'credit_validation_run_completed',
+                tableName: 'credit_reconciliation_reports',
+                recordId: clientId || 'all',
+                changedData: results,
+                details: {
+                    action: 'Credit validation run completed',
+                    client_id: clientId || 'all',
+                    start_time: startTime,
+                    end_time: endTime,
+                    duration_ms: new Date(endTime).getTime() - new Date(startTime).getTime()
+                }
+            }
+        );
+
+        return results;
+    });
+}
 
 /**
  * Resolve a credit reconciliation report by applying the correction
+ *
+ * This function is wrapped with withAuth for UI/API calls.
+ * The tenant context is set by the withAuth wrapper.
  *
  * @param reportId The ID of the reconciliation report to resolve
  * @param userId The ID of the user resolving the report
@@ -707,7 +729,7 @@ export const validateAllCreditTracking = withAuth(async (
  * @returns The resolved report
  */
 export const resolveReconciliationReport = withAuth(async (
-    user,
+    _user,
     { tenant },
     reportId: string,
     userId: string,
@@ -847,25 +869,32 @@ export const resolveReconciliationReport = withAuth(async (
 });
 
 /**
- * Run credit balance validation for a specific client
+ * Run credit balance validation for a specific client (UI entry point)
  * This is a convenience function that calls runScheduledCreditBalanceValidation with a specific client ID
  * Creates reconciliation reports for any discrepancies found
  * Also runs credit tracking validations to identify missing or inconsistent entries
  *
+ * This function is wrapped with withAuth for UI/API calls.
+ *
  * @param clientId The ID of the client to validate
  * @returns Summary of validation results
  */
-export async function validateClientCredit(clientId: string, userId: string = 'system'): Promise<{
+export const validateClientCredit = withAuth(async (
+    _user,
+    _ctx,
+    clientId: string,
+    userId: string = 'system'
+): Promise<{
     totalClients: number;
     balanceValidCount: number;
     balanceDiscrepancyCount: number;
     missingTrackingCount: number;
     inconsistentTrackingCount: number;
     errorCount: number;
-}> {
+}> => {
     if (!clientId) {
         throw new Error('Client ID is required for client-specific validation');
     }
 
     return await runScheduledCreditBalanceValidation(clientId, userId);
-}
+});

@@ -22,6 +22,8 @@ export { default as ContactAvatar } from './ContactAvatar';
 export * from './ContactPicker';
 export * from './ContactPickerDialog';
 export { default as ContactPickerDialog } from './ContactPickerDialog';
+export { ContentCard } from './ContentCard';
+export { default as ContentCardDefault } from './ContentCard';
 export * from './CountryPicker';
 export { default as CountryPicker } from './CountryPicker';
 export * from './CreditExpirationBadge';

@@ -151,11 +151,6 @@ function RichTextViewerInternal({
   const editor = useCreateBlockNote({
     schema,
     initialContent: parsedContent,
-    domAttributes: {
-      editor: {
-        class: 'pointer-events-none',
-      },
-    },
   });
 
   useEffect(() => {
@@ -170,6 +165,7 @@ function RichTextViewerInternal({
         <BlockNoteView
           key={shouldRemount ? contentKey : 'stable'}
           editor={editor}
+          editable={false}
           theme="light"
           className="w-full min-w-0"
           style={{

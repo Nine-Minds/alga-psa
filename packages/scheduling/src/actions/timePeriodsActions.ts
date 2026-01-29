@@ -19,7 +19,7 @@ import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet
 import { formatUtcDateNoTime, toPlainDate } from '@alga-psa/core';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, getTenantContext } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSession, withAuth } from '@alga-psa/auth';
@@ -475,15 +475,20 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
  * This function manages its own transaction internally to ensure atomicity - either all
  * periods are created or none are. It uses createTenantKnex() to get a pooled connection.
  *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ * For background jobs, wrap calls with runWithTenant(tenantId, ...).
+ *
  * @param settings - Time period settings to use for generation
  * @param daysThreshold - How many days ahead to create periods (default: 5)
  */
-export const createNextTimePeriod = withAuth(async (
-  _user,
-  { tenant },
+export async function createNextTimePeriod(
   settings: ITimePeriodSettings[],
   daysThreshold: number = 5
-): Promise<ITimePeriod | null> => {
+): Promise<ITimePeriod | null> {
+  const tenant = getTenantContext();
+  if (!tenant) {
+    throw new Error('Tenant context is required. Ensure this function is called within runWithTenant() or from an authenticated server action.');
+  }
   // Safety limit to prevent infinite loops (max 1 year of weekly periods)
   const MAX_PERIODS_PER_RUN = 52;
 
@@ -611,4 +616,4 @@ export const createNextTimePeriod = withAuth(async (
     logger.error('Error creating next time period:', error);
     throw error;
   }
-});
+}

@@ -538,6 +538,14 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
             return created;
         } catch (error) {
             console.error('Output validation error:', error);
+            // Extract Zod validation details if available
+            if (error && typeof error === 'object' && 'issues' in error) {
+                const zodError = error as { issues: Array<{ path: (string | number)[]; message: string }> };
+                const details = zodError.issues
+                    .map(issue => `${issue.path.join('.')}: ${issue.message}`)
+                    .join('; ');
+                throw new Error(`Asset validation failed: ${details}`);
+            }
             throw new Error('Server error: Invalid output data format');
         }
 

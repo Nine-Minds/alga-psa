@@ -197,10 +197,12 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         {isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In')}
       </Button>
 
+      {/* SSO not supported for client portal
       <SsoProviderButtons
         callbackUrl={callbackUrl}
         tenantHint={tenantSlug}
       />
+      */}
     </form>
   )
 }
