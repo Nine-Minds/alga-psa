@@ -13,3 +13,10 @@ These checks validate that an **EE deployment** does not ship or render the CE/O
 4. Expected:
    - The page does **not** show the “Enterprise Feature / Please upgrade…” stub content.
 
+## T021: EE deployment renders workflow designer main surface
+
+1. Navigate to `https://<env-host>/msp/workflows` as an authenticated MSP user with workflow permissions.
+2. Expected (basic visibility assertions):
+   - A page heading `Workflow Designer` is visible.
+   - Tabs `Designer`, `Runs`, and `Events` are visible.
+   - The UI is interactive (e.g. search input `#workflow-designer-search` is enabled once registries load).
