@@ -53,3 +53,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: Added deterministic env selection guard for `@alga-psa/workflows/entry` aliasing (EE vs CE) without requiring a full Next build:
   - Script: `scripts/guard-workflows-entry-edition-selection.mjs`
   - CI hook: `.github/workflows/workflows-ee-build-guard.yml` runs it before the EE build scan
+- 2026-01-29: Hardened EE build guard to fail if legacy workflows entrypoints are reintroduced under `packages/workflows/src/**` (and confirmed EE build still passes with the legacy entrypoints removed): `node scripts/guard-ee-workflows-next-build.mjs`

@@ -13,6 +13,13 @@ const nextServerDir = path.join(serverDir, '.next', 'server');
 const needle = 'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.';
 const needleBytes = Buffer.from(needle, 'utf8');
 
+const legacyEntryCandidates = [
+  path.join(repoRoot, 'packages', 'workflows', 'src', 'entry.ts'),
+  path.join(repoRoot, 'packages', 'workflows', 'src', 'entry.tsx'),
+  path.join(repoRoot, 'packages', 'workflows', 'src', 'ee', 'entry.tsx'),
+  path.join(repoRoot, 'packages', 'workflows', 'src', 'oss', 'entry.tsx'),
+];
+
 function walkFiles(rootDir) {
   const stack = [rootDir];
   const files = [];
@@ -53,6 +60,15 @@ function scanForNeedle(targetDir) {
 
 const args = new Set(process.argv.slice(2));
 const skipBuild = args.has('--skip-build');
+
+const legacyHits = legacyEntryCandidates.filter((candidate) => fs.existsSync(candidate));
+if (legacyHits.length) {
+  console.error('\n[guard-ee-workflows-next-build] FAIL: legacy workflows entrypoints still exist (expected deleted)\n');
+  for (const filePath of legacyHits) {
+    console.error(`- ${path.relative(repoRoot, filePath)}`);
+  }
+  process.exit(1);
+}
 
 if (!skipBuild) {
   fs.rmSync(path.join(serverDir, '.next'), { recursive: true, force: true });
