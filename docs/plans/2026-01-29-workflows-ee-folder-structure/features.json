@@ -1,7 +1,7 @@
 [
   { "id": "F001", "description": "Document current workflow UI entrypoint resolution and failure mode (hybrid EE build)", "implemented": true },
   { "id": "F002", "description": "Define target EE folder structure for workflow UI under `ee/server/src/**`", "implemented": true },
-  { "id": "F003", "description": "Define target CE/OSS stub placement under `server/src/empty/**`", "implemented": false },
+  { "id": "F003", "description": "Define target CE/OSS stub placement under `server/src/empty/**`", "implemented": true },
 
   { "id": "F010", "description": "Create EE workflow entry file in `ee/server/src/**` exporting `DnDFlow` as expected by loader", "implemented": false },
   { "id": "F011", "description": "Move workflow designer UI components from `packages/workflows/src/ee/**` into `ee/server/src/**`", "implemented": false },
