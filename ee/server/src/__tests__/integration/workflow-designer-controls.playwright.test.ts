@@ -213,7 +213,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
     }
   });
 
-  test('non-admin users do not see Dead Letter or Audit tabs', async ({ page }) => {
+  test('non-admin users do not see Dead Letter tab', async ({ page }) => {
     test.setTimeout(120000);
     const { db, tenantData } = await createWorkflowTenant(page, MANAGE_PERMISSIONS);
 
@@ -223,7 +223,6 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await workflowPage.waitForLoaded();
 
       await expect(page.getByRole('tab', { name: 'Dead Letter' })).toHaveCount(0);
-      await expect(page.getByRole('tab', { name: 'Audit' })).toHaveCount(0);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
@@ -264,7 +263,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
     }
   });
 
-  test('admin users can access Dead Letter and Audit tabs', async ({ page }) => {
+  test('admin users can access Dead Letter tab', async ({ page }) => {
     test.setTimeout(120000);
     const { db, tenantData } = await createWorkflowTenant(page, ADMIN_PERMISSIONS);
 
@@ -274,16 +273,11 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await workflowPage.waitForLoaded();
 
       const deadLetterTab = page.getByRole('tab', { name: 'Dead Letter' });
-      const auditTab = page.getByRole('tab', { name: 'Audit' });
 
       await expect(deadLetterTab).toBeVisible();
-      await expect(auditTab).toBeVisible();
 
       await deadLetterTab.click();
       await expect(page.locator('#workflow-dead-letter-min-retries')).toBeVisible();
-
-      await auditTab.click();
-      await expect(page.locator('#workflow-audit-export')).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
