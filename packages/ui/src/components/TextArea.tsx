@@ -3,6 +3,7 @@
 import React, { useLayoutEffect, useEffect, useRef, useCallback } from 'react';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
+import { cn } from '../lib/utils';
 
 interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
   label?: string;
@@ -12,6 +13,8 @@ interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
   required?: boolean;
   /** Ref for the textarea element */
   ref?: React.Ref<HTMLTextAreaElement>;
+  /** Optional wrapper class overrides */
+  wrapperClassName?: string;
 }
 
 export function TextArea({
@@ -23,6 +26,7 @@ export function TextArea({
   disabled,
   required,
   ref: forwardedRef,
+  wrapperClassName,
   "data-automation-id": dataAutomationId,
   ...props
 }: TextAreaProps & AutomationProps) {
@@ -117,7 +121,7 @@ export function TextArea({
   };
 
   return (
-    <div className="mb-4 px-0.5">
+    <div className={cn('mb-4 px-0.5', wrapperClassName)}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}

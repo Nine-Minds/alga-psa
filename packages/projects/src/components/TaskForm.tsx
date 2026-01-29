@@ -1271,6 +1271,7 @@ export default function TaskForm({
                             checked={item.completed}
                             onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
                             className="flex-none"
+                            containerClassName=""
                           />
                           <div className="flex-1">
                             <TextArea
@@ -1278,6 +1279,7 @@ export default function TaskForm({
                               onChange={(e) => updateChecklistItem(index, 'item_name', e.target.value)}
                               placeholder="Checklist item"
                               className="w-full"
+                              wrapperClassName="!mb-0 !px-0"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
                               autoFocus={editingChecklistItemId === item.checklist_item_id}
                               onKeyDown={handleChecklistItemKeyDown}
@@ -1297,6 +1299,7 @@ export default function TaskForm({
                             checked={item.completed}
                             onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
                             className="flex-none"
+                            containerClassName=""
                           />
                           <span
                             className={`flex-1 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-500' : ''}`}
