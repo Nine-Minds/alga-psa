@@ -753,17 +753,16 @@ const nextConfig = {
 	        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
 	        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 	        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
-	        const workflowsEeEntry = path.join(__dirname, '../packages/workflows/src/ee/entry.tsx');
+	        const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
 	        config.plugins = config.plugins || [];
 	        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
 	          try {
 	            const req = resource.request || '';
 	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
-	            // Our tsconfig maps `@alga-psa/workflows/entry -> packages/workflows/src/entry` (OSS stub) and relies on webpack
-	            // aliasing to override to the EE entry in enterprise builds. In practice, JsConfigPathsPlugin can resolve the OSS
-	            // path first when that file exists, producing "hybrid" EE builds where workflows still load the OSS EE-only stub UI.
+	            // If the workflows entry specifier gets resolved via tsconfig `paths` before webpack aliasing, an enterprise build
+	            // can accidentally bundle the CE/OSS workflow stub UI ("hybrid" build).
 	            //
-	            // Force consistency by rewriting the workflows entry specifier to the EE source file *before* resolution.
+	            // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
 	            if (req === '@alga-psa/workflows/entry') {
 	              resource.request = workflowsEeEntry;
 	              return;
