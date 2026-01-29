@@ -863,6 +863,9 @@ const nextConfig = {
     return config;
   },
   experimental: {
+    // We alias certain EE-only modules directly into `../ee/server/src/**` (outside this Next.js app root).
+    // Ensure Next is allowed to import/compile source files from outside `server/`.
+    externalDir: true,
     serverActions: {
       bodySizeLimit: serverActionsBodyLimit,
     },
