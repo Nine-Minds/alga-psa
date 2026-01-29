@@ -30,7 +30,9 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",
+    "lucide-react": "^0.428.0",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

@@ -231,6 +231,14 @@ const nextConfig = {
 	      '@alga-psa/db/models/userPreferences': '../packages/db/src/models/userPreferences.ts',
 	      '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
 	      '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
+	      // Surveys package
+	      '@alga-psa/surveys': '../packages/surveys/src',
+	      '@alga-psa/surveys/': '../packages/surveys/src/',
+	      '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
+	      '@alga-psa/surveys/actions/surveyResponseActions': '../packages/surveys/src/actions/surveyResponseActions.ts',
+	      '@alga-psa/surveys/actions/surveyTokenService': '../packages/surveys/src/actions/surveyTokenService.ts',
+	      '@alga-psa/surveys/components': '../packages/surveys/src/components/index.ts',
+	      '@alga-psa/surveys/components/public/SurveyResponsePage': '../packages/surveys/src/components/public/SurveyResponsePage.tsx',
       '@/empty': isEE ? '../ee/server/src' : './src/empty',
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
@@ -350,6 +358,7 @@ const nextConfig = {
 	    '@alga-psa/reference-data',
 	    '@alga-psa/billing',
 	    '@alga-psa/projects',
+	    '@alga-psa/surveys',
 	    // Product feature packages (only those needed in this app)
 	    '@product/extensions',
     '@product/settings-extensions',
@@ -416,6 +425,7 @@ const nextConfig = {
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
       '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
+      '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations

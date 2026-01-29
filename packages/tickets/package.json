@@ -37,9 +37,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/billing": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/surveys": "*",
     "@alga-psa/tags": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",

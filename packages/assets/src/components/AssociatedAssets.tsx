@@ -16,6 +16,7 @@ import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
+import { ContentCard } from '@alga-psa/ui/components';
 import {
     ASSET_DRAWER_TABS,
     type AssetDrawerTab,
@@ -364,12 +365,16 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
     return (
         <ReflectionContainer id={id} label="Associated Assets">
-            <div className="space-y-3 mb-8">
+            <ContentCard>
                 <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold text-gray-900">Associated Assets</h3>
+                    <ContentCard.Header>
+                        <Boxes className="w-5 h-5 mr-2" />
+                        Associated Assets
+                    </ContentCard.Header>
                     <Button
                         id='add-asset-button'
                         variant="outline"
+                        size="sm"
                         onClick={handleOpenDialog}
                     >
                         Add Asset
@@ -377,9 +382,9 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                 </div>
 
                 {isLoading ? (
-                    <div className="text-gray-500">Loading assets...</div>
+                    <div className="text-gray-500 text-center py-8">Loading assets...</div>
                 ) : associatedAssets.length === 0 ? (
-                    <div className="text-gray-500">No assets associated</div>
+                    <div className="text-gray-500 text-center py-8">No assets associated with this ticket.</div>
                 ) : (
                     <div className="space-y-2">
                         {visibleAssets.map((association): React.JSX.Element => (
@@ -647,7 +652,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                     onTabChange={handleDrawerTabChange}
                     defaultBoardId={defaultBoardId}
                 />
-            </div>
+            </ContentCard>
         </ReflectionContainer>
     );
 }

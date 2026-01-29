@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
 import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
 import {
@@ -297,10 +298,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-          </div>
+          <Spinner size="lg" />
           <div className="space-y-1">
             <p className="text-lg font-medium text-gray-900">Loading assets...</p>
             <p className="text-sm text-gray-500">Please wait while we fetch your data</p>
