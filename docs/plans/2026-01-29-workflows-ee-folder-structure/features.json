@@ -19,7 +19,7 @@
   { "id": "F042", "description": "Provide TS typings for `@alga-psa/workflows/entry` via `server/src/types/*.d.ts`", "implemented": true },
 
   { "id": "F050", "description": "Keep workflow UI loader and app imports using the stable specifier `@alga-psa/workflows/entry`", "implemented": true, "notes": "Loader lives at `packages/workflows/src/components/WorkflowComponentLoader.ts`." },
-  { "id": "F051", "description": "Ensure Next build config can compile/workspace-resolve the new EE workflow UI location under `ee/server/src/**` (externalDir/transpilePackages/etc)", "implemented": false },
+  { "id": "F051", "description": "Ensure Next build config can compile/workspace-resolve the new EE workflow UI location under `ee/server/src/**` (externalDir/transpilePackages/etc)", "implemented": true, "notes": "Verified `server` can `next build` in EE mode with `@alga-psa/workflows/entry` aliased to `ee/server/src/workflows/entry.tsx`." },
 
   { "id": "F060", "description": "Add CI check: EE `next build` output must not contain OSS stub workflow strings", "implemented": false },
   { "id": "F061", "description": "Add automated UI smoke test (Playwright or equivalent) that workflows page loads without EE-only stub in EE builds", "implemented": false },

@@ -32,3 +32,4 @@ Use `features.json` and `tests.json` as the source of truth for what is actually
 - 2026-01-29: Removed TS `paths` mapping for `@alga-psa/workflows/entry` (mitigates JsConfigPathsPlugin “hybrid build” risk).
 - 2026-01-29: `server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
 - 2026-01-29: `ee/server/tsconfig.json` no longer maps `@alga-psa/workflows/entry` via `compilerOptions.paths`.
+- 2026-01-29: Verified EE build works with new entry wiring: `EDITION=enterprise NEXT_PUBLIC_EDITION=enterprise npm -w server run build`.
