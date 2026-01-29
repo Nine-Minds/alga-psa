@@ -89,7 +89,6 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Projects',
         icon: Layers,
-        href: '/msp/projects',
         subItems: [
           { name: 'All Projects', icon: Layers, href: '/msp/projects' },
           { name: 'Templates', icon: FileText, href: '/msp/projects/templates' }

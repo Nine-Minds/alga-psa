@@ -482,7 +482,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       target.closest('[role="menuitem"]') ||
       target.closest('[data-radix-collection-item]') ||
       target.closest('button') ||
-      target.closest('[data-state]') // Radix dropdown trigger
+      target.closest('input') ||
+      target.closest('a')
     ) {
       return;
     }

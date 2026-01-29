@@ -18,7 +18,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from '@alga-psa/tags/components';
-import { ResponseStateSelect } from '../ResponseStateSelect';
+import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
@@ -121,8 +121,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
 
-  // Get the effective board ID (pending or current)
-  const effectiveBoardId = pendingChanges.board_id ?? ticket.board_id;
+  // Get the effective board ID (pending or saved)
+  const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
 
   // Get the effective board config (pending or current)
   const effectiveBoardConfig = pendingBoardConfig ?? boardConfig;
@@ -209,7 +209,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       if (boardIdToFetch && boardIdToFetch !== ticket.board_id) {
         fetchingBoardIdRef.current = boardIdToFetch;
         setPendingCategories([]);
-        setPendingBoardConfig(null);
+        // Don't clear pendingBoardConfig here - keep showing previous config until new one loads
         setIsLoadingBoardConfig(true);
 
         try {
@@ -578,10 +578,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       return pendingCategory || '';
     }
 
-    if (ticket.subcategory_id) {
-      return ticket.subcategory_id;
+    if (originalTicketValues.subcategory_id) {
+      return originalTicketValues.subcategory_id;
     }
-    return ticket.category_id || '';
+    return originalTicketValues.category_id || '';
   };
 
   // Handler for ITIL field changes (now uses pending changes)
@@ -590,10 +590,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   const customStyles = {
-    trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+    trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
     content: "bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 overflow-auto",
-    item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white",
-    itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600",
+    item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-primary-100",
+    itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-primary-600",
   };
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
@@ -691,10 +691,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           )}
 
           <div className="grid grid-cols-2 gap-4 mb-4">
+            {/* Row 1: Status + Assigned To */}
             <div>
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
-                value={pendingChanges.status_id ?? ticket.status_id ?? ''}
+                value={pendingChanges.status_id ?? originalTicketValues.status_id ?? ''}
                 options={statusOptions}
                 onValueChange={(value) => handlePendingChange('status_id', value)}
                 customStyles={customStyles}
@@ -703,16 +704,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             </div>
             <div>
-              <h5 className="font-bold mb-2">Response State</h5>
-              <ResponseStateSelect
-                value={((pendingChanges.response_state ?? ticket.response_state) || null) as TicketResponseState}
-                onValueChange={(value) => handlePendingChange('response_state', value)}
-              />
-            </div>
-            <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
               <UserPicker
-                value={pendingChanges.assigned_to ?? ticket.assigned_to ?? ''}
+                value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
                 onValueChange={(value) => handlePendingChange('assigned_to', value)}
                 users={usersList}
                 labelStyle="none"
@@ -723,6 +717,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 disabled={workflowLocked}
               />
             </div>
+
+            {/* Row 2: Board + Category */}
             <div>
               <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
@@ -730,7 +726,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 options={boardOptions}
                 onValueChange={(value) => {
                   handlePendingChange('board_id', value);
-                  // Clear pending categories when board changes
                   handlePendingChange('category_id', null);
                   handlePendingChange('subcategory_id', null);
                 }}
@@ -738,59 +733,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 className="!w-fit"
               />
             </div>
-            <div>
-              <h5 className="font-bold mb-2">Priority</h5>
-              {effectiveBoardConfig.priority_type === 'itil' ? (
-                calculatedItilPriority ? (
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full border border-gray-300"
-                      style={{ backgroundColor:
-                        calculatedItilPriority === 1 ? '#DC2626' : // Red
-                        calculatedItilPriority === 2 ? '#EA580C' : // Orange
-                        calculatedItilPriority === 3 ? '#F59E0B' : // Amber
-                        calculatedItilPriority === 4 ? '#3B82F6' : // Blue
-                        '#6B7280' // Gray
-                      }}
-                    />
-                    <span className="text-sm font-medium">
-                      {ItilLabels.priority[calculatedItilPriority]}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      (Impact {effectiveItilImpact} × Urgency {effectiveItilUrgency})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                      title="Show ITIL Priority Matrix"
-                    >
-                      <HelpCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500">
-                    Please set Impact and Urgency below to determine priority
-                  </div>
-                )
-              ) : (
-                <PrioritySelect
-                  value={pendingChanges.priority_id ?? ticket.priority_id ?? null}
-                  options={priorityOptions}
-                  onValueChange={(value) => handlePendingChange('priority_id', value)}
-                  customStyles={customStyles}
-                  className="!w-fit"
-                  disabled={workflowLocked}
-                />
-              )}
-            </div>
             {effectiveBoardConfig.category_type && (
-              <div className="col-span-2">
-                <h5 className="font-bold mb-1">{effectiveBoardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
+              <div>
+                <h5 className="font-bold mb-2">{effectiveBoardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
                 <div className="w-fit">
                   {isLoadingBoardConfig ? (
                     <div className="h-10 w-48 bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500">
-                      Loading categories...
+                      Loading...
                     </div>
                   ) : (
                     <CategoryPicker
@@ -798,23 +747,177 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       categories={effectiveCategories}
                       selectedCategories={[getSelectedCategoryId()]}
                       onSelect={handleCategoryChange}
-                      placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
+                      placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select category..." : "Select ITIL category..."}
                     />
                   )}
                 </div>
               </div>
             )}
+
+            {/* Row 3: Priority area (animated based on board type) */}
+            <div className="col-span-2 transition-all duration-200 ease-in-out">
+              {effectiveBoardConfig.priority_type === 'itil' ? (
+                <div className="grid grid-cols-2 gap-4 transition-opacity duration-200 ease-in-out">
+                  <div>
+                    <h5 className="font-bold mb-2">Impact</h5>
+                    <div className="w-fit">
+                      <CustomSelect
+                        options={[
+                          { value: '1', label: '1 - High (Critical business function affected)' },
+                          { value: '2', label: '2 - Medium-High (Important function affected)' },
+                          { value: '3', label: '3 - Medium (Minor function affected)' },
+                          { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+                          { value: '5', label: '5 - Low (No business impact)' }
+                        ]}
+                        value={effectiveItilImpact?.toString() || null}
+                        onValueChange={(value) => handleLocalItilFieldChange('itil_impact', Number(value))}
+                        placeholder="Select Impact"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-bold mb-2">Urgency</h5>
+                    <div className="w-fit">
+                      <CustomSelect
+                        options={[
+                          { value: '1', label: '1 - High (Work cannot continue)' },
+                          { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+                          { value: '3', label: '3 - Medium (Work continues with limitations)' },
+                          { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+                          { value: '5', label: '5 - Low (Work continues normally)' }
+                        ]}
+                        value={effectiveItilUrgency?.toString() || null}
+                        onValueChange={(value) => handleLocalItilFieldChange('itil_urgency', Number(value))}
+                        placeholder="Select Urgency"
+                      />
+                    </div>
+                  </div>
+                  {/* Calculated ITIL Priority Badge */}
+                  {calculatedItilPriority && (
+                    <div className="col-span-2 flex items-center gap-2 mt-1">
+                      <span className="text-sm text-gray-500">Calculated Priority:</span>
+                      <div
+                        className="w-3 h-3 rounded-full border border-gray-300"
+                        style={{ backgroundColor:
+                          calculatedItilPriority === 1 ? '#DC2626' :
+                          calculatedItilPriority === 2 ? '#EA580C' :
+                          calculatedItilPriority === 3 ? '#F59E0B' :
+                          calculatedItilPriority === 4 ? '#3B82F6' :
+                          '#6B7280'
+                        }}
+                      />
+                      <span className="text-sm font-medium">
+                        {ItilLabels.priority[calculatedItilPriority]}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Show ITIL Priority Matrix"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  {/* ITIL Priority Matrix - Show when help icon is clicked */}
+                  {showPriorityMatrix && (
+                    <div className="col-span-2 mt-3 p-4 bg-gray-50 border rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-xs">
+                          <thead>
+                            <tr>
+                              <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
+                              <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                            </tr>
+                            <tr>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                            </tr>
+                            <tr>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                            </tr>
+                            <tr>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                            </tr>
+                            <tr>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-600">
+                        <p><strong>Impact:</strong> How many users/business functions are affected?</p>
+                        <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="transition-opacity duration-200 ease-in-out">
+                  <h5 className="font-bold mb-2">Priority</h5>
+                  <PrioritySelect
+                    value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
+                    options={priorityOptions}
+                    onValueChange={(value) => handlePendingChange('priority_id', value)}
+                    customStyles={customStyles}
+                    className="!w-fit"
+                    disabled={workflowLocked}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Row 4: Response State + Due Date (future SLA area) */}
+            <div>
+              <ResponseStateDisplay
+                value={((pendingChanges.response_state ?? originalTicketValues.response_state) || null) as TicketResponseState}
+                onValueChange={(value) => handlePendingChange('response_state', value)}
+                editable={true}
+              />
+            </div>
             <div>
               <h5 className="font-bold mb-2">Due Date</h5>
               {(() => {
-                // Use pending due_date if available
                 const effectiveDueDate = pendingChanges.due_date !== undefined
                   ? (pendingChanges.due_date ? new Date(pendingChanges.due_date as string) : undefined)
-                  : (ticket.due_date ? new Date(ticket.due_date) : undefined);
+                  : (originalTicketValues.due_date ? new Date(originalTicketValues.due_date as string) : undefined);
                 const existingTime = effectiveDueDate ? format(effectiveDueDate, 'HH:mm') : undefined;
                 const isMidnight = existingTime === '00:00';
 
-                // Determine styling based on due date status
                 let containerClass = '';
                 if (effectiveDueDate) {
                   const now = new Date();
@@ -831,7 +934,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     handlePendingChange('due_date', null);
                     return;
                   }
-                  // Preserve existing time or use midnight
                   if (effectiveDueDate && !isMidnight) {
                     newDate = setHours(newDate, effectiveDueDate.getHours());
                     newDate = setMinutes(newDate, effectiveDueDate.getMinutes());
@@ -892,115 +994,23 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 );
               })()}
             </div>
-            {/* ITIL Fields for ITIL priority boards */}
-            {effectiveBoardConfig.priority_type === 'itil' && (
-              <>
-                <div>
-                  <h5 className="font-bold mb-2">Impact</h5>
-                  <div className="w-fit">
-                    <CustomSelect
-                      options={[
-                        { value: '1', label: '1 - High (Critical business function affected)' },
-                        { value: '2', label: '2 - Medium-High (Important function affected)' },
-                        { value: '3', label: '3 - Medium (Minor function affected)' },
-                        { value: '4', label: '4 - Medium-Low (Minimal impact)' },
-                        { value: '5', label: '5 - Low (No business impact)' }
-                      ]}
-                      value={effectiveItilImpact?.toString() || null}
-                      onValueChange={(value) => handleLocalItilFieldChange('itil_impact', Number(value))}
-                      placeholder="Select Impact"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <h5 className="font-bold mb-2">Urgency</h5>
-                  <div className="w-fit">
-                    <CustomSelect
-                      options={[
-                        { value: '1', label: '1 - High (Work cannot continue)' },
-                        { value: '2', label: '2 - Medium-High (Work severely impaired)' },
-                        { value: '3', label: '3 - Medium (Work continues with limitations)' },
-                        { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
-                        { value: '5', label: '5 - Low (Work continues normally)' }
-                      ]}
-                      value={effectiveItilUrgency?.toString() || null}
-                      onValueChange={(value) => handleLocalItilFieldChange('itil_urgency', Number(value))}
-                      placeholder="Select Urgency"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-            {/* ITIL Categories for ITIL category boards */}
-            {/* ITIL Categories are now handled by the unified CategoryPicker above */}
-          </div>
 
-          {/* ITIL Priority Matrix - Show when help icon is clicked */}
-          {showPriorityMatrix && effectiveBoardConfig.priority_type === 'itil' && (
-            <div className="mt-4 p-4 bg-gray-50 border rounded-lg">
-              <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-xs">
-                  <thead>
-                    <tr>
-                      <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
-                      <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
-                      <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
-                      <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
-                      <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
-                      <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                      <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
-                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                    </tr>
-                    <tr>
-                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                    </tr>
-                    <tr>
-                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                    </tr>
-                    <tr>
-                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                      <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
-                    </tr>
-                    <tr>
-                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                      <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
-                      <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-2 text-xs text-gray-600">
-                <p><strong>Impact:</strong> How many users/business functions are affected?</p>
-                <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
-              </div>
+            {/* Row 5: Tags */}
+            <div className="col-span-2">
+              <h5 className="font-bold mb-2">Tags</h5>
+              {onTagsChange && ticket.ticket_id ? (
+                <TagManager
+                  entityId={ticket.ticket_id}
+                  entityType="ticket"
+                  initialTags={tags}
+                  onTagsChange={onTagsChange}
+                  useInlineInput={isInDrawer}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">Tags cannot be managed</p>
+              )}
             </div>
-          )}
+          </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -1087,22 +1097,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   return <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />;
                 })()}
               </div>
-            )}
-          </div>
-          
-          {/* Tags Section */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">Tags</h2>
-            {onTagsChange && ticket.ticket_id ? (
-              <TagManager
-                entityId={ticket.ticket_id}
-                entityType="ticket"
-                initialTags={tags}
-                onTagsChange={onTagsChange}
-                useInlineInput={isInDrawer}
-              />
-            ) : (
-              <p className="text-sm text-gray-500">Tags cannot be managed</p>
             )}
           </div>
 

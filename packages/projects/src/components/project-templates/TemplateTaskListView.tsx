@@ -491,6 +491,26 @@ export default function TemplateTaskListView({
 
       {/* Hierarchical rows - scrollable */}
       <div className="divide-y divide-gray-200 overflow-y-auto flex-1">
+        {/* Empty state - inside scrollable area for proper centering */}
+        {phaseGroups.length === 0 && (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="text-center">
+              <p className="text-base font-medium">No phases found</p>
+              <p className="text-sm mt-1">Create phases and add tasks to see them here</p>
+              <Button
+                id="add-phase-empty-state"
+                variant="default"
+                size="sm"
+                className="mt-4"
+                onClick={onAddPhase}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Phase
+              </Button>
+            </div>
+          </div>
+        )}
+
         {phaseGroups.map((phaseGroup) => {
           const isPhaseExpanded = expandedPhases.has(phaseGroup.phase.template_phase_id);
 
@@ -910,26 +930,6 @@ export default function TemplateTaskListView({
           </Button>
         </div>
       </div>
-
-      {/* Empty state */}
-      {phaseGroups.length === 0 && (
-        <div className="flex items-center justify-center h-48 text-gray-500">
-          <div className="text-center">
-            <p className="text-base font-medium">No phases found</p>
-            <p className="text-sm mt-1">Create phases and add tasks to see them here</p>
-            <Button
-              id="add-phase-empty-state"
-              variant="default"
-              size="sm"
-              className="mt-4"
-              onClick={onAddPhase}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Phase
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

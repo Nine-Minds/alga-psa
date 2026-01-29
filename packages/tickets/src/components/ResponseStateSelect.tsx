@@ -37,10 +37,10 @@ export function ResponseStateSelect({
   };
 
   const customStyles = {
-    trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+    trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
     content: "bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 overflow-auto",
-    item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white",
-    itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600",
+    item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-primary-100",
+    itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-primary-600",
   };
 
   // If there's no current value, show "Set Response State" as placeholder
@@ -97,15 +97,12 @@ export function ResponseStateDisplay({
   return (
     <div className={className}>
       {showLabel && <h5 className="font-bold mb-2">Response State</h5>}
-      <div className="flex items-center gap-2">
-        {value && <ResponseStateBadge responseState={value} size="sm" showTooltip={false} />}
-        {onValueChange && (
-          <ResponseStateSelect
-            value={value}
-            onValueChange={onValueChange}
-          />
-        )}
-      </div>
+      {onValueChange && (
+        <ResponseStateSelect
+          value={value}
+          onValueChange={onValueChange}
+        />
+      )}
     </div>
   );
 }
