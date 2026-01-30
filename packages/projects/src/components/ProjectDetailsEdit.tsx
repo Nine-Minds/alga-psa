@@ -17,7 +17,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
 import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
@@ -301,6 +301,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 clearErrorIfSubmitted();
               }}
               users={users}
+              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
               size="sm"
               labelStyle="none"
               buttonWidth="full"

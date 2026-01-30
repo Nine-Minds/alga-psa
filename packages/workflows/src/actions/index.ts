@@ -21,3 +21,4 @@ export * from './event-catalog-actions';
 export * from './template-library-actions';
 export * from './workflow-runtime-v2-actions';
 export * from './workflow-event-catalog-v2-actions';
+export * from './invoiceWorkflowActions';

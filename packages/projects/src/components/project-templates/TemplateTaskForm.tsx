@@ -10,6 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { TaskTypeSelector } from '../TaskTypeSelector';
 import { ListChecks, Link2, Plus, Trash2, Ban, GitBranch } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -621,6 +622,7 @@ export function TemplateTaskForm({
                   }
                 }}
                 users={users}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 placeholder="Select primary agent (optional)"
                 disabled={isSubmitting}
                 buttonWidth="full"
@@ -644,6 +646,7 @@ export function TemplateTaskForm({
                   values={additionalAgents}
                   onValuesChange={setAdditionalAgents}
                   users={users.filter(u => u.user_id !== assignedTo)}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 />
               )}
               <p className="text-xs text-gray-500 mt-1">

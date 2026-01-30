@@ -19,7 +19,7 @@ import {
   AccountingExportDocument,
   TaxDelegationMode
 } from '../adapters/accounting/accountingExportAdapter';
-import { AccountingExportValidation } from '@alga-psa/billing';
+import { AccountingExportValidation } from '../validation/accountingExportValidation';
 import { publishEvent } from '../eventBus/publishers';
 import { AppError } from '../errors';
 import { getExternalTaxImportService } from './externalTaxImportService';

@@ -255,8 +255,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
                 taxRegionId: taxRegion,
                 targetRealm: context.batch.target_realm
               });
-              taxCodeRef = taxMapping?.external_entity_id ?? null;
-              taxCodeCache.set(taxRegion, taxCodeRef);
+              const resolvedTaxCodeRef = taxMapping?.external_entity_id ?? null;
+              taxCodeRef = resolvedTaxCodeRef;
+              taxCodeCache.set(taxRegion, resolvedTaxCodeRef);
             }
             if (taxCodeRef) {
               salesDetail.TaxCodeRef = { value: taxCodeRef };
@@ -302,8 +303,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
             paymentTermId: clientRow.payment_terms,
             targetRealm: context.batch.target_realm
           });
-          termRef = termMapping?.external_entity_id ?? null;
-          paymentTermCache.set(clientRow.payment_terms, termRef);
+          const resolvedTermRef = termMapping?.external_entity_id ?? null;
+          termRef = resolvedTermRef;
+          paymentTermCache.set(clientRow.payment_terms, resolvedTermRef);
         }
         if (termRef) {
           qboInvoice.SalesTermRef = { value: termRef };

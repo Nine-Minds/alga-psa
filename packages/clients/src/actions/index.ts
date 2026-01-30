@@ -19,6 +19,7 @@ export * from './countryActions';
 export * from './contact-actions';
 export * from './interactionActions';
 export * from './interactionTypeActions';
+export * from './contactAvatarActions';
 
 // TODO: Create client-specific action files with dual-write logic:
 // - clientActions.ts (replaces clientActions.ts)

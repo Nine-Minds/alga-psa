@@ -1104,6 +1104,7 @@ export default function TaskListView({
                                           users={users.filter(u =>
                                             !resources.some(r => r.additional_user_id === u.user_id)
                                           )}
+                                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                                         />
                                       ) : (
                                         (() => {

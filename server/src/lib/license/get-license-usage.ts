@@ -1,4 +1,4 @@
-import { getConnection } from '@alga-psa/db/connection';
+import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 export interface LicenseUsage {
@@ -17,7 +17,7 @@ export async function getLicenseUsage(
   tenantId: string,
   trx?: Knex.Transaction
 ): Promise<LicenseUsage> {
-  const knex = trx || (await getConnection());
+  const knex = trx || (await createTenantKnex(tenantId)).knex;
   
   // Get the tenant's license limit
   const tenant = await knex('tenants')

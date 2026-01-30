@@ -15,7 +15,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getAllUsersBasic, getCurrentUser } from '@alga-psa/users/actions';
+import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { IClient } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -422,6 +422,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   }}
                   disabled={assignedToMe}
                   users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 />
                 <SwitchWithLabel
                   label="Assigned to me"

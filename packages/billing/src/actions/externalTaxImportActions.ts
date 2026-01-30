@@ -7,7 +7,7 @@ import {
   SingleImportResult,
   BatchImportResult,
   ReconciliationResult
-} from '../services/externalTaxImportService';
+} from 'server/src/lib/services/externalTaxImportService';
 import type { IExternalTaxImport } from '@alga-psa/types';
 
 /**

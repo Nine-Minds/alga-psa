@@ -12,6 +12,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { TemplateChecklistItem, TemplateTask, TemplateWizardData } from '../../../types/templateWizard';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { IUserWithRoles } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 
@@ -299,6 +300,7 @@ export function TemplateTasksStep({
                                 updateTask(task.temp_id, { assigned_to: value || undefined })
                               }
                               users={users}
+                              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                               placeholder="Not assigned"
                             />
                           </div>
@@ -316,6 +318,7 @@ export function TemplateTasksStep({
                                   updateTask(task.temp_id, { additional_agents: values })
                                 }
                                 users={users.filter(u => u.user_id !== task.assigned_to)}
+                                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                               />
                             )}
                           </div>

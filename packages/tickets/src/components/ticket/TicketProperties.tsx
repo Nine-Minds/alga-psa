@@ -23,13 +23,13 @@ import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getUserContactId } from '@alga-psa/users/actions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import TicketMaterialsCard from './TicketMaterialsCard';
-import { TicketSurveySummaryCard } from '@alga-psa/surveys/components';
+import TicketSurveySummaryCard from './TicketSurveySummaryCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 
 interface TicketPropertiesProps {
@@ -677,6 +677,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <MultiUserPicker
               id={`${id}-additional-agents`}
               values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
               onValuesChange={async (newUserIds) => {
                 // Prevent race conditions from rapid clicks
                 if (isProcessingAgentsRef.current) {

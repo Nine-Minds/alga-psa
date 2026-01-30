@@ -44,7 +44,8 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
@@ -194,7 +195,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
@@ -399,7 +401,8 @@ export const addClientTicketComment = withAuth(async (
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
@@ -491,7 +494,8 @@ export const updateClientTicketComment = withAuth(async (
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
@@ -576,7 +580,8 @@ export const updateTicketStatus = withAuth(async (
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
@@ -664,7 +669,8 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canDelete = await hasPermission(userForPermission, 'ticket', 'delete', db);
     if (!canDelete) {
@@ -725,7 +731,8 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
@@ -809,7 +816,8 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false
+      is_inactive: false,
+      tenant
     } as IUser;
     const canCreate = await hasPermission(userForPermission, 'ticket', 'create', db);
     if (!canCreate) {

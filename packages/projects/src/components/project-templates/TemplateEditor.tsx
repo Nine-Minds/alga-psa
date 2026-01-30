@@ -1551,6 +1551,7 @@ function TaskCard({
           }
           size="sm"
           users={users}
+          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         />
         {additionalAgentsCount > 0 && (
           <Tooltip

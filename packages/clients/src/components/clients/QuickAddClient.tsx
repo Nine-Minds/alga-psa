@@ -18,6 +18,7 @@ import {
   DialogFooter
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient, createClientLocation, getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import { createClientContact } from '@alga-psa/clients/actions';
@@ -779,6 +780,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     value={formData.account_manager_id || ''}
                     onValueChange={(value) => handleClientChange('account_manager_id', value)}
                     users={internalUsers}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                     disabled={isLoadingUsers || isSubmitting}
                     placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
                     buttonWidth="full"

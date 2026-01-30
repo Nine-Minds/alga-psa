@@ -1,7 +1,6 @@
-import { createTenantKnex } from '@alga-psa/db';
-import { AccountingExportRepository } from '../../repositories/accountingExportRepository';
-import { AccountingExportService } from '../../services/accountingExportService';
-import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { createTenantKnex } from '../db';
+import { AccountingExportRepository } from '../repositories/accountingExportRepository';
+import { AccountingMappingResolver } from '@alga-psa/billing';
 
 export class AccountingExportValidation {
   static async ensureMappingsForBatch(batchId: string): Promise<void> {
@@ -47,21 +46,23 @@ export class AccountingExportValidation {
       }
     }
 
-    const charges = chargeIds.size > 0
-      ? await knex('invoice_charges')
-          .select('item_id', 'invoice_id', 'service_id', 'tax_region')
-          .whereIn('item_id', Array.from(chargeIds))
-          .andWhere({ tenant: batch.tenant })
-      : [];
-    const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
+    const charges =
+      chargeIds.size > 0
+        ? await knex('invoice_charges')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region')
+            .whereIn('item_id', Array.from(chargeIds))
+            .andWhere({ tenant: batch.tenant })
+        : [];
+    const chargesById = new Map(charges.map((charge: any) => [charge.item_id, charge]));
 
-    const invoices = invoiceIds.size > 0
-      ? await knex('invoices')
-          .select('invoice_id', 'client_id', 'tax_source')
-          .whereIn('invoice_id', Array.from(invoiceIds))
-          .andWhere({ tenant: batch.tenant })
-      : [];
-    const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
+    const invoices =
+      invoiceIds.size > 0
+        ? await knex('invoices')
+            .select('invoice_id', 'client_id', 'tax_source')
+            .whereIn('invoice_id', Array.from(invoiceIds))
+            .andWhere({ tenant: batch.tenant })
+        : [];
+    const invoiceTaxSourceById = new Map(invoices.map((row: any) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
     if (isQuickBooks) {
       for (const invoice of invoices) {
@@ -71,13 +72,14 @@ export class AccountingExportValidation {
       }
     }
 
-    const clients = clientIds.size > 0
-      ? await knex('clients')
-          .select('client_id', 'payment_terms')
-          .whereIn('client_id', Array.from(clientIds))
-          .andWhere({ tenant: batch.tenant })
-      : [];
-    const clientsById = new Map(clients.map((row) => [row.client_id, row]));
+    const clients =
+      clientIds.size > 0
+        ? await knex('clients')
+            .select('client_id', 'payment_terms')
+            .whereIn('client_id', Array.from(clientIds))
+            .andWhere({ tenant: batch.tenant })
+        : [];
+    const clientsById = new Map(clients.map((row: any) => [row.client_id, row]));
 
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
@@ -94,13 +96,16 @@ export class AccountingExportValidation {
       }
     }
 
-    const services = serviceIds.size > 0
-      ? await knex('service_catalog')
-          .select('service_id', 'service_name')
-          .whereIn('service_id', Array.from(serviceIds))
-          .andWhere({ tenant: batch.tenant })
-      : [];
-    const serviceNameById = new Map<string, string>(services.map((row: any) => [row.service_id, row.service_name]));
+    const services =
+      serviceIds.size > 0
+        ? await knex('service_catalog')
+            .select('service_id', 'service_name')
+            .whereIn('service_id', Array.from(serviceIds))
+            .andWhere({ tenant: batch.tenant })
+        : [];
+    const serviceNameById = new Map<string, string>(
+      services.map((row: any) => [row.service_id, row.service_name])
+    );
 
     for (const line of lines) {
       if (!line.invoice_charge_id) {
@@ -138,7 +143,9 @@ export class AccountingExportValidation {
             batch_id: batchId,
             line_id: line.line_id,
             code: 'missing_service_mapping',
-            message: serviceName ? `No mapping for service "${serviceName}"` : `No mapping for service ${charge.service_id}`,
+            message: serviceName
+              ? `No mapping for service "${serviceName}"`
+              : `No mapping for service ${charge.service_id}`,
             metadata: {
               service_id: charge.service_id,
               service_name: serviceName
@@ -231,7 +238,6 @@ export class AccountingExportValidation {
     const errors = await repo.listErrors(batchId);
     const openErrors = errors.filter((item) => item.resolution_state === 'open');
     const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
-    const service = await AccountingExportService.create();
-    await service.updateBatchStatus(batchId, { status: cleanedStatus });
+    await repo.updateBatchStatus(batchId, { status: cleanedStatus });
   }
 }

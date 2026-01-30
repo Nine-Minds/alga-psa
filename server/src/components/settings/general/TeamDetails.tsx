@@ -6,7 +6,7 @@ import { getAllUsers, getMultipleUsersWithRoles } from '@alga-psa/users/actions'
 import { ITeam, IUser, IRole, IUserWithRoles } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getUserAvatarUrlAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { Input } from '@alga-psa/ui/components/Input';
 
 interface TeamDetailsProps {
@@ -246,6 +246,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             value={selectedManagerId || ''}
             onValueChange={setSelectedManagerId}
             users={allUsers}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             labelStyle="none"
             buttonWidth="fit"
             size="sm"
@@ -269,6 +270,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             value={selectedUserId || ''}
             onValueChange={setSelectedUserId}
             users={allUsers.filter(user => !team.members.some(member => member.user_id === user.user_id))}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             labelStyle="none"
             buttonWidth="fit"
             size="sm"

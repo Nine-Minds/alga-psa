@@ -1668,6 +1668,7 @@ export default function ProjectDetail({
                   values={selectedAgentFilter}
                   onValuesChange={handleAgentFilterChange}
                   users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
@@ -1789,6 +1790,7 @@ export default function ProjectDetail({
                   values={selectedAgentFilter}
                   onValuesChange={handleAgentFilterChange}
                   users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}

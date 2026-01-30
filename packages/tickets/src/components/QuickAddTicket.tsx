@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { addTicket } from '../actions/ticketActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
@@ -690,6 +690,7 @@ export function QuickAddTicket({
                         ...user,
                         roles: []
                       }))}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                       buttonWidth="full"
                       size="sm"
                       placeholder="Assign To *"

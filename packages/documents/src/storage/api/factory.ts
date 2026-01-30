@@ -1,7 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { getConnection } from '@alga-psa/db/connection';
+import { createTenantKnex } from '@alga-psa/db';
 import { StorageService } from './service';
 import { StorageServiceError } from './errors';
 
@@ -16,7 +16,7 @@ export async function getStorageServiceForTenant(tenantId: string): Promise<Stor
     throw new StorageServiceError('VALIDATION_FAILED', 'tenantId is required');
   }
 
-  const knex = await getConnection();
+  const { knex } = await createTenantKnex(tenantId);
   const service = new StorageService(knex, tenantId);
 
   return {

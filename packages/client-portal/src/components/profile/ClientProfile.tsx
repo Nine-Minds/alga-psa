@@ -12,6 +12,7 @@ import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
 import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
+import { useContactAvatar, invalidateContactAvatar } from '@alga-psa/users/hooks';
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
@@ -23,7 +24,6 @@ import { PasswordChangeForm } from '@alga-psa/users/components';
 import { SessionManagement } from '@alga-psa/auth/components';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 import { updateUserLocaleAction, getUserLocaleAction } from '@alga-psa/users/actions';
@@ -40,7 +40,9 @@ export function ClientProfile() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
-  const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
+
+  // Use SWR hook for contact avatar - automatically syncs with header
+  const { avatarUrl: contactAvatarUrl } = useContactAvatar(user?.contact_id ?? undefined, user?.tenant);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -78,12 +80,6 @@ export function ClientProfile() {
         const inherited = await getInheritedLocaleAction();
         setCurrentEffectiveLocale(inherited.locale);
         setInheritedSource(inherited.source);
-
-        // If this is a client user with a linked contact, get the contact avatar URL
-        if (currentUser.user_type === 'client' && currentUser.contact_id) {
-          const contactAvatar = await getContactAvatarUrlAction(currentUser.contact_id, currentUser.tenant);
-          setContactAvatarUrl(contactAvatar);
-        }
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -215,7 +211,7 @@ export function ClientProfile() {
                   contactId={user.contact_id}
                   contactName={`${user.first_name} ${user.last_name}`}
                   avatarUrl={contactAvatarUrl}
-                  onAvatarChange={(newAvatarUrl) => setContactAvatarUrl(newAvatarUrl)}
+                  onAvatarChange={() => invalidateContactAvatar(user.contact_id!, user.tenant)}
                   userType="client"
                   userContactId={user.contact_id}
                   size="xl"

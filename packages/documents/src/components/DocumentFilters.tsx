@@ -5,6 +5,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { IUser } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -137,6 +138,7 @@ export default function DocumentFilters({
             onValueChange={(value: string) => {
               onFiltersChange({ ...filters, uploadedBy: value });
             }}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             placeholder={t('documents.filters.uploadedByPlaceholder', 'All Users')}
             buttonWidth="full"
             className="w-full"
