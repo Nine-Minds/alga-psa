@@ -10,20 +10,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Shield } from 'lucide-react';
-import type { EmailProvider } from '@alga-psa/integrations';
+import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
 import {
   createEmailProvider,
   updateEmailProvider,
   upsertEmailProvider,
-  initiateEmailOAuth,
-  getInboundTicketDefaults,
-  getGoogleIntegrationStatus,
-  useOAuthPopup,
-  BasicConfigCard,
-  ProcessingSettingsCard,
-  OAuthSection,
-  baseGmailProviderSchema
-} from '@alga-psa/integrations';
+} from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
+import { initiateEmailOAuth } from '@alga-psa/integrations/actions/email-actions/oauthActions';
+import { getGoogleIntegrationStatus } from '@alga-psa/integrations/actions/integrations/googleActions';
+import { useOAuthPopup } from '@alga-psa/integrations/components/email/providers/gmail/useOAuthPopup';
+import { BasicConfigCard } from '@alga-psa/integrations/components/email/providers/gmail/BasicConfigCard';
+import { ProcessingSettingsCard } from '@alga-psa/integrations/components/email/providers/gmail/ProcessingSettingsCard';
+import { OAuthSection } from '@alga-psa/integrations/components/email/providers/gmail/OAuthSection';
+import { baseGmailProviderSchema } from '@alga-psa/integrations/components/email/providers/gmail/schemas';
 
 type EEGmailProviderFormData = import('@alga-psa/integrations/components').BaseGmailProviderFormData;
 

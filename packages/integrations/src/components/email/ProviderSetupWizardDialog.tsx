@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { EmailProviderSelector } from './EmailProviderSelector';
-import { GmailProviderForm } from './GmailProviderForm';
-import { ImapProviderForm } from './ImapProviderForm';
-import { MicrosoftProviderForm } from './MicrosoftProviderForm';
+import {
+  GmailProviderForm,
+  ImapProviderForm,
+  MicrosoftProviderForm,
+} from '@alga-psa/integrations/email/providers/entry';
 import type { EmailProvider } from './types';
 
 interface ProviderSetupWizardDialogProps {
