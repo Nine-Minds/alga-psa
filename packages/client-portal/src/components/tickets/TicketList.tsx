@@ -518,21 +518,22 @@ export function TicketList() {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-4 w-full">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('tickets.title')}</h1>
-          <p className="text-gray-600">{t('tickets.subtitle')}</p>
+    <div className="bg-white shadow rounded-lg w-full">
+      <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{t('tickets.title')}</h1>
+            <p className="text-gray-600">{t('tickets.subtitle')}</p>
+          </div>
+          <Button
+            id="create-ticket-button"
+            className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-4 py-2"
+            onClick={() => setIsAddTicketOpen(true)}
+          >
+            {t('tickets.createButton')}
+          </Button>
         </div>
-        <Button
-          id="create-ticket-button"
-          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-4 py-2"
-          onClick={() => setIsAddTicketOpen(true)}
-        >
-          {t('tickets.createButton')}
-        </Button>
-      </div>
-      <div className="flex items-center gap-3 flex-nowrap mb-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <CustomSelect
             options={statusOptions}
             value={selectedStatus}
@@ -572,6 +573,8 @@ export function TicketList() {
             placeholder="All Priorities"
           />
 
+          <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
           <CategoryPicker
             categories={categories}
             selectedCategories={selectedCategories}
@@ -585,6 +588,8 @@ export function TicketList() {
             className="text-sm min-w-[200px]"
           />
 
+          <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
           <Input
             id="client-portal-search-tickets-input"
             placeholder={t('tickets.filters.search')}
@@ -593,26 +598,25 @@ export function TicketList() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="h-[38px] min-w-[200px] text-sm"
+            className="h-[38px] min-w-[350px] text-sm"
             containerClassName=""
           />
 
           <Button
-            id="reset-filters-button"
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={handleResetFilters}
-            className="whitespace-nowrap flex items-center gap-2 ml-auto"
+            className="text-gray-500 hover:text-gray-700 shrink-0"
+            id="reset-filters-button"
           >
-            <XCircle className="h-4 w-4" />
-            {t('tickets.resetFilters')}
+            <XCircle className="h-4 w-4 mr-1" />
+            Reset
           </Button>
         </div>
+      </div>
 
-      <h2 className="text-xl font-semibold mt-6 mb-2">
-        {t('tickets.title')}
-      </h2>
-
-      <div className="w-full overflow-x-auto">
+      <div className="p-6">
+        <div className="w-full overflow-x-auto">
         <div className="min-w-full">
           <DataTable
             id="client-portal-tickets-table"
@@ -625,6 +629,7 @@ export function TicketList() {
             onItemsPerPageChange={handlePageSizeChange}
             rowClassName={() => "hover:bg-gray-50"}
           />
+        </div>
         </div>
       </div>
 
