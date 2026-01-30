@@ -105,6 +105,11 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags]);
+
   // Pre-fetch tag permissions
   useTagPermissions(['ticket']);
 
