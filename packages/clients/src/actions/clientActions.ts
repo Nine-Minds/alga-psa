@@ -1564,7 +1564,7 @@ export const uploadClientLogo = withAuth(async (
     }
 
     // Invalidate cache for relevant paths - be more comprehensive
-    revalidatePath(`/client-portal/settings`);
+    revalidatePath(`/client-portal/client-settings`);
     revalidatePath(`/clients/${clientId}`);
     revalidatePath(`/msp/clients/${clientId}`);
     revalidatePath(`/msp/clients`);
@@ -1605,7 +1605,7 @@ export const deleteClientLogo = withAuth(async (
     }
 
     // Invalidate cache for relevant paths - be more comprehensive
-    revalidatePath(`/client-portal/settings`);
+    revalidatePath(`/client-portal/client-settings`);
     revalidatePath(`/clients/${clientId}`);
     revalidatePath(`/msp/clients/${clientId}`);
     revalidatePath(`/msp/clients`);

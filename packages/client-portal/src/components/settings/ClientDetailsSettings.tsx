@@ -62,6 +62,7 @@ export function ClientDetailsSettings() {
   const [clientDetails, setClientDetails] = useState<IClient | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -275,6 +276,7 @@ export function ClientDetailsSettings() {
           </div>
           <div>
             <ClientLocations
+              key={locationsRefreshKey}
               clientId={clientDetails.client_id}
               isEditing={false}
             />
@@ -293,9 +295,12 @@ export function ClientDetailsSettings() {
         </Button>
       </Flex>
 
-      <Dialog 
-        isOpen={isLocationsDialogOpen} 
-        onClose={() => setIsLocationsDialogOpen(false)}
+      <Dialog
+        isOpen={isLocationsDialogOpen}
+        onClose={() => {
+          setIsLocationsDialogOpen(false);
+          setLocationsRefreshKey(prev => prev + 1);
+        }}
         title={`${t('clientSettings.fields.manageLocations')} - ${clientDetails.client_name}`}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

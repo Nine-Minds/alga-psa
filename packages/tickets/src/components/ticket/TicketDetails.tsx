@@ -1037,7 +1037,16 @@ const handleClose = () => {
     const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            return await onBatchTicketUpdate(changes);
+            const success = await onBatchTicketUpdate(changes);
+            if (success) {
+                // Update local ticket state with the saved changes
+                setTicket(prevTicket => ({
+                    ...prevTicket,
+                    ...changes,
+                    updated_at: new Date().toISOString()
+                }));
+            }
+            return success;
         }
 
         // Fallback: save each change individually
