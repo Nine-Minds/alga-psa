@@ -41,6 +41,9 @@ pub struct UserInfo {
     pub user_type: String,
     #[serde(default, alias = "company_name")]
     pub client_name: String,
+    /// For client portal users, the client_id they are associated with
+    #[serde(default)]
+    pub client_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

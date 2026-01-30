@@ -69,6 +69,7 @@ interface types {
         user-email: string,
         user-name: string,
         user-type: string,
+        client-id: option<string>,
     }
 
     enum user-error {
