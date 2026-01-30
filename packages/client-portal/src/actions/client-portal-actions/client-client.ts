@@ -1,11 +1,8 @@
-// @ts-nocheck
-// TODO: Argument count issues with model methods
 "use server";
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
-import { getUserClientId } from '@alga-psa/users/actions';
 import Client from '@alga-psa/clients/models/client';
 import { getClientLogoUrl } from '@alga-psa/documents/lib/avatarUtils';
 import type { IClient, IUserWithRoles } from '@alga-psa/types';
@@ -19,23 +16,38 @@ export const getClientClient = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<IClient | null> => {
-  const clientId = await getUserClientId(user.user_id);
-  if (!clientId) {
-    return null; // No associated client
-  }
-
   const { knex } = await createTenantKnex();
 
-  // Client.getById enforces tenant scoping internally (WHERE tenant = currentTenant)
-  // which is required for Citus/pooled connections to avoid cross-shard scans.
-  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await Client.getById(trx, clientId);
+  // Use a single transaction to get the client ID and client data
+  // This avoids nested withAuth calls which can exhaust the connection pool
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Get client ID from contact if user is contact-based
+    let clientId: string | null = null;
+
+    if (user.contact_id) {
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .select('client_id')
+        .first();
+
+      clientId = contact?.client_id || null;
+    }
+
+    if (!clientId) {
+      return null; // No associated client
+    }
+
+    // Get the client data
+    return await Client.getById(trx, tenant, clientId);
   });
 
-  if (!client) return null;
+  if (!result) return null;
 
-  // Optionally include the logo URL for richer UI
-  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  // Get logo URL outside the transaction (it's a separate operation)
+  const logoUrl = await getClientLogoUrl(result.client_id, tenant);
 
-  return { ...client, logoUrl } as IClient;
+  return { ...result, logoUrl } as IClient;
 });

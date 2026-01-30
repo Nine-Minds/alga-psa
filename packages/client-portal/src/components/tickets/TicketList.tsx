@@ -311,13 +311,15 @@ export function TicketList() {
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
-        <Link
-          href={`/client-portal/tickets/${record.ticket_id}`}
-          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {value}
-        </Link>
+        <div className="overflow-hidden">
+          <Link
+            href={`/client-portal/tickets/${record.ticket_id}`}
+            className="font-medium hover:text-[rgb(var(--color-secondary-600))] block whitespace-normal break-words"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {value}
+          </Link>
+        </div>
       ),
     },
     {

@@ -5,14 +5,27 @@ import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { getUserClientId } from '@alga-psa/users/actions';
+import type { IUserWithRoles } from '@alga-psa/types';
 
-async function requireClientId(userId: string): Promise<string> {
-  const clientId = await getUserClientId(userId);
-  if (!clientId) {
-    throw new Error('No client associated with user');
-  }
-  return clientId;
+/**
+ * Get clientId from user's contact - avoids nested withAuth calls
+ */
+async function getClientIdFromUser(
+  knex: Knex | Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string
+): Promise<string | null> {
+  if (!user.contact_id) return null;
+
+  const contact = await knex('contacts')
+    .where({
+      contact_name_id: user.contact_id,
+      tenant
+    })
+    .select('client_id')
+    .first();
+
+  return contact?.client_id || null;
 }
 
 export interface IClientProfile {
@@ -195,7 +208,8 @@ export const getClientProfile = withAuth(async (user, { tenant }): Promise<IClie
     };
   } else {
     // For non-client users, use the original clientId logic
-    const clientId = await requireClientId(user.user_id);
+    const clientId = await getClientIdFromUser(knex, user, tenant);
+    if (!clientId) throw new Error('No client associated with user');
 
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('clients as c')
@@ -230,9 +244,10 @@ export const getClientProfile = withAuth(async (user, { tenant }): Promise<IClie
 });
 
 export const updateClientProfile = withAuth(async (user, { tenant }, profile: IClientProfile): Promise<{ success: boolean }> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -254,9 +269,10 @@ export const updateClientProfile = withAuth(async (user, { tenant }, profile: IC
 });
 
 export const getPaymentMethods = withAuth(async (user, { tenant }): Promise<PaymentMethod[]> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   const methods = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('payment_methods')
@@ -284,9 +300,10 @@ export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
   token: string;
   setDefault: boolean;
 }): Promise<{ success: boolean }> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   // Start a transaction
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -322,9 +339,10 @@ export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
 });
 
 export const removePaymentMethod = withAuth(async (user, { tenant }, id: string): Promise<{ success: boolean }> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('payment_methods')
@@ -343,9 +361,10 @@ export const removePaymentMethod = withAuth(async (user, { tenant }, id: string)
 });
 
 export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: string): Promise<{ success: boolean }> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Unset any existing default
@@ -390,9 +409,10 @@ async function processPaymentToken(token: string) {
 }
 
 export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[]> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
@@ -432,9 +452,10 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[]>
 });
 
 export const getBillingCycles = withAuth(async (user, { tenant }): Promise<BillingCycle[]> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   const cycles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_contract_lines')
@@ -461,9 +482,10 @@ export const getBillingCycles = withAuth(async (user, { tenant }): Promise<Billi
 });
 
 export const getActiveServices = withAuth(async (user, { tenant }): Promise<Service[]> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   const now = new Date().toISOString();
 
@@ -669,9 +691,10 @@ export interface ServicePlan {
 }
 
 export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: string): Promise<ServicePlan[]> => {
-  const clientId = await requireClientId(user.user_id);
-
   const { knex } = await createTenantKnex();
+
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) throw new Error('No client associated with user');
 
   // Get current service details
   const currentService = await withTransaction(knex, async (trx: Knex.Transaction) => {

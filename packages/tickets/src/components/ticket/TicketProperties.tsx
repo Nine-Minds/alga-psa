@@ -11,7 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon, Building, Users } from 'lucide-react';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -285,7 +285,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   return (
     <div className="flex-shrink-0 space-y-6">
       <div {...withDataAutomationId({ id: `${id}-time-entry` })} className={`${styles['card']} p-6 space-y-4`}>
-        <h2 className={`${styles['panel-header']}`}>Time Entry</h2>
+        <h2 className={`${styles['panel-header']}`}>
+            <Clock className="inline-block w-5 h-5 mr-2" />
+            Time Entry
+          </h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span>Ticket Timer - #{ticket.ticket_number}</span>
@@ -347,7 +350,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       </div>
 
       <div {...withDataAutomationId({ id: `${id}-contact-info` })} className={`${styles['card']} p-6 space-y-4`}>
-        <h2 className={`${styles['panel-header']}`}>Contact Info</h2>
+        <h2 className={`${styles['panel-header']}`}>
+            <Building className="inline-block w-5 h-5 mr-2" />
+            Contact Info
+          </h2>
         <div className="space-y-2">
           <div>
             <h5 className="font-bold">Contact</h5>
@@ -621,7 +627,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
       <div className={`${styles['card']} p-6 space-y-4`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`${styles['panel-header']}`}>Agent team</h2>
+          <h2 className={`${styles['panel-header']}`}>
+            <Users className="inline-block w-5 h-5 mr-2" />
+            Agent team
+          </h2>
         </div>
         <div className="space-y-4">
           {/* Primary Agent */}

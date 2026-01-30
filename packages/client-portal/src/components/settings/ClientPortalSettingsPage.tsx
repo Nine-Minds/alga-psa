@@ -66,8 +66,8 @@ export default function ClientPortalSettingsPage() {
     }
 
     const newUrl = currentSearchParams.toString()
-      ? `/client-portal/settings?${currentSearchParams.toString()}`
-      : '/client-portal/settings';
+      ? `/client-portal/client-settings?${currentSearchParams.toString()}`
+      : '/client-portal/client-settings';
 
     window.history.pushState({}, '', newUrl);
   }, [labelToSlugMap]);
