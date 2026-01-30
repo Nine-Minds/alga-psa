@@ -5,12 +5,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from "next-auth/react";
 import { LogOut, User, CreditCard } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@alga-psa/ui/components/DropdownMenu';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getCurrentUser } from '@alga-psa/users/actions';
+import { useContactAvatar } from '@alga-psa/users/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
-import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
 import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBranding } from '@alga-psa/tenancy/components';
@@ -30,11 +35,12 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [hasBillingAccess, setHasBillingAccess] = useState(false);
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [hasAccountAccess, setHasAccountAccess] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslation('clientPortal');
   const { branding } = useBranding();
-  
+
+  // Use SWR hook for contact avatar - automatically updates when invalidated
+  const { avatarUrl } = useContactAvatar(userData?.contact_id ?? undefined, userData?.tenant);
 
   const handleSignOut = async () => {
     // Get tenant slug to include in callback URL
@@ -53,15 +59,6 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
     console.log('Signing out...');
   };
 
-  const fetchAvatarUrl = async (contactId: string, tenant: string) => {
-    try {
-      const contactAvatarUrl = await getContactAvatarUrlAction(contactId, tenant);
-      setAvatarUrl(contactAvatarUrl);
-    } catch (error) {
-      console.error('Error fetching contact avatar:', error);
-    }
-  };
-
   useEffect(() => {
     const fetchUserData = async () => {
       const user = await getCurrentUser();
@@ -74,26 +71,11 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
         setHasBillingAccess(permissions.hasBillingAccess);
         setHasUserManagementAccess(permissions.hasUserManagementAccess);
         setHasAccountAccess(permissions.hasAccountAccess);
-
-        if (user.contact_id) {
-          await fetchAvatarUrl(user.contact_id, user.tenant);
-        }
       }
     };
 
     fetchUserData();
   }, []);
-
-  // Poll for avatar changes every 5 seconds when the component is visible
-  useEffect(() => {
-    if (!userData?.contact_id || !userData?.tenant) return;
-
-    const intervalId = setInterval(() => {
-      fetchAvatarUrl(userData.contact_id!, userData.tenant);
-    }, 5000); // Check every 5 seconds
-
-    return () => clearInterval(intervalId);
-  }, [userData?.contact_id, userData?.tenant]);
 
   return (
     <DrawerProvider>
@@ -191,8 +173,8 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             <div className="flex items-center gap-2">
               <NotificationBell />
               <div className="flex items-center">
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <button className="relative" aria-label="User menu">
                       <ContactAvatar
                         contactId={userData?.contact_id || ''}
@@ -202,40 +184,34 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                       />
                       <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
                     </button>
-                  </DropdownMenu.Trigger>
+                  </DropdownMenuTrigger>
 
-                  <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    className="min-w-[220px] bg-subMenu-bg rounded-md p-1 shadow-md"
-                    sideOffset={5}
-                    align="end"
-                  >
-                      <DropdownMenu.Item
-                        className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                        onSelect={() => router.push('/client-portal/profile')}
+                  <DropdownMenuContent align="end" className="min-w-[220px]">
+                    <DropdownMenuItem
+                      id="client-profile-menu-item"
+                      onSelect={() => router.push('/client-portal/profile')}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      {t('nav.profile')}
+                    </DropdownMenuItem>
+                    {hasAccountAccess && (
+                      <DropdownMenuItem
+                        id="client-account-menu-item"
+                        onSelect={() => router.push('/client-portal/account')}
                       >
-                        <User className="mr-2 h-3.5 w-3.5" />
-                        <span>{t('nav.profile')}</span>
-                      </DropdownMenu.Item>
-                      {hasAccountAccess && (
-                        <DropdownMenu.Item
-                          className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                          onSelect={() => router.push('/client-portal/account')}
-                        >
-                          <CreditCard className="mr-2 h-3.5 w-3.5" />
-                          <span>{t('nav.account')}</span>
-                        </DropdownMenu.Item>
-                      )}
-                      <DropdownMenu.Item
-                        className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                        onSelect={handleSignOut}
-                      >
-                        <LogOut className="mr-2 h-3.5 w-3.5" />
-                        <span>{t('nav.signOut')}</span>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        {t('nav.account')}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      id="client-sign-out-menu-item"
+                      onSelect={handleSignOut}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t('nav.signOut')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>

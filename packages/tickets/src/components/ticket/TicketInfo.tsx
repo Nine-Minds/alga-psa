@@ -13,6 +13,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '../PrioritySelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
@@ -709,6 +710,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
                 onValueChange={(value) => handlePendingChange('assigned_to', value)}
                 users={usersList}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 labelStyle="none"
                 buttonWidth="fit"
                 size="sm"

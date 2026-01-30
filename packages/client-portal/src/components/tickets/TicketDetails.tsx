@@ -5,7 +5,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
-import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests } from '@alga-psa/tickets/components';
+import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
@@ -14,7 +14,8 @@ import {
   addClientTicketComment,
   updateClientTicketComment,
   deleteClientTicketComment,
-  updateTicketStatus
+  updateTicketStatus,
+  getAppointmentRequestsByTicketId
 } from '@alga-psa/client-portal/actions';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
@@ -77,7 +78,51 @@ export function TicketDetails({
       styles: {}
     }]
   }]);
-  // No component-level pending state needed; we’ll keep optimistic data within the save handler scope
+  // No component-level pending state needed; we'll keep optimistic data within the save handler scope
+
+  // State for appointment requests
+  const [appointments, setAppointments] = useState<ITicketAppointmentRequest[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+
+  // Fetch appointment requests for this ticket
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!ticketId) return;
+      // In dialog mode, only load when open
+      if (!asStandalone && !isOpen) return;
+
+      setAppointmentsLoading(true);
+      try {
+        const result = await getAppointmentRequestsByTicketId(ticketId);
+        if (result.success && result.data) {
+          // Map the data to the expected interface
+          const mappedAppointments: ITicketAppointmentRequest[] = result.data.map((appt: any) => ({
+            appointment_request_id: appt.appointment_request_id,
+            service_name: appt.service_name,
+            status: appt.status,
+            requested_date: appt.requested_date,
+            requested_time: appt.requested_time,
+            requested_duration: appt.requested_duration,
+            preferred_assigned_user_name: appt.preferred_technician_first_name && appt.preferred_technician_last_name
+              ? `${appt.preferred_technician_first_name} ${appt.preferred_technician_last_name}`
+              : undefined,
+            approved_at: appt.approved_at,
+            approver_first_name: appt.approver_first_name,
+            approver_last_name: appt.approver_last_name,
+            declined_reason: appt.declined_reason,
+            is_authenticated: appt.is_authenticated
+          }));
+          setAppointments(mappedAppointments);
+        }
+      } catch (err) {
+        console.error('Failed to fetch appointment requests:', err);
+      } finally {
+        setAppointmentsLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [ticketId, isOpen, asStandalone]);
 
   // Fetch current user on mount (for comment authorship)
   useEffect(() => {
@@ -601,6 +646,8 @@ export function TicketDetails({
             <div>
               <TicketAppointmentRequests
                 ticketId={ticket.ticket_id}
+                appointments={appointments}
+                isLoading={appointmentsLoading}
               />
             </div>
           )}

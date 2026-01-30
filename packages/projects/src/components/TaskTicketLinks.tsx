@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
@@ -611,6 +611,7 @@ export default function TaskTicketLinks({
                             value={selectedUser}
                             onValueChange={setSelectedUser}
                             users={users}
+                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                             size="sm"
                           />
                         </div>

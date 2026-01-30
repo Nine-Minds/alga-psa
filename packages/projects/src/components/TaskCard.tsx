@@ -10,6 +10,7 @@ import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bu
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { findPriorityById } from '@alga-psa/reference-data/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from '../actions/projectTaskActions';
 import { TagList } from '@alga-psa/ui/components';
@@ -364,6 +365,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             users={users.filter(u =>
               !displayResources.some(r => r.additional_user_id === u.user_id)
             )}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
           />
         </div>
         {displayResources.length > 0 && (

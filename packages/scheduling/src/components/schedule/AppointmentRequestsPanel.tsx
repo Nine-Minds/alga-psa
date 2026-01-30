@@ -13,7 +13,7 @@ import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
-import { getAllUsersBasic, getCurrentUser } from '@alga-psa/users/actions';
+import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   getAppointmentRequests,
@@ -526,6 +526,7 @@ export default function AppointmentRequestsPanel({
                           users={technicians}
                           value={assignedTechnicianId}
                           onValueChange={setAssignedTechnicianId}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                           placeholder="Select technician"
                           userTypeFilter="internal"
                           buttonWidth="full"

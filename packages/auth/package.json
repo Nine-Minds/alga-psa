@@ -7,71 +7,71 @@
   "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
     "./actions": {
-      "import": "./dist/actions/index.js",
+      "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
     "./session": {
-      "import": "./dist/lib/session.js",
+      "import": "./src/lib/session.ts",
       "types": "./src/lib/session.ts"
     },
     "./rbac": {
-      "import": "./dist/lib/rbac.js",
+      "import": "./src/lib/rbac.ts",
       "types": "./src/lib/rbac.ts"
     },
     "./withAuth": {
-      "import": "./dist/lib/withAuth.js",
+      "import": "./src/lib/withAuth.ts",
       "types": "./src/lib/withAuth.ts"
     },
     "./apiAuth": {
-      "import": "./dist/lib/apiAuth.js",
+      "import": "./src/lib/apiAuth.ts",
       "types": "./src/lib/apiAuth.ts"
     },
     "./deviceFingerprint": {
-      "import": "./dist/lib/deviceFingerprint.js",
+      "import": "./src/lib/deviceFingerprint.ts",
       "types": "./src/lib/deviceFingerprint.ts"
     },
     "./ipAddress": {
-      "import": "./dist/lib/ipAddress.js",
+      "import": "./src/lib/ipAddress.ts",
       "types": "./src/lib/ipAddress.ts"
     },
     "./geolocation": {
-      "import": "./dist/lib/geolocation.js",
+      "import": "./src/lib/geolocation.ts",
       "types": "./src/lib/geolocation.ts"
     },
     "./twoFactorHelpers": {
-      "import": "./dist/lib/twoFactorHelpers.js",
+      "import": "./src/lib/twoFactorHelpers.ts",
       "types": "./src/lib/twoFactorHelpers.ts"
     },
     "./nextAuthOptions": {
-      "import": "./dist/lib/nextAuthOptions.js",
+      "import": "./src/lib/nextAuthOptions.ts",
       "types": "./src/lib/nextAuthOptions.ts"
     },
     "./getCurrentUser": {
-      "import": "./dist/lib/getCurrentUser.js",
+      "import": "./src/lib/getCurrentUser.ts",
       "types": "./src/lib/getCurrentUser.ts"
     },
     "./client": {
-      "import": "./dist/client.js",
+      "import": "./src/client.ts",
       "types": "./src/client.ts"
     },
     "./components": {
-      "import": "./dist/components/index.js",
+      "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"
     },
     "./types/next-auth": {
-      "import": "./dist/types/next-auth.js",
+      "import": "./src/types/next-auth.ts",
       "types": "./src/types/next-auth.ts"
     },
     "./nextauth/auth": {
-      "import": "./dist/nextauth/auth.js",
+      "import": "./src/nextauth/auth.ts",
       "types": "./src/nextauth/auth.ts"
     },
     "./nextauth/edge-auth": {
-      "import": "./dist/nextauth/edge-auth.js",
+      "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"
     }
   },

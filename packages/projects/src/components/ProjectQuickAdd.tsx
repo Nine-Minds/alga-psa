@@ -18,7 +18,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
 import { IContact } from '@alga-psa/types';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 import { QuickAddTagPicker } from '@alga-psa/tags/components';
@@ -261,6 +261,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   value={selectedUserId || ''}
                   onValueChange={setSelectedUserId}
                   users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   labelStyle="none"
                   buttonWidth="full"
                   size="sm"

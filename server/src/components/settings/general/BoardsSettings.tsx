@@ -12,7 +12,7 @@ import {
   deleteBoard
 } from '@alga-psa/tickets/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { IUser } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -654,6 +654,7 @@ const BoardsSettings: React.FC = () => {
                 value={formData.default_assigned_to}
                 onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value })}
                 users={users}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 userTypeFilter="internal"
                 placeholder="None (manual assignment required)"
                 buttonWidth="full"

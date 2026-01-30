@@ -253,15 +253,59 @@ const ProjectModel = {
 
       const phaseIds = phases.map((phase): string => phase.phase_id);
 
+      // Build subquery for task IDs in this project's phases
+      const taskIdsSubquery = trx('project_tasks')
+        .select('task_id')
+        .whereIn('phase_id', phaseIds)
+        .andWhere('tenant', tenant);
+
+      // Check for time entries linked to tasks in this project
+      if (phaseIds.length > 0) {
+        const timeEntriesCount = await trx('time_entries')
+          .whereIn('work_item_id', taskIdsSubquery)
+          .andWhere('work_item_type', 'project_task')
+          .andWhere('tenant', tenant)
+          .count('* as count')
+          .first();
+
+        if (timeEntriesCount && Number(timeEntriesCount.count) > 0) {
+          throw new Error(
+            `Cannot delete project: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this project.`
+          );
+        }
+      }
+
+      // Delete task dependencies (both predecessor and successor references)
+      if (phaseIds.length > 0) {
+        await trx('project_task_dependencies')
+          .where(function() {
+            this.whereIn('predecessor_task_id', taskIdsSubquery)
+              .orWhereIn('successor_task_id', taskIdsSubquery);
+          })
+          .andWhere('tenant', tenant)
+          .del();
+      }
+
+      // Delete task comments
+      if (phaseIds.length > 0) {
+        await trx('project_task_comments')
+          .whereIn('task_id', taskIdsSubquery)
+          .andWhere('tenant', tenant)
+          .del();
+      }
+
+      // Delete task resources (additional assignees)
+      if (phaseIds.length > 0) {
+        await trx('task_resources')
+          .whereIn('task_id', taskIdsSubquery)
+          .andWhere('tenant', tenant)
+          .del();
+      }
+
       // Delete checklist items for all tasks in all phases
       if (phaseIds.length > 0) {
         await trx('task_checklist_items')
-          .whereIn('task_id',
-            trx('project_tasks')
-              .select('task_id')
-              .whereIn('phase_id', phaseIds)
-              .andWhere('tenant', tenant)
-          )
+          .whereIn('task_id', taskIdsSubquery)
           .andWhere('tenant', tenant)
           .del();
       }
@@ -441,14 +485,50 @@ const ProjectModel = {
     const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
 
     try {
-      // First, delete all checklist items for tasks in this phase
+      // Build subquery for task IDs in this phase
+      const taskIdsSubquery = trx('project_tasks')
+        .select('task_id')
+        .where('phase_id', phaseId)
+        .andWhere('tenant', tenant);
+
+      // Check for time entries linked to tasks in this phase
+      const timeEntriesCount = await trx('time_entries')
+        .whereIn('work_item_id', taskIdsSubquery)
+        .andWhere('work_item_type', 'project_task')
+        .andWhere('tenant', tenant)
+        .count('* as count')
+        .first();
+
+      if (timeEntriesCount && Number(timeEntriesCount.count) > 0) {
+        throw new Error(
+          `Cannot delete phase: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this phase.`
+        );
+      }
+
+      // Delete task dependencies (both predecessor and successor references)
+      await trx('project_task_dependencies')
+        .where(function() {
+          this.whereIn('predecessor_task_id', taskIdsSubquery)
+            .orWhereIn('successor_task_id', taskIdsSubquery);
+        })
+        .andWhere('tenant', tenant)
+        .del();
+
+      // Delete task comments
+      await trx('project_task_comments')
+        .whereIn('task_id', taskIdsSubquery)
+        .andWhere('tenant', tenant)
+        .del();
+
+      // Delete task resources (additional assignees)
+      await trx('task_resources')
+        .whereIn('task_id', taskIdsSubquery)
+        .andWhere('tenant', tenant)
+        .del();
+
+      // Delete all checklist items for tasks in this phase
       await trx('task_checklist_items')
-        .whereIn('task_id',
-          trx('project_tasks')
-            .select('task_id')
-            .where('phase_id', phaseId)
-            .andWhere('tenant', tenant)
-        )
+        .whereIn('task_id', taskIdsSubquery)
         .andWhere('tenant', tenant)
         .del();
 

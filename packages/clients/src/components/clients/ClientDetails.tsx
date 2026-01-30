@@ -6,6 +6,7 @@ import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
@@ -795,6 +796,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   value={editedClient.account_manager_id || ''}
                   onValueChange={(value) => handleFieldChange('account_manager_id', value)}
                   users={internalUsers}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   disabled={isLoadingUsers}
                   placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
                   buttonWidth="full"
