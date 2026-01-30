@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import {
     ITicket,
     IComment,
@@ -66,7 +67,6 @@ import {
     searchEligibleChildTicketsAction,
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
-
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -268,7 +268,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
     // NOTE: ITIL categories are now managed through the unified category system
 
-    const { openDrawer, closeDrawer } = useDrawer();
+    const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
@@ -542,23 +542,42 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleContactClick = () => {
-        if (contactInfo && client) {
-            openDrawer(
-                <div className="p-4 space-y-3">
-                    <div className="text-lg font-semibold">{contactInfo.full_name}</div>
-                    {contactInfo.email ? <div className="text-sm text-gray-600">{contactInfo.email}</div> : null}
-                    {contactInfo.phone_number ? <div className="text-sm text-gray-600">{contactInfo.phone_number}</div> : null}
-                    <Button
-                        id="ticket-details-open-contact-client"
-                        type="button"
-                        variant="outline"
-                        onClick={() => window.open(`/msp/clients/${client.client_id}`, '_blank', 'noopener,noreferrer')}
-                    >
-                        Open Client <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                </div>
+    const handleContactClick = async () => {
+        const contactNameId = ticket.contact_name_id || contactInfo?.contact_name_id;
+        if (!contactNameId) {
+            openDrawer(<div className="text-sm text-gray-600">No contact selected.</div>);
+            return;
+        }
+
+        openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+        try {
+            const contact = await getContactByContactNameId(contactNameId);
+            if (!contact) {
+                replaceDrawer(<div className="p-4 text-sm text-gray-600">Contact not found.</div>);
+                return;
+            }
+
+            const minimalClients =
+                clients.length > 0 ? clients : client ? [client] : [];
+
+            replaceDrawer(
+                <ContactDetailsView
+                    id={`${id}-contact-details`}
+                    initialContact={contact}
+                    clients={minimalClients}
+                    isInDrawer={true}
+                    userId={userId}
+                    quickView={true}
+                    showDocuments={false}
+                    showInteractions={true}
+                    clientReadOnly={true}
+                />,
+                undefined,
+                '900px'
             );
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to load contact.';
+            replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
         }
     };
 

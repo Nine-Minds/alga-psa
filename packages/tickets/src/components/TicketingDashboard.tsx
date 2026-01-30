@@ -33,13 +33,14 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useIntervalTracking } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
-import Drawer from '@alga-psa/ui/components/Drawer';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { ExternalLink } from 'lucide-react';
+import { useDrawer } from '@alga-psa/ui';
+import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import { getClientById } from '../actions/clientLookupActions';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -114,6 +115,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(user || null);
+  const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
@@ -179,10 +181,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
-
-  // Quick View state
-  const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -411,17 +409,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setDeleteError(null);
   };
   
-  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
-  
-  const onQuickViewClient = async (clientId: string) => {
-    // First try to find the client in our existing data
-    const client = initialClients.find(c => c.client_id === clientId);
-    if (client) {
-      setQuickViewClient(client);
-      setQuickViewClientId(clientId);
-      setIsQuickViewOpen(true);
+  const onQuickViewClient = useCallback(async (clientId: string) => {
+    if (!clientId) return;
+
+    openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+    try {
+      const client = await getClientById(clientId);
+      if (!client) {
+        replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+        return;
+      }
+
+      replaceDrawer(
+        <ClientDetails
+          id={`${id}-client-details`}
+          client={client}
+          documents={[]}
+          contacts={[]}
+          isInDrawer={true}
+          quickView={true}
+        />,
+        undefined,
+        '900px'
+      );
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to load client.';
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
     }
-  };
+  }, [id, openDrawer, replaceDrawer]);
   
   // Initialize currentUser state from props if available
   useEffect(() => {
@@ -1599,30 +1614,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </DialogFooter>
       </Dialog>
-      
-      {/* Client Quick View Drawer */}
-      <Drawer
-        isOpen={isQuickViewOpen}
-        onClose={() => {
-          setIsQuickViewOpen(false);
-          setQuickViewClientId(null);
-          setQuickViewClient(null);
-        }}
-      >
-	        {quickViewClient ? (
-	          <div className="p-4 space-y-3">
-	            <div className="text-lg font-semibold">{quickViewClient.client_name}</div>
-	            <Button
-	              id={`${id}-quickview-open-client`}
-	              type="button"
-	              variant="outline"
-	              onClick={() => window.open(`/msp/clients/${quickViewClient.client_id}`, '_blank', 'noopener,noreferrer')}
-	            >
-	              Open Client <ExternalLink className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        ) : null}
-      </Drawer>
     </ReflectionContainer>
   );
 };

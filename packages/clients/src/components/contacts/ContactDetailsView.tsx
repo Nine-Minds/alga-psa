@@ -35,6 +35,8 @@ interface ContactDetailsViewProps {
   documents?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
   quickView?: boolean;
+  showDocuments?: boolean;
+  showInteractions?: boolean;
   clientReadOnly?: boolean; // When true, prevents editing the client (e.g., when opened from a ticket)
 }
 
@@ -71,6 +73,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   documents: initialDocuments = [],
   onDocumentCreated,
   quickView = false,
+  showDocuments = !quickView,
+  showInteractions = !quickView,
   clientReadOnly = false
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
@@ -268,7 +272,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               <Heading size="6">{contact.full_name}</Heading>
             </div>
             <div className="flex items-center space-x-2">
-              {!quickView && (
+              {(!quickView || isInDrawer) && (
                 <Button
                   id={`${id}-back-button`}
                   onClick={goBack}
@@ -381,7 +385,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </tbody>
         </table>
 
-        {!quickView && userId && (
+        {showDocuments && userId && (
           <div className="mt-6">
             <Heading size="4" className="mb-4">Documents</Heading>
             <Documents
@@ -396,7 +400,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </div>
         )}
 
-        {!quickView && (
+        {showInteractions && (
           <div className="mt-6">
             <InteractionsFeed 
               id={`${id}-interactions`}
