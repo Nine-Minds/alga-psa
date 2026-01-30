@@ -1,0 +1,23 @@
+{
+  "name": "@alga-psa/msp-composition",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/msp-composition/src",
+  "projectType": "library",
+  "tags": ["scope:msp-composition", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/msp-composition/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}
+

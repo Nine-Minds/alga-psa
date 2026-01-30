@@ -2,7 +2,7 @@ import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimiz
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import type { ITicketListFilters } from '@alga-psa/types';
-import TicketsPageClient from './TicketsPageClient';
+import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';
 
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -165,7 +165,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
-        <TicketsPageClient
+        <MspTicketsPageClient
           consolidatedData={consolidatedData}
           currentUser={user!}
           initialFilters={initialFilters}
