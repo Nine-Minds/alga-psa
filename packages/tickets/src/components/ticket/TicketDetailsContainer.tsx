@@ -51,12 +51,14 @@ interface TicketDetailsContainerProps {
   };
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   associatedAssets?: React.ReactNode;
+  renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
 }
 
 export default function TicketDetailsContainer({
   ticketData,
   surveySummary = null,
   associatedAssets = null,
+  renderContactDetails,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -241,6 +243,7 @@ export default function TicketDetailsContainer({
             isSubmitting={isSubmitting}
             surveySummary={surveySummary}
             associatedAssets={associatedAssets}
+            renderContactDetails={renderContactDetails}
           />
         </Suspense>
       </div>

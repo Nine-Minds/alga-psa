@@ -147,6 +147,12 @@
       "@alga-psa/tickets/*": [
         "../packages/tickets/src/*"
       ],
+      "@alga-psa/msp-composition": [
+        "../packages/msp-composition/src"
+      ],
+      "@alga-psa/msp-composition/*": [
+        "../packages/msp-composition/src/*"
+      ],
       "@alga-psa/scheduling": [
         "../packages/scheduling/src"
       ],

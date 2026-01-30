@@ -3,7 +3,7 @@
   "publisher": "Alga",
   "version": "0.1.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["cap:invoice.manual.create", "cap:log.emit", "cap:context.read"],
+  "capabilities": ["cap:invoice.manual.create", "cap:log.emit", "cap:context.read", "cap:ui.proxy"],
   "ui": {
     "type": "iframe",
     "entry": "ui/index.html",

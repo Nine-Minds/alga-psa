@@ -4,8 +4,8 @@ import { getCurrentUser } from '@alga-psa/users/actions';
 import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
-import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
+import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
 
 interface TicketDetailsPageProps {
   params: Promise<{
@@ -48,7 +48,7 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
     return (
       <div id="ticket-details-container" className="bg-gray-100">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <TicketDetailsContainer
+          <MspTicketDetailsContainerClient
             ticketData={ticketData}
             surveySummary={surveySummary ?? null}
             associatedAssets={associatedAssets}

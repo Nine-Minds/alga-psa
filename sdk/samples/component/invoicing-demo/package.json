@@ -3,15 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "rimraf dist tmp bundle.tar.zst bundle.tar.zst.sha256",
-    "build:js": "esbuild src/handler.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=dist/js/handler.js",
-    "build:component": "jco componentize dist/js/handler.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
-    "build": "npm run clean && npm run build:js && npm run build:component",
+    "clean": "rimraf dist tmp bundle.tar.zst bundle.tar.zst.sha256 ui/main.js ui/main.js.map",
+    "build:js": "esbuild src/index.ts --bundle --format=esm --platform=neutral --target=es2022 --external:alga:extension/* --outfile=dist/js/index.js",
+    "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
+    "build:ui": "esbuild ui/main.ts --bundle --format=esm --platform=browser --target=es2020 --minify --outfile=ui/main.js",
+    "build": "npm run clean && npm run build:js && npm run build:component && npm run build:ui",
     "postbuild": "node ./scripts/postbuild.mjs",
     "pack": "node ./scripts/pack.mjs",
     "test": "vitest"
   },
   "dependencies": {
+    "@alga-psa/extension-iframe-sdk": "^0.1.0",
     "@alga-psa/extension-runtime": "^0.2.0",
     "@mongodb-js/zstd": "^7.0.0"
   },

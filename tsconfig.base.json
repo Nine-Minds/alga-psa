@@ -64,6 +64,8 @@
       "@alga-psa/projects/*": ["packages/projects/src/*"],
       "@alga-psa/tickets": ["packages/tickets/src"],
       "@alga-psa/tickets/*": ["packages/tickets/src/*"],
+      "@alga-psa/msp-composition": ["packages/msp-composition/src"],
+      "@alga-psa/msp-composition/*": ["packages/msp-composition/src/*"],
       "@alga-psa/scheduling": ["packages/scheduling/src"],
       "@alga-psa/scheduling/*": ["packages/scheduling/src/*"],
       "@alga-psa/workflows": ["packages/workflows/src"],

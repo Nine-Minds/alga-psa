@@ -114,6 +114,7 @@ static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("STORAGE_API_BASE_URL")
         .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
         .ok()
+        .map(normalize_internal_base_url)
 });
 static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("RUNNER_STORAGE_API_TOKEN")
@@ -126,6 +127,7 @@ static SCHEDULER_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("STORAGE_API_BASE_URL")
         .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
         .ok()
+        .map(normalize_internal_base_url)
 });
 
 // Invoicing API uses the same base URL and token as storage/scheduler
@@ -133,7 +135,22 @@ static INVOICING_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("STORAGE_API_BASE_URL")
         .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
         .ok()
+        .map(normalize_internal_base_url)
 });
+
+/// Normalize the configured base URL for runner → server internal calls.
+///
+/// We expect the base to be an origin (e.g. `http://host.docker.internal:3000`).
+/// If the base is accidentally configured with a trailing `/api`, the runner would
+/// generate paths like `/api/api/internal/...`, which then get blocked by API-key
+/// middleware. Strip a terminal `/api` to make this configuration more forgiving.
+fn normalize_internal_base_url(raw: String) -> String {
+    let trimmed = raw.trim().trim_end_matches('/').to_string();
+    match trimmed.strip_suffix("/api") {
+        Some(prefix) if !prefix.is_empty() => prefix.to_string(),
+        _ => trimmed,
+    }
+}
 
 pub(crate) fn add_component_host(linker: &mut Linker<HostState>) -> anyhow::Result<()> {
     component::Runner::add_to_linker::<HostState, HasSelf<HostState>>(linker, |state| state)
@@ -2036,20 +2053,33 @@ impl invoicing::HostWithStore for HasSelf<HostState> {
                 .items
                 .iter()
                 .map(|item| {
-                    let discount_type = item.discount_type.as_ref().map(|dt| match dt {
-                        types::DiscountType::Percentage => "percentage",
-                        types::DiscountType::Fixed => "fixed",
-                    });
-                    serde_json::json!({
-                        "serviceId": item.service_id,
-                        "quantity": item.quantity,
-                        "description": item.description,
-                        "rate": item.rate,
-                        "isDiscount": item.is_discount,
-                        "discountType": discount_type,
-                        "appliesToItemId": item.applies_to_item_id,
-                        "appliesToServiceId": item.applies_to_service_id,
-                    })
+                    // IMPORTANT: omit absent optional fields entirely.
+                    // Older server-side validators treat `null` as "present", which can turn a normal
+                    // line item into a validation error. Using explicit inserts avoids emitting nulls.
+                    let mut m = Map::new();
+                    m.insert("serviceId".into(), Value::String(item.service_id.to_string()));
+                    m.insert("quantity".into(), Value::Number(serde_json::Number::from_f64(item.quantity).unwrap_or_else(|| serde_json::Number::from(0))));
+                    m.insert("description".into(), Value::String(item.description.to_string()));
+                    m.insert("rate".into(), Value::Number(serde_json::Number::from_f64(item.rate).unwrap_or_else(|| serde_json::Number::from(0))));
+
+                    if let Some(is_discount) = item.is_discount {
+                        m.insert("isDiscount".into(), Value::Bool(is_discount));
+                    }
+                    if let Some(dt) = item.discount_type.as_ref() {
+                        let v = match dt {
+                            types::DiscountType::Percentage => "percentage",
+                            types::DiscountType::Fixed => "fixed",
+                        };
+                        m.insert("discountType".into(), Value::String(v.to_string()));
+                    }
+                    if let Some(applies_to_item_id) = item.applies_to_item_id.as_ref() {
+                        m.insert("appliesToItemId".into(), Value::String(applies_to_item_id.to_string()));
+                    }
+                    if let Some(applies_to_service_id) = item.applies_to_service_id.as_ref() {
+                        m.insert("appliesToServiceId".into(), Value::String(applies_to_service_id.to_string()));
+                    }
+
+                    Value::Object(m)
                 })
                 .collect();
             payload.insert("items".into(), Value::Array(items));
