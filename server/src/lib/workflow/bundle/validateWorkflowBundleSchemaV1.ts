@@ -1,7 +1,8 @@
 // NOTE: This repo has multiple Ajv versions in the dependency tree. Importing from `ajv`
 // can resolve to Ajv v6 under `server/node_modules`, which is incompatible with `ajv-formats` (Ajv v8).
-// Importing from `ajv/dist/2020` ensures we use the workspace-root Ajv v8 build consistently.
-import Ajv from 'ajv/dist/2020';
+// Importing from `ajv/dist/2020.js` ensures we use the workspace-root Ajv v8 build consistently and
+// works in ESM/bundler environments that require fully specified file extensions.
+import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { WorkflowBundleImportError } from './workflowBundleImportErrors';
 import draft7MetaSchema from 'ajv/dist/refs/json-schema-draft-07.json';

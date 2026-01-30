@@ -22,6 +22,7 @@ import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefi
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
 import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
+import { WorkflowRuntimeV2EventStreamWorker } from '../../../../services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
@@ -43,6 +44,13 @@ vi.mock('server/src/lib/db', () => ({
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn()
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => async (...args: any[]) =>
+    fn({ user_id: userId, tenant: tenantId, roles: [] } as any, { tenant: tenantId } as any, ...args),
+  hasPermission: vi.fn(() => Promise.resolve(true)),
+  getCurrentUser: vi.fn(async () => ({ user_id: userId, tenant: tenantId, roles: [] } as any)),
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -143,6 +151,17 @@ beforeEach(async () => {
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
+  await db('tenants').insert({
+    tenant: tenantId,
+    client_name: `Test Tenant ${tenantId.slice(0, 8)}`,
+    phone_number: '123-456-7899',
+    email: `tenant-${tenantId}@example.com`,
+    created_at: new Date().toISOString(),
+    payment_platform_id: 'platform-test',
+    payment_method_id: 'method-test',
+    auth_service_id: 'auth-test',
+    plan: 'pro'
+  });
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
@@ -255,6 +274,54 @@ describe('workflow runtime v2 E2E tests', () => {
     const runId = result.startedRuns[0];
     const run = await WorkflowRunModelV2.getById(db, runId);
     expect((run as any)?.input_json?.foo).toBe('hello');
+    expect((run as any)?.source_payload_schema_ref).toBe(TEST_SOURCE_SCHEMA_REF);
+    expect((run as any)?.trigger_mapping_applied).toBe(true);
+  });
+
+  it('Event worker: schemaRef mismatch uses trigger mapping to build workflow payload and persists provenance.', async () => {
+    await db('event_catalog').insert({
+      event_id: uuidv4(),
+      event_type: 'PING_MAP_STREAM',
+      name: 'Ping Map Stream',
+      description: 'test',
+      category: 'Test',
+      payload_schema: {},
+      payload_schema_ref: TEST_SOURCE_SCHEMA_REF,
+      tenant: tenantId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      payloadSchemaRef: TEST_REQUIRED_SCHEMA_REF,
+      trigger: {
+        type: 'event',
+        eventName: 'PING_MAP_STREAM',
+        sourcePayloadSchemaRef: TEST_SOURCE_SCHEMA_REF,
+        payloadMapping: { foo: { $expr: 'toString(event.payload.bar)' } }
+      }
+    });
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(true);
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('event-worker-test');
+    await (worker as any).processEvent({
+      event_id: uuidv4(),
+      event_name: 'PING_MAP_STREAM',
+      event_type: 'PING_MAP_STREAM',
+      tenant: tenantId,
+      timestamp: new Date().toISOString(),
+      payload: { bar: 123 }
+    });
+
+    const run = await db('workflow_runs')
+      .where({ tenant_id: tenantId, event_type: 'PING_MAP_STREAM' })
+      .orderBy('started_at', 'desc')
+      .first();
+
+    expect(run).toBeTruthy();
+    expect((run as any)?.input_json?.foo).toBe('123');
     expect((run as any)?.source_payload_schema_ref).toBe(TEST_SOURCE_SCHEMA_REF);
     expect((run as any)?.trigger_mapping_applied).toBe(true);
   });

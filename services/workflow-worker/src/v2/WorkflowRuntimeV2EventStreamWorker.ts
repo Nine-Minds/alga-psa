@@ -1,11 +1,57 @@
 import logger from '@shared/core/logger.js';
 import { RedisStreamClient, WorkflowEventBaseSchema } from '@shared/workflow/streams/index.js';
-import { WorkflowRuntimeV2, getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import {
+  WorkflowRuntimeV2,
+  createSecretResolverFromProvider,
+  getSchemaRegistry,
+  initializeWorkflowRuntimeV2,
+  resolveInputMapping,
+} from '@shared/workflow/runtime';
+import { createTenantSecretProvider } from '@shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
+
+const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!key.includes('.')) {
+      result[key] = value;
+      continue;
+    }
+    const parts = key.split('.').filter(Boolean);
+    if (parts.length === 0) continue;
+    let cursor: Record<string, unknown> = result;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]!;
+      const isLeaf = i === parts.length - 1;
+      if (isLeaf) {
+        cursor[part] = value;
+        continue;
+      }
+      const existing = cursor[part];
+      if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
+        cursor = existing as Record<string, unknown>;
+        continue;
+      }
+      const next: Record<string, unknown> = {};
+      cursor[part] = next;
+      cursor = next;
+    }
+  }
+  return result;
+};
+
+const mappingUsesSecretRefs = (value: unknown): boolean => {
+  if (!value) return false;
+  if (Array.isArray(value)) return value.some(mappingUsesSecretRefs);
+  if (typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.$secret === 'string' && obj.$secret.trim().length > 0) return true;
+  return Object.values(obj).some(mappingUsesSecretRefs);
+};
 
 type WorkerConfig = {
   consumerGroup: string;
@@ -151,10 +197,14 @@ export class WorkflowRuntimeV2EventStreamWorker {
     const startedRuns: string[] = [];
     const skipStats = {
       noVersion: 0,
-      missingSchemaRef: 0,
-      unknownSchemaRef: 0,
-      schemaMismatch: 0,
-      payloadValidationFailed: 0,
+      missingWorkflowSchemaRef: 0,
+      unknownWorkflowSchemaRef: 0,
+      missingSourceSchemaRef: 0,
+      unknownSourceSchemaRef: 0,
+      sourcePayloadValidationFailed: 0,
+      triggerMappingRequired: 0,
+      triggerMappingFailed: 0,
+      mappedPayloadValidationFailed: 0,
     };
     for (const workflow of matching) {
       const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
@@ -169,36 +219,86 @@ export class WorkflowRuntimeV2EventStreamWorker {
         (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null) ??
         (typeof (workflow as any)?.payload_schema_ref === 'string' ? String((workflow as any).payload_schema_ref) : null);
 
-      // If we can’t validate or don’t have a canonical source schema ref, skip.
       if (!workflowPayloadSchemaRef) {
-        skipStats.missingSchemaRef += 1;
+        skipStats.missingWorkflowSchemaRef += 1;
         continue;
       }
       if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
-        skipStats.unknownSchemaRef += 1;
+        skipStats.unknownWorkflowSchemaRef += 1;
         continue;
       }
 
-      // If the event catalog defines a source schema, require it to match for now (no trigger mapping in worker yet).
-      if (payloadSchemaRef && payloadSchemaRef !== workflowPayloadSchemaRef) {
-        skipStats.schemaMismatch += 1;
+      const trigger = latestDefinition?.trigger ?? workflow.trigger ?? null;
+      const overrideSourceSchemaRef = typeof trigger?.sourcePayloadSchemaRef === 'string' ? String(trigger.sourcePayloadSchemaRef) : null;
+      const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? payloadSchemaRef;
+
+      if (!effectiveSourceSchemaRef) {
+        skipStats.missingSourceSchemaRef += 1;
+        continue;
+      }
+      if (!schemaRegistry.has(effectiveSourceSchemaRef)) {
+        skipStats.unknownSourceSchemaRef += 1;
         continue;
       }
 
-      const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(payload);
-      if (!validation.success) {
-        skipStats.payloadValidationFailed += 1;
+      const payloadMapping = trigger?.payloadMapping as any | undefined;
+      const mappingProvided = payloadMapping && typeof payloadMapping === 'object' && Object.keys(payloadMapping).length > 0;
+      const refsMatch = effectiveSourceSchemaRef === workflowPayloadSchemaRef;
+      if (!mappingProvided && !refsMatch) {
+        skipStats.triggerMappingRequired += 1;
+        continue;
+      }
+
+      const sourceValidation = schemaRegistry.get(effectiveSourceSchemaRef).safeParse(payload);
+      if (!sourceValidation.success) {
+        skipStats.sourcePayloadValidationFailed += 1;
+        continue;
+      }
+
+      let workflowPayload: Record<string, unknown> = payload;
+      let mappingApplied = false;
+      if (mappingProvided) {
+        try {
+          const provider = mappingUsesSecretRefs(payloadMapping)
+            ? createTenantSecretProvider(knex, event.tenant)
+            : null;
+          const secretResolver = provider
+            ? createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId))
+            : undefined;
+
+          const resolved = await resolveInputMapping(payloadMapping, {
+            expressionContext: {
+              event: {
+                name: event.event_type,
+                payload,
+                payloadSchemaRef: effectiveSourceSchemaRef
+              }
+            },
+            secretResolver
+          });
+
+          workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
+          mappingApplied = true;
+        } catch {
+          skipStats.triggerMappingFailed += 1;
+          continue;
+        }
+      }
+
+      const workflowValidation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(workflowPayload);
+      if (!workflowValidation.success) {
+        skipStats.mappedPayloadValidationFailed += 1;
         continue;
       }
 
       const runId = await runtime.startRun(knex, {
         workflowId: workflow.workflow_id,
         version: latest.version,
-        payload,
+        payload: workflowPayload,
         tenantId: event.tenant,
         eventType: event.event_type,
-        sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
-        triggerMappingApplied: false,
+        sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+        triggerMappingApplied: mappingApplied,
       });
       startedRuns.push(runId);
       if (this.verbose) {

@@ -1,6 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
+const isEE =
+  process.env.EDITION === 'ee'
+  || process.env.EDITION === 'enterprise'
+  || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
 export default defineConfig({
   test: {
     globals: true,
@@ -58,6 +63,13 @@ export default defineConfig({
 
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas\/schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/schemas/index.ts') },
+      { find: /^@alga-psa\/event-schemas\/schemas\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/schemas/$1.ts') },
+      { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/index.ts') },
+      { find: /^@alga-psa\/event-bus\/events$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/events.ts') },
+      { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/publishers/index.ts') },
+      { find: /^@alga-psa\/event-bus\/publishers\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/publishers/$1.ts') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },
       { find: /^@alga-psa\/auth\/rbac$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/rbac.ts') },
@@ -94,6 +106,9 @@ export default defineConfig({
       { find: /^@alga-psa\/tenancy\/actions$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/actions/index.ts') },
       { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
 
+      { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../packages/email/src/index.ts') },
+      { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
+
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
@@ -104,6 +119,31 @@ export default defineConfig({
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
+      {
+        find: '@alga-psa/product-extension-actions',
+        replacement: path.resolve(
+          __dirname,
+          isEE
+            ? '../packages/product-extension-actions/ee/entry.ts'
+            : '../packages/product-extension-actions/oss/entry.ts'
+        ),
+      },
+      {
+        find: '@alga-psa/product-extension-initialization',
+        replacement: path.resolve(
+          __dirname,
+          isEE
+            ? '../packages/product-extension-initialization/ee/entry.ts'
+            : '../packages/product-extension-initialization/oss/entry.ts'
+        ),
+      },
+      // Ensure Vite resolves Ajv v8 (root node_modules) instead of Ajv v6 (server/node_modules),
+      // and avoids virtualized deep-import paths that break Ajv's internal relative requires.
+      { find: 'ajv/dist/2020.js', replacement: path.resolve(__dirname, '../node_modules/ajv/dist/2020.js') },
+      {
+        find: 'ajv/dist/refs/json-schema-draft-07.json',
+        replacement: path.resolve(__dirname, '../node_modules/ajv/dist/refs/json-schema-draft-07.json'),
+      },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },
