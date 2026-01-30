@@ -47,7 +47,14 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import { MappingPanel, type ActionInputField } from './mapping';
-import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
+import {
+  ExpressionEditor,
+  buildTriggerMappingExpressionContext,
+  buildWorkflowExpressionContext,
+  type ExpressionEditorHandle,
+  type ExpressionContext,
+  type JsonSchema as ExprJsonSchema
+} from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@alga-psa/workflows/actions';
@@ -1204,58 +1211,6 @@ const syntaxHighlightJson = (json: string) => {
   });
 };
 
-/**
- * Build ExpressionContext for the Monaco expression editor from DataContext
- * This converts the workflow designer's DataContext to the format expected by the expression editor
- */
-const buildExpressionContext = (
-  payloadSchema: JsonSchema | null,
-  dataContext: DataContext | null
-): ExpressionContext => {
-  // Build vars schema from step outputs
-  const varsProperties: Record<string, ExprJsonSchema> = {};
-  if (dataContext?.steps) {
-    for (const stepOutput of dataContext.steps) {
-      varsProperties[stepOutput.saveAs] = stepOutput.outputSchema as ExprJsonSchema;
-    }
-  }
-
-  const varsSchema: ExprJsonSchema | undefined = Object.keys(varsProperties).length > 0
-    ? { type: 'object', properties: varsProperties }
-    : undefined;
-
-  // Meta schema
-  const metaSchema: ExprJsonSchema = {
-    type: 'object',
-    properties: {
-      state: { type: 'string', description: 'Workflow state' },
-      traceId: { type: 'string', description: 'Trace ID' },
-      tags: { type: 'object', description: 'Workflow tags' },
-    },
-  };
-
-  // Error schema (only relevant in catch blocks)
-  const errorSchema: ExprJsonSchema | undefined = dataContext?.inCatchBlock ? {
-    type: 'object',
-    properties: {
-      name: { type: 'string', description: 'Error name' },
-      message: { type: 'string', description: 'Error message' },
-      stack: { type: 'string', description: 'Stack trace' },
-      nodePath: { type: 'string', description: 'Error location in workflow' },
-    },
-  } : undefined;
-
-  return {
-    payloadSchema: payloadSchema as ExprJsonSchema | undefined,
-    varsSchema,
-    metaSchema,
-    errorSchema,
-    inCatchBlock: dataContext?.inCatchBlock,
-    forEachItemVar: dataContext?.forEach?.itemVar,
-    forEachIndexVar: dataContext?.forEach?.indexVar,
-  };
-};
-
 const ensureExpr = (value: Expr | undefined): Expr => ({ $expr: value?.$expr ?? '' });
 
 /**
@@ -1561,24 +1516,7 @@ const WorkflowDesigner: React.FC = () => {
   }, [triggerSourceSchema]);
 
   const triggerMappingExpressionContext = useMemo(() => {
-    const sourceSchema = triggerSourceSchema ?? { type: 'object', properties: {} };
-    return {
-      allowPayloadRoot: false,
-      eventSchema: {
-        type: 'object',
-        properties: {
-          payload: sourceSchema
-        }
-      },
-      metaSchema: {
-        type: 'object',
-        properties: {
-          state: { type: 'string', description: 'Workflow state' },
-          traceId: { type: 'string', description: 'Trace ID' },
-          tags: { type: 'object', description: 'Workflow tags' }
-        }
-      }
-    } as ExpressionContext;
+    return buildTriggerMappingExpressionContext({ sourcePayloadSchema: triggerSourceSchema as ExprJsonSchema | null });
   }, [triggerSourceSchema]);
 
   const pipeOptions = useMemo(() => {
@@ -4910,10 +4848,21 @@ const StepConfigPanel: React.FC<{
   );
 
   // §20 - Expression context for Monaco editor autocomplete
-  const expressionContext = useMemo(() =>
-    buildExpressionContext(payloadSchema, dataContext),
-    [payloadSchema, dataContext]
-  );
+  const expressionContext = useMemo(() => {
+    const varsByName: Record<string, ExprJsonSchema> = {};
+    if (dataContext?.steps) {
+      for (const stepOutput of dataContext.steps) {
+        varsByName[stepOutput.saveAs] = stepOutput.outputSchema as ExprJsonSchema;
+      }
+    }
+    return buildWorkflowExpressionContext({
+      payloadSchema: payloadSchema as ExprJsonSchema | null,
+      varsByName,
+      inCatchBlock: dataContext?.inCatchBlock,
+      forEachItemVar: dataContext?.forEach?.itemVar,
+      forEachIndexVar: dataContext?.forEach?.indexVar,
+    });
+  }, [payloadSchema, dataContext]);
 
   // §16.5 - Expression validation for this step
   const expressionValidations = useMemo(() => {

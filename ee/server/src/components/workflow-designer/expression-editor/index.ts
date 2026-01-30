@@ -8,6 +8,14 @@
 export { ExpressionEditor, type ExpressionEditorProps, type ExpressionEditorHandle } from './ExpressionEditor';
 export { ExpressionEditorField, type ExpressionEditorFieldProps, type DataContextInfo } from './ExpressionEditorField';
 export type { ExpressionContext, JsonSchema } from './completionProvider';
+export {
+  buildWorkflowExpressionContext,
+  buildTriggerMappingExpressionContext,
+  DEFAULT_META_SCHEMA,
+  DEFAULT_ERROR_SCHEMA,
+  type WorkflowExpressionContextParams,
+  type TriggerMappingExpressionContextParams,
+} from './expressionContextBuilder';
 
 // Language definition
 export { LANGUAGE_ID, registerJsonataLanguage } from './jsonataLanguage';

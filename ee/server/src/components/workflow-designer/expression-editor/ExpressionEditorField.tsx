@@ -14,6 +14,7 @@
 
 import React, { useCallback, useMemo, useRef } from 'react';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema } from './ExpressionEditor';
+import { buildWorkflowExpressionContext } from './expressionContextBuilder';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -71,41 +72,6 @@ export interface ExpressionEditorFieldProps {
 }
 
 /**
- * Build ExpressionContext from DataContextInfo
- */
-function buildExpressionContext(dataContext?: DataContextInfo): ExpressionContext {
-  if (!dataContext) {
-    return {};
-  }
-
-  return {
-    payloadSchema: dataContext.payloadSchema ?? undefined,
-    varsSchema: dataContext.varsSchema ?? undefined,
-    metaSchema: {
-      type: 'object',
-      properties: {
-        state: { type: 'string', description: 'Workflow state' },
-        traceId: { type: 'string', description: 'Trace ID' },
-        tags: { type: 'object', description: 'Workflow tags' },
-      },
-    },
-    errorSchema: dataContext.inCatchBlock ? {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'Error name' },
-        message: { type: 'string', description: 'Error message' },
-        stack: { type: 'string', description: 'Stack trace' },
-        nodePath: { type: 'string', description: 'Error location in workflow' },
-      },
-    } : undefined,
-    inCatchBlock: dataContext.inCatchBlock,
-    forEachItemVar: dataContext.forEachItemVar,
-    forEachItemSchema: dataContext.forEachItemSchema ?? undefined,
-    forEachIndexVar: dataContext.forEachIndexVar,
-  };
-}
-
-/**
  * ExpressionEditorField Component
  *
  * A form-field wrapper around ExpressionEditor with field picker integration.
@@ -130,7 +96,14 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
 
   // Build expression context from data context
   const expressionContext = useMemo(
-    () => buildExpressionContext(dataContext),
+    () => buildWorkflowExpressionContext({
+      payloadSchema: (dataContext?.payloadSchema ?? undefined) as JsonSchema | undefined,
+      varsSchema: (dataContext?.varsSchema ?? undefined) as JsonSchema | undefined,
+      inCatchBlock: dataContext?.inCatchBlock,
+      forEachItemVar: dataContext?.forEachItemVar,
+      forEachItemSchema: (dataContext?.forEachItemSchema ?? undefined) as JsonSchema | undefined,
+      forEachIndexVar: dataContext?.forEachIndexVar,
+    }),
     [dataContext]
   );
 

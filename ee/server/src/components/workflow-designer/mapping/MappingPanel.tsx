@@ -19,6 +19,7 @@ import { TypeCompatibility, getTypeCompatibility, inferTypeFromJsonSchema } from
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import type { Expr, InputMapping } from '@shared/workflow/runtime';
 import type { ExpressionContext, JsonSchema } from '../expression-editor';
+import { buildWorkflowExpressionContext } from '../expression-editor';
 
 /**
  * Schema field type from WorkflowDesigner's DataContext
@@ -155,52 +156,6 @@ const buildSourceTypeLookup = (ctx: WorkflowDataContext, payloadRootPath: string
   return map;
 };
 
-/**
- * Build ExpressionContext from WorkflowDataContext for Monaco editor autocomplete
- */
-const buildExpressionContext = (ctx: WorkflowDataContext): ExpressionContext => {
-  // Build vars schema from step outputs
-  const varsProperties: Record<string, JsonSchema> = {};
-  for (const stepOutput of ctx.steps) {
-    varsProperties[stepOutput.saveAs] = stepOutput.outputSchema as JsonSchema;
-  }
-
-  const varsSchema: JsonSchema | undefined = Object.keys(varsProperties).length > 0
-    ? { type: 'object', properties: varsProperties }
-    : undefined;
-
-  // Meta schema
-  const metaSchema: JsonSchema = {
-    type: 'object',
-    properties: {
-      state: { type: 'string', description: 'Workflow state' },
-      traceId: { type: 'string', description: 'Trace ID' },
-      tags: { type: 'object', description: 'Workflow tags' },
-    },
-  };
-
-  // Error schema (only relevant in catch blocks)
-  const errorSchema: JsonSchema | undefined = ctx.inCatchBlock ? {
-    type: 'object',
-    properties: {
-      name: { type: 'string', description: 'Error name' },
-      message: { type: 'string', description: 'Error message' },
-      stack: { type: 'string', description: 'Stack trace' },
-      nodePath: { type: 'string', description: 'Error location in workflow' },
-    },
-  } : undefined;
-
-  return {
-    payloadSchema: ctx.payloadSchema as JsonSchema | undefined,
-    varsSchema,
-    metaSchema,
-    errorSchema,
-    inCatchBlock: ctx.inCatchBlock,
-    forEachItemVar: ctx.forEach?.itemVar,
-    forEachIndexVar: ctx.forEach?.indexVar,
-  };
-};
-
 export interface MappingPanelProps {
   /**
    * Current input mapping value
@@ -289,7 +244,18 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
 
   // §20 - Build expression context for Monaco editor autocomplete
   const expressionContext = useMemo(() => {
-    const ctx = expressionContextOverride ?? buildExpressionContext(dataContext);
+    const varsByName: Record<string, JsonSchema> = {};
+    for (const stepOutput of dataContext.steps) {
+      varsByName[stepOutput.saveAs] = stepOutput.outputSchema as JsonSchema;
+    }
+
+    const ctx = expressionContextOverride ?? buildWorkflowExpressionContext({
+      payloadSchema: dataContext.payloadSchema as JsonSchema | undefined,
+      varsByName,
+      inCatchBlock: dataContext.inCatchBlock,
+      forEachItemVar: dataContext.forEach?.itemVar,
+      forEachIndexVar: dataContext.forEach?.indexVar,
+    });
     console.log('[MappingPanel] Built expressionContext:', {
       hasPayloadSchema: !!ctx.payloadSchema,
       payloadSchemaType: ctx.payloadSchema?.type,
