@@ -176,6 +176,14 @@ body,
 .dark {
     --background: 0, 0, 0;
 
+    /* SEMANTIC BADGE COLORS - not affected by branding */
+    --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
+    --badge-info-text: 191 219 254;     /* blue-200 */
+    --badge-info-border: 30 64 175;     /* blue-800 */
+    --badge-warning-bg: 120 53 15;      /* amber-900 for dark mode */
+    --badge-warning-text: 253 230 138;  /* amber-200 */
+    --badge-warning-border: 146 64 14;  /* amber-800 */
+
     /* BORDER COLOR */
     --color-border-base: 100 116 139;
     --color-border-50: 15 23 42;
@@ -263,6 +271,14 @@ body,
 
 .light {
     --background: 255, 255, 255;
+
+    /* SEMANTIC BADGE COLORS - not affected by branding */
+    --badge-info-bg: 219 234 254;       /* blue-100 */
+    --badge-info-text: 30 64 175;       /* blue-800 */
+    --badge-info-border: 191 219 254;   /* blue-200 */
+    --badge-warning-bg: 254 243 199;    /* amber-100 */
+    --badge-warning-text: 146 64 14;    /* amber-800 */
+    --badge-warning-border: 253 230 138; /* amber-200 */
 
     /* BORDER COLOR */
     --color-border-base: 148 163 184;

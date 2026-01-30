@@ -160,9 +160,10 @@ export function ResponseStateBadge({
     lg: 'px-2.5 py-1.5 text-base',
   };
 
+  // Use CSS variables to prevent client portal branding from overriding badge colors
   const colorClasses = {
-    awaiting_client: 'bg-amber-100 text-amber-800 border-amber-200',
-    awaiting_internal: 'bg-blue-100 text-blue-800 border-blue-200',
+    awaiting_client: 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] border-[rgb(var(--badge-warning-border))]',
+    awaiting_internal: 'bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] border-[rgb(var(--badge-info-border))]',
   };
 
   const badgeContent = (
