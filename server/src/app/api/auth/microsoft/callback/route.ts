@@ -142,18 +142,40 @@ export async function GET(request: NextRequest) {
       credentialSource = 'app_secret';
     } else {
       // Use tenant-specific or fallback credentials
-      const envClientId = process.env.MICROSOFT_CLIENT_ID || null;
-      const envClientSecret = process.env.MICROSOFT_CLIENT_SECRET || null;
+      // Priority: tenant secrets (user-configured via UI) > env vars > app secrets
+      // IMPORTANT: Select credentials as a PAIR from the same source to avoid mismatch
       const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
       const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
+      const envClientId = process.env.MICROSOFT_CLIENT_ID || null;
+      const envClientSecret = process.env.MICROSOFT_CLIENT_SECRET || null;
       const appClientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
       const appClientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET');
-      clientId = envClientId || tenantClientId || appClientId || null;
-      clientSecret = envClientSecret || tenantClientSecret || appClientSecret || null;
-      credentialSource = envClientId && envClientSecret ? 'env'
-        : tenantClientId && tenantClientSecret ? 'tenant_secret'
-        : appClientId && appClientSecret ? 'app_secret'
-        : 'unknown';
+
+      // Select credentials as a pair from the same source
+      if (tenantClientId && tenantClientSecret) {
+        clientId = tenantClientId;
+        clientSecret = tenantClientSecret;
+        credentialSource = 'tenant_secret';
+      } else if (envClientId && envClientSecret) {
+        clientId = envClientId;
+        clientSecret = envClientSecret;
+        credentialSource = 'env';
+      } else if (appClientId && appClientSecret) {
+        clientId = appClientId;
+        clientSecret = appClientSecret;
+        credentialSource = 'app_secret';
+      } else {
+        // Partial configuration - log warning for debugging
+        console.warn('[MS OAuth] Incomplete credential configuration detected', {
+          hasTenantClientId: !!tenantClientId,
+          hasTenantClientSecret: !!tenantClientSecret,
+          hasEnvClientId: !!envClientId,
+          hasEnvClientSecret: !!envClientSecret,
+          hasAppClientId: !!appClientId,
+          hasAppClientSecret: !!appClientSecret,
+        });
+        credentialSource = 'unknown';
+      }
     }
     // Normalize whitespace just in case the secret was copied with spaces/newlines
     clientId = clientId?.trim() || null;

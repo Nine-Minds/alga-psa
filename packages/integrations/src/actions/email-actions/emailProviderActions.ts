@@ -190,11 +190,11 @@ async function persistMicrosoftConfig(
     throw new Error('Redirect URI is required for Microsoft configuration');
   }
   
-  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig) {
+  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig?.client_id) {
     // Only store user-provided secrets, not hosted ones
     await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', effectiveClientId);
   }
-  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig) {
+  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig?.client_secret) {
     // Only store user-provided secrets, not hosted ones
     await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
   }
