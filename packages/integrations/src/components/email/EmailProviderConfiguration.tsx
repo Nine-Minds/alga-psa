@@ -11,9 +11,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { GmailProviderForm } from './GmailProviderForm';
-import { ImapProviderForm } from './ImapProviderForm';
-import { MicrosoftProviderForm } from './MicrosoftProviderForm';
+import {
+  GmailProviderForm,
+  ImapProviderForm,
+  MicrosoftProviderForm,
+} from '@alga-psa/integrations/email/providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';

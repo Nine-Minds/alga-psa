@@ -11,9 +11,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { CheckCircle, Clock, Shield } from 'lucide-react';
-import type { EmailProvider } from '@alga-psa/integrations';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, initiateEmailOAuth, getInboundTicketDefaults } from '@alga-psa/integrations';
-import { getHostedMicrosoftConfig } from '@alga-psa/integrations/actions';
+import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
+import {
+  createEmailProvider,
+  updateEmailProvider,
+  upsertEmailProvider,
+  getHostedMicrosoftConfig,
+} from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
+import { initiateEmailOAuth } from '@alga-psa/integrations/actions/email-actions/oauthActions';
 
 const eeMicrosoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

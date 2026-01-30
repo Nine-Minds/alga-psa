@@ -8,8 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "NX_DAEMON=false nx next:dev",
-    "dev:turbo": "nx next:dev --turbo",
+    "dev": "cd .. && NODE_ENV=development NX_DAEMON=false npx nx next:dev server",
+    "dev:turbo": "cd .. && NODE_ENV=development npx nx next:dev server -- --turbo",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
