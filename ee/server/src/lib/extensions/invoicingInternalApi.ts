@@ -1,7 +1,8 @@
-import { CAP_INVOICE_MANUAL_CREATE, normalizeCapability } from './providers'
-import { getInstallConfigByInstallId } from './installConfig'
-import { createManualInvoice } from './invoicingHostApi'
-import { validateCreateManualInvoiceInput } from './invoicingValidation'
+import { CAP_INVOICE_MANUAL_CREATE, normalizeCapability } from '@ee/lib/extensions/providers'
+import { getInstallConfigByInstallId } from '@ee/lib/extensions/installConfig'
+import { createManualInvoice } from '@ee/lib/extensions/invoicingHostApi'
+import { validateCreateManualInvoiceInput } from '@ee/lib/extensions/invoicingValidation'
+import { runWithTenant } from 'server/src/lib/db'
 
 export type InvoicingInternalResponse = { status: number; body: any }
 
@@ -60,14 +61,16 @@ export async function handleInternalInvoicingInstallRequest(params: {
       }
     }
 
-    const result = await createManualInvoice(
-      {
-        tenantId: config.tenantId,
-        installId: config.installId,
-        versionId: config.versionId,
-        registryId: config.registryId,
-      },
-      validated.value
+    const result = await runWithTenant(config.tenantId, async () =>
+      createManualInvoice(
+        {
+          tenantId: config.tenantId,
+          installId: config.installId,
+          versionId: config.versionId,
+          registryId: config.registryId,
+        },
+        validated.value
+      )
     )
 
     return { status: result.success ? 201 : 400, body: result }
@@ -78,4 +81,3 @@ export async function handleInternalInvoicingInstallRequest(params: {
     return { status: 500, body: { error: 'Internal error', code: 'INTERNAL_ERROR' } }
   }
 }
-
