@@ -10,8 +10,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
-import type { EmailProvider } from '@alga-psa/integrations';
-import { createEmailProvider, updateEmailProvider, getInboundTicketDefaults } from '@alga-psa/integrations';
+import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
+import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
 
 const eeImapProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
