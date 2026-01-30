@@ -4,12 +4,12 @@ import { getConnection } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getUserClientId, getUserRolesWithPermissions } from '@alga-psa/users/actions';
 import {
   IClientContractLine,
   IBillingResult,
   IBucketUsage,
-  IService
+  IService,
+  IUserWithRoles
 } from '@alga-psa/types';
 import {
   fetchInvoicesByClient,
@@ -25,21 +25,62 @@ import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/
 import { JobService } from '@alga-psa/jobs';
 import { JobStatus } from '@alga-psa/jobs';
 
-async function requireClientId(userId: string): Promise<string> {
-  const clientId = await getUserClientId(userId);
-  if (!clientId) {
-    throw new Error('Unauthorized');
-  }
-  return clientId;
+/**
+ * Get clientId from user's contact - avoids nested withAuth calls
+ */
+async function getClientIdFromUser(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string
+): Promise<string | null> {
+  if (!user.contact_id) return null;
+
+  const contact = await trx('contacts')
+    .where({
+      contact_name_id: user.contact_id,
+      tenant
+    })
+    .select('client_id')
+    .first();
+
+  return contact?.client_id || null;
+}
+
+/**
+ * Check if user has billing read permission - avoids nested withAuth calls
+ */
+async function hasBillingPermission(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string
+): Promise<boolean> {
+  const permissions = await trx('role_permissions as rp')
+    .join('permissions as p', 'rp.permission_id', 'p.permission_id')
+    .join('user_roles as ur', function() {
+      this.on('rp.role_id', '=', 'ur.role_id')
+        .andOn('rp.tenant', '=', 'ur.tenant');
+    })
+    .where({
+      'ur.user_id': user.user_id,
+      'ur.tenant': tenant,
+      'p.resource': 'billing',
+      'p.action': 'read'
+    })
+    .first();
+
+  return !!permissions;
 }
 
 export const getClientContractLine = withAuth(async (user, { tenant }): Promise<IClientContractLine | null> => {
-  const clientId = await requireClientId(user.user_id);
-
   const knex = await getConnection(tenant);
 
   try {
     const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
       // Query via client_contracts -> contracts -> contract_lines
       // (contracts are client-specific via client_contracts)
       return await trx('client_contracts as cc')
@@ -86,21 +127,24 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
  * Fetch all invoices for the current client
  */
 export const getClientInvoices = withAuth(async (user, { tenant }): Promise<InvoiceViewModel[]> => {
-  const clientId = await requireClientId(user.user_id);
-
-  // Check for billing permission (client portal uses 'billing' resource)
-  const userRoles = await getUserRolesWithPermissions(user.user_id);
-  const hasInvoiceAccess = userRoles.some(role =>
-    role.permissions.some(p =>
-      p.resource === 'billing' && p.action === 'read' && p.client === true
-    )
-  );
-
-  if (!hasInvoiceAccess) {
-    throw new Error('Unauthorized to access invoice data');
-  }
+  const knex = await getConnection(tenant);
 
   try {
+    // Get clientId and check permissions in a single transaction
+    const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const id = await getClientIdFromUser(trx, user, tenant);
+      if (!id) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access invoice data');
+      }
+
+      return id;
+    });
+
     // Directly fetch only invoices for the current client
     const invoices = await fetchInvoicesByClient(clientId);
     // Filter out draft invoices - only finalized invoices should be visible in client portal
@@ -116,26 +160,23 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Invo
  * Get invoice details by ID
  */
 export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId: string): Promise<InvoiceViewModel> => {
-  const clientId = await requireClientId(user.user_id);
-
-  // Check for billing permission (client portal uses 'billing' resource)
-  const userRoles = await getUserRolesWithPermissions(user.user_id);
-  const hasInvoiceAccess = userRoles.some(role =>
-    role.permissions.some(p =>
-      p.resource === 'billing' && p.action === 'read' && p.client === true
-    )
-  );
-
-  if (!hasInvoiceAccess) {
-    throw new Error('Unauthorized to access invoice data');
-  }
-
   const knex = await getConnection(tenant);
 
   try {
-    // Verify the invoice belongs to the client and is not a draft
-    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+    // Get clientId, check permissions, and verify invoice in a single transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access invoice data');
+      }
+
+      // Verify the invoice belongs to the client and is not a draft
+      const invoiceCheck = await trx('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
@@ -143,11 +184,11 @@ export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId:
         })
         .whereNot('status', 'draft')
         .first();
-    });
 
-    if (!invoiceCheck) {
-      throw new Error('Invoice not found or access denied');
-    }
+      if (!invoiceCheck) {
+        throw new Error('Invoice not found or access denied');
+      }
+    });
 
     // Get full invoice details
     return await getInvoiceForRendering(invoiceId);
@@ -161,26 +202,23 @@ export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId:
  * Get invoice line items
  */
 export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoiceId: string) => {
-  const clientId = await requireClientId(user.user_id);
-
-  // Check for billing permission (client portal uses 'billing' resource)
-  const userRoles = await getUserRolesWithPermissions(user.user_id);
-  const hasInvoiceAccess = userRoles.some(role =>
-    role.permissions.some(p =>
-      p.resource === 'billing' && p.action === 'read' && p.client === true
-    )
-  );
-
-  if (!hasInvoiceAccess) {
-    throw new Error('Unauthorized to access invoice data');
-  }
-
   const knex = await getConnection(tenant);
 
   try {
-    // Verify the invoice belongs to the client and is not a draft
-    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+    // Get clientId, check permissions, and verify invoice in a single transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access invoice data');
+      }
+
+      // Verify the invoice belongs to the client and is not a draft
+      const invoiceCheck = await trx('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
@@ -188,11 +226,11 @@ export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoi
         })
         .whereNot('status', 'draft')
         .first();
-    });
 
-    if (!invoiceCheck) {
-      throw new Error('Invoice not found or access denied');
-    }
+      if (!invoiceCheck) {
+        throw new Error('Invoice not found or access denied');
+      }
+    });
 
     // Get invoice items
     return await getInvoiceLineItems(invoiceId);
@@ -228,26 +266,23 @@ export interface DownloadPdfResult {
  * Download invoice PDF - schedules job, waits for completion, returns file ID
  */
 export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<DownloadPdfResult> => {
-  const clientId = await requireClientId(user.user_id);
-
-  // Check for billing permission (client portal uses 'billing' resource)
-  const userRoles = await getUserRolesWithPermissions(user.user_id);
-  const hasInvoiceAccess = userRoles.some(role =>
-    role.permissions.some(p =>
-      p.resource === 'billing' && p.action === 'read' && p.client === true
-    )
-  );
-
-  if (!hasInvoiceAccess) {
-    throw new Error('Unauthorized to access invoice data');
-  }
-
   const knex = await getConnection(tenant);
 
   try {
-    // Verify the invoice belongs to the client and is not a draft
-    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+    // Get clientId, check permissions, and verify invoice in a single transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access invoice data');
+      }
+
+      // Verify the invoice belongs to the client and is not a draft
+      const invoiceCheck = await trx('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
@@ -255,11 +290,11 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
         })
         .whereNot('status', 'draft')
         .first();
-    });
 
-    if (!invoiceCheck) {
-      throw new Error('Invoice not found or access denied');
-    }
+      if (!invoiceCheck) {
+        throw new Error('Invoice not found or access denied');
+      }
+    });
 
     // Schedule PDF generation
     const result = await scheduleInvoiceZipAction([invoiceId]);
@@ -294,26 +329,23 @@ export interface SendEmailResult {
  * Send invoice email - schedules job, waits for completion
  */
 export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceId: string): Promise<SendEmailResult> => {
-  const clientId = await requireClientId(user.user_id);
-
-  // Check for billing permission (client portal uses 'billing' resource)
-  const userRoles = await getUserRolesWithPermissions(user.user_id);
-  const hasInvoiceAccess = userRoles.some(role =>
-    role.permissions.some(p =>
-      p.resource === 'billing' && p.action === 'read' && p.client === true
-    )
-  );
-
-  if (!hasInvoiceAccess) {
-    throw new Error('Unauthorized to access invoice data');
-  }
-
   const knex = await getConnection(tenant);
 
   try {
-    // Verify the invoice belongs to the client and is not a draft
-    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+    // Get clientId, check permissions, and verify invoice in a single transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access invoice data');
+      }
+
+      // Verify the invoice belongs to the client and is not a draft
+      const invoiceCheck = await trx('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
@@ -321,11 +353,11 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
         })
         .whereNot('status', 'draft')
         .first();
-    });
 
-    if (!invoiceCheck) {
-      throw new Error('Invoice not found or access denied');
-    }
+      if (!invoiceCheck) {
+        throw new Error('Invoice not found or access denied');
+      }
+    });
 
     // Schedule email sending
     const result = await scheduleInvoiceEmailAction([invoiceId]);
@@ -450,12 +482,15 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
   bucketUsage: IBucketUsage | null;
   services: IService[];
 }> => {
-  const clientId = await requireClientId(user.user_id);
-
   const knex = await getConnection(tenant);
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
       // Get current bucket usage if any
       const bucketUsage = await trx('bucket_usage')
         .select('*')

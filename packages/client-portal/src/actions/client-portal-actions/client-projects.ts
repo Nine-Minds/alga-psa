@@ -3,11 +3,31 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getUserClientId } from '@alga-psa/users/actions';
 import { IProject, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import ProjectModel from '@alga-psa/projects/models/project';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+
+/**
+ * Get clientId from user's contact - avoids nested withAuth calls
+ */
+async function getClientIdFromUser(
+  knex: Knex | Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string
+): Promise<string | null> {
+  if (!user.contact_id) return null;
+
+  const contact = await knex('contacts')
+    .where({
+      contact_name_id: user.contact_id,
+      tenant
+    })
+    .select('client_id')
+    .first();
+
+  return contact?.client_id || null;
+}
 
 /**
  * Fetch a single project by ID for the client portal
@@ -20,7 +40,7 @@ export const getClientProjectDetails = withAuth(async (
 ): Promise<IProject | null> => {
   const { knex } = await createTenantKnex();
 
-  const clientId = await getUserClientId(user.user_id);
+  const clientId = await getClientIdFromUser(knex, user, tenant);
   if (!clientId) {
     throw new Error('Client not found');
   }
@@ -77,11 +97,11 @@ export const getClientProjects = withAuth(async (
 }> => {
   const { knex } = await createTenantKnex();
 
-  const clientId = await getUserClientId(user.user_id);
+  const clientId = await getClientIdFromUser(knex, user, tenant);
   if (!clientId) {
     throw new Error('Client not found');
   }
-  
+
   // Set up query with pagination, sorting, filtering
   const query = knex('projects')
     .select([
@@ -210,7 +230,7 @@ export const getProjectProgress = withAuth(async (
   }
 
   // Verify user has access to this project's client
-  const userClientId = await getUserClientId(user.user_id);
+  const userClientId = await getClientIdFromUser(knex, user, tenant);
   if (userClientId !== project.client_id) {
     throw new Error('Access denied');
   }
@@ -337,13 +357,13 @@ export const getProjectManager = withAuth(async (
   if (!project) {
     throw new Error('Project not found');
   }
-  
+
   // Verify user has access to this project's client
-  const userClientId = await getUserClientId(user.user_id);
+  const userClientId = await getClientIdFromUser(knex, user, tenant);
   if (userClientId !== project.client_id) {
     throw new Error('Access denied');
   }
-  
+
   // Get project manager details
   if (!project.assigned_to) {
     return {

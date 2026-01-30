@@ -21,7 +21,6 @@ import {
   IContractLineServiceBucketConfig
 } from '@alga-psa/types';
 import { toPlainDate, formatDateOnly } from '@alga-psa/core';
-import { getUserRolesWithPermissions } from '@alga-psa/users/actions';
 import { withAuth } from '@alga-psa/auth';
 
 // Define the schema for the hours by service input parameters
