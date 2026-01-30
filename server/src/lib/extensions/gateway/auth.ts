@@ -102,6 +102,7 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     userEmail: userInfo.user_email,
     userName: userInfo.user_name,
     userType: userInfo.user_type,
+    clientId: userInfo.client_id,
   });
 
   return userInfo;

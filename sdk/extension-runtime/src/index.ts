@@ -203,6 +203,8 @@ export interface UserData {
   userName: string;
   /** User type (e.g., "msp", "client") */
   userType: string;
+  /** For client portal users, the client_id they are associated with */
+  clientId?: string;
 }
 
 /** Errors that can occur when fetching user data */
@@ -363,6 +365,7 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
           userEmail: 'mock@example.com',
           userName: 'Mock User',
           userType: 'client',
+          clientId: 'client-mock',
         };
       },
     },
