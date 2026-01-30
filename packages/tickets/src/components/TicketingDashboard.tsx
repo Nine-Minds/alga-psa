@@ -39,7 +39,6 @@ import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useDrawer } from '@alga-psa/ui';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { getClientById } from '../actions/clientLookupActions';
 
 interface TicketingDashboardProps {
@@ -65,6 +64,7 @@ interface TicketingDashboardProps {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   onSortChange: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+  renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -102,7 +102,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   displaySettings,
   sortBy = 'entered_at',
   sortDirection = 'desc',
-  onSortChange
+  onSortChange,
+  renderClientDetails,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   // Pre-fetch tag permissions to prevent individual API calls
@@ -421,14 +422,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
 
       replaceDrawer(
-        <ClientDetails
-          id={`${id}-client-details`}
-          client={client}
-          documents={[]}
-          contacts={[]}
-          isInDrawer={true}
-          quickView={true}
-        />,
+        renderClientDetails
+          ? renderClientDetails({ id: `${id}-client-details`, client })
+          : <div className="p-4 text-sm text-gray-600">Client details renderer not configured.</div>,
         undefined,
         '900px'
       );
@@ -436,7 +432,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       const message = e instanceof Error ? e.message : 'Failed to load client.';
       replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
     }
-  }, [id, openDrawer, replaceDrawer]);
+  }, [id, openDrawer, replaceDrawer, renderClientDetails]);
   
   // Initialize currentUser state from props if available
   useEffect(() => {

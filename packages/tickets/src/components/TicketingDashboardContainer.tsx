@@ -35,6 +35,7 @@ interface TicketingDashboardContainerProps {
   initialPage?: number;
   initialPageSize?: number;
   displaySettings?: TicketingDisplaySettings;
+  renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
 }
 
 export default function TicketingDashboardContainer({
@@ -43,7 +44,8 @@ export default function TicketingDashboardContainer({
   initialFilters,
   initialPage = 1,
   initialPageSize = 10,
-  displaySettings
+  displaySettings,
+  renderClientDetails,
 }: TicketingDashboardContainerProps) {
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
@@ -314,6 +316,7 @@ export default function TicketingDashboardContainer({
       sortBy={sortBy}
       sortDirection={sortDirection}
       onSortChange={handleSortChange}
+      renderClientDetails={renderClientDetails}
     />
   );
 }

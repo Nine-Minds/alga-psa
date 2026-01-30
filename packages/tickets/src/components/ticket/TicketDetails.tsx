@@ -6,7 +6,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
-import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import {
     ITicket,
     IComment,
@@ -112,6 +111,17 @@ interface TicketDetailsProps {
      * This keeps @alga-psa/tickets from importing other vertical slices directly.
      */
     associatedAssets?: React.ReactNode;
+
+    /**
+     * Optional injected UI for contact quick view (e.g. @alga-psa/clients ContactDetailsView).
+     * If omitted, TicketDetails falls back to a minimal drawer with a link to open the contact page.
+     */
+    renderContactDetails?: (args: {
+        id: string;
+        contact: IContact;
+        clients: IClient[];
+        userId?: string;
+    }) => React.ReactNode;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -149,7 +159,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onUpdateDescription,
     isSubmitting = false,
     surveySummary = null,
-    associatedAssets = null
+    associatedAssets = null,
+    renderContactDetails
 }) => {
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -561,17 +572,28 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 clients.length > 0 ? clients : client ? [client] : [];
 
             replaceDrawer(
-                <ContactDetailsView
-                    id={`${id}-contact-details`}
-                    initialContact={contact}
-                    clients={minimalClients}
-                    isInDrawer={true}
-                    userId={userId}
-                    quickView={true}
-                    showDocuments={false}
-                    showInteractions={true}
-                    clientReadOnly={true}
-                />,
+                renderContactDetails
+                    ? renderContactDetails({
+                        id: `${id}-contact-details`,
+                        contact,
+                        clients: minimalClients,
+                        userId
+                    })
+                    : (
+                        <div className="p-4 space-y-3">
+                            <div className="text-lg font-semibold">
+                                {contact.full_name || 'Contact'}
+                            </div>
+                            <Button
+                                id="ticket-details-open-contact"
+                                type="button"
+                                variant="outline"
+                                onClick={() => window.open(`/msp/contacts/${contact.contact_name_id}`, '_blank', 'noopener,noreferrer')}
+                            >
+                                Open Contact <ExternalLink className="ml-2 h-4 w-4" />
+                            </Button>
+                        </div>
+                    ),
                 undefined,
                 '900px'
             );
