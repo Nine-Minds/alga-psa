@@ -106,8 +106,8 @@
     <label for="description">Description</label>
     <textarea id="description" rows="2" placeholder="e.g. Implementation work">Implementation work</textarea>
 
-    <button id="btn-create" onclick="createInvoice()">Create Draft Invoice</button>
-    <button onclick="checkStatus()" style="background:#666;">Status</button>
+    <button id="btn-create">Create Draft Invoice</button>
+    <button id="btn-status" style="background:#666;">Status</button>
   </div>
 
   <div class="card">
@@ -115,72 +115,6 @@
     <div id="output" class="output">Ready.</div>
   </div>
 
-  <script>
-    const output = document.getElementById('output');
-
-    function write(obj) {
-      output.textContent = JSON.stringify(obj, null, 2);
-    }
-
-    function extensionId() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('extensionId') || window.EXTENSION_ID || 'com.alga.sample.invoicing-demo';
-      } catch {
-        return window.EXTENSION_ID || 'com.alga.sample.invoicing-demo';
-      }
-    }
-
-    async function apiCall(method, path, body) {
-      const res = await fetch(`/api/extensions/exec/${extensionId()}${path}`, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-      const data = await res.json().catch(() => ({}));
-      return { ok: res.ok, status: res.status, data };
-    }
-
-    async function checkStatus() {
-      const result = await apiCall('GET', '/api/status');
-      write(result);
-    }
-
-    async function createInvoice() {
-      const btn = document.getElementById('btn-create');
-      btn.disabled = true;
-      btn.textContent = 'Creating...';
-
-      try {
-        const clientId = document.getElementById('clientId').value.trim();
-        const serviceId = document.getElementById('serviceId').value.trim();
-        const invoiceDate = document.getElementById('invoiceDate').value.trim();
-        const dueDate = document.getElementById('dueDate').value.trim();
-        const poNumber = document.getElementById('poNumber').value.trim();
-        const quantity = Number(document.getElementById('quantity').value);
-        const rateDollars = Number(document.getElementById('rateDollars').value);
-        const description = document.getElementById('description').value;
-
-        const rate = Number.isFinite(rateDollars) ? Math.round(rateDollars * 100) : rateDollars;
-
-        const body = {
-          clientId,
-          invoiceDate: invoiceDate || undefined,
-          dueDate: dueDate || undefined,
-          poNumber: poNumber ? poNumber : null,
-          items: [
-            { serviceId, quantity, description, rate },
-          ],
-        };
-
-        const result = await apiCall('POST', '/api/create-manual-invoice', body);
-        write(result);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Create Draft Invoice';
-      }
-    }
-  </script>
+  <script src="./main.js" type="module"></script>
 </body>
 </html>
-

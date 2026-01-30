@@ -95,17 +95,19 @@ function validateItems(items: unknown, errors: Record<string, string>): ManualIn
       if (discountTypeRaw) {
         addError(errors, `items[${idx}].discountType`, 'Not allowed unless isDiscount=true')
       }
-      if (raw.appliesToItemId !== undefined || raw.appliesToServiceId !== undefined) {
+      // Treat `null` the same as undefined; older runner versions serialize `option<string>` as `null`
+      // rather than omitting the key.
+      if (raw.appliesToItemId != null || raw.appliesToServiceId != null) {
         addError(errors, `items[${idx}]`, 'appliesTo* fields require isDiscount=true')
       }
     }
 
     const appliesToItemId =
-      raw.appliesToItemId === undefined
+      raw.appliesToItemId == null
         ? undefined
         : validateUuid(raw.appliesToItemId, `items[${idx}].appliesToItemId`, errors)
     const appliesToServiceId =
-      raw.appliesToServiceId === undefined
+      raw.appliesToServiceId == null
         ? undefined
         : validateUuid(raw.appliesToServiceId, `items[${idx}].appliesToServiceId`, errors)
 
@@ -165,4 +167,3 @@ export function validateCreateManualInvoiceInput(
     },
   }
 }
-

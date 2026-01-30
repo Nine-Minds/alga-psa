@@ -52,7 +52,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
     `[invoicing-demo] request start tenant=${tenantId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`
   );
 
-  if (method === 'GET' && url.startsWith('/api/status')) {
+  if ((method === 'GET' || method === 'POST') && url.startsWith('/api/status')) {
     return jsonResponse({
       status: 'healthy',
       timestamp: new Date().toISOString(),

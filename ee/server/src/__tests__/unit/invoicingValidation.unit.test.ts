@@ -27,6 +27,23 @@ describe('Invoicing validation (T012, T017)', () => {
     }
   })
 
+  it('allows null appliesTo* fields when isDiscount is not set (runner may send null for option<string>)', () => {
+    const result = validateCreateManualInvoiceInput({
+      clientId: '8b7e8a8f-0b86-4e80-8a3f-1d7b1f9d9c08',
+      items: [
+        {
+          serviceId: '8b7e8a8f-0b86-4e80-8a3f-1d7b1f9d9c08',
+          quantity: 1,
+          description: 'Item',
+          rate: 100,
+          appliesToItemId: null,
+          appliesToServiceId: null,
+        },
+      ],
+    })
+    expect(result.ok).toBe(true)
+  })
+
   it('T017: rejects invalid invoiceDate/dueDate formats', () => {
     const result = validateCreateManualInvoiceInput({
       clientId: '8b7e8a8f-0b86-4e80-8a3f-1d7b1f9d9c08',
@@ -48,4 +65,3 @@ describe('Invoicing validation (T012, T017)', () => {
     }
   })
 })
-
