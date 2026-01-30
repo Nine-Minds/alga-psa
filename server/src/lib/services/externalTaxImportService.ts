@@ -225,7 +225,8 @@ export class ExternalTaxImportService {
         )
         .first();
 
-      const newTotal = Number(newTotals?.subtotal ?? 0) + Number(newTotals?.tax ?? 0);
+      const newTotalsRow = newTotals as unknown as { subtotal?: number | string; tax?: number | string } | undefined;
+      const newTotal = Number(newTotalsRow?.subtotal ?? 0) + Number(newTotalsRow?.tax ?? 0);
 
       await knex('invoices')
         .where({ invoice_id: invoiceId, tenant })

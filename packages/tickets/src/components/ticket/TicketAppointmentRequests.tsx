@@ -5,6 +5,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock, User, Loader2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { format, parseISO } from 'date-fns';
+import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 
 export interface ITicketAppointmentRequest {
   appointment_request_id: string;
@@ -34,15 +35,15 @@ export default function TicketAppointmentRequests({
 }: TicketAppointmentRequestsProps) {
   const { t } = useTranslation('clientPortal');
 
-  const getStatusBadgeVariant = (status: string): 'default' | 'outline' | 'secondary' | 'destructive' => {
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {
       case 'approved':
-        return 'default';
+        return 'success';
       case 'pending':
-        return 'secondary';
+        return 'warning';
       case 'declined':
       case 'cancelled':
-        return 'destructive';
+        return 'error';
       default:
         return 'outline';
     }

@@ -49,30 +49,22 @@ export {
   getTaxImportState,
 } from '@alga-psa/types';
 
-// Services
+// Legacy accounting integration helpers (used by server adapters/workflows)
 export { AccountingMappingResolver } from './services/accountingMappingResolver';
 export type { MappingResolution } from './services/accountingMappingResolver';
-
-// Company sync services
+export { KnexInvoiceMappingRepository } from './repositories/invoiceMappingRepository';
 export {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload,
   QuickBooksOnlineCompanyAdapter,
-  XeroCompanyAdapter
+  XeroCompanyAdapter,
 } from './services/companySync';
 export type {
-  CompanyMappingRepository,
-  AccountingCompanyAdapter,
+  AccountingAdapterType,
+  ExternalCompanyRecord,
   NormalizedCompanyPayload,
-  ExternalCompanyRecord
 } from './services/companySync';
-
-// Repositories
-export { KnexInvoiceMappingRepository } from './repositories/invoiceMappingRepository';
-
-// Validation
-export { AccountingExportValidation } from './lib/validation/accountingExportValidation';
 
 // Note: This module contains:
 // - Invoice CRUD operations (migrated)
