@@ -101,16 +101,19 @@ const NEXTAUTH_COOKIES = {
     },
 } as const;
 
-let enterpriseSsoRegistryInitialized = false;
+let enterpriseSsoRegistryInitPromise: Promise<void> | null = null;
 
 async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
-    if (!isEnterprise || enterpriseSsoRegistryInitialized) {
+    if (!isEnterprise) {
         return;
     }
 
-    enterpriseSsoRegistryInitialized = true;
+    if (enterpriseSsoRegistryInitPromise) {
+        await enterpriseSsoRegistryInitPromise;
+        return;
+    }
 
-    try {
+    enterpriseSsoRegistryInitPromise = (async () => {
         const {
             mapOAuthProfileToExtendedUser,
             applyOAuthAccountHints,
@@ -123,6 +126,12 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
         } = await import('@ee/lib/auth/oauthAccountLinks');
         const { isAutoLinkEnabledForTenant } = await import('@ee/lib/auth/ssoAutoLink');
 
+        // If @ee is mis-aliased to CE stubs at build time, these functions will still exist but will
+        // throw EE-only errors. Detect and log a more actionable message.
+        if (String(mapOAuthProfileToExtendedUser).includes('OAuth providers are only available in Enterprise Edition')) {
+            console.error('[auth] Enterprise SSO registry resolved to CE stubs. Check build-time EDITION/NEXT_PUBLIC_EDITION and @ee alias wiring.');
+        }
+
         registerSSOProvider({
             mapOAuthProfileToExtendedUser,
             applyOAuthAccountHints,
@@ -132,7 +141,12 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
             listOAuthAccountLinksForUser,
             isAutoLinkEnabledForTenant,
         });
+    })();
+
+    try {
+        await enterpriseSsoRegistryInitPromise;
     } catch (error) {
+        enterpriseSsoRegistryInitPromise = null;
         // Avoid crashing auth if EE modules aren't available; providers will fail with a clearer error
         // when invoked via the default registry stubs.
         console.error('[auth] Failed to initialize Enterprise SSO registry', error);
