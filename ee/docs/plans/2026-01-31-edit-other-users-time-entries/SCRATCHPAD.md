@@ -77,3 +77,4 @@
 - 2026-01-31: F031 — Timesheet header now shows “Time Sheet for {Subject}” and (when delegated) “Edited by {Actor}” via new props plumbed through `TimeSheetClient` → `TimeSheet` → `TimeSheetHeader`.
 - 2026-01-31: F032 — Added “Reopen for edits” button to `TimeSheetHeader` for APPROVED, non-invoiced timesheets when server precomputes `canReopenForEdits` (see `server/src/app/msp/time-entry/timesheet/[id]/page.tsx`).
 - 2026-01-31: F033 — Reopen flow now uses `ConfirmationDialog` and shows toast success/error (including invoiced-block errors) in `TimeSheetClient`.
+- 2026-01-31: F034 — Timesheet client now forces `timeEntry.user_id = timeSheet.user_id` when saving so delegated entry create/edit targets the subject reliably.

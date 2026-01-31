@@ -48,6 +48,7 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     try {
       console.log('Saving time entry:', timeEntry);
       timeEntry.time_sheet_id = timeSheet.id;
+      timeEntry.user_id = timeSheet.user_id;
       const savedTimeEntry = await saveTimeEntry(timeEntry);
       console.log('Time entry saved successfully:', savedTimeEntry);
 

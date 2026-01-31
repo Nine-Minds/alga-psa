@@ -41,7 +41,7 @@
   { "id": "F032", "description": "UI: Add “Reopen for edits” control for authorized users when a time sheet is `APPROVED` and not invoiced.", "implemented": true },
   { "id": "F033", "description": "UI: Make the reopen flow actionable and informative (confirmation dialog + error display if invoiced).", "implemented": true },
 
-  { "id": "F034", "description": "UI: Ensure time entry create/edit/delete in the timesheet UI works unchanged for self and works correctly for delegated subject users.", "implemented": false },
+  { "id": "F034", "description": "UI: Ensure time entry create/edit/delete in the timesheet UI works unchanged for self and works correctly for delegated subject users.", "implemented": true },
   { "id": "F035", "description": "UI: Prevent editing UI affordances when the server indicates non-editable status or invoiced constraints.", "implemented": false },
 
   { "id": "F036", "description": "Security: Remove/avoid APIs that accept arbitrary team ids for manager-scoped operations; compute/validate scope server-side.", "implemented": false },
