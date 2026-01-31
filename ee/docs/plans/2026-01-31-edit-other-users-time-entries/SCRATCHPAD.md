@@ -117,3 +117,4 @@
 - 2026-01-31: T091 — Extended static UI test to assert `UserPicker` options come from `fetchEligibleTimeEntrySubjects`.
 - 2026-01-31: T092 — Extended static UI test to assert subject selection drives `fetchTimePeriods(subjectUserId)` + `fetchOrCreateTimeSheet(subjectUserId, ...)`.
 - 2026-01-31: T093 — Added static UI test `server/src/test/unit/ui/timesheetHeader.test.ts` asserting header contains subject + delegated actor messaging.
+- 2026-01-31: T094 — Added static UI test `server/src/test/unit/ui/reopenForEdits.test.ts` asserting “Reopen for edits” gating (server-side) + confirm flow (client-side).
