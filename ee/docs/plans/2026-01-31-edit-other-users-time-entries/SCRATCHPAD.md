@@ -70,3 +70,4 @@
 - 2026-01-31: F024 — Hardened approval operations in `packages/scheduling/src/actions/timeSheetActions.ts`: approvals now enforce delegation scope via `assertCanActOnBehalf` (tenant-wide admins vs managers), and reject spoofed `approverId/managerId` params.
 - 2026-01-31: F025 — Updated “reopen/reverse approval” (`reverseTimeSheetApproval`) to set the timesheet + entries to `CHANGES_REQUESTED` so the UI becomes editable.
 - 2026-01-31: F026 — `reverseTimeSheetApproval` now enforces delegation authorization via `assertCanActOnBehalf` (and rejects spoofed `approverId`).
+- 2026-01-31: F027 — Added subject user selector to `/msp/time-entry` (implemented in `packages/scheduling/src/components/time-management/time-entry/TimeTracking.tsx`; defaults to self and only renders when multiple eligible subjects exist).

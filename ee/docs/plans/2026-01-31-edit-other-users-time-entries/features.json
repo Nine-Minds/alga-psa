@@ -32,7 +32,7 @@
   { "id": "F025", "description": "Actions: Update the “reverse approval / reopen” behavior to transition the time sheet into an editable status (`CHANGES_REQUESTED`) instead of `SUBMITTED`.", "implemented": true },
   { "id": "F026", "description": "Actions: Ensure “reopen for edits” requires `timesheet:reverse` and delegation authorization.", "implemented": true },
 
-  { "id": "F027", "description": "UI: Add a subject user selector to `/msp/time-entry` for users who can act on behalf of others (default to self).", "implemented": false },
+  { "id": "F027", "description": "UI: Add a subject user selector to `/msp/time-entry` for users who can act on behalf of others (default to self).", "implemented": true },
   { "id": "F028", "description": "UI: Use `UserPicker` for subject selection and load options from the new eligible-subjects server action.", "implemented": false },
   { "id": "F029", "description": "UI: Update time period listing to fetch periods for the selected subject user.", "implemented": false },
   { "id": "F030", "description": "UI: Ensure navigation into a timesheet preserves/communicates the subject context (derived from time sheet owner).", "implemented": false },
