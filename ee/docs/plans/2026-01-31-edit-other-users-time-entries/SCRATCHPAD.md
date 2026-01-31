@@ -81,3 +81,6 @@
 - 2026-01-31: F035 — Improved client error handling so server-side “not editable” / “invoiced” constraints surface as user-visible toast messages (see `TimeEntryDialog.tsx`).
 - 2026-01-31: F036 — Removed client-supplied team scoping from `fetchTimeSheetsForApproval`; server now computes manager scope via joins (updated `ManagerApprovalDashboard` call signature).
 - 2026-01-31: F037 — Hardened remaining time entry reads to prevent ID-guessing: `fetchTimeEntriesForTimeSheet` and `getTimeEntryById` now enforce owner-or-delegate via `assertCanActOnBehalf` in `packages/scheduling/src/actions/timeEntryCrudActions.ts`.
+
+## Test log
+- 2026-01-31: T001 — `python3 scripts/validate_plan.py ee/docs/plans/2026-01-31-edit-other-users-time-entries` ✅
