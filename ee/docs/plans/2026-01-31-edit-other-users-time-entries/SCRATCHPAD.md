@@ -49,3 +49,4 @@
 - 2026-01-31: F003 — Extended `ITimeEntry` types to include optional `created_by`/`updated_by` in `server/src/interfaces/timeEntry.interfaces.ts` and `packages/types/src/interfaces/timeEntry.interfaces.ts`.
 - 2026-01-31: F004 — Extended `timeEntrySchema` to include optional `created_by`/`updated_by` in `packages/scheduling/src/schemas/timeSheet.schemas.ts`.
 - 2026-01-31: F005 — Added shared delegation helper `packages/scheduling/src/actions/timeEntryDelegationAuth.ts` (`assertCanActOnBehalf`) to authorize self vs tenant-wide vs manager-of-subject access.
+- 2026-01-31: F006 — Implemented server-side manager-of-subject check via `teams.manager_id` + `team_members` join (exported `isManagerOfSubject`).

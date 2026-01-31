@@ -6,7 +6,7 @@ import { hasPermission } from '@alga-psa/auth';
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
 
-async function isManagerOfSubject(
+export async function isManagerOfSubject(
   db: Knex | Knex.Transaction,
   tenant: string,
   actorUserId: string,
@@ -52,4 +52,3 @@ export async function assertCanActOnBehalf(
 
   throw new Error('Permission denied: Cannot access other users time sheets');
 }
-
