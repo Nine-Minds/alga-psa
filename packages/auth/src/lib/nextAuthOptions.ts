@@ -18,7 +18,7 @@ import {
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
-import { getSSORegistry } from "./sso/registry";
+import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import type { OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
 import { OAuthAccountLinkConflictError } from "./sso/types";
 import { cookies } from "next/headers.js";
@@ -100,6 +100,44 @@ const NEXTAUTH_COOKIES = {
         },
     },
 } as const;
+
+let enterpriseSsoRegistryInitialized = false;
+
+async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
+    if (!isEnterprise || enterpriseSsoRegistryInitialized) {
+        return;
+    }
+
+    enterpriseSsoRegistryInitialized = true;
+
+    try {
+        const {
+            mapOAuthProfileToExtendedUser,
+            applyOAuthAccountHints,
+            decodeOAuthJwtPayload,
+        } = await import('@ee/lib/auth/ssoProviders');
+        const {
+            upsertOAuthAccountLink,
+            findOAuthAccountLink,
+            listOAuthAccountLinksForUser,
+        } = await import('@ee/lib/auth/oauthAccountLinks');
+        const { isAutoLinkEnabledForTenant } = await import('@ee/lib/auth/ssoAutoLink');
+
+        registerSSOProvider({
+            mapOAuthProfileToExtendedUser,
+            applyOAuthAccountHints,
+            decodeOAuthJwtPayload,
+            upsertOAuthAccountLink,
+            findOAuthAccountLink,
+            listOAuthAccountLinksForUser,
+            isAutoLinkEnabledForTenant,
+        });
+    } catch (error) {
+        // Avoid crashing auth if EE modules aren't available; providers will fail with a clearer error
+        // when invoked via the default registry stubs.
+        console.error('[auth] Failed to initialize Enterprise SSO registry', error);
+    }
+}
 
 async function computeVanityRedirect({
     url,
@@ -781,6 +819,7 @@ async function getOAuthSecrets() {
 
 // Build NextAuth options dynamically with secrets
 export async function buildAuthOptions(): Promise<NextAuthConfig> {
+    await ensureEnterpriseSsoRegistryInitialized();
     const secrets = await getOAuthSecrets();
     const nextAuthSecret = await getNextAuthSecret();
 
