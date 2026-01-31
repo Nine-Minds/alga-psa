@@ -94,4 +94,60 @@ describe('fetchEligibleTimeEntrySubjects', () => {
     expect(ids).toContain('report-2');
     expect(ids).not.toContain('outside-user');
   });
+
+  it('returns all internal users for tenant-wide admins', async () => {
+    currentUser = {
+      tenant: 'tenant-1',
+      user_id: 'admin-1',
+      user_type: 'internal',
+      username: 'admin',
+      email: 'admin@example.com',
+      is_inactive: false,
+      first_name: 'Ari',
+      last_name: 'Admin',
+    };
+
+    vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
+      if (resource !== 'timesheet') return false;
+      return action === 'approve' || action === 'read_all';
+    });
+
+    const allInternalUsers = [
+      {
+        user_id: 'admin-1',
+        username: 'admin',
+        first_name: 'Ari',
+        last_name: 'Admin',
+        email: 'admin@example.com',
+        is_inactive: false,
+        tenant: 'tenant-1',
+        user_type: 'internal',
+        timezone: 'UTC',
+      },
+      {
+        user_id: 'user-2',
+        username: 'user2',
+        first_name: 'Uma',
+        last_name: 'User',
+        email: 'user2@example.com',
+        is_inactive: false,
+        tenant: 'tenant-1',
+        user_type: 'internal',
+        timezone: 'UTC',
+      },
+    ];
+
+    const qb: any = {
+      where: () => qb,
+      select: async () => allInternalUsers,
+    };
+    const fakeDb = vi.fn(() => qb) as any;
+
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: fakeDb, tenant: currentUser.tenant } as any);
+
+    const subjects = await fetchEligibleTimeEntrySubjects();
+    const ids = subjects.map((u) => u.user_id);
+    expect(ids).toContain('admin-1');
+    expect(ids).toContain('user-2');
+  });
 });

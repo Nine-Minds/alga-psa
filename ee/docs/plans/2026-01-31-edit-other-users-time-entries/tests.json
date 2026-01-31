@@ -15,7 +15,7 @@
 
   { "id": "T040", "description": "Actions: Eligible-subjects action returns self-only for non-delegates.", "implemented": true, "featureIds": ["F008"] },
   { "id": "T041", "description": "Actions: Eligible-subjects action returns team members for managers (only teams they manage).", "implemented": true, "featureIds": ["F006", "F008"] },
-  { "id": "T042", "description": "Actions: Eligible-subjects action returns all internal users for tenant-wide admins.", "implemented": false, "featureIds": ["F008"] },
+  { "id": "T042", "description": "Actions: Eligible-subjects action returns all internal users for tenant-wide admins.", "implemented": true, "featureIds": ["F008"] },
 
   { "id": "T050", "description": "Actions: `fetchTimePeriods(subjectUserId)` rejects unauthorized subject user.", "implemented": false, "featureIds": ["F009", "F037"] },
   { "id": "T051", "description": "Actions: `fetchOrCreateTimeSheet(subjectUserId, periodId)` rejects unauthorized subject user.", "implemented": false, "featureIds": ["F010", "F037"] },
