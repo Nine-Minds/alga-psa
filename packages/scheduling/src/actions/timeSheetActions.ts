@@ -231,6 +231,10 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
+    if (managerId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     const approvedSheets: any[] = [];
 
     await db.transaction(async (trx) => {
@@ -247,21 +251,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           throw new Error(`Time sheet ${id} is not in a submitted state or does not exist`);
         }
 
-        const isManager = await trx('teams')
-          .join('team_members', function() {
-            this.on('teams.team_id', '=', 'team_members.team_id')
-                .andOn('teams.tenant', '=', 'team_members.tenant');
-          })
-          .where({
-            'team_members.user_id': timeSheet.user_id,
-            'teams.manager_id': managerId,
-            'teams.tenant': tenant
-          })
-          .first();
-
-        if (!isManager) {
-          throw new Error(`Unauthorized: Not a manager for time sheet ${id}`);
-        }
+        await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
         // Get analytics data before approval
         const entriesInfo = await trx('time_entries')
@@ -283,7 +273,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           })
           .update({
             approval_status: 'APPROVED',
-            approved_by: managerId,
+            approved_by: user.user_id,
             approved_at: new Date()
           });
 
@@ -312,7 +302,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
         entry_count: sheet.entry_count,
         total_hours: sheet.total_hours,
         approval_type: 'bulk'
-      }, managerId);
+      }, user.user_id);
     }
 
     return { success: true };
@@ -504,6 +494,10 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
+    if (approverId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     let analyticsData: any = {};
 
     await db.transaction(async (trx) => {
@@ -517,6 +511,8 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
       // Get analytics data
       const entriesInfo = await trx('time_entries')

@@ -67,3 +67,4 @@
 - 2026-01-31: F021 — Reopen/reverse approval is blocked when any related `time_entries.invoiced = true` (see `reverseTimeSheetApproval` in `packages/scheduling/src/actions/timeSheetActions.ts`).
 - 2026-01-31: F022 — Hardened `deleteTimeEntry(entryId)` in `packages/scheduling/src/actions/timeEntryCrudActions.ts` (enforces delegation via `assertCanActOnBehalf` and blocks deletes when `invoiced=true`).
 - 2026-01-31: F023 — Hardened `submitTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeSheetOperations.ts` (requires `timesheet:submit` and enforces delegation via `assertCanActOnBehalf` before submitting + updating entry statuses).
+- 2026-01-31: F024 — Hardened approval operations in `packages/scheduling/src/actions/timeSheetActions.ts`: approvals now enforce delegation scope via `assertCanActOnBehalf` (tenant-wide admins vs managers), and reject spoofed `approverId/managerId` params.
