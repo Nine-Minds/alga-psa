@@ -18,4 +18,10 @@ describe('saveTimeEntry behavior (static)', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
     expect(src).toContain('const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry');
   });
+
+  it('sets created_by/updated_by audit fields from the actor', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
+    expect(src).toContain('updated_by: actorUserId');
+    expect(src).toContain('created_by: actorUserId');
+  });
 });

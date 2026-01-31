@@ -25,7 +25,7 @@
 
   { "id": "T060", "description": "Actions: Creating a time entry on behalf sets `time_entries.user_id = subjectUserId` (not actor).", "implemented": true, "featureIds": ["F014", "F016"] },
   { "id": "T061", "description": "Actions: Updating a time entry does not change `user_id` ownership.", "implemented": true, "featureIds": ["F015"] },
-  { "id": "T062", "description": "Actions: On create, `created_by` and `updated_by` are set to actor; on update, `updated_by` changes to actor.", "implemented": false, "featureIds": ["F018"] },
+  { "id": "T062", "description": "Actions: On create, `created_by` and `updated_by` are set to actor; on update, `updated_by` changes to actor.", "implemented": true, "featureIds": ["F018"] },
   { "id": "T063", "description": "Actions: `work_date` is computed using the subject timezone (edge case around midnight local time).", "implemented": false, "featureIds": ["F017"] },
   { "id": "T064", "description": "Actions: Time entry timestamps outside the time period boundary are rejected.", "implemented": false, "featureIds": ["F019"] },
 
