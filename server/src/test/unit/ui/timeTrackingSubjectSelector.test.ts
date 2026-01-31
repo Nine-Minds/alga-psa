@@ -15,5 +15,13 @@ describe('/msp/time-entry subject selector (static)', () => {
     expect(src).toContain('useState(currentUser.user_id)');
     expect(src).toContain('const showSubjectSelector = subjectUsers.length > 1');
   });
-});
 
+  it('uses UserPicker populated from eligible-subjects server action', () => {
+    const src = readRepoFile(
+      'packages/scheduling/src/components/time-management/time-entry/TimeTracking.tsx'
+    );
+    expect(src).toContain("import UserPicker from '@alga-psa/ui/components/UserPicker'");
+    expect(src).toContain('fetchEligibleTimeEntrySubjects');
+    expect(src).toContain('users={subjectUsers}');
+  });
+});
