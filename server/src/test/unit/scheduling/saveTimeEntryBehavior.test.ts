@@ -31,4 +31,9 @@ describe('saveTimeEntry behavior (static)', () => {
     expect(src).toContain('const periodStart');
     expect(src).toContain('const periodEnd');
   });
+
+  it('blocks updates to invoiced time entries', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
+    expect(src).toContain('already been invoiced and cannot be modified');
+  });
 });

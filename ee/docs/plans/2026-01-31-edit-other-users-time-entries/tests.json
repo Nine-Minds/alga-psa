@@ -29,7 +29,7 @@
   { "id": "T063", "description": "Actions: `work_date` is computed using the subject timezone (edge case around midnight local time).", "implemented": true, "featureIds": ["F017"] },
   { "id": "T064", "description": "Actions: Time entry timestamps outside the time period boundary are rejected.", "implemented": true, "featureIds": ["F019"] },
 
-  { "id": "T070", "description": "Billing integrity: Editing an invoiced time entry is blocked.", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T070", "description": "Billing integrity: Editing an invoiced time entry is blocked.", "implemented": true, "featureIds": ["F020"] },
   { "id": "T071", "description": "Billing integrity: Deleting an invoiced time entry is blocked.", "implemented": false, "featureIds": ["F020", "F022"] },
   { "id": "T072", "description": "Billing integrity: Reopening a time sheet with any invoiced entry is blocked.", "implemented": false, "featureIds": ["F021"] },
 

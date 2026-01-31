@@ -106,3 +106,4 @@
 - 2026-01-31: T062 — Extended static `saveTimeEntry` test to assert audit columns are set from the actor (`created_by` on insert, `updated_by` on save).
 - 2026-01-31: T063 — Added unit test `server/src/test/unit/db/workDate.test.ts` validating timezone-aware `work_date` computation around midnight.
 - 2026-01-31: T064 — Extended static `saveTimeEntry` test to assert time period boundary validation exists and returns a clear error.
+- 2026-01-31: T070 — Extended static `saveTimeEntry` test to assert invoiced entries are blocked from editing.
