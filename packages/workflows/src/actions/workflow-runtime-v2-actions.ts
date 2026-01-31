@@ -16,8 +16,11 @@ import {
   applyRedactions,
   validateWorkflowDefinition,
   validateInputMapping,
+  buildTriggerMappingExpressionContext,
+  expandDottedKeys,
   resolveInputMapping,
   createSecretResolverFromProvider,
+  mappingUsesSecretRefs,
   type PublishError
 } from '@shared/workflow/runtime';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
@@ -658,36 +661,6 @@ const measurePayloadBytes = (payload: unknown) => {
   } catch {
     return null;
   }
-};
-
-const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (!key.includes('.')) {
-      result[key] = value;
-      continue;
-    }
-    const parts = key.split('.').filter(Boolean);
-    if (parts.length === 0) continue;
-    let cursor: Record<string, unknown> = result;
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]!;
-      const isLeaf = i === parts.length - 1;
-      if (isLeaf) {
-        cursor[part] = value;
-        continue;
-      }
-      const existing = cursor[part];
-      if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
-        cursor = existing as Record<string, unknown>;
-        continue;
-      }
-      const next: Record<string, unknown> = {};
-      cursor[part] = next;
-      cursor = next;
-    }
-  }
-  return result;
 };
 
 const redactSensitiveValues = (value: unknown): unknown => {
@@ -1544,19 +1517,19 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
       });
     }
     if (triggerMappingProvided) {
-      const provider = tenant ? createTenantSecretProvider(knex, tenant) : null;
+      const provider = (tenant && mappingUsesSecretRefs(triggerMapping))
+        ? createTenantSecretProvider(knex, tenant)
+        : null;
       const secretResolver = provider
         ? createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId))
         : undefined;
       const resolved = await resolveInputMapping(triggerMapping, {
-        expressionContext: {
-          event: {
-            name: parsed.eventType ?? trigger?.eventName ?? null,
-            correlationKey: 'manual',
-            payload: parsed.payload ?? {},
-            payloadSchemaRef: effectiveSourceSchemaRef
-          }
-        },
+        expressionContext: buildTriggerMappingExpressionContext({
+          name: parsed.eventType ?? trigger?.eventName ?? null,
+          correlationKey: 'manual',
+          payload: (parsed.payload ?? {}) as Record<string, unknown>,
+          payloadSchemaRef: effectiveSourceSchemaRef
+        }),
         secretResolver
       });
       finalPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
@@ -2656,19 +2629,19 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     let mappingApplied = false;
     if (mappingProvided) {
       try {
-        const provider = tenant ? createTenantSecretProvider(knex, tenant) : null;
+        const provider = (tenant && mappingUsesSecretRefs(payloadMapping))
+          ? createTenantSecretProvider(knex, tenant)
+          : null;
         const secretResolver = provider
           ? createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId))
           : undefined;
         const resolved = await resolveInputMapping(payloadMapping, {
-          expressionContext: {
-            event: {
-              name: parsed.eventName,
-              correlationKey: parsed.correlationKey,
-              payload: parsed.payload ?? {},
-              payloadSchemaRef: effectiveSourceSchemaRef
-            }
-          },
+          expressionContext: buildTriggerMappingExpressionContext({
+            name: parsed.eventName,
+            correlationKey: parsed.correlationKey,
+            payload: (parsed.payload ?? {}) as Record<string, unknown>,
+            payloadSchemaRef: effectiveSourceSchemaRef
+          }),
           secretResolver
         });
         const flat = resolved ?? {};

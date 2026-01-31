@@ -25,6 +25,12 @@ export {
   type MappingResolverOptions
 } from './utils/mappingResolver';
 export {
+  buildTriggerMappingExpressionContext,
+  expandDottedKeys,
+  mappingUsesSecretRefs,
+  type TriggerMappingExpressionContextEvent,
+} from './utils/triggerMappingUtils';
+export {
   maskSecretRefs,
   maskResolvedSecrets,
   applyRedactions,

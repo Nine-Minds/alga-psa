@@ -2,9 +2,12 @@ import logger from '@shared/core/logger.js';
 import { RedisStreamClient, WorkflowEventBaseSchema } from '@shared/workflow/streams/index.js';
 import {
   WorkflowRuntimeV2,
+  buildTriggerMappingExpressionContext,
   createSecretResolverFromProvider,
+  expandDottedKeys,
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
+  mappingUsesSecretRefs,
   resolveInputMapping,
 } from '@shared/workflow/runtime';
 import { createTenantSecretProvider } from '@shared/workflow/secrets';
@@ -13,45 +16,6 @@ import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workf
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
-
-const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (!key.includes('.')) {
-      result[key] = value;
-      continue;
-    }
-    const parts = key.split('.').filter(Boolean);
-    if (parts.length === 0) continue;
-    let cursor: Record<string, unknown> = result;
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]!;
-      const isLeaf = i === parts.length - 1;
-      if (isLeaf) {
-        cursor[part] = value;
-        continue;
-      }
-      const existing = cursor[part];
-      if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
-        cursor = existing as Record<string, unknown>;
-        continue;
-      }
-      const next: Record<string, unknown> = {};
-      cursor[part] = next;
-      cursor = next;
-    }
-  }
-  return result;
-};
-
-const mappingUsesSecretRefs = (value: unknown): boolean => {
-  if (!value) return false;
-  if (Array.isArray(value)) return value.some(mappingUsesSecretRefs);
-  if (typeof value !== 'object') return false;
-  const obj = value as Record<string, unknown>;
-  if (typeof obj.$secret === 'string' && obj.$secret.trim().length > 0) return true;
-  return Object.values(obj).some(mappingUsesSecretRefs);
-};
 
 type WorkerConfig = {
   consumerGroup: string;
@@ -267,13 +231,12 @@ export class WorkflowRuntimeV2EventStreamWorker {
             : undefined;
 
           const resolved = await resolveInputMapping(payloadMapping, {
-            expressionContext: {
-              event: {
-                name: event.event_type,
-                payload,
-                payloadSchemaRef: effectiveSourceSchemaRef
-              }
-            },
+            expressionContext: buildTriggerMappingExpressionContext({
+              name: event.event_type,
+              correlationKey: event.event_id,
+              payload,
+              payloadSchemaRef: effectiveSourceSchemaRef
+            }),
             secretResolver
           });
 
