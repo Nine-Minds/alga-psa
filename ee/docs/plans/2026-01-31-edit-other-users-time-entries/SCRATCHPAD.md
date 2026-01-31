@@ -113,3 +113,4 @@
 - 2026-01-31: T081 — Added static test `server/src/test/unit/scheduling/approvalBehavior.test.ts` asserting `approveTimeSheet` enforces delegation and sets `APPROVED`.
 - 2026-01-31: T082 — Extended approval behavior test to assert `bulkApproveTimeSheets` enforces manager scope via `assertCanActOnBehalf` (no widening via spoofed managerId).
 - 2026-01-31: T083 — Extended guard-wiring test to assert reopen transitions to `CHANGES_REQUESTED` and UI treats that status as editable.
+- 2026-01-31: T090 — Added static UI test `server/src/test/unit/ui/timeTrackingSubjectSelector.test.ts` asserting selector defaults to self and hides when no delegation options exist.
