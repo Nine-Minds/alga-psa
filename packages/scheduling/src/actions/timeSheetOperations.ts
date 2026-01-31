@@ -207,7 +207,7 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
   }));
 });
 
-export const fetchOrCreateTimeSheet = withAuth(async (_user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView> => {
+export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView> => {
   // Validate input
   const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
     fetchOrCreateTimeSheetParamsSchema,
@@ -215,6 +215,8 @@ export const fetchOrCreateTimeSheet = withAuth(async (_user, { tenant }, userId:
   );
 
   const {knex: db} = await createTenantKnex();
+
+  await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
   let timeSheet = await db('time_sheets')
     .where({

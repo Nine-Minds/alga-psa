@@ -10,7 +10,7 @@
   { "id": "F008", "description": "Actions: Add a server action that returns the list of eligible subject users for the actor (self always; otherwise team-scoped or tenant-wide depending on permissions).", "implemented": true },
 
   { "id": "F009", "description": "Actions: Harden `fetchTimePeriods(userId)` to enforce the delegation policy when `userId !== actor.user_id`.", "implemented": true },
-  { "id": "F010", "description": "Actions: Harden `fetchOrCreateTimeSheet(userId, periodId)` to enforce the delegation policy when creating/fetching a time sheet for another user.", "implemented": false },
+  { "id": "F010", "description": "Actions: Harden `fetchOrCreateTimeSheet(userId, periodId)` to enforce the delegation policy when creating/fetching a time sheet for another user.", "implemented": true },
   { "id": "F011", "description": "Actions: Harden `fetchTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate (billing admin / manager-of-subject).", "implemented": false },
   { "id": "F012", "description": "Actions: Harden `fetchTimeEntriesForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": false },
   { "id": "F013", "description": "Actions: Harden `fetchWorkItemsForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": false },
