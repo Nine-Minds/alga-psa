@@ -30,6 +30,7 @@ export default function TimeTracking({ currentUser, isManager: _isManager }: Tim
   }, [currentUser.user_id]);
 
   useEffect(() => {
+    setTimePeriods([]);
     setIsLoading(true);
     void loadTimePeriods();
   }, [subjectUserId]);

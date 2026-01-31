@@ -72,3 +72,4 @@
 - 2026-01-31: F026 — `reverseTimeSheetApproval` now enforces delegation authorization via `assertCanActOnBehalf` (and rejects spoofed `approverId`).
 - 2026-01-31: F027 — Added subject user selector to `/msp/time-entry` (implemented in `packages/scheduling/src/components/time-management/time-entry/TimeTracking.tsx`; defaults to self and only renders when multiple eligible subjects exist).
 - 2026-01-31: F028 — Switched subject selector to use `UserPicker` and populate from `fetchEligibleTimeEntrySubjects`.
+- 2026-01-31: F029 — Time period list now reloads from `fetchTimePeriods(subjectUserId)` when the selected subject changes.
