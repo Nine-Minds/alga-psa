@@ -22,7 +22,7 @@
   { "id": "F018", "description": "Actions: Populate `created_by`/`updated_by` on create, and `updated_by` on update.", "implemented": true },
 
   { "id": "F019", "description": "Actions: Add server-side validation that a time entry’s timestamps fall within the associated time period boundaries for the time sheet.", "implemented": true },
-  { "id": "F020", "description": "Actions: Block updates/deletes for `time_entries.invoiced = true` with a clear error message.", "implemented": false },
+  { "id": "F020", "description": "Actions: Block updates/deletes for `time_entries.invoiced = true` with a clear error message.", "implemented": true },
   { "id": "F021", "description": "Actions: Block reopening/reversing approvals for a time sheet if any related time entry is invoiced.", "implemented": false },
 
   { "id": "F022", "description": "Actions: Update `deleteTimeEntry(entryId)` to enforce delegation policy and invoiced constraints.", "implemented": false },

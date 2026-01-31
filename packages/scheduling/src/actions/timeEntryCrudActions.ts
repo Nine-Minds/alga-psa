@@ -232,11 +232,15 @@ export const saveTimeEntry = withAuth(async (
     if (validatedTimeEntry.entry_id) {
       const existing = await db('time_entries')
         .where({ entry_id: validatedTimeEntry.entry_id, tenant })
-        .select('user_id')
+        .select('user_id', 'invoiced')
         .first();
 
       if (!existing) {
         throw new Error(`Original time entry with ID ${validatedTimeEntry.entry_id} not found for update.`);
+      }
+
+      if (existing.invoiced) {
+        throw new Error('This time entry has already been invoiced and cannot be modified.');
       }
 
       timeEntryUserId = existing.user_id;
