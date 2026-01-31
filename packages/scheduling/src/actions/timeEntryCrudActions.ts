@@ -21,6 +21,7 @@ import {
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -239,6 +240,8 @@ export const saveTimeEntry = withAuth(async (
 
       timeEntryUserId = existing.user_id;
     }
+
+    await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
 
     if (validatedTimeEntry.work_item_type === 'ticket') {
       const ticket = await db('tickets')

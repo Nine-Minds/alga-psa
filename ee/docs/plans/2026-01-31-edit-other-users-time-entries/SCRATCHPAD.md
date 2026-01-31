@@ -59,3 +59,4 @@
 - 2026-01-31: F013 — Hardened `fetchWorkItemsForTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeEntryWorkItemActions.ts` by enforcing owner-or-delegate via `assertCanActOnBehalf`.
 - 2026-01-31: F014 — Updated `saveTimeEntry` in `packages/scheduling/src/actions/timeEntryCrudActions.ts` to persist `time_entries.user_id` from the requested subject (no longer forced to actor).
 - 2026-01-31: F015 — Prevented `saveTimeEntry` updates from changing `time_entries.user_id` ownership (canonical owner comes from existing row; `user_id` is removed from UPDATE payload).
+- 2026-01-31: F016 — Enforced delegation policy in `saveTimeEntry` via `assertCanActOnBehalf` (blocks creating/updating entries for unauthorized subjects).
