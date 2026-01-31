@@ -27,7 +27,7 @@
   { "id": "T061", "description": "Actions: Updating a time entry does not change `user_id` ownership.", "implemented": true, "featureIds": ["F015"] },
   { "id": "T062", "description": "Actions: On create, `created_by` and `updated_by` are set to actor; on update, `updated_by` changes to actor.", "implemented": true, "featureIds": ["F018"] },
   { "id": "T063", "description": "Actions: `work_date` is computed using the subject timezone (edge case around midnight local time).", "implemented": true, "featureIds": ["F017"] },
-  { "id": "T064", "description": "Actions: Time entry timestamps outside the time period boundary are rejected.", "implemented": false, "featureIds": ["F019"] },
+  { "id": "T064", "description": "Actions: Time entry timestamps outside the time period boundary are rejected.", "implemented": true, "featureIds": ["F019"] },
 
   { "id": "T070", "description": "Billing integrity: Editing an invoiced time entry is blocked.", "implemented": false, "featureIds": ["F020"] },
   { "id": "T071", "description": "Billing integrity: Deleting an invoiced time entry is blocked.", "implemented": false, "featureIds": ["F020", "F022"] },

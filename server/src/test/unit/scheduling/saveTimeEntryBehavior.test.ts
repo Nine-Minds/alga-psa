@@ -24,4 +24,11 @@ describe('saveTimeEntry behavior (static)', () => {
     expect(src).toContain('updated_by: actorUserId');
     expect(src).toContain('created_by: actorUserId');
   });
+
+  it('rejects time entries outside the timesheet time period boundaries', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
+    expect(src).toContain('Time entry must fall within the time period for the time sheet');
+    expect(src).toContain('const periodStart');
+    expect(src).toContain('const periodEnd');
+  });
 });
