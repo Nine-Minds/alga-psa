@@ -223,7 +223,8 @@ export const saveTimeEntry = withAuth(async (
   // Validate input
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
-  const userId = user.user_id;
+  const actorUserId = user.user_id;
+  const timeEntryUserId = validatedTimeEntry.user_id;
 
   try {
     if (validatedTimeEntry.work_item_type === 'ticket') {
@@ -253,7 +254,7 @@ export const saveTimeEntry = withAuth(async (
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
-    const userTimeZone = await resolveUserTimeZone(db, tenant, userId);
+    const userTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
     const { work_date, work_timezone } = computeWorkDateFields(start_time, userTimeZone);
 
     const startDate = new Date(start_time);
@@ -288,7 +289,7 @@ export const saveTimeEntry = withAuth(async (
       tax_region,
       contract_line_id,
       tax_rate_id, // Add tax_rate_id to the object being saved
-      user_id: userId, // Always use user_id from withAuth
+      user_id: timeEntryUserId,
       tenant: tenant as string,
       updated_at: new Date().toISOString()
     };
@@ -453,19 +454,19 @@ export const saveTimeEntry = withAuth(async (
                 tenant,
               })
               .where(function() {
-                this.where('assigned_to', userId)
-                  .orWhere('additional_user_id', userId);
+                this.where('assigned_to', timeEntryUserId)
+                  .orWhere('additional_user_id', timeEntryUserId);
               })
               .first();
 
             // If task already has an assignee and it's not the current user
-            if (task.assigned_to && task.assigned_to !== userId) {
+            if (task.assigned_to && task.assigned_to !== timeEntryUserId) {
               // Only add as additional user if not already in resources
               if (!existingResource) {
                 await trx('task_resources').insert({
                   task_id: work_item_id,
                   assigned_to: task.assigned_to,
-                  additional_user_id: userId,
+                  additional_user_id: timeEntryUserId,
                   assigned_at: new Date(),
                   tenant,
                 });
@@ -478,7 +479,7 @@ export const saveTimeEntry = withAuth(async (
                   tenant,
                 })
                 .update({
-                  assigned_to: userId,
+                  assigned_to: timeEntryUserId,
                   updated_at: new Date(),
                 });
               // No task_resources record is created when there's no additional user
@@ -492,8 +493,8 @@ export const saveTimeEntry = withAuth(async (
               tenant,
             })
             .where(function() {
-              this.where('assigned_to', userId)
-                .orWhere('additional_user_id', userId);
+              this.where('assigned_to', timeEntryUserId)
+                .orWhere('additional_user_id', timeEntryUserId);
             })
             .first();
 
@@ -508,11 +509,11 @@ export const saveTimeEntry = withAuth(async (
 
             if (ticket) {
               // If ticket already has an assignee, add user as additional_user_id
-              if (ticket.assigned_to && ticket.assigned_to !== userId) {
+              if (ticket.assigned_to && ticket.assigned_to !== timeEntryUserId) {
                 await trx('ticket_resources').insert({
                   ticket_id: work_item_id,
                   assigned_to: ticket.assigned_to,
-                  additional_user_id: userId,
+                  additional_user_id: timeEntryUserId,
                   assigned_at: new Date(),
                   tenant,
                 });
@@ -526,9 +527,9 @@ export const saveTimeEntry = withAuth(async (
                     tenant,
                   })
                   .update({
-                    assigned_to: userId,
+                    assigned_to: timeEntryUserId,
                     updated_at: new Date().toISOString(),
-                    updated_by: userId,
+                    updated_by: actorUserId,
                   });
               }
             }

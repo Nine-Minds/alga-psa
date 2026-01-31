@@ -57,3 +57,4 @@
 - 2026-01-31: F011 — Hardened `fetchTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeSheetActions.ts` by enforcing owner-or-delegate access via `assertCanActOnBehalf` (prevents ID-guessing).
 - 2026-01-31: F012 — Hardened `fetchTimeEntriesForTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeSheetActions.ts` by resolving the timesheet owner and enforcing `assertCanActOnBehalf`.
 - 2026-01-31: F013 — Hardened `fetchWorkItemsForTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeEntryWorkItemActions.ts` by enforcing owner-or-delegate via `assertCanActOnBehalf`.
+- 2026-01-31: F014 — Updated `saveTimeEntry` in `packages/scheduling/src/actions/timeEntryCrudActions.ts` to persist `time_entries.user_id` from the requested subject (no longer forced to actor).
