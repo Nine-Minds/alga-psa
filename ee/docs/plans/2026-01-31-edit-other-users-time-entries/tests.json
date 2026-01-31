@@ -2,7 +2,7 @@
   { "id": "T001", "description": "Plan: `python3 scripts/validate_plan.py ee/docs/plans/2026-01-31-edit-other-users-time-entries` passes.", "implemented": true },
 
   { "id": "T010", "description": "DB: Migration adds `time_entries.created_by` and `time_entries.updated_by` columns.", "implemented": true, "featureIds": ["F001"] },
-  { "id": "T011", "description": "DB: FK constraints for `created_by`/`updated_by` exist and are tenant-scoped.", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T011", "description": "DB: FK constraints for `created_by`/`updated_by` exist and are tenant-scoped.", "implemented": true, "featureIds": ["F002"] },
 
   { "id": "T020", "description": "Types: `ITimeEntry` includes optional `created_by`/`updated_by` and build/typecheck passes.", "implemented": false, "featureIds": ["F003"] },
   { "id": "T021", "description": "Validation: `timeEntrySchema` accepts entries with/without `created_by`/`updated_by`.", "implemented": false, "featureIds": ["F004"] },

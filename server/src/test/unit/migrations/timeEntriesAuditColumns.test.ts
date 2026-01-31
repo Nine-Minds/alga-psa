@@ -17,5 +17,15 @@ describe('time_entries audit migrations', () => {
     expect(migration).toContain("table.uuid('created_by')");
     expect(migration).toContain("table.uuid('updated_by')");
   });
-});
 
+  it('adds tenant-scoped foreign keys for created_by and updated_by (migration)', () => {
+    const migration = readRepoFile(
+      'server/migrations/20260131120500_add_time_entries_actor_audit_fks.cjs'
+    );
+
+    expect(migration).toContain(".foreign(['tenant', 'created_by'])");
+    expect(migration).toContain(".references(['tenant', 'user_id'])");
+    expect(migration).toContain(".foreign(['tenant', 'updated_by'])");
+    expect(migration).toContain(".inTable('users')");
+  });
+});
