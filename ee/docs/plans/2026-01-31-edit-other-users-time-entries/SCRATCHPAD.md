@@ -47,3 +47,4 @@
 - 2026-01-31: F001 — Added `time_entries.created_by` + `time_entries.updated_by` columns via migration `server/migrations/20260131120000_add_time_entries_actor_audit_columns.cjs` (FK constraints added in F002).
 - 2026-01-31: F002 — Added tenant-scoped FK constraints for `time_entries.(created_by,updated_by)` → `users(user_id)` via migration `server/migrations/20260131120500_add_time_entries_actor_audit_fks.cjs`.
 - 2026-01-31: F003 — Extended `ITimeEntry` types to include optional `created_by`/`updated_by` in `server/src/interfaces/timeEntry.interfaces.ts` and `packages/types/src/interfaces/timeEntry.interfaces.ts`.
+- 2026-01-31: F004 — Extended `timeEntrySchema` to include optional `created_by`/`updated_by` in `packages/scheduling/src/schemas/timeSheet.schemas.ts`.
