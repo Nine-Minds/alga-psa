@@ -43,6 +43,17 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
+  const timeSheet = await db('time_sheets')
+    .where({ id: validatedParams.timeSheetId, tenant })
+    .select('user_id')
+    .first();
+
+  if (!timeSheet) {
+    throw new Error('Time sheet not found');
+  }
+
+  await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+
   const timeEntries = await db('time_entries')
     .where({
       time_sheet_id: validatedParams.timeSheetId,
@@ -983,6 +994,8 @@ export const getTimeEntryById = withAuth(async (
       if (!entry) {
         return null;
       }
+
+      await assertCanActOnBehalf(user, tenant, entry.user_id, db);
 
       // Fetch work item details based on the saved entry
       let workItemDetails: IWorkItem;
