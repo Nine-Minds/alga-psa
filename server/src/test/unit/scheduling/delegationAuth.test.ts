@@ -107,4 +107,25 @@ describe('assertCanActOnBehalf', () => {
       /Permission denied/i
     );
   });
+
+  it('rejects non-delegates trying to access another user', async () => {
+    const actor = {
+      tenant: 'tenant-1',
+      user_id: 'user-1',
+      user_type: 'internal',
+      username: 'user',
+      email: 'user@example.com',
+      is_inactive: false,
+    };
+
+    vi.mocked(hasPermission).mockResolvedValue(false);
+
+    const db = vi.fn(() => {
+      throw new Error('db should not be called when approve is missing');
+    }) as any;
+
+    await expect(assertCanActOnBehalf(actor as any, actor.tenant, 'other-user', db)).rejects.toThrow(
+      /Permission denied/i
+    );
+  });
 });
