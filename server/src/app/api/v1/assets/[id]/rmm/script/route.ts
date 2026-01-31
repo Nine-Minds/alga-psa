@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { triggerRmmScript } from '@ee/lib/actions/asset-actions/rmmActions';
+import { triggerRmmScript } from '@/lib/actions/asset-actions/rmmActions';
 
 export async function POST(
   request: Request,

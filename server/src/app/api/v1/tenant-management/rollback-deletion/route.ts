@@ -23,7 +23,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   }
 
   if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@ee/app/api/v1/tenant-management/rollback-deletion/route')
+    eeRouteModulePromise = import('@enterprise/app/api/v1/tenant-management/rollback-deletion/route')
       .then((module) => module as unknown as EeRouteModule)
       .catch((error) => {
         console.error('[v1/tenant-management/rollback-deletion] Failed to load EE route', error);

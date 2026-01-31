@@ -4,6 +4,22 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import type { WebhookProcessingResult } from '@alga-psa/types';
 
+async function loadEnterprisePayments(): Promise<{
+  PaymentService: any;
+  createStripePaymentProvider: any;
+} | null> {
+  try {
+    const mod = await import('@enterprise/lib/payments');
+    return {
+      PaymentService: (mod as any).PaymentService,
+      createStripePaymentProvider: (mod as any).createStripePaymentProvider,
+    };
+  } catch (error) {
+    logger.debug('[Stripe Payment Webhook] enterprise payments module not available', { error });
+    return null;
+  }
+}
+
 /**
  * POST /api/webhooks/stripe/payments
  *
@@ -80,7 +96,7 @@ export async function POST(req: NextRequest) {
     let webhookSecret: string;
     try {
       webhookSecret = await getWebhookSecret();
-    } catch (error) {
+    } catch {
       logger.error('[Stripe Payment Webhook] Failed to get webhook secret');
       return NextResponse.json(
         { error: 'Webhook configuration error' },
@@ -180,12 +196,13 @@ async function processStripePaymentWebhookPayload(tenantId: string, payload: str
   }
 
   try {
-    const eeModule = await import('@ee/lib/payments');
-    const PaymentService = (eeModule as any).PaymentService;
-    const createStripePaymentProvider = (eeModule as any).createStripePaymentProvider;
+    const ee = await loadEnterprisePayments();
+    if (!ee?.PaymentService || !ee?.createStripePaymentProvider) {
+      return { success: false, error: 'Payment integration not available' } as WebhookProcessingResult;
+    }
 
-    const paymentService = await PaymentService.create(tenantId);
-    const provider = createStripePaymentProvider(tenantId);
+    const paymentService = await ee.PaymentService.create(tenantId);
+    const provider = ee.createStripePaymentProvider(tenantId);
     const webhookEvent = provider.parseWebhookEvent(payload);
 
     return paymentService.processWebhookEvent(webhookEvent);
@@ -231,6 +248,7 @@ function extractTenantId(event: Stripe.Event): string | null {
  * Health check endpoint for Stripe payment webhook configuration
  */
 export async function GET(req: NextRequest) {
+  void req;
   const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
   if (!isEE) {

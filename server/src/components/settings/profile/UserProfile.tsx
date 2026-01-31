@@ -34,7 +34,7 @@ import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSk
 
 // Dynamic import for EE SSO wrapper component
 const ConnectSsoWrapper = dynamic(
-  () => import('@ee/components/settings/profile/ConnectSsoWrapper'),
+  () => import('@enterprise/components/settings/profile/ConnectSsoWrapper'),
   {
     loading: () => (
       <SettingsTabSkeleton

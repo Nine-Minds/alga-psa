@@ -19,6 +19,8 @@
       "@shared/extension-utils/*": ["shared/extension-utils/*"],
       "@shared/lib": ["shared/lib"],
       "@shared/lib/*": ["shared/lib/*"],
+      "@enterprise": ["packages/ee/src"],
+      "@enterprise/*": ["packages/ee/src/*"],
       "@ee": ["packages/ee/src"],
       "@ee/*": ["packages/ee/src/*"],
       "@alga-psa/extension-runtime": ["sdk/extension-runtime/src"],

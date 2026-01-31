@@ -21,20 +21,7 @@ import { initializeServerWorkflows } from '@shared/workflow/index.js';
 import { registerAccountingExportWorkflowActions } from './init/registerAccountingExportActions.js';
 import { updateSystemWorkflowsFromAssets } from './init/updateWorkflows.js';
 import { registerEmailAttachmentActions } from './actions/registerEmailAttachmentActions.js';
-
-async function registerEnterpriseStorageProviders(): Promise<void> {
-  const isEnterprise =
-    process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  if (!isEnterprise) return;
-
-  try {
-    const { S3StorageProvider } = await import('@ee/lib/storage/providers/S3StorageProvider');
-    (global as any).S3StorageProvider = S3StorageProvider;
-    logger.info('[WorkflowWorker] Registered S3StorageProvider for enterprise edition');
-  } catch (error) {
-    logger.warn('[WorkflowWorker] S3StorageProvider not available; continuing without S3 provider');
-  }
-}
+import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
 
 async function startServices() {
   try {
