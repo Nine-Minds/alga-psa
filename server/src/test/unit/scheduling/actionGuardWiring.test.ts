@@ -13,5 +13,10 @@ describe('delegation guard wiring (static)', () => {
     expect(src).toContain('export const fetchTimePeriods');
     expect(src).toContain('assertCanActOnBehalf');
   });
-});
 
+  it('fetchOrCreateTimeSheet enforces delegation via assertCanActOnBehalf', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeSheetOperations.ts');
+    expect(src).toContain('export const fetchOrCreateTimeSheet');
+    expect(src).toContain('assertCanActOnBehalf');
+  });
+});
