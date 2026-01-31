@@ -4,6 +4,7 @@ import {
   getSessionMaxAge,
   getSessionCookieName,
   getSessionCookieConfig,
+  withDevPortSuffix,
   encodePortalSessionToken,
 } from './session';
 
@@ -31,6 +32,7 @@ describe('session utilities', () => {
     process.env.NODE_ENV = 'development';
     process.env.NEXTAUTH_URL = 'http://localhost:3001';
     expect(getSessionCookieName()).toBe('authjs.session-token.3001');
+    expect(withDevPortSuffix('authjs.pkce.code_verifier')).toBe('authjs.pkce.code_verifier.3001');
   });
 
   it('uses secure cookie name in production without port suffix', () => {
