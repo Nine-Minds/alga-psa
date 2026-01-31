@@ -7,7 +7,7 @@
   { "id": "T020", "description": "Types: `ITimeEntry` includes optional `created_by`/`updated_by` and build/typecheck passes.", "implemented": true, "featureIds": ["F003"] },
   { "id": "T021", "description": "Validation: `timeEntrySchema` accepts entries with/without `created_by`/`updated_by`.", "implemented": true, "featureIds": ["F004"] },
 
-  { "id": "T030", "description": "Auth: Self access is allowed (actor can access their own time periods/time sheets/entries).", "implemented": false, "featureIds": ["F005", "F007"] },
+  { "id": "T030", "description": "Auth: Self access is allowed (actor can access their own time periods/time sheets/entries).", "implemented": true, "featureIds": ["F005", "F007"] },
   { "id": "T031", "description": "Auth: Billing/system admin (with `timesheet:read_all` + `timesheet:approve`) can access any user tenant-wide.", "implemented": false, "featureIds": ["F005", "F007"] },
   { "id": "T032", "description": "Auth: Manager-of-subject (team manager) can access subject users in their managed teams.", "implemented": false, "featureIds": ["F006", "F007"] },
   { "id": "T033", "description": "Auth: Manager cannot access users outside managed teams.", "implemented": false, "featureIds": ["F006", "F007"] },

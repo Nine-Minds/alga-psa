@@ -88,3 +88,4 @@
 - 2026-01-31: T011 — Extended audit migration unit test to verify tenant-scoped FK constraints for `created_by`/`updated_by`.
 - 2026-01-31: T020 — Added type-level unit test `server/src/test/unit/types/timeEntryAuditFields.test.ts` to assert `ITimeEntry` exposes optional `created_by`/`updated_by`.
 - 2026-01-31: T021 — Added schema unit test `server/src/test/unit/validation/timeEntrySchemaAuditFields.test.ts` to ensure `timeEntrySchema` accepts audit fields (present or omitted).
+- 2026-01-31: T030 — Added unit test `server/src/test/unit/scheduling/delegationAuth.test.ts` covering self access for delegation auth.
