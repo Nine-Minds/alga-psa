@@ -224,9 +224,22 @@ export const saveTimeEntry = withAuth(async (
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
   const actorUserId = user.user_id;
-  const timeEntryUserId = validatedTimeEntry.user_id;
+  let timeEntryUserId = validatedTimeEntry.user_id;
 
   try {
+    if (validatedTimeEntry.entry_id) {
+      const existing = await db('time_entries')
+        .where({ entry_id: validatedTimeEntry.entry_id, tenant })
+        .select('user_id')
+        .first();
+
+      if (!existing) {
+        throw new Error(`Original time entry with ID ${validatedTimeEntry.entry_id} not found for update.`);
+      }
+
+      timeEntryUserId = existing.user_id;
+    }
+
     if (validatedTimeEntry.work_item_type === 'ticket') {
       const ticket = await db('tickets')
         .select('ticket_id', 'master_ticket_id')
@@ -356,7 +369,7 @@ export const saveTimeEntry = withAuth(async (
         oldDuration = originalEntryForUpdate.billable_duration || 0;
 
         // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
-        const { tenant: _tenant, ...updateData } = cleanedEntry;
+        const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry;
         const [updated] = await trx('time_entries')
           .where({ entry_id, tenant }) // Ensure tenant match
           .update(updateData)
