@@ -13,5 +13,10 @@ describe('timesheet approval behavior (static)', () => {
     expect(src).toMatch(/export const approveTimeSheet[\\s\\S]*assertCanActOnBehalf/);
     expect(src).toMatch(/approveTimeSheet[\\s\\S]*approval_status:\\s*'APPROVED'/);
   });
-});
 
+  it('bulkApproveTimeSheets enforces manager scope via assertCanActOnBehalf', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
+    expect(src).toMatch(/export const bulkApproveTimeSheets[\\s\\S]*assertCanActOnBehalf/);
+    expect(src).toMatch(/managerId\\s*!==\\s*user\\.user_id/);
+  });
+});
