@@ -19,6 +19,7 @@ import {
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
 import { withAuth } from '@alga-psa/auth';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -174,11 +175,13 @@ export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<IT
   }));
 });
 
-export const fetchTimePeriods = withAuth(async (_user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[]> => {
+export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[]> => {
   // Validate input
   const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
   const {knex: db} = await createTenantKnex();
+
+  await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
   const periods = await db('time_periods as tp')
     .leftJoin('time_sheets as ts', function() {
