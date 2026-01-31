@@ -76,3 +76,4 @@
 - 2026-01-31: F030 — Timesheet page refresh after saving entries now re-fetches via the timesheet owner (`fetchOrCreateTimeSheet(timeSheet.user_id, ...)`) so subject context is derived from the timesheet itself.
 - 2026-01-31: F031 — Timesheet header now shows “Time Sheet for {Subject}” and (when delegated) “Edited by {Actor}” via new props plumbed through `TimeSheetClient` → `TimeSheet` → `TimeSheetHeader`.
 - 2026-01-31: F032 — Added “Reopen for edits” button to `TimeSheetHeader` for APPROVED, non-invoiced timesheets when server precomputes `canReopenForEdits` (see `server/src/app/msp/time-entry/timesheet/[id]/page.tsx`).
+- 2026-01-31: F033 — Reopen flow now uses `ConfirmationDialog` and shows toast success/error (including invoiced-block errors) in `TimeSheetClient`.

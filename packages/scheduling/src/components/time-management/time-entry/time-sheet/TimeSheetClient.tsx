@@ -7,6 +7,8 @@ import { saveTimeEntry, fetchOrCreateTimeSheet } from '@alga-psa/scheduling/acti
 import { fetchEligibleTimeEntrySubjects } from '@alga-psa/scheduling/actions/timeEntryDelegationActions';
 import { fetchTimeSheet, reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
 import { TimeSheet } from './TimeSheet';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { toast } from 'react-hot-toast';
 
 interface TimeSheetClientProps {
   timeSheet: ITimeSheetView;
@@ -19,6 +21,8 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
   const router = useRouter();
   const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
   const [subjectUser, setSubjectUser] = useState<IUser | null>(null);
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
 
   const formatUserName = (u: Pick<IUser, 'first_name' | 'last_name' | 'email'>): string =>
     `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email;
@@ -59,10 +63,24 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     router.refresh();
   };
 
-  const handleReopenForEdits = async () => {
-    await reverseTimeSheetApproval(timeSheet.id, currentUser.user_id, 'Reopened for edits');
-    const updatedTimeSheet = await fetchTimeSheet(timeSheet.id);
-    setTimeSheet(updatedTimeSheet);
+  const openReopenDialog = async () => {
+    setIsReopenDialogOpen(true);
+  };
+
+  const confirmReopenForEdits = async () => {
+    setIsReopening(true);
+    try {
+      await reverseTimeSheetApproval(timeSheet.id, currentUser.user_id, 'Reopened for edits');
+      const updatedTimeSheet = await fetchTimeSheet(timeSheet.id);
+      setTimeSheet(updatedTimeSheet);
+      setIsReopenDialogOpen(false);
+      toast.success('Time sheet reopened for edits');
+    } catch (error) {
+      console.error('Error reopening time sheet:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reopen time sheet');
+    } finally {
+      setIsReopening(false);
+    }
   };
 
   const handleBack = () => {
@@ -70,17 +88,30 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
   };
 
   return (
-    <TimeSheet
-      timeSheet={timeSheet}
-      onSaveTimeEntry={handleSaveTimeEntry}
-      isManager={isManager}
-      subjectName={subjectUser ? formatUserName(subjectUser) : timeSheet.user_id}
-      actorName={formatUserName(currentUser)}
-      isDelegated={isDelegated}
-      canReopenForEdits={canReopenForEdits}
-      onReopenForEdits={handleReopenForEdits}
-      onSubmitTimeSheet={handleSubmitTimeSheet}
-      onBack={handleBack}
-    />
+    <>
+      <TimeSheet
+        timeSheet={timeSheet}
+        onSaveTimeEntry={handleSaveTimeEntry}
+        isManager={isManager}
+        subjectName={subjectUser ? formatUserName(subjectUser) : timeSheet.user_id}
+        actorName={formatUserName(currentUser)}
+        isDelegated={isDelegated}
+        canReopenForEdits={canReopenForEdits}
+        onReopenForEdits={openReopenDialog}
+        onSubmitTimeSheet={handleSubmitTimeSheet}
+        onBack={handleBack}
+      />
+
+      <ConfirmationDialog
+        isOpen={isReopenDialogOpen}
+        onClose={() => setIsReopenDialogOpen(false)}
+        onConfirm={confirmReopenForEdits}
+        title="Reopen for edits?"
+        message="This will move the time sheet back to Changes Requested so time entries can be edited."
+        confirmLabel="Reopen"
+        cancelLabel="Cancel"
+        isConfirming={isReopening}
+      />
+    </>
   );
 }
