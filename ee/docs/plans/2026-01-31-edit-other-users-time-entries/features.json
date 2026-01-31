@@ -19,7 +19,7 @@
   { "id": "F015", "description": "Actions: Fix `saveTimeEntry` update semantics so `user_id` is not changed on update unless explicitly requested (default: immutable ownership).", "implemented": true },
   { "id": "F016", "description": "Actions: Ensure `saveTimeEntry` enforces delegation policy when subject != actor.", "implemented": true },
   { "id": "F017", "description": "Actions: Ensure `saveTimeEntry` computes `work_date`/`work_timezone` using the subject user’s timezone (not the actor’s).", "implemented": true },
-  { "id": "F018", "description": "Actions: Populate `created_by`/`updated_by` on create, and `updated_by` on update.", "implemented": false },
+  { "id": "F018", "description": "Actions: Populate `created_by`/`updated_by` on create, and `updated_by` on update.", "implemented": true },
 
   { "id": "F019", "description": "Actions: Add server-side validation that a time entry’s timestamps fall within the associated time period boundaries for the time sheet.", "implemented": false },
   { "id": "F020", "description": "Actions: Block updates/deletes for `time_entries.invoiced = true` with a clear error message.", "implemented": false },

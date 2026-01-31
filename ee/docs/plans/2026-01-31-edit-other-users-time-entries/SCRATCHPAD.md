@@ -61,3 +61,4 @@
 - 2026-01-31: F015 — Prevented `saveTimeEntry` updates from changing `time_entries.user_id` ownership (canonical owner comes from existing row; `user_id` is removed from UPDATE payload).
 - 2026-01-31: F016 — Enforced delegation policy in `saveTimeEntry` via `assertCanActOnBehalf` (blocks creating/updating entries for unauthorized subjects).
 - 2026-01-31: F017 — `saveTimeEntry` now computes `work_date`/`work_timezone` using the subject user’s timezone (`resolveUserTimeZone(..., timeEntryUserId)`).
+- 2026-01-31: F018 — `saveTimeEntry` now writes audit columns (`updated_by` on every save; `created_by` on insert) to capture the actor.

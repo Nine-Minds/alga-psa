@@ -306,6 +306,7 @@ export const saveTimeEntry = withAuth(async (
       contract_line_id,
       tax_rate_id, // Add tax_rate_id to the object being saved
       user_id: timeEntryUserId,
+      updated_by: actorUserId,
       tenant: tenant as string,
       updated_at: new Date().toISOString()
     };
@@ -416,7 +417,8 @@ export const saveTimeEntry = withAuth(async (
           .insert({
             ...cleanedEntry,
             entry_id: uuidv4(),
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            created_by: actorUserId
           })
           .returning('*');
 
