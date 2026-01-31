@@ -33,7 +33,7 @@ const emptyShim = './src/empty/shims/empty.ts';
 
 const appVersion = (() => {
   try {
-    const pkgPath = path.join(__dirname, '../package.json');
+    const pkgPath = path.join(__dirname, '../packages/core/package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
     return pkg?.version || 'dev';
   } catch {
@@ -190,6 +190,10 @@ const nextConfig = {
 	      '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
 	      '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
 	      '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+	      // SSO provider buttons - swap between CE stub and EE implementation
+	      '@alga-psa/auth/sso/entry': isEE
+	        ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
+	        : '../packages/auth/src/components/SsoProviderButtons.tsx',
 	      // Notifications package
 	      '@alga-psa/notifications': '../packages/notifications/src',
 	      '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -474,6 +478,10 @@ const nextConfig = {
         console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
+      // SSO provider buttons - swap between CE stub and EE implementation
+      '@alga-psa/auth/sso/entry': isEE
+        ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
+        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/integrations/email/providers/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx')
         : path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),

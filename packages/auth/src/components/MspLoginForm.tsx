@@ -7,7 +7,7 @@ import { Label, Input, Button, Alert, AlertDescription } from '@alga-psa/ui/comp
 import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
-import SsoProviderButtons from './SsoProviderButtons';
+import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 
 interface MspLoginFormProps {
   callbackUrl: string;
