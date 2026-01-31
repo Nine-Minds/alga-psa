@@ -24,6 +24,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -349,6 +350,8 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
     if (!timeSheet) {
       throw new Error(`Time sheet with id ${timeSheetId} not found`);
     }
+
+    await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
     const result = {
       ...timeSheet,
