@@ -55,3 +55,4 @@
 - 2026-01-31: F009 — Hardened `fetchTimePeriods(userId)` in `packages/scheduling/src/actions/timeSheetOperations.ts` to enforce delegation policy via `assertCanActOnBehalf`.
 - 2026-01-31: F010 — Hardened `fetchOrCreateTimeSheet(userId, periodId)` in `packages/scheduling/src/actions/timeSheetOperations.ts` to enforce delegation policy via `assertCanActOnBehalf`.
 - 2026-01-31: F011 — Hardened `fetchTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeSheetActions.ts` by enforcing owner-or-delegate access via `assertCanActOnBehalf` (prevents ID-guessing).
+- 2026-01-31: F012 — Hardened `fetchTimeEntriesForTimeSheet(timeSheetId)` in `packages/scheduling/src/actions/timeSheetActions.ts` by resolving the timesheet owner and enforcing `assertCanActOnBehalf`.

@@ -376,6 +376,17 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
       throw new Error('Permission denied: Cannot read timesheet entries');
     }
 
+    const timeSheet = await db('time_sheets')
+      .where({ id: timeSheetId, tenant })
+      .select('user_id')
+      .first();
+
+    if (!timeSheet) {
+      throw new Error(`Time sheet with id ${timeSheetId} not found`);
+    }
+
+    await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+
     const timeEntries = await db<ITimeEntry>('time_entries')
       .where('time_sheet_id', timeSheetId)
       .andWhere('tenant', tenant)
