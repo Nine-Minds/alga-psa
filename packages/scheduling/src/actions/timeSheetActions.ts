@@ -671,7 +671,7 @@ export const reverseTimeSheetApproval = withAuth(async (
           tenant
         })
         .update({
-          approval_status: 'SUBMITTED' as TimeSheetStatus,
+          approval_status: 'CHANGES_REQUESTED' as TimeSheetStatus,
           approved_at: null,
           approved_by: null
         });
@@ -682,7 +682,7 @@ export const reverseTimeSheetApproval = withAuth(async (
           time_sheet_id: timeSheetId,
           tenant
         })
-        .update({ approval_status: 'SUBMITTED' });
+        .update({ approval_status: 'CHANGES_REQUESTED' });
 
       // Add comment for audit trail
       await trx('time_sheet_comments').insert({
