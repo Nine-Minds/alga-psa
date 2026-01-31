@@ -13,5 +13,9 @@ describe('saveTimeEntry behavior (static)', () => {
     expect(src).toContain('let timeEntryUserId = validatedTimeEntry.user_id');
     expect(src).toContain('user_id: timeEntryUserId');
   });
-});
 
+  it('does not change user_id ownership on update', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
+    expect(src).toContain('const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry');
+  });
+});

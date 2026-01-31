@@ -102,3 +102,4 @@
 - 2026-01-31: T053 — Extended static guard-wiring test to cover `fetchTimeEntriesForTimeSheet` owner-or-delegate enforcement (both `timeSheetActions` + `timeEntryCrudActions` variants).
 - 2026-01-31: T054 — Extended static guard-wiring test to cover `fetchWorkItemsForTimeSheet` owner-or-delegate enforcement.
 - 2026-01-31: T060 — Added static test `server/src/test/unit/scheduling/saveTimeEntryBehavior.test.ts` asserting `saveTimeEntry` persists `user_id` from the subject user.
+- 2026-01-31: T061 — Extended static `saveTimeEntry` test to assert updates strip `user_id` from the UPDATE payload.
