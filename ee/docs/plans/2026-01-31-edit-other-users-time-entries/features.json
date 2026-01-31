@@ -1,7 +1,7 @@
 [
   { "id": "F001", "description": "DB: Add `created_by` and `updated_by` columns to `time_entries` to track the actor who created/updated an entry.", "implemented": true },
   { "id": "F002", "description": "DB: Add FK constraints for `time_entries.(created_by,updated_by)` referencing `users(user_id)` scoped by tenant.", "implemented": true },
-  { "id": "F003", "description": "Types: Extend `ITimeEntry` (and derived time entry types) to include optional `created_by`/`updated_by` fields.", "implemented": false },
+  { "id": "F003", "description": "Types: Extend `ITimeEntry` (and derived time entry types) to include optional `created_by`/`updated_by` fields.", "implemented": true },
   { "id": "F004", "description": "Validation: Extend `packages/scheduling/src/schemas/timeSheet.schemas.ts` `timeEntrySchema` to include optional `created_by`/`updated_by`.", "implemented": false },
 
   { "id": "F005", "description": "Auth: Add a shared server-side helper to determine whether the actor can act on behalf of a subject user (self, tenant-wide admin, or manager-of-subject).", "implemented": false },
