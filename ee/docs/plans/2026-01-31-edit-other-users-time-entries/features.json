@@ -23,7 +23,7 @@
 
   { "id": "F019", "description": "Actions: Add server-side validation that a time entry’s timestamps fall within the associated time period boundaries for the time sheet.", "implemented": true },
   { "id": "F020", "description": "Actions: Block updates/deletes for `time_entries.invoiced = true` with a clear error message.", "implemented": true },
-  { "id": "F021", "description": "Actions: Block reopening/reversing approvals for a time sheet if any related time entry is invoiced.", "implemented": false },
+  { "id": "F021", "description": "Actions: Block reopening/reversing approvals for a time sheet if any related time entry is invoiced.", "implemented": true },
 
   { "id": "F022", "description": "Actions: Update `deleteTimeEntry(entryId)` to enforce delegation policy and invoiced constraints.", "implemented": false },
   { "id": "F023", "description": "Actions: Update `submitTimeSheet(timeSheetId)` to allow submission by authorized delegates and keep entry statuses consistent.", "implemented": false },

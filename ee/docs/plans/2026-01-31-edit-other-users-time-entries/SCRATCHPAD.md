@@ -64,3 +64,4 @@
 - 2026-01-31: F018 — `saveTimeEntry` now writes audit columns (`updated_by` on every save; `created_by` on insert) to capture the actor.
 - 2026-01-31: F019 — Added server-side time period boundary validation in `saveTimeEntry` (requires entry start/end to fall within the associated timesheet’s time period; also enforces timesheet owner matches entry user).
 - 2026-01-31: F020 — Blocked updates to invoiced time entries in `saveTimeEntry` (throws a clear error when `time_entries.invoiced = true`). Deletes enforced in `deleteTimeEntry` (F022).
+- 2026-01-31: F021 — Reopen/reverse approval is blocked when any related `time_entries.invoiced = true` (see `reverseTimeSheetApproval` in `packages/scheduling/src/actions/timeSheetActions.ts`).

@@ -665,7 +665,7 @@ export const reverseTimeSheetApproval = withAuth(async (
         .first();
 
       if (invoicedEntries) {
-        throw new Error('Cannot reverse approval: time entries have been invoiced');
+        throw new Error('This time sheet contains invoiced time and cannot be reopened.');
       }
 
       // Update time sheet status
