@@ -22,6 +22,7 @@ import {
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { toPlainDate } from '@alga-psa/core';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -272,6 +273,41 @@ export const saveTimeEntry = withAuth(async (
 
     const subjectTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
     const { work_date, work_timezone } = computeWorkDateFields(start_time, subjectTimeZone);
+    const { work_date: end_work_date } = computeWorkDateFields(end_time, subjectTimeZone);
+
+    if (time_sheet_id) {
+      const timeSheetWithPeriod = await db('time_sheets')
+        .join('time_periods', function joinPeriods() {
+          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+        })
+        .where({
+          'time_sheets.id': time_sheet_id,
+          'time_sheets.tenant': tenant
+        })
+        .select('time_sheets.user_id', 'time_periods.start_date', 'time_periods.end_date')
+        .first();
+
+      if (!timeSheetWithPeriod) {
+        throw new Error('Time sheet not found');
+      }
+
+      if (timeSheetWithPeriod.user_id !== timeEntryUserId) {
+        throw new Error('Time entry user does not match time sheet owner');
+      }
+
+      const periodStart = toPlainDate(timeSheetWithPeriod.start_date).toString();
+      const periodEnd = toPlainDate(timeSheetWithPeriod.end_date).toString();
+
+      if (
+        work_date < periodStart ||
+        work_date > periodEnd ||
+        end_work_date < periodStart ||
+        end_work_date > periodEnd
+      ) {
+        throw new Error('Time entry must fall within the time period for the time sheet');
+      }
+    }
 
     const startDate = new Date(start_time);
     const endDate = new Date(end_time);

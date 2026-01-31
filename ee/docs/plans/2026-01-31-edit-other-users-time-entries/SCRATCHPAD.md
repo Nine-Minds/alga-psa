@@ -62,3 +62,4 @@
 - 2026-01-31: F016 — Enforced delegation policy in `saveTimeEntry` via `assertCanActOnBehalf` (blocks creating/updating entries for unauthorized subjects).
 - 2026-01-31: F017 — `saveTimeEntry` now computes `work_date`/`work_timezone` using the subject user’s timezone (`resolveUserTimeZone(..., timeEntryUserId)`).
 - 2026-01-31: F018 — `saveTimeEntry` now writes audit columns (`updated_by` on every save; `created_by` on insert) to capture the actor.
+- 2026-01-31: F019 — Added server-side time period boundary validation in `saveTimeEntry` (requires entry start/end to fall within the associated timesheet’s time period; also enforces timesheet owner matches entry user).
