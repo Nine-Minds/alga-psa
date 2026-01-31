@@ -23,7 +23,7 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
       const savedTimeEntry = await saveTimeEntry(timeEntry);
       console.log('Time entry saved successfully:', savedTimeEntry);
 
-      const updatedTimeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, timeSheet.period_id);
+      const updatedTimeSheet = await fetchOrCreateTimeSheet(timeSheet.user_id, timeSheet.period_id);
       setTimeSheet(updatedTimeSheet);
     } catch (error) {
       console.error('Error saving time entry:', error);
@@ -49,4 +49,3 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     />
   );
 }
-
