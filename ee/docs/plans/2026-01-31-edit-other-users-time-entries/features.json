@@ -47,5 +47,5 @@
   { "id": "F036", "description": "Security: Remove/avoid APIs that accept arbitrary team ids for manager-scoped operations; compute/validate scope server-side.", "implemented": true },
   { "id": "F037", "description": "Security: Ensure knowing a `timeSheetId` is insufficient to read/edit entries without being owner or authorized delegate.", "implemented": true },
 
-  { "id": "F038", "description": "DX: Add minimal unit/integration coverage around delegation authorization + invoiced constraints (see tests.json).", "implemented": false }
+  { "id": "F038", "description": "DX: Add minimal unit/integration coverage around delegation authorization + invoiced constraints (see tests.json).", "implemented": true }
 ]
