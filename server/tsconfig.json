@@ -76,6 +76,9 @@
       "@alga-psa/auth": [
         "../packages/auth/src"
       ],
+      "@alga-psa/auth/sso/entry": [
+        "../packages/auth/src/components/SsoProviderButtons.tsx"
+      ],
       "@alga-psa/auth/*": [
         "../packages/auth/src/*",
         "../packages/auth/src/lib/*"

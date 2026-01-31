@@ -94,9 +94,9 @@ spec:
           - name: NEXT_PUBLIC_APP_VERSION
             value: "{{ .Values.version }}"
           - name: APP_BUILD_SHA
-            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
+            value: "{{ (default dict .Values.build).sha | default .Values.server.image.tag }}"
           - name: NEXT_PUBLIC_APP_BUILD_SHA
-            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
+            value: "{{ (default dict .Values.build).sha | default .Values.server.image.tag }}"
           - name: APP_NAME
             value: "{{ .Values.nameOverride }}"
           - name: APP_ENV
@@ -353,6 +353,8 @@ spec:
           - name: RESEND_BASE_URL
             value: "{{ .Values.email.resendBaseUrl }}"
           {{- end }}
+          - name: INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED
+            value: "yes"
 
           # ----------- LLM ----------------
           - name: OPENAI_API_KEY
@@ -458,7 +460,7 @@ spec:
           {{- end }}
 
           # ----------- GMAIL INTEGRATION ----------------
-          {{- if .Values.gmail_integration.enabled }}
+          {{- if (default dict .Values.gmail_integration).enabled }}
           - name: GOOGLE_CLIENT_ID
             value: "{{ .Values.gmail_integration.client_id }}"
           - name: GOOGLE_CLIENT_SECRET
@@ -492,7 +494,7 @@ spec:
           {{- end }}
 
           # ----------- MICROSOFT INTEGRATION ----------------
-          {{- if .Values.microsoft_integration.enabled }}
+          {{- if (default dict .Values.microsoft_integration).enabled }}
           {{- if .Values.microsoft_integration.client_id }}
           - name: MICROSOFT_CLIENT_ID
             value: "{{ .Values.microsoft_integration.client_id }}"
@@ -515,7 +517,7 @@ spec:
           {{- end }}
 
           # ----------- XERO INTEGRATION ----------------
-          {{- if .Values.xero_integration.enabled }}
+          {{- if (default dict .Values.xero_integration).enabled }}
           {{- if .Values.xero_integration.client_id }}
           - name: XERO_CLIENT_ID
             value: "{{ .Values.xero_integration.client_id }}"
@@ -529,7 +531,7 @@ spec:
           {{- end }}
 
           # ----------- NINJAONE INTEGRATION ----------------
-          {{- if .Values.ninjaone_integration.enabled }}
+          {{- if (default dict .Values.ninjaone_integration).enabled }}
           {{- if .Values.ninjaone_integration.client_id }}
           - name: NINJAONE_CLIENT_ID
             value: "{{ .Values.ninjaone_integration.client_id }}"

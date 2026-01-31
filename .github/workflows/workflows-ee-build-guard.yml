@@ -56,8 +56,8 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
         run: npm -w server run build:enterprise
 
-      - name: Guard: legacy workflows shims removed
+      - name: "Guard: legacy workflows shims removed"
         run: node scripts/guard-no-legacy-workflows-shims.mjs
 
-      - name: Guard: no OSS workflows stub in EE output
+      - name: "Guard: no OSS workflows stub in EE output"
         run: node scripts/guard-ee-workflows-next-build.mjs server/.next
