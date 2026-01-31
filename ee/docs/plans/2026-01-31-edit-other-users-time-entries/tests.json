@@ -31,7 +31,7 @@
 
   { "id": "T070", "description": "Billing integrity: Editing an invoiced time entry is blocked.", "implemented": true, "featureIds": ["F020"] },
   { "id": "T071", "description": "Billing integrity: Deleting an invoiced time entry is blocked.", "implemented": true, "featureIds": ["F020", "F022"] },
-  { "id": "T072", "description": "Billing integrity: Reopening a time sheet with any invoiced entry is blocked.", "implemented": false, "featureIds": ["F021"] },
+  { "id": "T072", "description": "Billing integrity: Reopening a time sheet with any invoiced entry is blocked.", "implemented": true, "featureIds": ["F021"] },
 
   { "id": "T080", "description": "Approvals: Delegate can submit a subject’s time sheet and time entries transition to `SUBMITTED`.", "implemented": false, "featureIds": ["F023"] },
   { "id": "T081", "description": "Approvals: Billing/system admin can approve a subject’s time sheet tenant-wide.", "implemented": false, "featureIds": ["F024"] },

@@ -37,4 +37,9 @@ describe('delegation guard wiring (static)', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeEntryWorkItemActions.ts');
     expect(src).toMatch(/export const fetchWorkItemsForTimeSheet[\\s\\S]*assertCanActOnBehalf/);
   });
+
+  it('reopen/reverse approval is blocked when a timesheet contains invoiced entries', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
+    expect(src).toContain('contains invoiced time and cannot be reopened');
+  });
 });
