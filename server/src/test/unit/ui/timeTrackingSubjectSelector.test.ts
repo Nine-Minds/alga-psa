@@ -24,4 +24,13 @@ describe('/msp/time-entry subject selector (static)', () => {
     expect(src).toContain('fetchEligibleTimeEntrySubjects');
     expect(src).toContain('users={subjectUsers}');
   });
+
+  it('loads time periods and timesheets for the selected subject user', () => {
+    const src = readRepoFile(
+      'packages/scheduling/src/components/time-management/time-entry/TimeTracking.tsx'
+    );
+    expect(src).toContain('await fetchTimePeriods(subjectUserId)');
+    expect(src).toContain('await fetchOrCreateTimeSheet(subjectUserId, timePeriod.period_id)');
+    expect(src).toContain('}, [subjectUserId]);');
+  });
 });
