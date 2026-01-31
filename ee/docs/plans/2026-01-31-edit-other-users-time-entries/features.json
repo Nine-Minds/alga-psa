@@ -7,7 +7,7 @@
   { "id": "F005", "description": "Auth: Add a shared server-side helper to determine whether the actor can act on behalf of a subject user (self, tenant-wide admin, or manager-of-subject).", "implemented": true },
   { "id": "F006", "description": "Auth: Implement server-side “manager-of-subject” check using `teams` + `team_members` joins (do not trust client-provided team ids).", "implemented": true },
   { "id": "F007", "description": "Auth: Define a single policy for delegation actions: allow if self; else require `timesheet:approve` AND (tenant-wide via `timesheet:read_all` OR manager-of-subject).", "implemented": true },
-  { "id": "F008", "description": "Actions: Add a server action that returns the list of eligible subject users for the actor (self always; otherwise team-scoped or tenant-wide depending on permissions).", "implemented": false },
+  { "id": "F008", "description": "Actions: Add a server action that returns the list of eligible subject users for the actor (self always; otherwise team-scoped or tenant-wide depending on permissions).", "implemented": true },
 
   { "id": "F009", "description": "Actions: Harden `fetchTimePeriods(userId)` to enforce the delegation policy when `userId !== actor.user_id`.", "implemented": false },
   { "id": "F010", "description": "Actions: Harden `fetchOrCreateTimeSheet(userId, periodId)` to enforce the delegation policy when creating/fetching a time sheet for another user.", "implemented": false },
