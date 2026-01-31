@@ -78,3 +78,4 @@
 - 2026-01-31: F032 — Added “Reopen for edits” button to `TimeSheetHeader` for APPROVED, non-invoiced timesheets when server precomputes `canReopenForEdits` (see `server/src/app/msp/time-entry/timesheet/[id]/page.tsx`).
 - 2026-01-31: F033 — Reopen flow now uses `ConfirmationDialog` and shows toast success/error (including invoiced-block errors) in `TimeSheetClient`.
 - 2026-01-31: F034 — Timesheet client now forces `timeEntry.user_id = timeSheet.user_id` when saving so delegated entry create/edit targets the subject reliably.
+- 2026-01-31: F035 — Improved client error handling so server-side “not editable” / “invoiced” constraints surface as user-visible toast messages (see `TimeEntryDialog.tsx`).

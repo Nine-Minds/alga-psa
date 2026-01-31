@@ -271,9 +271,12 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       toast.dismiss(loadingToast);
       console.error('Error saving time entry:', error);
       
-      // Show a more user-friendly error message
-      if (error instanceof Error && error.message.includes('Unauthorized')) {
-        toast.error('Please log in to save time entries');
+      if (error instanceof Error) {
+        if (error.message.includes('Unauthorized')) {
+          toast.error('Please log in to save time entries');
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.error('Failed to save time entry. Please try again.');
       }
@@ -318,7 +321,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       }
     } catch (error) {
       console.error('Error deleting time entry:', error);
-      toast.error('Failed to delete time entry. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete time entry. Please try again.');
     } finally {
       setDeleteConfirmation({ isOpen: false, index: null });
     }
