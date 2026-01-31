@@ -10,6 +10,7 @@ import { IUser } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { fetchTimePeriods, fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '../../../actions/timeEntryDelegationActions';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 
 
 interface TimeTrackingProps {
@@ -70,19 +71,14 @@ export default function TimeTracking({ currentUser, isManager: _isManager }: Tim
   return (
     <div className="space-y-4">
       {showSubjectSelector && (
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">User</label>
-          <select
-            className="w-full max-w-md rounded border border-gray-300 bg-white px-3 py-2 text-sm"
+        <div className="w-full max-w-md">
+          <UserPicker
+            label="User"
             value={subjectUserId}
-            onChange={(e) => setSubjectUserId(e.target.value)}
-          >
-            {subjectUsers.map((u) => (
-              <option key={u.user_id} value={u.user_id}>
-                {`${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email}
-              </option>
-            ))}
-          </select>
+            onValueChange={setSubjectUserId}
+            users={subjectUsers}
+            buttonWidth="full"
+          />
         </div>
       )}
 
