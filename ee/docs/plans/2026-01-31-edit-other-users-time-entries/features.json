@@ -13,7 +13,7 @@
   { "id": "F010", "description": "Actions: Harden `fetchOrCreateTimeSheet(userId, periodId)` to enforce the delegation policy when creating/fetching a time sheet for another user.", "implemented": true },
   { "id": "F011", "description": "Actions: Harden `fetchTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate (billing admin / manager-of-subject).", "implemented": true },
   { "id": "F012", "description": "Actions: Harden `fetchTimeEntriesForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": true },
-  { "id": "F013", "description": "Actions: Harden `fetchWorkItemsForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": false },
+  { "id": "F013", "description": "Actions: Harden `fetchWorkItemsForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": true },
 
   { "id": "F014", "description": "Actions: Fix `saveTimeEntry` to support creating/editing entries for a subject user (do not force `user_id` to the actor).", "implemented": false },
   { "id": "F015", "description": "Actions: Fix `saveTimeEntry` update semantics so `user_id` is not changed on update unless explicitly requested (default: immutable ownership).", "implemented": false },
