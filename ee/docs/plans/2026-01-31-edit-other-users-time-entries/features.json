@@ -1,0 +1,51 @@
+[
+  { "id": "F001", "description": "DB: Add `created_by` and `updated_by` columns to `time_entries` to track the actor who created/updated an entry.", "implemented": true },
+  { "id": "F002", "description": "DB: Add FK constraints for `time_entries.(created_by,updated_by)` referencing `users(user_id)` scoped by tenant.", "implemented": false },
+  { "id": "F003", "description": "Types: Extend `ITimeEntry` (and derived time entry types) to include optional `created_by`/`updated_by` fields.", "implemented": false },
+  { "id": "F004", "description": "Validation: Extend `packages/scheduling/src/schemas/timeSheet.schemas.ts` `timeEntrySchema` to include optional `created_by`/`updated_by`.", "implemented": false },
+
+  { "id": "F005", "description": "Auth: Add a shared server-side helper to determine whether the actor can act on behalf of a subject user (self, tenant-wide admin, or manager-of-subject).", "implemented": false },
+  { "id": "F006", "description": "Auth: Implement server-side “manager-of-subject” check using `teams` + `team_members` joins (do not trust client-provided team ids).", "implemented": false },
+  { "id": "F007", "description": "Auth: Define a single policy for delegation actions: allow if self; else require `timesheet:approve` AND (tenant-wide via `timesheet:read_all` OR manager-of-subject).", "implemented": false },
+  { "id": "F008", "description": "Actions: Add a server action that returns the list of eligible subject users for the actor (self always; otherwise team-scoped or tenant-wide depending on permissions).", "implemented": false },
+
+  { "id": "F009", "description": "Actions: Harden `fetchTimePeriods(userId)` to enforce the delegation policy when `userId !== actor.user_id`.", "implemented": false },
+  { "id": "F010", "description": "Actions: Harden `fetchOrCreateTimeSheet(userId, periodId)` to enforce the delegation policy when creating/fetching a time sheet for another user.", "implemented": false },
+  { "id": "F011", "description": "Actions: Harden `fetchTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate (billing admin / manager-of-subject).", "implemented": false },
+  { "id": "F012", "description": "Actions: Harden `fetchTimeEntriesForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": false },
+  { "id": "F013", "description": "Actions: Harden `fetchWorkItemsForTimeSheet(timeSheetId)` to allow only the owner or an authorized delegate.", "implemented": false },
+
+  { "id": "F014", "description": "Actions: Fix `saveTimeEntry` to support creating/editing entries for a subject user (do not force `user_id` to the actor).", "implemented": false },
+  { "id": "F015", "description": "Actions: Fix `saveTimeEntry` update semantics so `user_id` is not changed on update unless explicitly requested (default: immutable ownership).", "implemented": false },
+  { "id": "F016", "description": "Actions: Ensure `saveTimeEntry` enforces delegation policy when subject != actor.", "implemented": false },
+  { "id": "F017", "description": "Actions: Ensure `saveTimeEntry` computes `work_date`/`work_timezone` using the subject user’s timezone (not the actor’s).", "implemented": false },
+  { "id": "F018", "description": "Actions: Populate `created_by`/`updated_by` on create, and `updated_by` on update.", "implemented": false },
+
+  { "id": "F019", "description": "Actions: Add server-side validation that a time entry’s timestamps fall within the associated time period boundaries for the time sheet.", "implemented": false },
+  { "id": "F020", "description": "Actions: Block updates/deletes for `time_entries.invoiced = true` with a clear error message.", "implemented": false },
+  { "id": "F021", "description": "Actions: Block reopening/reversing approvals for a time sheet if any related time entry is invoiced.", "implemented": false },
+
+  { "id": "F022", "description": "Actions: Update `deleteTimeEntry(entryId)` to enforce delegation policy and invoiced constraints.", "implemented": false },
+  { "id": "F023", "description": "Actions: Update `submitTimeSheet(timeSheetId)` to allow submission by authorized delegates and keep entry statuses consistent.", "implemented": false },
+  { "id": "F024", "description": "Actions: Ensure approval operations (`approveTimeSheet`, `bulkApproveTimeSheets`) remain consistent with delegation rules (billing admins tenant-wide; managers only for their reports).", "implemented": false },
+
+  { "id": "F025", "description": "Actions: Update the “reverse approval / reopen” behavior to transition the time sheet into an editable status (`CHANGES_REQUESTED`) instead of `SUBMITTED`.", "implemented": false },
+  { "id": "F026", "description": "Actions: Ensure “reopen for edits” requires `timesheet:reverse` and delegation authorization.", "implemented": false },
+
+  { "id": "F027", "description": "UI: Add a subject user selector to `/msp/time-entry` for users who can act on behalf of others (default to self).", "implemented": false },
+  { "id": "F028", "description": "UI: Use `UserPicker` for subject selection and load options from the new eligible-subjects server action.", "implemented": false },
+  { "id": "F029", "description": "UI: Update time period listing to fetch periods for the selected subject user.", "implemented": false },
+  { "id": "F030", "description": "UI: Ensure navigation into a timesheet preserves/communicates the subject context (derived from time sheet owner).", "implemented": false },
+
+  { "id": "F031", "description": "UI: Update timesheet header to display “Time Sheet for {Subject}” and optionally “Edited by {Actor}” when acting on behalf.", "implemented": false },
+  { "id": "F032", "description": "UI: Add “Reopen for edits” control for authorized users when a time sheet is `APPROVED` and not invoiced.", "implemented": false },
+  { "id": "F033", "description": "UI: Make the reopen flow actionable and informative (confirmation dialog + error display if invoiced).", "implemented": false },
+
+  { "id": "F034", "description": "UI: Ensure time entry create/edit/delete in the timesheet UI works unchanged for self and works correctly for delegated subject users.", "implemented": false },
+  { "id": "F035", "description": "UI: Prevent editing UI affordances when the server indicates non-editable status or invoiced constraints.", "implemented": false },
+
+  { "id": "F036", "description": "Security: Remove/avoid APIs that accept arbitrary team ids for manager-scoped operations; compute/validate scope server-side.", "implemented": false },
+  { "id": "F037", "description": "Security: Ensure knowing a `timeSheetId` is insufficient to read/edit entries without being owner or authorized delegate.", "implemented": false },
+
+  { "id": "F038", "description": "DX: Add minimal unit/integration coverage around delegation authorization + invoiced constraints (see tests.json).", "implemented": false }
+]

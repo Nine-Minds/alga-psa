@@ -1,0 +1,48 @@
+[
+  { "id": "T001", "description": "Plan: `python3 scripts/validate_plan.py ee/docs/plans/2026-01-31-edit-other-users-time-entries` passes.", "implemented": false },
+
+  { "id": "T010", "description": "DB: Migration adds `time_entries.created_by` and `time_entries.updated_by` columns.", "implemented": false, "featureIds": ["F001"] },
+  { "id": "T011", "description": "DB: FK constraints for `created_by`/`updated_by` exist and are tenant-scoped.", "implemented": false, "featureIds": ["F002"] },
+
+  { "id": "T020", "description": "Types: `ITimeEntry` includes optional `created_by`/`updated_by` and build/typecheck passes.", "implemented": false, "featureIds": ["F003"] },
+  { "id": "T021", "description": "Validation: `timeEntrySchema` accepts entries with/without `created_by`/`updated_by`.", "implemented": false, "featureIds": ["F004"] },
+
+  { "id": "T030", "description": "Auth: Self access is allowed (actor can access their own time periods/time sheets/entries).", "implemented": false, "featureIds": ["F005", "F007"] },
+  { "id": "T031", "description": "Auth: Billing/system admin (with `timesheet:read_all` + `timesheet:approve`) can access any user tenant-wide.", "implemented": false, "featureIds": ["F005", "F007"] },
+  { "id": "T032", "description": "Auth: Manager-of-subject (team manager) can access subject users in their managed teams.", "implemented": false, "featureIds": ["F006", "F007"] },
+  { "id": "T033", "description": "Auth: Manager cannot access users outside managed teams.", "implemented": false, "featureIds": ["F006", "F007"] },
+  { "id": "T034", "description": "Auth: User without delegation permissions cannot access another user’s time sheets/entries (403/permission error).", "implemented": false, "featureIds": ["F005", "F007", "F037"] },
+
+  { "id": "T040", "description": "Actions: Eligible-subjects action returns self-only for non-delegates.", "implemented": false, "featureIds": ["F008"] },
+  { "id": "T041", "description": "Actions: Eligible-subjects action returns team members for managers (only teams they manage).", "implemented": false, "featureIds": ["F006", "F008"] },
+  { "id": "T042", "description": "Actions: Eligible-subjects action returns all internal users for tenant-wide admins.", "implemented": false, "featureIds": ["F008"] },
+
+  { "id": "T050", "description": "Actions: `fetchTimePeriods(subjectUserId)` rejects unauthorized subject user.", "implemented": false, "featureIds": ["F009", "F037"] },
+  { "id": "T051", "description": "Actions: `fetchOrCreateTimeSheet(subjectUserId, periodId)` rejects unauthorized subject user.", "implemented": false, "featureIds": ["F010", "F037"] },
+  { "id": "T052", "description": "Actions: `fetchTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": false, "featureIds": ["F011", "F037"] },
+  { "id": "T053", "description": "Actions: `fetchTimeEntriesForTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": false, "featureIds": ["F012", "F037"] },
+  { "id": "T054", "description": "Actions: `fetchWorkItemsForTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": false, "featureIds": ["F013", "F037"] },
+
+  { "id": "T060", "description": "Actions: Creating a time entry on behalf sets `time_entries.user_id = subjectUserId` (not actor).", "implemented": false, "featureIds": ["F014", "F016"] },
+  { "id": "T061", "description": "Actions: Updating a time entry does not change `user_id` ownership.", "implemented": false, "featureIds": ["F015"] },
+  { "id": "T062", "description": "Actions: On create, `created_by` and `updated_by` are set to actor; on update, `updated_by` changes to actor.", "implemented": false, "featureIds": ["F018"] },
+  { "id": "T063", "description": "Actions: `work_date` is computed using the subject timezone (edge case around midnight local time).", "implemented": false, "featureIds": ["F017"] },
+  { "id": "T064", "description": "Actions: Time entry timestamps outside the time period boundary are rejected.", "implemented": false, "featureIds": ["F019"] },
+
+  { "id": "T070", "description": "Billing integrity: Editing an invoiced time entry is blocked.", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T071", "description": "Billing integrity: Deleting an invoiced time entry is blocked.", "implemented": false, "featureIds": ["F020", "F022"] },
+  { "id": "T072", "description": "Billing integrity: Reopening a time sheet with any invoiced entry is blocked.", "implemented": false, "featureIds": ["F021"] },
+
+  { "id": "T080", "description": "Approvals: Delegate can submit a subject’s time sheet and time entries transition to `SUBMITTED`.", "implemented": false, "featureIds": ["F023"] },
+  { "id": "T081", "description": "Approvals: Billing/system admin can approve a subject’s time sheet tenant-wide.", "implemented": false, "featureIds": ["F024"] },
+  { "id": "T082", "description": "Approvals: Manager can approve only subject time sheets for users in managed teams.", "implemented": false, "featureIds": ["F024"] },
+  { "id": "T083", "description": "Approvals: Reopen operation transitions time sheet and entries to `CHANGES_REQUESTED` and becomes editable in the UI.", "implemented": false, "featureIds": ["F025", "F026", "F032"] },
+
+  { "id": "T090", "description": "UI: User selector is hidden/disabled for non-delegates and defaults to self.", "implemented": false, "featureIds": ["F027"] },
+  { "id": "T091", "description": "UI: Eligible-subjects list populates UserPicker correctly (team-scoped vs tenant-wide).", "implemented": false, "featureIds": ["F028"] },
+  { "id": "T092", "description": "UI: Selecting a subject changes the displayed time periods and opens subject’s timesheet.", "implemented": false, "featureIds": ["F029", "F030"] },
+  { "id": "T093", "description": "UI: Timesheet header shows subject identity and indicates delegated editing when applicable.", "implemented": false, "featureIds": ["F031"] },
+  { "id": "T094", "description": "UI: “Reopen for edits” appears only for authorized users on APPROVED, non-invoiced time sheets and executes successfully.", "implemented": false, "featureIds": ["F032", "F033"] },
+
+  { "id": "T100", "description": "Security regression: Manager-scoped operations cannot be widened by passing arbitrary team ids from the client.", "implemented": false, "featureIds": ["F036"] }
+]
