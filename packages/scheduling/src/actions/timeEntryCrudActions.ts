@@ -270,8 +270,8 @@ export const saveTimeEntry = withAuth(async (
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
-    const userTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
-    const { work_date, work_timezone } = computeWorkDateFields(start_time, userTimeZone);
+    const subjectTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
+    const { work_date, work_timezone } = computeWorkDateFields(start_time, subjectTimeZone);
 
     const startDate = new Date(start_time);
     const endDate = new Date(end_time);
