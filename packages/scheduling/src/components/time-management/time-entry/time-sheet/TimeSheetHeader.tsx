@@ -14,6 +14,9 @@ export type TimeSheetViewMode = 'grid' | 'list';
 interface TimeSheetHeaderProps {
     status: TimeSheetStatus;
     isEditable: boolean;
+    subjectName?: string;
+    actorName?: string;
+    isDelegated?: boolean;
     onSubmit: () => Promise<void>;
     onBack: () => void;
     showIntervals?: boolean;
@@ -31,6 +34,9 @@ const viewOptions: ViewSwitcherOption<TimeSheetViewMode>[] = [
 export function TimeSheetHeader({
     status,
     isEditable,
+    subjectName,
+    actorName,
+    isDelegated = false,
     onSubmit,
     onBack,
     showIntervals = false,
@@ -68,7 +74,14 @@ export function TimeSheetHeader({
                     >
                         <ArrowLeft className="h-4 w-4 mr-1" /> Back
                     </Button>
-                    <h2 className="text-2xl font-bold truncate">Time Sheet</h2>
+                    <div className="min-w-0">
+                        <h2 className="text-2xl font-bold truncate">
+                            {subjectName ? `Time Sheet for ${subjectName}` : 'Time Sheet'}
+                        </h2>
+                        {isDelegated && actorName && (
+                            <div className="text-xs text-gray-500 truncate">Edited by {actorName}</div>
+                        )}
+                    </div>
                 </div>
 
                 {dateNavigator?.dateRangeDisplay && (

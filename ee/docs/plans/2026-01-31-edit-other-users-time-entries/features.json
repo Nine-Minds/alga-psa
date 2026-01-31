@@ -37,7 +37,7 @@
   { "id": "F029", "description": "UI: Update time period listing to fetch periods for the selected subject user.", "implemented": true },
   { "id": "F030", "description": "UI: Ensure navigation into a timesheet preserves/communicates the subject context (derived from time sheet owner).", "implemented": true },
 
-  { "id": "F031", "description": "UI: Update timesheet header to display “Time Sheet for {Subject}” and optionally “Edited by {Actor}” when acting on behalf.", "implemented": false },
+  { "id": "F031", "description": "UI: Update timesheet header to display “Time Sheet for {Subject}” and optionally “Edited by {Actor}” when acting on behalf.", "implemented": true },
   { "id": "F032", "description": "UI: Add “Reopen for edits” control for authorized users when a time sheet is `APPROVED` and not invoiced.", "implemented": false },
   { "id": "F033", "description": "UI: Make the reopen flow actionable and informative (confirmation dialog + error display if invoiced).", "implemented": false },
 

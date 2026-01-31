@@ -39,6 +39,9 @@ interface TimeSheetProps {
     timeSheet: ITimeSheetView;
     onSaveTimeEntry: (timeEntry: ITimeEntry) => Promise<void>;
     isManager?: boolean;
+    subjectName?: string;
+    actorName?: string;
+    isDelegated?: boolean;
     onSubmitTimeSheet: () => Promise<void>;
     initialWorkItem?: IExtendedWorkItem;
     initialDate?: string;
@@ -70,6 +73,9 @@ export function TimeSheet({
     timeSheet: initialTimeSheet,
     onSaveTimeEntry,
     isManager = false,
+    subjectName,
+    actorName,
+    isDelegated = false,
     onSubmitTimeSheet,
     initialWorkItem,
     initialDate,
@@ -598,6 +604,9 @@ export function TimeSheet({
                 <TimeSheetHeader
                 status={timeSheet.approval_status}
                 isEditable={isEditable}
+                subjectName={subjectName}
+                actorName={actorName}
+                isDelegated={isDelegated}
                 onSubmit={handleSubmitTimeSheet}
                 onBack={onBack}
                 showIntervals={showIntervals}
