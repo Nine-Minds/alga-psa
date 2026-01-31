@@ -84,3 +84,4 @@
 
 ## Test log
 - 2026-01-31: T001 — `python3 scripts/validate_plan.py ee/docs/plans/2026-01-31-edit-other-users-time-entries` ✅
+- 2026-01-31: T010 — Added unit test `server/src/test/unit/migrations/timeEntriesAuditColumns.test.ts` verifying migration adds `created_by` + `updated_by` columns.
