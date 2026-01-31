@@ -17,6 +17,8 @@ interface TimeSheetHeaderProps {
     subjectName?: string;
     actorName?: string;
     isDelegated?: boolean;
+    canReopenForEdits?: boolean;
+    onReopenForEdits?: () => Promise<void>;
     onSubmit: () => Promise<void>;
     onBack: () => void;
     showIntervals?: boolean;
@@ -37,6 +39,8 @@ export function TimeSheetHeader({
     subjectName,
     actorName,
     isDelegated = false,
+    canReopenForEdits = false,
+    onReopenForEdits,
     onSubmit,
     onBack,
     showIntervals = false,
@@ -176,6 +180,16 @@ export function TimeSheetHeader({
                             className="bg-primary-500 hover:bg-primary-600 text-white"
                         >
                             Submit Time Sheet
+                        </Button>
+                    )}
+
+                    {!isEditable && status === 'APPROVED' && canReopenForEdits && onReopenForEdits && (
+                        <Button
+                            id="reopen-timesheet-button"
+                            onClick={onReopenForEdits}
+                            variant="soft"
+                        >
+                            Reopen for edits
                         </Button>
                     )}
                 </div>

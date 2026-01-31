@@ -75,3 +75,4 @@
 - 2026-01-31: F029 — Time period list now reloads from `fetchTimePeriods(subjectUserId)` when the selected subject changes.
 - 2026-01-31: F030 — Timesheet page refresh after saving entries now re-fetches via the timesheet owner (`fetchOrCreateTimeSheet(timeSheet.user_id, ...)`) so subject context is derived from the timesheet itself.
 - 2026-01-31: F031 — Timesheet header now shows “Time Sheet for {Subject}” and (when delegated) “Edited by {Actor}” via new props plumbed through `TimeSheetClient` → `TimeSheet` → `TimeSheetHeader`.
+- 2026-01-31: F032 — Added “Reopen for edits” button to `TimeSheetHeader` for APPROVED, non-invoiced timesheets when server precomputes `canReopenForEdits` (see `server/src/app/msp/time-entry/timesheet/[id]/page.tsx`).

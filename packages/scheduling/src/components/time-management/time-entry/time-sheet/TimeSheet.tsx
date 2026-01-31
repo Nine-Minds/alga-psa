@@ -42,6 +42,8 @@ interface TimeSheetProps {
     subjectName?: string;
     actorName?: string;
     isDelegated?: boolean;
+    canReopenForEdits?: boolean;
+    onReopenForEdits?: () => Promise<void>;
     onSubmitTimeSheet: () => Promise<void>;
     initialWorkItem?: IExtendedWorkItem;
     initialDate?: string;
@@ -76,6 +78,8 @@ export function TimeSheet({
     subjectName,
     actorName,
     isDelegated = false,
+    canReopenForEdits = false,
+    onReopenForEdits,
     onSubmitTimeSheet,
     initialWorkItem,
     initialDate,
@@ -607,6 +611,8 @@ export function TimeSheet({
                 subjectName={subjectName}
                 actorName={actorName}
                 isDelegated={isDelegated}
+                canReopenForEdits={canReopenForEdits}
+                onReopenForEdits={onReopenForEdits}
                 onSubmit={handleSubmitTimeSheet}
                 onBack={onBack}
                 showIntervals={showIntervals}

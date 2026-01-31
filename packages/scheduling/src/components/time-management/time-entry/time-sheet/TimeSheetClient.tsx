@@ -5,15 +5,17 @@ import { useEffect, useState } from 'react';
 import type { ITimeEntry, ITimeSheetView, IUser, IUserWithRoles } from '@alga-psa/types';
 import { saveTimeEntry, fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '@alga-psa/scheduling/actions/timeEntryDelegationActions';
+import { fetchTimeSheet, reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
 import { TimeSheet } from './TimeSheet';
 
 interface TimeSheetClientProps {
   timeSheet: ITimeSheetView;
   currentUser: IUserWithRoles;
   isManager: boolean;
+  canReopenForEdits: boolean;
 }
 
-export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager }: TimeSheetClientProps) {
+export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager, canReopenForEdits }: TimeSheetClientProps) {
   const router = useRouter();
   const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
   const [subjectUser, setSubjectUser] = useState<IUser | null>(null);
@@ -57,6 +59,12 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     router.refresh();
   };
 
+  const handleReopenForEdits = async () => {
+    await reverseTimeSheetApproval(timeSheet.id, currentUser.user_id, 'Reopened for edits');
+    const updatedTimeSheet = await fetchTimeSheet(timeSheet.id);
+    setTimeSheet(updatedTimeSheet);
+  };
+
   const handleBack = () => {
     router.push('/msp/time-entry');
   };
@@ -69,6 +77,8 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
       subjectName={subjectUser ? formatUserName(subjectUser) : timeSheet.user_id}
       actorName={formatUserName(currentUser)}
       isDelegated={isDelegated}
+      canReopenForEdits={canReopenForEdits}
+      onReopenForEdits={handleReopenForEdits}
       onSubmitTimeSheet={handleSubmitTimeSheet}
       onBack={handleBack}
     />
