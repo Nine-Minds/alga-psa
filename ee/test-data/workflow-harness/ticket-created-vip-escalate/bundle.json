@@ -80,7 +80,7 @@
                     "attributes": true
                   }
                 },
-                "saveAs": "vars.lookup"
+                "saveAs": "lookup"
               }
             },
             {
@@ -180,7 +180,7 @@
                       "attributes": true
                     }
                   },
-                  "saveAs": "vars.lookup"
+                  "saveAs": "lookup"
                 }
               },
               {

@@ -385,12 +385,12 @@
     "implemented": true
   },
   {
-    "description": "action.call validates output schema before storing in payload. Mocks: non-target dependencies.",
+    "description": "action.call validates output schema before storing in vars. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": true
   },
   {
-    "description": "action.call saveAs stores output at specified payload path. Mocks: non-target dependencies.",
+    "description": "action.call saveAs stores output under vars.<saveAs>. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": true
   },

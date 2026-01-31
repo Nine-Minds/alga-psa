@@ -918,15 +918,15 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     expect(getSideEffectCount()).toBe(1);
   });
 
-  it('Duplicate idempotency key returns previously stored output without calling handler. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'payload.first' }), actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'payload.second' })]
-    });
-    await publishWorkflow(workflowId, 1);
-    await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const invocations = await db('workflow_action_invocations').where({ action_id: 'test.sideEffect' });
-    expect(invocations.length).toBe(1);
-  });
+	  it('Duplicate idempotency key returns previously stored output without calling handler. Mocks: non-target dependencies.', async () => {
+	    const workflowId = await createDraftWorkflow({
+	      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'first' }), actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'second' })]
+	    });
+	    await publishWorkflow(workflowId, 1);
+	    await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+	    const invocations = await db('workflow_action_invocations').where({ action_id: 'test.sideEffect' });
+	    expect(invocations.length).toBe(1);
+	  });
 
   it('Idempotency cache respects action_id and action_version. Mocks: non-target dependencies.', async () => {
     const registry = getActionRegistryV2();

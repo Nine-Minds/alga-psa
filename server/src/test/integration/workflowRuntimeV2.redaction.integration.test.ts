@@ -94,11 +94,11 @@ describe('workflow runtime v2 redaction + snapshot integration tests', () => {
     expect(payload.nested.secretRef).toBe('[REDACTED]');
   });
 
-  it('Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: { secretRef: 'token' } }, saveAs: 'payload.output' })]
-    });
-    await publishWorkflow(workflowId, 1);
+	  it('Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.', async () => {
+	    const workflowId = await createDraftWorkflow({
+	      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: { secretRef: 'token' } }, saveAs: 'output' })]
+	    });
+	    await publishWorkflow(workflowId, 1);
 
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const invocation = await db('workflow_action_invocations').where({ run_id: run.runId }).first();

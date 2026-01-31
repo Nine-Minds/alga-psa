@@ -18,7 +18,7 @@
 - (2026-01-01) `WorkflowDesigner.tsx` supports Playwright overrides via `window.__ALGA_PLAYWRIGHT_WORKFLOW__` for deterministic UI testing.
 - (2026-01-01) Workflow events are published to the Redis stream `workflow:events:global` (default event channel) and must be ingested into runtime v2 tables to start runs.
 - (2026-01-01) A v2 ingestor worker exists at `services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts` and uses consumer group `WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP` (default `workflow-runtime-v2`) to avoid competing with existing workflow processors.
-- (2026-01-01) Runtime v2 `action.call` uses `config.saveAs` as an assignment path; unscoped values like `tickets.addCommentResult` must be normalized (we treat unscoped values as `vars.<value>`).
+- (2026-01-01) Runtime v2 `action.call` treats `config.saveAs` as a `vars` key (output is stored under `vars.<saveAs>`); use `transform.assign` for explicit payload/meta assignments.
 - (2026-01-01) Ticket comments UI defaults to the "Client" tab (non-internal only); tests should click "All Comments" before asserting comment text to avoid internal/public default mismatches.
 - (2026-01-01) To keep the Playwright docker deps running for inspection, set `PW_KEEP_DEPS=true` (skips `ee/server/playwright.global-teardown.ts`).
 

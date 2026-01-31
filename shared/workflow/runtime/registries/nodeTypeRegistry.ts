@@ -32,6 +32,12 @@ export type NodeHandlerContext = {
 export type NodeTypeDef = {
   id: string;
   configSchema: ZodSchema<any>;
+  /**
+   * Optional schema describing the value produced by this node when it writes an output
+   * (e.g. to `vars.<saveAs>`). This is used by the Workflow Designer to provide typed
+   * autocomplete and mapping assistance.
+   */
+  outputSchema?: ZodSchema<any>;
   handler: (env: Envelope, config: any, ctx: NodeHandlerContext) => Promise<Envelope | { type: 'wait' } | { type: 'return' }>;
   ui?: NodeTypeUI;
   examples?: Record<string, unknown>;

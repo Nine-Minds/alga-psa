@@ -724,9 +724,9 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(runRecord?.status).toBe('FAILED');
   });
 
-  it('action.call validates output schema before storing in payload. Mocks: non-target dependencies.', async () => {
+  it('action.call validates output schema before storing in vars. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'payload.output' })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'output' })]
     });
     await publishWorkflow(workflowId, 1);
     stubAction('test.echo', 1, async () => 'invalid-output');
@@ -735,15 +735,15 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(record?.status).toBe('FAILED');
   });
 
-  it('action.call saveAs stores output at specified payload path. Mocks: non-target dependencies.', async () => {
+  it('action.call saveAs stores output under vars.<saveAs>. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'payload.output' })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'output' })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
     const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
-    expect((lastSnapshot.envelope_json as any).payload.output.value).toBe('ok');
+    expect((lastSnapshot.envelope_json as any).vars.output.value).toBe('ok');
   });
 
   it('onError=continue records error and continues to next step. Mocks: non-target dependencies.', async () => {

@@ -2426,6 +2426,9 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
     id: node.id,
     ui: node.ui,
     configSchema: zodToJsonSchema(node.configSchema, { name: node.id }),
+    outputSchema: node.outputSchema
+      ? zodToJsonSchema(node.outputSchema, { name: `${node.id}.output` })
+      : null,
     examples: node.examples ?? null,
     defaultRetry: node.defaultRetry ?? null
   }));

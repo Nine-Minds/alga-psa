@@ -397,7 +397,7 @@ describe('workflow runtime v2 email workflow integration tests', () => {
             config: {
               html: { $expr: 'payload.html' },
               text: { $expr: 'payload.text' },
-              saveAs: 'payload.blocks'
+              saveAs: 'blocks'
             }
           }
         ]
@@ -425,7 +425,7 @@ describe('workflow runtime v2 email workflow integration tests', () => {
 
     const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { html: '<p>Hi</p>', text: 'Hi' } });
     const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, result.runId);
-    const blocks = snapshots[snapshots.length - 1].envelope_json.payload.blocks;
+    const blocks = snapshots[snapshots.length - 1].envelope_json.vars.blocks;
     expect(blocks).toBeDefined();
   });
 

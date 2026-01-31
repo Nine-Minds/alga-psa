@@ -125,6 +125,7 @@ type NodeRegistryItem = {
     icon?: string;
   };
   configSchema: JsonSchema;
+  outputSchema?: JsonSchema | null;
   examples?: Record<string, unknown> | null;
   defaultRetry?: Record<string, unknown> | null;
 };
@@ -425,6 +426,7 @@ const buildDataContext = (
   definition: WorkflowDefinition,
   currentStepId: string,
   actionRegistry: ActionRegistryItem[],
+  nodeRegistry: Record<string, NodeRegistryItem>,
   payloadSchema: JsonSchema | null
 ): DataContext => {
   const context: DataContext = {
@@ -555,15 +557,15 @@ const buildDataContext = (
               });
             }
           } else {
-            // For custom node types, look up the action by the step type (which matches action.id)
-            const action = actionRegistry.find(a => a.id === step.type);
-            if (action?.outputSchema) {
+            // For non-action nodes, use the node registry's declared output schema (when available)
+            const nodeDef = nodeRegistry[step.type];
+            if (nodeDef?.outputSchema) {
               context.steps.push({
                 stepId: step.id,
-                stepName: nodeStep.name || action.ui?.label || step.type,
+                stepName: nodeStep.name || nodeDef.ui?.label || step.type,
                 saveAs: config.saveAs,
-                outputSchema: action.outputSchema,
-                fields: extractSchemaFields(action.outputSchema, action.outputSchema)
+                outputSchema: nodeDef.outputSchema,
+                fields: extractSchemaFields(nodeDef.outputSchema, nodeDef.outputSchema)
               });
             } else {
               // If no schema found, still show the step output as available (with empty fields)
@@ -2693,12 +2695,8 @@ const WorkflowDesigner: React.FC = () => {
 
     // §16.6 - Enhanced registry items with output schema preview
     const registryItems = nodeRegistry.map((node) => {
-      // For action.call nodes, find the corresponding action in actionRegistry
-      const action = node.id === 'action.call'
-        ? actionRegistry[0] // Just show a placeholder for action.call
-        : actionRegistry.find(a => a.id === node.id);
-      const outputFields = action?.outputSchema
-        ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
+      const outputFields = node.outputSchema
+        ? extractSchemaFields(node.outputSchema, node.outputSchema).map(f => f.name)
         : [];
 
       return {
@@ -4791,6 +4789,11 @@ const StepConfigPanel: React.FC<{
   onChange
 }) => {
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
+  const supportsSaveAs = useMemo(() => {
+    if (!nodeSchema) return false;
+    const resolved = resolveSchema(nodeSchema, nodeSchema);
+    return Boolean(resolved?.properties?.saveAs);
+  }, [nodeSchema]);
   const [showDataContext, setShowDataContext] = useState(false);
   const [isInputMappingDialogOpen, setIsInputMappingDialogOpen] = useState(false);
 
@@ -4800,8 +4803,8 @@ const StepConfigPanel: React.FC<{
 
   // Build data context for this step position
   const dataContext = useMemo(() =>
-    buildDataContext(definition, step.id, actionRegistry, payloadSchema),
-    [definition, step.id, actionRegistry, payloadSchema]
+    buildDataContext(definition, step.id, actionRegistry, nodeRegistry, payloadSchema),
+    [definition, step.id, actionRegistry, nodeRegistry, payloadSchema]
   );
 
   // For action.call steps, get the selected action
@@ -4811,7 +4814,7 @@ const StepConfigPanel: React.FC<{
     return getActionFromRegistry(config?.actionId, config?.version, actionRegistry);
   }, [step, actionRegistry]);
 
-  const saveAs = step.type === 'action.call'
+  const saveAs = !step.type.startsWith('control.')
     ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
     : undefined;
 
@@ -4982,13 +4985,22 @@ const StepConfigPanel: React.FC<{
 
       {/* §19.4 - Enhanced Save Output section with toggle, preview, and copy */}
       {!step.type.startsWith('control.') && (() => {
+        if (!nodeSchema) return null;
+        const resolvedNodeSchema = resolveSchema(nodeSchema, nodeSchema);
+        const saveAsProp = resolvedNodeSchema?.properties?.saveAs as JsonSchema | undefined;
+        if (!saveAsProp) return null;
+
         const nodeStep = step as NodeStep;
         const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
         const currentSaveAs = (existingConfig?.saveAs as string) ?? '';
-        const isSaveEnabled = !!currentSaveAs;
+        const defaultSaveAs = typeof saveAsProp.default === 'string' ? String(saveAsProp.default) : '';
+        const supportsToggle = !defaultSaveAs;
+        const isSaveEnabled = supportsToggle ? !!currentSaveAs : true;
         const actionId = (existingConfig?.actionId as string) ?? '';
+        const effectiveSaveAs = (supportsToggle ? currentSaveAs : (currentSaveAs || defaultSaveAs)).trim();
 
         const handleToggleSave = (enabled: boolean) => {
+          if (!supportsToggle) return;
           if (enabled) {
             // Auto-generate name from actionId if available
             const autoName = actionId ? generateSaveAsName(actionId) : 'result';
@@ -5005,25 +5017,34 @@ const StepConfigPanel: React.FC<{
         };
 
         const handleSaveAsChange = (value: string) => {
+          const next = value.trim();
           onChange({
             ...nodeStep,
-            config: { ...existingConfig, saveAs: value.trim() || undefined }
+            config: { ...existingConfig, saveAs: next || undefined }
           });
         };
 
         return (
           <div className="space-y-2">
-            {/* Toggle row */}
-            <div className="flex items-center justify-between">
-              <Label htmlFor={`workflow-step-saveAs-toggle-${step.id}`} className="text-sm font-medium">
-                Save output
+            {!supportsToggle && (
+              <Label htmlFor={`workflow-step-saveAs-${step.id}`} className="text-sm font-medium">
+                Output variable
               </Label>
-              <Switch
-                id={`workflow-step-saveAs-toggle-${step.id}`}
-                checked={isSaveEnabled}
-                onCheckedChange={handleToggleSave}
-              />
-            </div>
+            )}
+
+            {/* Toggle row (only for optional outputs) */}
+            {supportsToggle && (
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`workflow-step-saveAs-toggle-${step.id}`} className="text-sm font-medium">
+                  Save output
+                </Label>
+                <Switch
+                  id={`workflow-step-saveAs-toggle-${step.id}`}
+                  checked={isSaveEnabled}
+                  onCheckedChange={handleToggleSave}
+                />
+              </div>
+            )}
 
             {/* Input and copy button when enabled */}
             {isSaveEnabled && (
@@ -5032,7 +5053,7 @@ const StepConfigPanel: React.FC<{
                   <Input
                     id={`workflow-step-saveAs-${step.id}`}
                     placeholder="e.g., ticketDefaults"
-                    value={currentSaveAs}
+                    value={effectiveSaveAs}
                     onChange={(event) => handleSaveAsChange(event.target.value)}
                     className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-red-500' : saveAsValidation?.type === 'warning' ? 'border-yellow-500' : ''}`}
                   />
@@ -5040,7 +5061,7 @@ const StepConfigPanel: React.FC<{
                     id={`workflow-step-saveAs-copy-${step.id}`}
                     variant="outline"
                     size="sm"
-                    onClick={() => handleCopyPath(`vars.${currentSaveAs}`)}
+                    onClick={() => handleCopyPath(`vars.${effectiveSaveAs}`)}
                     title="Copy full path"
                     className="flex-shrink-0"
                   >
@@ -5052,7 +5073,7 @@ const StepConfigPanel: React.FC<{
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
                   <span>Accessible as:</span>
                   <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-mono">
-                    vars.{currentSaveAs}
+                    vars.{effectiveSaveAs}
                   </code>
                 </div>
 
@@ -5189,7 +5210,10 @@ const StepConfigPanel: React.FC<{
           fieldOptions={enhancedFieldOptions}
           actionRegistry={actionRegistry}
           stepId={step.id}
-          excludeFields={step.type === 'action.call' ? ['inputMapping'] : []}
+          excludeFields={[
+            ...(step.type === 'action.call' ? ['inputMapping'] : []),
+            ...(supportsSaveAs ? ['saveAs'] : [])
+          ]}
           expressionContext={expressionContext}
         />
       )}
@@ -5401,7 +5425,7 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   actionId: { label: 'Action', description: 'The action to invoke' },
   version: { label: 'Version', description: 'Action version number' },
   inputMapping: { label: 'Input Mapping', description: 'Map data to action inputs' },
-  saveAs: { label: 'Save Result As', description: 'Variable name or assignment path (e.g., result, vars.result, payload.result)' },
+  saveAs: { label: 'Save Result As', description: 'Variable name for this step output (saved under vars.<name>)' },
   idempotencyKey: {
     label: 'Idempotency Key',
     description: 'Expression that produces a unique key to prevent duplicate executions. If the same key is seen twice, the cached result is returned.',

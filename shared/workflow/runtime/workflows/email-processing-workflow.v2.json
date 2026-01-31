@@ -30,7 +30,7 @@
           "config": {
             "text": { "$expr": "payload.emailData.body.text" },
             "html": { "$expr": "payload.emailData.body.html" },
-            "saveAs": "vars.parsedEmail"
+            "saveAs": "parsedEmail"
           }
         },
         {
@@ -48,7 +48,7 @@
               "emailData": { "$expr": "payload.emailData" },
               "parsedEmail": { "$expr": "vars.parsedEmail" }
             },
-            "saveAs": "vars.existingTicketResolution"
+            "saveAs": "existingTicketResolution"
           }
         },
         {
@@ -113,7 +113,7 @@
                   "providerId": { "$expr": "payload.providerId" },
                   "senderEmail": { "$expr": "payload.emailData.from.email" }
                 },
-                "saveAs": "vars.ticketContext"
+                "saveAs": "ticketContext"
               }
             },
             {
@@ -150,7 +150,7 @@
                   "targetLocationId": { "$expr": "vars.ticketContext.targetLocationId" }
                 },
                 "idempotencyKey": { "$expr": "payload.providerId & ':' & payload.emailData.id" },
-                "saveAs": "vars.createdTicket"
+                "saveAs": "createdTicket"
               }
             },
             {

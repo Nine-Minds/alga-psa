@@ -9,20 +9,23 @@ import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
 import { getFormValidationService } from '../../core/formValidationService';
 
-function normalizeAssignmentPath(path: string): string {
-  const trimmed = path.trim();
-  if (!trimmed) return trimmed;
+const RESERVED_SAVE_AS_NAMES = new Set([
+  'payload',
+  'vars',
+  'meta',
+  'error',
+  'env',
+  'secrets',
+  'item',
+  '$index'
+]);
 
-  const scoped = trimmed.startsWith('payload.')
-    || trimmed.startsWith('vars.')
-    || trimmed.startsWith('meta.')
-    || trimmed.startsWith('error.')
-    || trimmed.startsWith('/');
-
-  // For backwards compatibility with the Workflow Designer, treat unscoped values
-  // as a variable name under `vars.*`.
-  return scoped ? trimmed : `vars.${trimmed}`;
-}
+const saveAsVarNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, { message: 'saveAs must be a valid identifier' })
+  .refine((name) => !RESERVED_SAVE_AS_NAMES.has(name), { message: 'saveAs is a reserved name' });
 
 const stateSetSchema = z.object({
   state: z.string().min(1)
@@ -43,7 +46,7 @@ const actionCallSchema = z.object({
   actionId: z.string().min(1),
   version: z.number().int().positive(),
   inputMapping: inputMappingSchema.optional().default({}),
-  saveAs: z.string().optional(),
+  saveAs: saveAsVarNameSchema.optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
   }).optional(),
@@ -53,14 +56,23 @@ const actionCallSchema = z.object({
 const emailParseBodySchema = z.object({
   text: exprSchema.optional(),
   html: exprSchema.optional(),
-  saveAs: z.string().optional().default('payload.parsedEmail')
+  saveAs: saveAsVarNameSchema.optional().default('parsedEmail')
 }).strict();
 
 const emailRenderCommentBlocksSchema = z.object({
   html: exprSchema.optional(),
   text: exprSchema.optional(),
-  saveAs: z.string().optional().default('payload.commentBlocks')
+  saveAs: saveAsVarNameSchema.optional().default('commentBlocks')
 }).strict();
+
+const emailParsedBodyOutputSchema = z.object({
+  sanitizedText: z.string(),
+  sanitizedHtml: z.string().optional(),
+  confidence: z.string(),
+  metadata: z.record(z.unknown())
+}).strict();
+
+const commentBlocksOutputSchema = z.array(z.unknown());
 
 const humanTaskSchema = z.object({
   taskType: z.string().min(1),
@@ -192,7 +204,7 @@ export function registerDefaultNodes(): void {
         const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
         if (config.saveAs) {
           return applyAssignments(env, {
-            [normalizeAssignmentPath(config.saveAs)]: output
+            [`vars.${config.saveAs}`]: output
           });
         }
         return env;
@@ -229,6 +241,7 @@ export function registerDefaultNodes(): void {
   registry.register({
     id: 'email.parseBody',
     configSchema: emailParseBodySchema,
+    outputSchema: emailParsedBodyOutputSchema,
     handler: async (env, config, ctx) => {
       const textValue = config.text ? await resolveExpressions(config.text, ctxToExpr(env)) : undefined;
       const htmlValue = config.html ? await resolveExpressions(config.html, ctxToExpr(env)) : undefined;
@@ -236,7 +249,7 @@ export function registerDefaultNodes(): void {
       const html = htmlValue === null || htmlValue === undefined ? undefined : String(htmlValue);
       const parsed = await parseEmailBodyWithFallback(ctx.actions.call, { text, html });
       return applyAssignments(env, {
-        [config.saveAs ? normalizeAssignmentPath(config.saveAs) : 'payload.parsedEmail']: parsed
+        [`vars.${config.saveAs}`]: parsed
       });
     },
     ui: {
@@ -249,6 +262,7 @@ export function registerDefaultNodes(): void {
   registry.register({
     id: 'email.renderCommentBlocks',
     configSchema: emailRenderCommentBlocksSchema,
+    outputSchema: commentBlocksOutputSchema,
     handler: async (env, config, ctx) => {
       const textValue = config.text ? await resolveExpressions(config.text, ctxToExpr(env)) : undefined;
       const htmlValue = config.html ? await resolveExpressions(config.html, ctxToExpr(env)) : undefined;
@@ -256,7 +270,7 @@ export function registerDefaultNodes(): void {
       const html = htmlValue === null || htmlValue === undefined ? undefined : String(htmlValue);
       const blocks = await renderCommentBlocksWithFallback(ctx.actions.call, { html, text });
       return applyAssignments(env, {
-        [config.saveAs ? normalizeAssignmentPath(config.saveAs) : 'payload.commentBlocks']: blocks
+        [`vars.${config.saveAs}`]: blocks
       });
     },
     ui: {

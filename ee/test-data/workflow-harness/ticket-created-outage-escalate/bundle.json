@@ -51,7 +51,7 @@
                   "ticket_id": { "$expr": "payload.ticketId" },
                   "include": { "attributes": true }
                 },
-                "saveAs": "vars.lookup"
+                "saveAs": "lookup"
               }
             },
             {
@@ -129,7 +129,7 @@
                     "ticket_id": { "$expr": "payload.ticketId" },
                     "include": { "attributes": true }
                   },
-                  "saveAs": "vars.lookup"
+                  "saveAs": "lookup"
                 }
               },
               {
