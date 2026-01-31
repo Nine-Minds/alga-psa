@@ -29,5 +29,26 @@ describe('assertCanActOnBehalf', () => {
     await expect(assertCanActOnBehalf(actor as any, actor.tenant, actor.user_id, db)).resolves.toBe('self');
     expect(hasPermission).not.toHaveBeenCalled();
   });
-});
 
+  it('allows tenant-wide access for approve + read_all', async () => {
+    const actor = {
+      tenant: 'tenant-1',
+      user_id: 'admin-1',
+      user_type: 'internal',
+      username: 'admin',
+      email: 'admin@example.com',
+      is_inactive: false,
+    };
+
+    vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
+      if (resource !== 'timesheet') return false;
+      return action === 'approve' || action === 'read_all';
+    });
+
+    const db = vi.fn(() => {
+      throw new Error('db should not be called for tenant-wide access');
+    }) as any;
+
+    await expect(assertCanActOnBehalf(actor as any, actor.tenant, 'subject-1', db)).resolves.toBe('tenant-wide');
+  });
+});
