@@ -36,7 +36,7 @@
   { "id": "T080", "description": "Approvals: Delegate can submit a subject’s time sheet and time entries transition to `SUBMITTED`.", "implemented": true, "featureIds": ["F023"] },
   { "id": "T081", "description": "Approvals: Billing/system admin can approve a subject’s time sheet tenant-wide.", "implemented": true, "featureIds": ["F024"] },
   { "id": "T082", "description": "Approvals: Manager can approve only subject time sheets for users in managed teams.", "implemented": true, "featureIds": ["F024"] },
-  { "id": "T083", "description": "Approvals: Reopen operation transitions time sheet and entries to `CHANGES_REQUESTED` and becomes editable in the UI.", "implemented": false, "featureIds": ["F025", "F026", "F032"] },
+  { "id": "T083", "description": "Approvals: Reopen operation transitions time sheet and entries to `CHANGES_REQUESTED` and becomes editable in the UI.", "implemented": true, "featureIds": ["F025", "F026", "F032"] },
 
   { "id": "T090", "description": "UI: User selector is hidden/disabled for non-delegates and defaults to self.", "implemented": false, "featureIds": ["F027"] },
   { "id": "T091", "description": "UI: Eligible-subjects list populates UserPicker correctly (team-scoped vs tenant-wide).", "implemented": false, "featureIds": ["F028"] },

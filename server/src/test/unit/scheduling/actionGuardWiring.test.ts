@@ -42,4 +42,12 @@ describe('delegation guard wiring (static)', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
     expect(src).toContain('contains invoiced time and cannot be reopened');
   });
+
+  it('reopen/reverse approval transitions timesheet and entries to CHANGES_REQUESTED', () => {
+    const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
+    expect(src).toMatch(/reverseTimeSheetApproval[\\s\\S]*approval_status:\\s*'CHANGES_REQUESTED'/);
+
+    const ui = readRepoFile('packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx');
+    expect(ui).toContain("timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED'");
+  });
 });
