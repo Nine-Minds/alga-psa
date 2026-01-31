@@ -845,6 +845,12 @@ export const deleteTimeEntry = withAuth(async (
         throw new Error('Time entry not found');
       }
 
+      await assertCanActOnBehalf(user, tenant, timeEntry.user_id, trx);
+
+      if (timeEntry.invoiced) {
+        throw new Error('This time entry has already been invoiced and cannot be deleted.');
+      }
+
       // --- Bucket Usage Update Logic (Before Delete) ---
       if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
         let clientId: string | null = null;
@@ -945,6 +951,9 @@ export const deleteTimeEntry = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting time entry:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error('Failed to delete time entry');
   }
 });

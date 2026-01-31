@@ -25,7 +25,7 @@
   { "id": "F020", "description": "Actions: Block updates/deletes for `time_entries.invoiced = true` with a clear error message.", "implemented": true },
   { "id": "F021", "description": "Actions: Block reopening/reversing approvals for a time sheet if any related time entry is invoiced.", "implemented": true },
 
-  { "id": "F022", "description": "Actions: Update `deleteTimeEntry(entryId)` to enforce delegation policy and invoiced constraints.", "implemented": false },
+  { "id": "F022", "description": "Actions: Update `deleteTimeEntry(entryId)` to enforce delegation policy and invoiced constraints.", "implemented": true },
   { "id": "F023", "description": "Actions: Update `submitTimeSheet(timeSheetId)` to allow submission by authorized delegates and keep entry statuses consistent.", "implemented": false },
   { "id": "F024", "description": "Actions: Ensure approval operations (`approveTimeSheet`, `bulkApproveTimeSheets`) remain consistent with delegation rules (billing admins tenant-wide; managers only for their reports).", "implemented": false },
 
