@@ -91,3 +91,4 @@
 - 2026-01-31: T030 — Added unit test `server/src/test/unit/scheduling/delegationAuth.test.ts` covering self access for delegation auth.
 - 2026-01-31: T031 — Extended delegation auth unit test to cover tenant-wide admin access (`approve` + `read_all`).
 - 2026-01-31: T032 — Extended delegation auth unit test to cover manager-of-subject access (managed team membership).
+- 2026-01-31: T033 — Extended delegation auth unit test to ensure managers cannot access users outside their managed teams.
