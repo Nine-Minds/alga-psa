@@ -634,6 +634,10 @@ export const reverseTimeSheetApproval = withAuth(async (
       throw new Error('Permission denied: Cannot reverse timesheet approvals');
     }
 
+    if (approverId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     await db.transaction(async (trx) => {
       // Check if time sheet exists and is approved
       const timeSheet = await trx('time_sheets')
@@ -646,6 +650,8 @@ export const reverseTimeSheetApproval = withAuth(async (
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
       if (timeSheet.approval_status !== 'APPROVED') {
         throw new Error('Time sheet is not in an approved state');
