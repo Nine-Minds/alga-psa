@@ -98,3 +98,4 @@
 - 2026-01-31: T042 — Extended eligible-subjects unit test to cover tenant-wide admin subject lists (all internal users).
 - 2026-01-31: T050 — Added static guard-wiring test `server/src/test/unit/scheduling/actionGuardWiring.test.ts` asserting `fetchTimePeriods` calls `assertCanActOnBehalf`.
 - 2026-01-31: T051 — Extended static guard-wiring test to cover `fetchOrCreateTimeSheet` delegation enforcement.
+- 2026-01-31: T052 — Extended static guard-wiring test to cover `fetchTimeSheet` owner-or-delegate enforcement.
