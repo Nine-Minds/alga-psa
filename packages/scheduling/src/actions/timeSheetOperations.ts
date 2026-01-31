@@ -18,7 +18,7 @@ import {
   fetchOrCreateTimeSheetParamsSchema,
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
@@ -75,6 +75,10 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
   const {knex: db} = await createTenantKnex();
 
   try {
+    if (!await hasPermission(user, 'timesheet', 'submit', db)) {
+      throw new Error('Permission denied: Cannot submit timesheets');
+    }
+
     return await db.transaction(async (trx) => {
       // Get timesheet info for analytics
       const timeSheetInfo = await trx('time_sheets')
@@ -83,6 +87,12 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
           tenant
         })
         .first();
+
+      if (!timeSheetInfo) {
+        throw new Error('Time sheet not found');
+      }
+
+      await assertCanActOnBehalf(user, tenant, timeSheetInfo.user_id, trx);
 
       // Get entry count and total hours for analytics
       const entriesInfo = await trx('time_entries')
