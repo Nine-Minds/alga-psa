@@ -91,6 +91,7 @@
       "@alga-psa/ui": ["packages/ui/src"],
       "@alga-psa/ui/*": ["packages/ui/src/*"],
       "@alga-psa/auth": ["packages/auth/src"],
+      "@alga-psa/auth/sso/entry": ["packages/auth/src/components/SsoProviderButtons.tsx"],
       "@alga-psa/auth/*": ["packages/auth/src/*", "packages/auth/src/lib/*"],
       "@alga-psa/analytics": ["packages/analytics/src"],
       "@alga-psa/analytics/*": ["packages/analytics/src/*"],

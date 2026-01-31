@@ -164,6 +164,7 @@ volumes/
 .aider*
 
 prod.config.ini
+secrets
 secrets/
 !server/src/lib/secrets/
 !packages/core/src/lib/secrets/

@@ -26,7 +26,6 @@ try {
 
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-console.log('[next.config] isEE:', isEE, { EDITION: process.env.EDITION, NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION });
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';

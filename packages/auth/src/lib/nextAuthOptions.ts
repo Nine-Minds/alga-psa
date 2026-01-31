@@ -12,12 +12,13 @@ import {
     getNextAuthSecretSync,
     getSessionCookieConfig,
     getSessionMaxAge,
+    withDevPortSuffix,
     type PortalSessionTokenPayload,
 } from "./session";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
-import { getSSORegistry } from "./sso/registry";
+import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import type { OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
 import { OAuthAccountLinkConflictError } from "./sso/types";
 import { cookies } from "next/headers.js";
@@ -45,6 +46,112 @@ function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, proto
 
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
+
+const NEXTAUTH_SECURE_COOKIES = process.env.NODE_ENV === 'production';
+const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
+
+const NEXTAUTH_COOKIES = {
+    sessionToken: SESSION_COOKIE,
+    callbackUrl: {
+        name: withDevPortSuffix(`${NEXTAUTH_COOKIE_PREFIX}authjs.callback-url`),
+        options: {
+            httpOnly: true,
+            sameSite: 'lax' as const,
+            path: '/',
+            secure: NEXTAUTH_SECURE_COOKIES,
+        },
+    },
+    csrfToken: {
+        name: withDevPortSuffix(`${NEXTAUTH_SECURE_COOKIES ? '__Host-' : ''}authjs.csrf-token`),
+        options: {
+            httpOnly: true,
+            sameSite: 'lax' as const,
+            path: '/',
+            secure: NEXTAUTH_SECURE_COOKIES,
+        },
+    },
+    pkceCodeVerifier: {
+        name: withDevPortSuffix(`${NEXTAUTH_COOKIE_PREFIX}authjs.pkce.code_verifier`),
+        options: {
+            httpOnly: true,
+            sameSite: 'lax' as const,
+            path: '/',
+            secure: NEXTAUTH_SECURE_COOKIES,
+            maxAge: 60 * 15,
+        },
+    },
+    state: {
+        name: withDevPortSuffix(`${NEXTAUTH_COOKIE_PREFIX}authjs.state`),
+        options: {
+            httpOnly: true,
+            sameSite: 'lax' as const,
+            path: '/',
+            secure: NEXTAUTH_SECURE_COOKIES,
+            maxAge: 60 * 15,
+        },
+    },
+    nonce: {
+        name: withDevPortSuffix(`${NEXTAUTH_COOKIE_PREFIX}authjs.nonce`),
+        options: {
+            httpOnly: true,
+            sameSite: 'lax' as const,
+            path: '/',
+            secure: NEXTAUTH_SECURE_COOKIES,
+        },
+    },
+} as const;
+
+let enterpriseSsoRegistryInitPromise: Promise<void> | null = null;
+
+async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
+    if (!isEnterprise) {
+        return;
+    }
+
+    if (enterpriseSsoRegistryInitPromise) {
+        await enterpriseSsoRegistryInitPromise;
+        return;
+    }
+
+    enterpriseSsoRegistryInitPromise = (async () => {
+        const {
+            mapOAuthProfileToExtendedUser,
+            applyOAuthAccountHints,
+            decodeOAuthJwtPayload,
+        } = await import('@ee/lib/auth/ssoProviders');
+        const {
+            upsertOAuthAccountLink,
+            findOAuthAccountLink,
+            listOAuthAccountLinksForUser,
+        } = await import('@ee/lib/auth/oauthAccountLinks');
+        const { isAutoLinkEnabledForTenant } = await import('@ee/lib/auth/ssoAutoLink');
+
+        // If @ee is mis-aliased to CE stubs at build time, these functions will still exist but will
+        // throw EE-only errors. Detect and log a more actionable message.
+        if (String(mapOAuthProfileToExtendedUser).includes('OAuth providers are only available in Enterprise Edition')) {
+            console.error('[auth] Enterprise SSO registry resolved to CE stubs. Check build-time EDITION/NEXT_PUBLIC_EDITION and @ee alias wiring.');
+        }
+
+        registerSSOProvider({
+            mapOAuthProfileToExtendedUser,
+            applyOAuthAccountHints,
+            decodeOAuthJwtPayload,
+            upsertOAuthAccountLink,
+            findOAuthAccountLink,
+            listOAuthAccountLinksForUser,
+            isAutoLinkEnabledForTenant,
+        });
+    })();
+
+    try {
+        await enterpriseSsoRegistryInitPromise;
+    } catch (error) {
+        enterpriseSsoRegistryInitPromise = null;
+        // Avoid crashing auth if EE modules aren't available; providers will fail with a clearer error
+        // when invoked via the default registry stubs.
+        console.error('[auth] Failed to initialize Enterprise SSO registry', error);
+    }
+}
 
 async function computeVanityRedirect({
     url,
@@ -726,6 +833,7 @@ async function getOAuthSecrets() {
 
 // Build NextAuth options dynamically with secrets
 export async function buildAuthOptions(): Promise<NextAuthConfig> {
+    await ensureEnterpriseSsoRegistryInitialized();
     const secrets = await getOAuthSecrets();
     const nextAuthSecret = await getNextAuthSecret();
 
@@ -1133,9 +1241,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
         strategy: "jwt",
         maxAge: SESSION_MAX_AGE,
     },
-    cookies: {
-        sessionToken: SESSION_COOKIE,
-    },
+    cookies: NEXTAUTH_COOKIES,
     callbacks: {
         async signIn({ user, account, credentials, profile, ...context }) {
             const providerId = account?.provider;
@@ -1896,9 +2002,7 @@ export const options: NextAuthConfig = {
         strategy: "jwt",
         maxAge: SESSION_MAX_AGE,
     },
-    cookies: {
-        sessionToken: SESSION_COOKIE,
-    },
+    cookies: NEXTAUTH_COOKIES,
     callbacks: {
         async signIn({ user, account, credentials }) {
             // Track successful login

@@ -8,15 +8,6 @@ const emptyShim = './src/empty/shims/empty.ts';
 
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-// DEBUG LOGGING - Remove after troubleshooting
-console.log('=== EE BUILD DEBUG ===');
-console.log('process.env.EDITION:', process.env.EDITION);
-console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
-console.log('isEE result:', isEE);
-console.log('Current working directory:', process.cwd());
-console.log('__dirname:', __dirname);
-console.log('=== END DEBUG ===');
-
 const nextConfig = {
   // Transpile shared product packages used by EE server
   transpilePackages: [

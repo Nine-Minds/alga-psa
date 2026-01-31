@@ -247,6 +247,37 @@ export async function initializeApp() {
     // Initialize enterprise features
     if (isEnterprise) {
 
+      // Register EE implementations for the auth package's SSO registry
+      // (NextAuth provider callbacks call into @alga-psa/auth's registry; EE must register the real implementations)
+      try {
+        const { registerSSOProvider } = await import('@alga-psa/auth/lib/sso/registry');
+        const {
+          mapOAuthProfileToExtendedUser,
+          applyOAuthAccountHints,
+          decodeOAuthJwtPayload,
+        } = await import('@ee/lib/auth/ssoProviders');
+        const {
+          upsertOAuthAccountLink,
+          findOAuthAccountLink,
+          listOAuthAccountLinksForUser,
+        } = await import('@ee/lib/auth/oauthAccountLinks');
+        const { isAutoLinkEnabledForTenant } = await import('@ee/lib/auth/ssoAutoLink');
+
+        registerSSOProvider({
+          mapOAuthProfileToExtendedUser,
+          applyOAuthAccountHints,
+          decodeOAuthJwtPayload,
+          upsertOAuthAccountLink,
+          findOAuthAccountLink,
+          listOAuthAccountLinksForUser,
+          isAutoLinkEnabledForTenant,
+        });
+
+        logger.info('Registered Enterprise SSO provider implementations');
+      } catch (error) {
+        logger.error('Failed to register Enterprise SSO provider implementations:', error);
+      }
+
       // Initialize extensions
        try {
          const { initializeExtensions } = await import('@alga-psa/product-extension-initialization');

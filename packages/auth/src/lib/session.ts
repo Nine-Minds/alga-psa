@@ -40,6 +40,19 @@ function getDevCookiePortSuffix(): string | null {
 }
 
 /**
+ * Cookies are shared across localhost ports. In development, suffix cookie names with the dev port
+ * so multiple worktrees (each with their own NEXTAUTH_SECRET) can coexist without clobbering.
+ */
+export function withDevPortSuffix(cookieName: string): string {
+  const portSuffix = getDevCookiePortSuffix();
+  if (!portSuffix) {
+    return cookieName;
+  }
+
+  return `${cookieName}.${portSuffix}`;
+}
+
+/**
  * Get the session max age in seconds
  */
 export function getSessionMaxAge(): number {
@@ -60,14 +73,7 @@ export function getSessionCookieName(): string {
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
 
-  const portSuffix = getDevCookiePortSuffix();
-  if (!portSuffix) {
-    return baseName;
-  }
-
-  // Cookies are shared across localhost ports; suffix the cookie name in dev so multiple worktrees
-  // (each with their own NEXTAUTH_SECRET) can coexist without clobbering each other.
-  return `${baseName}.${portSuffix}`;
+  return withDevPortSuffix(baseName);
 }
 
 /**
