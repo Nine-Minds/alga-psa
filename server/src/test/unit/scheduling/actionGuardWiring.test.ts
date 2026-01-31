@@ -24,4 +24,12 @@ describe('delegation guard wiring (static)', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
     expect(src).toMatch(/export const fetchTimeSheet[\\s\\S]*assertCanActOnBehalf/);
   });
+
+  it('fetchTimeEntriesForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf', () => {
+    const srcActions = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
+    expect(srcActions).toMatch(/export const fetchTimeEntriesForTimeSheet[\\s\\S]*assertCanActOnBehalf/);
+
+    const srcCrud = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
+    expect(srcCrud).toMatch(/export const fetchTimeEntriesForTimeSheet[\\s\\S]*assertCanActOnBehalf/);
+  });
 });

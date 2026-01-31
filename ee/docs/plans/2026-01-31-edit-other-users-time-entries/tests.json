@@ -20,7 +20,7 @@
   { "id": "T050", "description": "Actions: `fetchTimePeriods(subjectUserId)` rejects unauthorized subject user.", "implemented": true, "featureIds": ["F009", "F037"] },
   { "id": "T051", "description": "Actions: `fetchOrCreateTimeSheet(subjectUserId, periodId)` rejects unauthorized subject user.", "implemented": true, "featureIds": ["F010", "F037"] },
   { "id": "T052", "description": "Actions: `fetchTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": true, "featureIds": ["F011", "F037"] },
-  { "id": "T053", "description": "Actions: `fetchTimeEntriesForTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": false, "featureIds": ["F012", "F037"] },
+  { "id": "T053", "description": "Actions: `fetchTimeEntriesForTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": true, "featureIds": ["F012", "F037"] },
   { "id": "T054", "description": "Actions: `fetchWorkItemsForTimeSheet(timeSheetId)` rejects unauthorized non-owner.", "implemented": false, "featureIds": ["F013", "F037"] },
 
   { "id": "T060", "description": "Actions: Creating a time entry on behalf sets `time_entries.user_id = subjectUserId` (not actor).", "implemented": false, "featureIds": ["F014", "F016"] },
