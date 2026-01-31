@@ -110,34 +110,30 @@ function createTimePeriodView(periodId: string, tenant: string, startDate?: stri
 export const fetchTimeSheetsForApproval = withAuth(async (
   user,
   { tenant },
-  teamIds: string[],
   includeApproved: boolean = false
 ): Promise<ITimeSheetApprovalView[]> => {
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timesheet', 'read_all', db)) {
-      throw new Error('Permission denied: Cannot read team timesheets');
+    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+      throw new Error('Permission denied: Cannot read timesheets for approval');
     }
+
+    const canReadAll = await hasPermission(user, 'timesheet', 'read_all', db);
 
     const statuses = includeApproved
       ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED']
       : ['SUBMITTED', 'CHANGES_REQUESTED'];
 
-    const timeSheets = await db('time_sheets')
+    let query = db('time_sheets')
       .join('users', function() {
         this.on('time_sheets.user_id', '=', 'users.user_id')
             .andOn('time_sheets.tenant', '=', 'users.tenant');
-      })
-      .join('team_members', function() {
-        this.on('users.user_id', '=', 'team_members.user_id')
-            .andOn('users.tenant', '=', 'team_members.tenant');
       })
       .join('time_periods', function() {
         this.on('time_sheets.period_id', '=', 'time_periods.period_id')
             .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
       })
-      .whereIn('team_members.team_id', teamIds)
       .whereIn('time_sheets.approval_status', statuses)
       .where('time_sheets.tenant', tenant)
       .select(
@@ -149,6 +145,23 @@ export const fetchTimeSheetsForApproval = withAuth(async (
         'time_periods.start_date as period_start_date',
         'time_periods.end_date as period_end_date'
       );
+
+    if (!canReadAll) {
+      query = query
+        .join('team_members', function joinTeamMembers() {
+          this.on('users.user_id', '=', 'team_members.user_id').andOn('users.tenant', '=', 'team_members.tenant');
+        })
+        .join('teams', function joinTeams() {
+          this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
+        })
+        .where({
+          'teams.manager_id': user.user_id,
+          'teams.tenant': tenant
+        })
+        .distinct();
+    }
+
+    const timeSheets = await query;
 
     const timeSheetApprovals: ITimeSheetApprovalView[] = timeSheets.map((sheet): ITimeSheetApprovalView => ({
       id: sheet.id,
