@@ -93,3 +93,4 @@
 - 2026-01-31: T032 — Extended delegation auth unit test to cover manager-of-subject access (managed team membership).
 - 2026-01-31: T033 — Extended delegation auth unit test to ensure managers cannot access users outside their managed teams.
 - 2026-01-31: T034 — Extended delegation auth unit test to ensure non-delegates are blocked from accessing other users.
+- 2026-01-31: T040 — Added unit test `server/src/test/unit/scheduling/eligibleSubjects.test.ts` verifying eligible-subjects returns self-only for non-delegates.

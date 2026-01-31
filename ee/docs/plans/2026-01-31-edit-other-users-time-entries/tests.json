@@ -13,7 +13,7 @@
   { "id": "T033", "description": "Auth: Manager cannot access users outside managed teams.", "implemented": true, "featureIds": ["F006", "F007"] },
   { "id": "T034", "description": "Auth: User without delegation permissions cannot access another user’s time sheets/entries (403/permission error).", "implemented": true, "featureIds": ["F005", "F007", "F037"] },
 
-  { "id": "T040", "description": "Actions: Eligible-subjects action returns self-only for non-delegates.", "implemented": false, "featureIds": ["F008"] },
+  { "id": "T040", "description": "Actions: Eligible-subjects action returns self-only for non-delegates.", "implemented": true, "featureIds": ["F008"] },
   { "id": "T041", "description": "Actions: Eligible-subjects action returns team members for managers (only teams they manage).", "implemented": false, "featureIds": ["F006", "F008"] },
   { "id": "T042", "description": "Actions: Eligible-subjects action returns all internal users for tenant-wide admins.", "implemented": false, "featureIds": ["F008"] },
 
