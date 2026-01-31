@@ -109,3 +109,4 @@
 - 2026-01-31: T070 — Extended static `saveTimeEntry` test to assert invoiced entries are blocked from editing.
 - 2026-01-31: T071 — Added static test `server/src/test/unit/scheduling/deleteTimeEntryBehavior.test.ts` to assert invoiced entries are blocked from deletion.
 - 2026-01-31: T072 — Extended static guard-wiring test to assert reopening is blocked when any timesheet entry is invoiced.
+- 2026-01-31: T080 — Added static test `server/src/test/unit/scheduling/submitTimeSheetBehavior.test.ts` asserting submit transitions timesheet + entries to `SUBMITTED`.
