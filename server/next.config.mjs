@@ -795,6 +795,10 @@ const nextConfig = {
 	        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 	        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
 	        const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+	        const authSsoButtonsEeEntry = path.join(
+	          __dirname,
+	          '../ee/server/src/components/auth/SsoProviderButtons.tsx',
+	        );
 	        config.plugins = config.plugins || [];
 	        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
 	          try {
@@ -806,6 +810,12 @@ const nextConfig = {
 	            // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
 	            if (req === '@alga-psa/workflows/entry') {
 	              resource.request = workflowsEeEntry;
+	              return;
+	            }
+	            // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`
+	            // at the CE stub. Force the EE implementation for enterprise builds.
+	            if (req === '@alga-psa/auth/sso/entry') {
+	              resource.request = authSsoButtonsEeEntry;
 	              return;
 	            }
 	            // IMPORTANT:
