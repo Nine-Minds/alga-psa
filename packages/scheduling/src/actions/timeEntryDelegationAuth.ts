@@ -32,6 +32,9 @@ export async function assertCanActOnBehalf(
   subjectUserId: string,
   db: Knex | Knex.Transaction
 ): Promise<DelegationScope> {
+  // Delegation policy:
+  // - self: always allowed
+  // - otherwise: require `timesheet:approve` AND (`timesheet:read_all` OR manager-of-subject)
   if (actor.user_id === subjectUserId) {
     return 'self';
   }
