@@ -106,6 +106,7 @@ export function WorkItemList({
 
   const renderItemContent = (item: WorkItemWithStatus) => {
     if (item.type === 'ticket') {
+      const isBundledTicket = !!item.master_ticket_id;
       return (
         <>
           <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
@@ -129,6 +130,12 @@ export function WorkItemList({
               </span>
             )}
           </div>
+          {isBundledTicket && (
+            <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 italic">
+              Bundled ticket — log time on the master ticket
+              {item.master_ticket_number ? ` #${item.master_ticket_number}` : ''}.
+            </div>
+          )}
         </>
       );
     } else if (item.type === 'project_task') {
@@ -228,20 +235,30 @@ export function WorkItemList({
           {items.length > 0 ? (
             <div>
               <ul className="divide-y divide-[rgb(var(--color-border-200))]">
-                {items.map((item) => (
-                  <li
-                    key={item.work_item_id}
-                    className="bg-[rgb(var(--color-border-50))] hover:bg-[rgb(var(--color-border-100))] cursor-pointer transition-colors duration-150"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(item);
-                    }}
-                  >
-                    <div className="px-4 py-3">
-                      {renderItemContent(item)}
-                    </div>
-                  </li>
-                ))}
+                {items.map((item) => {
+                  const isDisabled = item.type === 'ticket' && !!item.master_ticket_id;
+                  return (
+                    <li
+                      key={item.work_item_id}
+                      aria-disabled={isDisabled}
+                      className={[
+                        'bg-[rgb(var(--color-border-50))] transition-colors duration-150',
+                        isDisabled
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-[rgb(var(--color-border-100))] cursor-pointer',
+                      ].join(' ')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isDisabled) return;
+                        onSelect(item);
+                      }}
+                    >
+                      <div className="px-4 py-3">
+                        {renderItemContent(item)}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
               <div className="px-6 py-4 border-t border-gray-100 bg-white">
                 <div className="flex items-center justify-between">
