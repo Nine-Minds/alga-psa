@@ -24,6 +24,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -109,34 +110,30 @@ function createTimePeriodView(periodId: string, tenant: string, startDate?: stri
 export const fetchTimeSheetsForApproval = withAuth(async (
   user,
   { tenant },
-  teamIds: string[],
   includeApproved: boolean = false
 ): Promise<ITimeSheetApprovalView[]> => {
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timesheet', 'read_all', db)) {
-      throw new Error('Permission denied: Cannot read team timesheets');
+    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+      throw new Error('Permission denied: Cannot read timesheets for approval');
     }
+
+    const canReadAll = await hasPermission(user, 'timesheet', 'read_all', db);
 
     const statuses = includeApproved
       ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED']
       : ['SUBMITTED', 'CHANGES_REQUESTED'];
 
-    const timeSheets = await db('time_sheets')
+    let query = db('time_sheets')
       .join('users', function() {
         this.on('time_sheets.user_id', '=', 'users.user_id')
             .andOn('time_sheets.tenant', '=', 'users.tenant');
-      })
-      .join('team_members', function() {
-        this.on('users.user_id', '=', 'team_members.user_id')
-            .andOn('users.tenant', '=', 'team_members.tenant');
       })
       .join('time_periods', function() {
         this.on('time_sheets.period_id', '=', 'time_periods.period_id')
             .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
       })
-      .whereIn('team_members.team_id', teamIds)
       .whereIn('time_sheets.approval_status', statuses)
       .where('time_sheets.tenant', tenant)
       .select(
@@ -148,6 +145,23 @@ export const fetchTimeSheetsForApproval = withAuth(async (
         'time_periods.start_date as period_start_date',
         'time_periods.end_date as period_end_date'
       );
+
+    if (!canReadAll) {
+      query = query
+        .join('team_members', function joinTeamMembers() {
+          this.on('users.user_id', '=', 'team_members.user_id').andOn('users.tenant', '=', 'team_members.tenant');
+        })
+        .join('teams', function joinTeams() {
+          this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
+        })
+        .where({
+          'teams.manager_id': user.user_id,
+          'teams.tenant': tenant
+        })
+        .distinct();
+    }
+
+    const timeSheets = await query;
 
     const timeSheetApprovals: ITimeSheetApprovalView[] = timeSheets.map((sheet): ITimeSheetApprovalView => ({
       id: sheet.id,
@@ -230,6 +244,10 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
+    if (managerId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     const approvedSheets: any[] = [];
 
     await db.transaction(async (trx) => {
@@ -246,21 +264,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           throw new Error(`Time sheet ${id} is not in a submitted state or does not exist`);
         }
 
-        const isManager = await trx('teams')
-          .join('team_members', function() {
-            this.on('teams.team_id', '=', 'team_members.team_id')
-                .andOn('teams.tenant', '=', 'team_members.tenant');
-          })
-          .where({
-            'team_members.user_id': timeSheet.user_id,
-            'teams.manager_id': managerId,
-            'teams.tenant': tenant
-          })
-          .first();
-
-        if (!isManager) {
-          throw new Error(`Unauthorized: Not a manager for time sheet ${id}`);
-        }
+        await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
         // Get analytics data before approval
         const entriesInfo = await trx('time_entries')
@@ -282,7 +286,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           })
           .update({
             approval_status: 'APPROVED',
-            approved_by: managerId,
+            approved_by: user.user_id,
             approved_at: new Date()
           });
 
@@ -311,7 +315,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
         entry_count: sheet.entry_count,
         total_hours: sheet.total_hours,
         approval_type: 'bulk'
-      }, managerId);
+      }, user.user_id);
     }
 
     return { success: true };
@@ -350,6 +354,8 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
       throw new Error(`Time sheet with id ${timeSheetId} not found`);
     }
 
+    await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+
     const result = {
       ...timeSheet,
       submitted_at: timeSheet.submitted_at ? formatISO(new Date(timeSheet.submitted_at)) : undefined,
@@ -372,6 +378,17 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
     if (!await hasPermission(user, 'timesheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheet entries');
     }
+
+    const timeSheet = await db('time_sheets')
+      .where({ id: timeSheetId, tenant })
+      .select('user_id')
+      .first();
+
+    if (!timeSheet) {
+      throw new Error(`Time sheet with id ${timeSheetId} not found`);
+    }
+
+    await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
     const timeEntries = await db<ITimeEntry>('time_entries')
       .where('time_sheet_id', timeSheetId)
@@ -490,6 +507,10 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
+    if (approverId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     let analyticsData: any = {};
 
     await db.transaction(async (trx) => {
@@ -503,6 +524,8 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
       // Get analytics data
       const entriesInfo = await trx('time_entries')
@@ -624,6 +647,10 @@ export const reverseTimeSheetApproval = withAuth(async (
       throw new Error('Permission denied: Cannot reverse timesheet approvals');
     }
 
+    if (approverId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     await db.transaction(async (trx) => {
       // Check if time sheet exists and is approved
       const timeSheet = await trx('time_sheets')
@@ -636,6 +663,8 @@ export const reverseTimeSheetApproval = withAuth(async (
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
       if (timeSheet.approval_status !== 'APPROVED') {
         throw new Error('Time sheet is not in an approved state');
@@ -651,7 +680,7 @@ export const reverseTimeSheetApproval = withAuth(async (
         .first();
 
       if (invoicedEntries) {
-        throw new Error('Cannot reverse approval: time entries have been invoiced');
+        throw new Error('This time sheet contains invoiced time and cannot be reopened.');
       }
 
       // Update time sheet status
@@ -661,7 +690,7 @@ export const reverseTimeSheetApproval = withAuth(async (
           tenant
         })
         .update({
-          approval_status: 'SUBMITTED' as TimeSheetStatus,
+          approval_status: 'CHANGES_REQUESTED' as TimeSheetStatus,
           approved_at: null,
           approved_by: null
         });
@@ -672,7 +701,7 @@ export const reverseTimeSheetApproval = withAuth(async (
           time_sheet_id: timeSheetId,
           tenant
         })
-        .update({ approval_status: 'SUBMITTED' });
+        .update({ approval_status: 'CHANGES_REQUESTED' });
 
       // Add comment for audit trail
       await trx('time_sheet_comments').insert({

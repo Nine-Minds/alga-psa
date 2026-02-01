@@ -73,6 +73,8 @@ export const timePeriodSettingsSchema = tenantSchema.extend({
 
 export const timeEntrySchema = tenantSchema.extend({
   entry_id: z.string().nullable().optional(),
+  created_by: z.string().nullable().optional(),
+  updated_by: z.string().nullable().optional(),
   work_item_id: z.string(),
   work_item_type: workItemTypeSchema,
   start_time: iso8601Schema,
@@ -91,4 +93,3 @@ export const timeEntrySchema = tenantSchema.extend({
   contract_line_id: z.string().nullable().optional(),
   tax_rate_id: z.string().nullable().optional(),
 });
-

@@ -14,6 +14,12 @@ export type TimeSheetViewMode = 'grid' | 'list';
 interface TimeSheetHeaderProps {
     status: TimeSheetStatus;
     isEditable: boolean;
+    subjectName?: string;
+    actorName?: string;
+    isDelegated?: boolean;
+    allowDelegatedEditing?: boolean;
+    canReopenForEdits?: boolean;
+    onReopenForEdits?: () => Promise<void>;
     onSubmit: () => Promise<void>;
     onBack: () => void;
     showIntervals?: boolean;
@@ -31,6 +37,12 @@ const viewOptions: ViewSwitcherOption<TimeSheetViewMode>[] = [
 export function TimeSheetHeader({
     status,
     isEditable,
+    subjectName,
+    actorName,
+    isDelegated = false,
+    allowDelegatedEditing = true,
+    canReopenForEdits = false,
+    onReopenForEdits,
     onSubmit,
     onBack,
     showIntervals = false,
@@ -55,6 +67,7 @@ export function TimeSheetHeader({
     };
 
     const statusDisplay = getStatusDisplay(status);
+    const showDelegationInfo = isDelegated && allowDelegatedEditing;
 
     return (
         <>
@@ -68,7 +81,14 @@ export function TimeSheetHeader({
                     >
                         <ArrowLeft className="h-4 w-4 mr-1" /> Back
                     </Button>
-                    <h2 className="text-2xl font-bold truncate">Time Sheet</h2>
+                    <div className="min-w-0">
+                        <h2 className="text-2xl font-bold truncate">
+                            {showDelegationInfo && subjectName ? `Time Sheet for ${subjectName}` : 'Time Sheet'}
+                        </h2>
+                        {showDelegationInfo && actorName && (
+                            <div className="text-xs text-gray-500 truncate">Edited by {actorName}</div>
+                        )}
+                    </div>
                 </div>
 
                 {dateNavigator?.dateRangeDisplay && (
@@ -163,6 +183,16 @@ export function TimeSheetHeader({
                             className="bg-primary-500 hover:bg-primary-600 text-white"
                         >
                             Submit Time Sheet
+                        </Button>
+                    )}
+
+                    {!isEditable && status === 'APPROVED' && canReopenForEdits && onReopenForEdits && (
+                        <Button
+                            id="reopen-timesheet-button"
+                            onClick={onReopenForEdits}
+                            variant="soft"
+                        >
+                            Reopen for edits
                         </Button>
                     )}
                 </div>

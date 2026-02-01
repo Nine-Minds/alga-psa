@@ -59,6 +59,18 @@ Controls access to email configuration settings.
 - When disabled: Shows construction placeholder image
 - Tab remains visible but displays placeholder content when accessed
 
+### 4. `delegated-time-entry`
+Controls access to the delegated time-entry UI (editing/viewing time sheets for other users) in the MSP portal.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Time Entry page at `/msp/time-entry` (subject user selector)
+  - Time Sheet pages at `/msp/time-entry/timesheet/:id` (delegation UI + ability to edit delegated sheets)
+
+**Behavior:**
+- When disabled: The UI only allows working with the current user’s own time periods/time sheets (delegated sheets are shown as read-only if accessed directly).
+- When enabled: Authorized users can select a subject user and edit/view that user’s time sheets via the UI.
+
 ## Implementation Details
 
 ### User Identification
