@@ -19,7 +19,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   }
 
   if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@ee/app/api/v1/extensions/uninstall/route')
+    eeRouteModulePromise = import('@enterprise/app/api/v1/extensions/uninstall/route')
       .then((module) => module as EeRouteModule)
       .catch((error) => {
         console.error('[v1/extensions/uninstall] Failed to load EE route', error);

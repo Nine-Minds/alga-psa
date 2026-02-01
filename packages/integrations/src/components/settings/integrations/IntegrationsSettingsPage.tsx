@@ -48,7 +48,7 @@ const StripeConnectionSettings = dynamic(
 
 // Dynamic import for NinjaOne (EE feature)
 const NinjaOneIntegrationSettings = dynamic(
-  () => import('@ee/components/settings/integrations/NinjaOneIntegrationSettings'),
+  () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
   {
     loading: () => (
       <Card>

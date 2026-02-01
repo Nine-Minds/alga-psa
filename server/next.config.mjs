@@ -26,14 +26,13 @@ try {
 
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-console.log('[next.config] isEE:', isEE, { EDITION: process.env.EDITION, NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION });
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
 const appVersion = (() => {
   try {
-    const pkgPath = path.join(__dirname, '../package.json');
+    const pkgPath = path.join(__dirname, '../packages/core/package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
     return pkg?.version || 'dev';
   } catch {
@@ -190,6 +189,10 @@ const nextConfig = {
 	      '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
 	      '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
 	      '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+	      // SSO provider buttons - swap between CE stub and EE implementation
+	      '@alga-psa/auth/sso/entry': isEE
+	        ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
+	        : '../packages/auth/src/components/SsoProviderButtons.tsx',
 	      // Notifications package
 	      '@alga-psa/notifications': '../packages/notifications/src',
 	      '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -265,6 +268,8 @@ const nextConfig = {
       './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
+      '@enterprise': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@enterprise/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
       'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
       // Native DB drivers not used
@@ -453,6 +458,9 @@ const nextConfig = {
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
+      '@enterprise': isEE
+        ? path.join(__dirname, '../ee/server/src')
+        : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
       // Also map deep EE paths used without the @ee alias to CE stubs
       // This ensures CE builds don't fail when code references ee/server/src directly
       'ee/server/src': isEE
@@ -474,6 +482,10 @@ const nextConfig = {
         console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
+      // SSO provider buttons - swap between CE stub and EE implementation
+      '@alga-psa/auth/sso/entry': isEE
+        ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
+        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/integrations/email/providers/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx')
         : path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),
@@ -628,6 +640,7 @@ const nextConfig = {
       at: __dirname,
       '@': config.resolve.alias['@'],
       '@ee': config.resolve.alias['@ee'],
+      '@enterprise': config.resolve.alias['@enterprise'],
       'ee/server/src': config.resolve.alias['ee/server/src'],
       ceEmptyAbs: isEE ? path.join(__dirname, 'src', 'empty') : undefined,
       eeSrcAbs: isEE ? path.join(__dirname, '../ee/server/src') : undefined,
@@ -820,6 +833,20 @@ const nextConfig = {
 	              const mapped = path.join(eeSrcRoot, rel);
 	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
 	                console.log('[replace:EE:@ee]', { from: req, to: mapped });
+	              }
+	              resource.request = mapped;
+	              return;
+	            }
+	            // Prefer @enterprise imports for CE/EE separation; rewrite to EE sources in enterprise builds.
+	            if (req === '@enterprise') {
+	              resource.request = eeSrcRoot.slice(0, -path.sep.length);
+	              return;
+	            }
+	            if (req.startsWith('@enterprise/')) {
+	              const rel = req.substring('@enterprise/'.length);
+	              const mapped = path.join(eeSrcRoot, rel);
+	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+	                console.log('[replace:EE:@enterprise]', { from: req, to: mapped });
 	              }
 	              resource.request = mapped;
 	              return;

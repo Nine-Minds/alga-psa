@@ -33,6 +33,7 @@ import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
 import { getRedisClient } from '../config/redisConfig';
+import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 
 let isFunctionExecuted = false;
 
@@ -247,6 +248,26 @@ export async function initializeApp() {
     // Initialize enterprise features
     if (isEnterprise) {
 
+      // Register EE implementations for the auth package's SSO registry
+      // (NextAuth provider callbacks call into @alga-psa/auth's registry; EE must register the real implementations)
+      try {
+        const { registerSSOProvider } = await import('@alga-psa/auth/lib/sso/registry');
+        const { loadEnterpriseSsoProviderRegistryImpl } = await import(
+          '@alga-psa/auth/lib/sso/enterpriseRegistryEntry'
+        );
+
+        const impl = await loadEnterpriseSsoProviderRegistryImpl();
+        if (impl) {
+          registerSSOProvider(impl);
+          logger.info('Registered Enterprise SSO provider implementations');
+        } else {
+          logger.info('Enterprise SSO provider implementations not available');
+        }
+
+      } catch (error) {
+        logger.error('Failed to register Enterprise SSO provider implementations:', error);
+      }
+
       // Initialize extensions
        try {
          const { initializeExtensions } = await import('@alga-psa/product-extension-initialization');
@@ -259,12 +280,10 @@ export async function initializeApp() {
 
       // Register enterprise storage providers for runtime factory
        try {
-         const { S3StorageProvider } = await import('@ee/lib/storage/providers/S3StorageProvider');
-         (global as any).S3StorageProvider = S3StorageProvider;
-         logger.info('Registered S3StorageProvider for enterprise edition');
-      } catch (error) {
+         await registerEnterpriseStorageProviders();
+       } catch (error) {
          logger.warn('S3StorageProvider not available; continuing without S3 provider');
-      }
+       }
     }
 
     // Development environment setup (non-critical)

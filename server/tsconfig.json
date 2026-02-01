@@ -76,6 +76,9 @@
       "@alga-psa/auth": [
         "../packages/auth/src"
       ],
+      "@alga-psa/auth/sso/entry": [
+        "../packages/auth/src/components/SsoProviderButtons.tsx"
+      ],
       "@alga-psa/auth/*": [
         "../packages/auth/src/*",
         "../packages/auth/src/lib/*"
@@ -262,6 +265,12 @@
         "../packages/media/src/*"
       ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
+      "@enterprise": [
+        "../packages/ee/src"
+      ],
+      "@enterprise/*": [
+        "../packages/ee/src/*"
+      ],
       "@ee": [
         "../packages/ee/src"
       ],

@@ -27,7 +27,7 @@ const isEnterpriseEditionEnv =
   resolvedEdition === 'enterprise' || resolvedEdition === 'ee';
 
 const EnterpriseQuickAskOverlay = lazy(
-  () => import('@ee/components/chat/QuickAskOverlay')
+  () => import('@enterprise/components/chat/QuickAskOverlay')
 );
 
 export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = (props) => {
@@ -57,4 +57,3 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = (props) => {
 };
 
 export default QuickAskOverlay;
-

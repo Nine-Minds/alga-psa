@@ -8,21 +8,13 @@ const emptyShim = './src/empty/shims/empty.ts';
 
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-// DEBUG LOGGING - Remove after troubleshooting
-console.log('=== EE BUILD DEBUG ===');
-console.log('process.env.EDITION:', process.env.EDITION);
-console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
-console.log('isEE result:', isEE);
-console.log('Current working directory:', process.cwd());
-console.log('__dirname:', __dirname);
-console.log('=== END DEBUG ===');
-
 const nextConfig = {
   // Transpile shared product packages used by EE server
   transpilePackages: [
     '@product/extensions',
     '@product/extensions-pages',
     '@alga-psa/event-schemas',
+    '@alga-psa/core',
   ],
   // Turbopack-specific aliases
   turbopack: {
@@ -30,6 +22,8 @@ const nextConfig = {
       '@': './src',
       // EE source alias
       '@ee/*': './src/*',
+      '@enterprise/*': './src/*',
+      '@enterprise': './src',
       // Feature swap: product pages and entries
       '@product/extensions/entry': isEE
         ? '../packages/product-extensions/ee/entry'
@@ -49,6 +43,8 @@ const nextConfig = {
       // Event schemas package
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+      // SSO provider buttons - always use EE implementation in EE server
+      '@alga-psa/auth/sso/entry': './src/components/auth/SsoProviderButtons.tsx',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -92,6 +88,7 @@ const nextConfig = {
         '@': path.join(__dirname, 'src'),
         // Ensure EE imports resolve to this package's src (EE edition)
         '@ee': path.join(__dirname, 'src'),
+        '@enterprise': path.join(__dirname, 'src'),
         // Hard-pin common EE import paths used by CE SettingsPage
         '@ee/lib/extensions/ExtensionComponentLoader': path.join(__dirname, 'src/lib/extensions/ExtensionComponentLoader.tsx'),
         '@ee/components': path.join(__dirname, 'src/components'),
@@ -113,6 +110,8 @@ const nextConfig = {
           : path.join(__dirname, '../packages/product-ext-proxy/oss/handler.ts'),
         // Event schemas package
         '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
+        // SSO provider buttons - always use EE implementation in EE server
+        '@alga-psa/auth/sso/entry': path.join(__dirname, 'src/components/auth/SsoProviderButtons.tsx'),
         // Stub native sharp during local dev to avoid platform build issues
         sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },

@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { triggerRmmReboot } from '@ee/lib/actions/asset-actions/rmmActions';
+import { triggerRmmReboot } from '@/lib/actions/asset-actions/rmmActions';
 
 export async function POST(
   request: Request,

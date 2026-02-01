@@ -18,7 +18,7 @@ interface AssetSoftwareInventoryProps {
 
 // Dynamic import that resolves to EE or CE version based on webpack alias
 const AssetSoftwareInventory = dynamic(
-  () => import('@ee/components/assets/AssetSoftwareInventory').then(mod => mod.AssetSoftwareInventory),
+  () => import('@enterprise/components/assets/AssetSoftwareInventory').then(mod => mod.AssetSoftwareInventory),
   {
     ssr: false,
     loading: () => null, // Don't show loading state

@@ -17,7 +17,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   }
 
   if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@ee/app/api/ext-bundles/upload-proxy/route')
+    eeRouteModulePromise = import('@enterprise/app/api/ext-bundles/upload-proxy/route')
       .then(module => module as EeRouteModule)
       .catch(error => {
         console.error('[ext-bundles/upload-proxy] Failed to load EE route', error);
@@ -47,4 +47,3 @@ export async function POST(request: Request): Promise<Response> {
   }
   return eeRoute.POST(request);
 }
-
