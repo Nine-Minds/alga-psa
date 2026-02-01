@@ -6,4 +6,4 @@
 
 export const runtime = 'nodejs';
 
-export { POST, GET, OPTIONS } from '@ee/app/api/webhooks/ninjaone/route';
+export { POST, GET, OPTIONS } from '@enterprise/app/api/webhooks/ninjaone/route';

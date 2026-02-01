@@ -265,6 +265,12 @@
         "../packages/media/src/*"
       ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
+      "@enterprise": [
+        "../packages/ee/src"
+      ],
+      "@enterprise/*": [
+        "../packages/ee/src/*"
+      ],
       "@ee": [
         "../packages/ee/src"
       ],

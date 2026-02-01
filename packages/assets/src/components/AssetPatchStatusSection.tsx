@@ -18,7 +18,7 @@ interface AssetPatchStatusSectionProps {
 
 // Dynamic import that resolves to EE or CE version based on webpack alias
 const AssetPatchStatusSection = dynamic(
-  () => import('@ee/components/assets/AssetPatchStatusSection').then(mod => mod.AssetPatchStatusSection),
+  () => import('@enterprise/components/assets/AssetPatchStatusSection').then(mod => mod.AssetPatchStatusSection),
   {
     ssr: false,
     loading: () => null, // Don't show loading state

@@ -25,7 +25,7 @@ type EeInstallConfigModule = {
 
 async function loadEeInstallConfigModule(): Promise<EeInstallConfigModule | null> {
   try {
-    const mod = (await import('@ee/lib/extensions/installConfig')) as any;
+    const mod = (await import('@enterprise/lib/extensions/installConfig')) as any;
     if (typeof mod?.getInstallConfigByInstallId !== 'function') return null;
     return mod as EeInstallConfigModule;
   } catch (error) {

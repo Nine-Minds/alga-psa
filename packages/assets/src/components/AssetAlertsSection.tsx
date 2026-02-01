@@ -18,7 +18,7 @@ interface AssetAlertsSectionProps {
 
 // Dynamic import that resolves to EE or CE version based on webpack alias
 const AssetAlertsSection = dynamic(
-  () => import('@ee/components/assets/AssetAlertsSection').then(mod => mod.AssetAlertsSection),
+  () => import('@enterprise/components/assets/AssetAlertsSection').then(mod => mod.AssetAlertsSection),
   {
     ssr: false,
     loading: () => null, // Don't show loading state

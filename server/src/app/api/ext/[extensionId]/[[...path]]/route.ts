@@ -44,7 +44,7 @@ async function loadEeInstallConfigModule(): Promise<EeInstallConfigModule | null
     return null;
   }
   if (!eeInstallConfigPromise) {
-    eeInstallConfigPromise = import('@ee/lib/extensions/installConfig')
+    eeInstallConfigPromise = import('@enterprise/lib/extensions/installConfig')
       .then((mod) => mod as EeInstallConfigModule)
       .catch((error) => {
         console.error('[api/ext] failed to load EE installConfig module', error);

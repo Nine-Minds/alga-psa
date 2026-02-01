@@ -19,7 +19,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   }
 
   if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@ee/app/api/internal/ext-invoicing/install/[installId]/route')
+    eeRouteModulePromise = import('@enterprise/app/api/internal/ext-invoicing/install/[installId]/route')
       .then((module) => module as EeRouteModule)
       .catch((error) => {
         console.error('[internal/ext-invoicing] Failed to load EE route', error);
@@ -50,4 +50,3 @@ export async function POST(
   }
   return eeRoute.POST(request, ctx);
 }
-

@@ -19,6 +19,7 @@ import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
+import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
 import type { OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
 import { OAuthAccountLinkConflictError } from "./sso/types";
 import { cookies } from "next/headers.js";
@@ -114,33 +115,11 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
     }
 
     enterpriseSsoRegistryInitPromise = (async () => {
-        const {
-            mapOAuthProfileToExtendedUser,
-            applyOAuthAccountHints,
-            decodeOAuthJwtPayload,
-        } = await import('@ee/lib/auth/ssoProviders');
-        const {
-            upsertOAuthAccountLink,
-            findOAuthAccountLink,
-            listOAuthAccountLinksForUser,
-        } = await import('@ee/lib/auth/oauthAccountLinks');
-        const { isAutoLinkEnabledForTenant } = await import('@ee/lib/auth/ssoAutoLink');
-
-        // If @ee is mis-aliased to CE stubs at build time, these functions will still exist but will
-        // throw EE-only errors. Detect and log a more actionable message.
-        if (String(mapOAuthProfileToExtendedUser).includes('OAuth providers are only available in Enterprise Edition')) {
-            console.error('[auth] Enterprise SSO registry resolved to CE stubs. Check build-time EDITION/NEXT_PUBLIC_EDITION and @ee alias wiring.');
+        const impl = await loadEnterpriseSsoProviderRegistryImpl();
+        if (!impl) {
+            return;
         }
-
-        registerSSOProvider({
-            mapOAuthProfileToExtendedUser,
-            applyOAuthAccountHints,
-            decodeOAuthJwtPayload,
-            upsertOAuthAccountLink,
-            findOAuthAccountLink,
-            listOAuthAccountLinksForUser,
-            isAutoLinkEnabledForTenant,
-        });
+        registerSSOProvider(impl);
     })();
 
     try {

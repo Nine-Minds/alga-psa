@@ -9,7 +9,7 @@
 import dynamic from 'next/dynamic';
 
 const NinjaOneComplianceDashboard = dynamic(
-  () => import('@ee/components/settings/integrations/NinjaOneComplianceDashboard'),
+  () => import('@enterprise/components/settings/integrations/NinjaOneComplianceDashboard'),
   {
     loading: () => null,
     ssr: false,

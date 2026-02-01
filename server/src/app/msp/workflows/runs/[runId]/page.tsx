@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import RunStudioShell from '@ee/components/workflow-run-studio/RunStudioShell';
+import RunStudioShell from '@enterprise/components/workflow-run-studio/RunStudioShell';
 
 export default function WorkflowRunStudioPage() {
   const params = useParams();

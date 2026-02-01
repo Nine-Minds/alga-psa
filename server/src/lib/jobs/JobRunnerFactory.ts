@@ -156,7 +156,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     if (isEnterprise) {
       try {
         // Dynamic import to avoid bundling EE code in CE
-        import('@ee/lib/jobs/runners/TemporalJobRunner')
+        import('@enterprise/lib/jobs/runners/TemporalJobRunner')
           .then(({ TemporalJobRunner }) => {
             TemporalJobRunner.reset();
           })
@@ -261,7 +261,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     // Dynamically import the EE Temporal runner to avoid bundling in CE
     try {
       const { TemporalJobRunner } = await import(
-        '@ee/lib/jobs/runners/TemporalJobRunner'
+        '@enterprise/lib/jobs/runners/TemporalJobRunner'
       );
       return (await TemporalJobRunner.create(temporalConfig)) as unknown as IJobRunner;
     } catch (error) {

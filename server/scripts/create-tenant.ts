@@ -4,7 +4,7 @@
  * CLI script to create a new tenant with onboarding seeds
  */
 
-import { createTenantComplete } from '@ee/lib/testing/tenant-creation';
+import { createTenantComplete } from '@enterprise/lib/testing/tenant-creation';
 import knex from 'knex';
 import { parse } from 'ts-command-line-args';
 import * as dotenv from 'dotenv';

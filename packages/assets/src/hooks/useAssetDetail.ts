@@ -1,7 +1,7 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAsset, getAssetSummaryMetrics } from '@alga-psa/assets/actions/assetActions';
-import { getAssetRmmData, refreshAssetRmmData } from '@ee/lib/actions/asset-actions/rmmActions';
+import { getAssetRmmData, refreshAssetRmmData } from '@alga-psa/assets/actions/rmmActions';
 import { toast } from 'react-hot-toast';
 
 export function useAssetDetail(assetId: string) {
@@ -63,4 +63,3 @@ export function useAssetDetail(assetId: string) {
     mutateAsset,
   };
 }
-

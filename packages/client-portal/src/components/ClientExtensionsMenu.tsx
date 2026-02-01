@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { listClientPortalMenuItemsForTenant, type ClientPortalMenuItem } from '@ee/lib/actions/clientPortalExtActions';
+import { listClientPortalMenuItemsForTenant, type ClientPortalMenuItem } from '../lib/actions/clientPortalExtActions';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, Blocks } from 'lucide-react';
 

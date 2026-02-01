@@ -45,19 +45,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Dynamically import EE StripeService (only available in EE builds)
-    let getStripeService: any;
-    try {
-      const eeModule = await import('@ee/lib/stripe/StripeService');
-      getStripeService = eeModule.getStripeService;
-    } catch (importError) {
-      logger.error('[Stripe Webhook] Failed to import StripeService (EE module not available)');
-      return NextResponse.json(
-        { error: 'Stripe integration not available' },
-        { status: 503 }
-      );
-    }
-
     // Get raw body as text (needed for signature verification)
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
@@ -75,8 +62,32 @@ export async function POST(req: NextRequest) {
       bodyLength: body.length,
     });
 
-    // Initialize Stripe service
-    const stripeService: any = getStripeService();
+    // Initialize Stripe service (EE-only)
+    let stripeServiceFactory: (() => any) | null = null;
+    try {
+      const mod = await import('@enterprise/lib/stripe/StripeService');
+      stripeServiceFactory = (mod as any).getStripeService ?? null;
+    } catch (error) {
+      logger.error('[Stripe Webhook] StripeService import failed', { error });
+    }
+
+    if (!stripeServiceFactory) {
+      return NextResponse.json(
+        { error: 'Stripe integration not available' },
+        { status: 503 }
+      );
+    }
+
+    let stripeService: any;
+    try {
+      stripeService = stripeServiceFactory();
+    } catch (error) {
+      logger.error('[Stripe Webhook] StripeService not available', { error });
+      return NextResponse.json(
+        { error: 'Stripe integration not available' },
+        { status: 503 }
+      );
+    }
 
     // Verify webhook signature and construct event
     let event: any;
@@ -169,6 +180,7 @@ export async function POST(req: NextRequest) {
  * Not used by Stripe, but useful for testing connectivity
  */
 export async function GET(req: NextRequest) {
+  void req;
   const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
   if (!isEE) {

@@ -6,4 +6,4 @@
 
 export const dynamic = 'force-dynamic';
 
-export { GET } from '@ee/app/api/integrations/ninjaone/callback/route';
+export { GET } from '@enterprise/app/api/integrations/ninjaone/callback/route';

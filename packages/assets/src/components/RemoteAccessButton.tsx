@@ -20,7 +20,7 @@ interface RemoteAccessButtonProps {
 
 // Dynamic import that resolves to EE or CE version based on webpack alias
 const RemoteAccessButton = dynamic(
-  () => import('@ee/components/assets/RemoteAccessButton').then(mod => mod.RemoteAccessButton),
+  () => import('@enterprise/components/assets/RemoteAccessButton').then(mod => mod.RemoteAccessButton),
   {
     ssr: false,
     loading: () => null, // Don't show loading state
@@ -29,7 +29,7 @@ const RemoteAccessButton = dynamic(
 
 // Also export the indicator component
 const RemoteAccessIndicator = dynamic(
-  () => import('@ee/components/assets/RemoteAccessButton').then(mod => mod.RemoteAccessIndicator),
+  () => import('@enterprise/components/assets/RemoteAccessButton').then(mod => mod.RemoteAccessIndicator),
   {
     ssr: false,
     loading: () => null,

@@ -89,7 +89,7 @@ export const getOnboardingProgressAction = withAuth(async (
 
 async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const { getSsoProviderOptions } = await import('@ee/lib/auth/providerConfig');
+    const { getSsoProviderOptions } = await import('@enterprise/lib/auth/providerConfig');
     const providerOptions = await getSsoProviderOptions();
     const configuredProviders = providerOptions.filter((option) => option.configured);
 
@@ -435,7 +435,9 @@ async function resolveInboundEmailProviderSubstep(tenantId: string): Promise<Onb
 }
 
 async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubstepServerState> {
-  const { getManagedEmailDomains } = await import('@ee/lib/actions/email-actions/managedDomainActions');
+  const { getManagedEmailDomains } = await import(
+    '@enterprise/lib/actions/email-actions/managedDomainActions'
+  );
   const domains = await getManagedEmailDomains();
 
   if (domains.length === 0) {

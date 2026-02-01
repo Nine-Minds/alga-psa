@@ -7,23 +7,29 @@ function isEnterpriseBuild(): boolean {
   return process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 }
 
-async function loadEePayments(): Promise<{
+async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
   createStripePaymentProvider: any;
-}> {
-  const eeModule = await import('@ee/lib/payments');
-  return {
-    PaymentService: (eeModule as any).PaymentService,
-    createStripePaymentProvider: (eeModule as any).createStripePaymentProvider,
-  };
+} | null> {
+  try {
+    const mod = await import('@enterprise/lib/payments');
+    return {
+      PaymentService: (mod as any).PaymentService,
+      createStripePaymentProvider: (mod as any).createStripePaymentProvider,
+    };
+  } catch (error) {
+    logger.debug('[billing/paymentActions] enterprise payments module not available', { error });
+    return null;
+  }
 }
 
 async function getPaymentService(tenantId: string): Promise<any | null> {
   if (!isEnterpriseBuild()) return null;
 
   try {
-    const { PaymentService } = await loadEePayments();
-    return PaymentService.create(tenantId);
+    const ee = await loadEnterprisePayments();
+    if (!ee?.PaymentService) return null;
+    return await ee.PaymentService.create(tenantId);
   } catch (error) {
     logger.debug('[billing/paymentActions] PaymentService not available', { error });
     return null;
@@ -116,10 +122,13 @@ export async function processStripePaymentWebhookPayload(
   }
 
   try {
-    const { PaymentService, createStripePaymentProvider } = await loadEePayments();
+    const ee = await loadEnterprisePayments();
+    if (!ee?.PaymentService || !ee?.createStripePaymentProvider) {
+      return { success: false, error: 'Payment integration not available' } as WebhookProcessingResult;
+    }
 
-    const paymentService = await PaymentService.create(tenantId);
-    const provider = createStripePaymentProvider(tenantId);
+    const paymentService = await ee.PaymentService.create(tenantId);
+    const provider = ee.createStripePaymentProvider(tenantId);
     const webhookEvent = provider.parseWebhookEvent(payload);
 
     return paymentService.processWebhookEvent(webhookEvent);
@@ -128,4 +137,3 @@ export async function processStripePaymentWebhookPayload(
     return { success: false, error: 'Payment webhook processing failed' } as WebhookProcessingResult;
   }
 }
-

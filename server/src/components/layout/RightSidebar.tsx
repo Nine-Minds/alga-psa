@@ -25,7 +25,7 @@ const resolvedEdition =
 const isEnterpriseEditionEnv =
   resolvedEdition === 'enterprise' || resolvedEdition === 'ee';
 const EnterpriseRightSidebar = lazy(
-  () => import('@ee/components/layout/RightSidebar')
+  () => import('@enterprise/components/layout/RightSidebar')
 );
 
 const RightSidebar: React.FC<RightSidebarProps> = ({

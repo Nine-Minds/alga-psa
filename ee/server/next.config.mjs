@@ -22,6 +22,8 @@ const nextConfig = {
       '@': './src',
       // EE source alias
       '@ee/*': './src/*',
+      '@enterprise/*': './src/*',
+      '@enterprise': './src',
       // Feature swap: product pages and entries
       '@product/extensions/entry': isEE
         ? '../packages/product-extensions/ee/entry'
@@ -86,6 +88,7 @@ const nextConfig = {
         '@': path.join(__dirname, 'src'),
         // Ensure EE imports resolve to this package's src (EE edition)
         '@ee': path.join(__dirname, 'src'),
+        '@enterprise': path.join(__dirname, 'src'),
         // Hard-pin common EE import paths used by CE SettingsPage
         '@ee/lib/extensions/ExtensionComponentLoader': path.join(__dirname, 'src/lib/extensions/ExtensionComponentLoader.tsx'),
         '@ee/components': path.join(__dirname, 'src/components'),
