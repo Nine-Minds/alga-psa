@@ -27,6 +27,8 @@ export interface IExtendedWorkItem extends IWorkItem {
   title?: string;
   client_id?: string;
   client_name?: string | null;
+  master_ticket_id?: string | null;
+  master_ticket_number?: string | null;
   status_name?: string;
   board_name?: string;
   assigned_to_name?: string;

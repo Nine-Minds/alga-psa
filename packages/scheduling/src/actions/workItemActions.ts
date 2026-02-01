@@ -301,6 +301,10 @@ export const searchPickerWorkItems = withAuth(async (
         this.on('t.status_id', '=', 's.status_id')
             .andOn('t.tenant', '=', 's.tenant');
       })
+      .leftJoin('tickets as mt', function() {
+        this.on('t.master_ticket_id', '=', 'mt.ticket_id')
+            .andOn('t.tenant', '=', 'mt.tenant');
+      })
       .leftJoin(
         db('ticket_resources')
           .where('tenant', tenant)
@@ -364,6 +368,8 @@ export const searchPickerWorkItems = withAuth(async (
          db.raw("t.attributes ->> 'description' as description"),
          db.raw("'ticket' as type"),
          't.ticket_number',
+         't.master_ticket_id as master_ticket_id',
+         'mt.ticket_number as master_ticket_number',
          't.title',
          db.raw('NULL::text as project_name'),
          db.raw('NULL::text as phase_name'),
@@ -493,6 +499,8 @@ export const searchPickerWorkItems = withAuth(async (
          'pt.description',
          db.raw("'project_task' as type"),
          db.raw('NULL::text as ticket_number'),
+         db.raw('NULL::uuid as master_ticket_id'),
+         db.raw('NULL::text as master_ticket_number'),
          db.raw('NULL::text as title'),
          'p.project_name',
          'pp.phase_name',
@@ -559,6 +567,8 @@ export const searchPickerWorkItems = withAuth(async (
           'se.notes as description',
           db.raw("'ad_hoc' as type"),
           db.raw('NULL::text as ticket_number'),
+          db.raw('NULL::uuid as master_ticket_id'),
+          db.raw('NULL::text as master_ticket_number'),
           'se.title',
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),
@@ -600,6 +610,8 @@ export const searchPickerWorkItems = withAuth(async (
           db.raw("'' as description"), // Don't copy interaction notes to time entry
           db.raw("'interaction' as type"),
           db.raw('NULL::text as ticket_number'),
+          db.raw('NULL::uuid as master_ticket_id'),
+          db.raw('NULL::text as master_ticket_number'),
           'i.title',
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),
@@ -713,6 +725,8 @@ export const searchPickerWorkItems = withAuth(async (
         description: item.description,
         is_billable: true,
         ticket_number: item.ticket_number,
+        master_ticket_id: item.master_ticket_id,
+        master_ticket_number: item.master_ticket_number,
         title: item.title,
         project_name: item.project_name,
         phase_name: item.phase_name,
