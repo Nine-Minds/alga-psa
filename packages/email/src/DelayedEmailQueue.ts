@@ -27,6 +27,10 @@ export interface DelayedEmailQueueConfig {
   checkIntervalMs: number;
   /** Maximum number of items to process per cycle (default: 100) */
   batchSize: number;
+  /** Timeout for Redis operations in milliseconds (default: 5000 = 5 seconds) */
+  redisTimeoutMs: number;
+  /** Timeout for email send callback in milliseconds (default: 30000 = 30 seconds) */
+  sendTimeoutMs: number;
 }
 
 const DEFAULT_CONFIG: DelayedEmailQueueConfig = {
@@ -35,7 +39,25 @@ const DEFAULT_CONFIG: DelayedEmailQueueConfig = {
   maxDelayMs: 15 * 60_000,    // 15 minutes
   checkIntervalMs: 10_000,    // 10 seconds
   batchSize: 100,
+  redisTimeoutMs: 5_000,      // 5 seconds
+  sendTimeoutMs: 30_000,      // 30 seconds
 };
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, operation: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[DelayedEmailQueue] ${operation} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
 
 /**
  * Type for Redis client - minimal interface needed
@@ -288,15 +310,20 @@ export class DelayedEmailQueue {
       return 0;
     }
 
+    const startTime = Date.now();
     const queueKey = this.getQueueKey();
     const now = Date.now();
     let processedCount = 0;
 
     try {
       // Get all ready items (score <= now)
-      const readyIds = await this.redis.zRangeByScore(queueKey, 0, now, {
-        LIMIT: { offset: 0, count: this.config.batchSize }
-      });
+      const readyIds = await withTimeout(
+        this.redis.zRangeByScore(queueKey, 0, now, {
+          LIMIT: { offset: 0, count: this.config.batchSize }
+        }),
+        this.config.redisTimeoutMs,
+        'zRangeByScore'
+      );
 
       if (readyIds.length === 0) {
         return 0;
@@ -308,7 +335,11 @@ export class DelayedEmailQueue {
       const byTenant = new Map<string, DelayedEmailEntry[]>();
 
       for (const id of readyIds) {
-        const data = await this.redis.get(this.getDataKey(id));
+        const data = await withTimeout(
+          this.redis.get(this.getDataKey(id)),
+          this.config.redisTimeoutMs,
+          `get(${id})`
+        );
         if (data) {
           try {
             const entry = JSON.parse(data) as DelayedEmailEntry;
@@ -328,7 +359,11 @@ export class DelayedEmailQueue {
         const entry = entries[0]; // Take first entry for this tenant
 
         // Atomic claim: try to remove from sorted set
-        const removed = await this.redis.zRem(queueKey, entry.id);
+        const removed = await withTimeout(
+          this.redis.zRem(queueKey, entry.id),
+          this.config.redisTimeoutMs,
+          `zRem(${entry.id})`
+        );
         if (removed === 0) {
           // Another instance already claimed this item
           logger.debug('[DelayedEmailQueue] Entry already claimed by another instance', {
@@ -354,11 +389,19 @@ export class DelayedEmailQueue {
             _originalTimestamp: entry.originalTimestamp
           };
 
-          // Attempt to send via callback
-          await this.sendCallback(tenantId, updatedParams);
+          // Attempt to send via callback with timeout protection
+          await withTimeout(
+            this.sendCallback(tenantId, updatedParams),
+            this.config.sendTimeoutMs,
+            'sendCallback'
+          );
 
           // Clean up the data entry
-          await this.redis.del(this.getDataKey(entry.id));
+          await withTimeout(
+            this.redis.del(this.getDataKey(entry.id)),
+            this.config.redisTimeoutMs,
+            `del(${entry.id})`
+          );
           processedCount++;
 
         } catch (error) {
@@ -370,18 +413,37 @@ export class DelayedEmailQueue {
 
           // Clean up the data entry even on failure
           // (the sendCallback should handle re-queueing if needed)
-          await this.redis.del(this.getDataKey(entry.id));
+          try {
+            await withTimeout(
+              this.redis.del(this.getDataKey(entry.id)),
+              this.config.redisTimeoutMs,
+              `del(${entry.id})`
+            );
+          } catch (cleanupError) {
+            logger.warn('[DelayedEmailQueue] Failed to cleanup entry after error:', {
+              id: entry.id,
+              error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
+            });
+          }
         }
       }
 
-      if (processedCount > 0) {
-        logger.info('[DelayedEmailQueue] Processing cycle complete', { processedCount });
+      const durationMs = Date.now() - startTime;
+      if (processedCount > 0 || durationMs > 1000) {
+        logger.info('[DelayedEmailQueue] Processing cycle complete', {
+          processedCount,
+          durationMs
+        });
       }
 
       return processedCount;
 
     } catch (error) {
-      logger.error('[DelayedEmailQueue] Error processing ready emails:', error);
+      const durationMs = Date.now() - startTime;
+      logger.error('[DelayedEmailQueue] Error processing ready emails:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        durationMs
+      });
       return 0;
     }
   }
