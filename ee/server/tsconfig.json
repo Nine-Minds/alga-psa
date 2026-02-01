@@ -13,6 +13,12 @@
       "@ee/*": [
         "ee/server/src/*"
       ],
+      "@enterprise": [
+        "ee/server/src"
+      ],
+      "@enterprise/*": [
+        "ee/server/src/*"
+      ],
       "@shared": [
         "shared"
       ],
