@@ -9,6 +9,7 @@ import { fetchTimeSheet, reverseTimeSheetApproval } from '@alga-psa/scheduling/a
 import { TimeSheet } from './TimeSheet';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface TimeSheetClientProps {
   timeSheet: ITimeSheetView;
@@ -28,10 +29,15 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email;
 
   const isDelegated = timeSheet.user_id !== currentUser.user_id;
+  const { enabled: delegatedTimeEntryEnabled, loading: delegatedTimeEntryLoading } = useFeatureFlag(
+    'delegated-time-entry',
+    { defaultValue: false }
+  );
+  const allowDelegatedEditing = delegatedTimeEntryEnabled && !delegatedTimeEntryLoading;
 
   useEffect(() => {
     const loadSubjectUser = async () => {
-      if (!isDelegated) {
+      if (!isDelegated || !allowDelegatedEditing) {
         setSubjectUser(currentUser);
         return;
       }
@@ -42,9 +48,12 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     };
 
     void loadSubjectUser();
-  }, [currentUser, isDelegated, timeSheet.user_id]);
+  }, [allowDelegatedEditing, currentUser, isDelegated, timeSheet.user_id]);
 
   const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
+    if (isDelegated && !allowDelegatedEditing) {
+      throw new Error('Delegated time entry is disabled');
+    }
     try {
       console.log('Saving time entry:', timeEntry);
       timeEntry.time_sheet_id = timeSheet.id;
@@ -94,9 +103,10 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
         timeSheet={timeSheet}
         onSaveTimeEntry={handleSaveTimeEntry}
         isManager={isManager}
-        subjectName={subjectUser ? formatUserName(subjectUser) : timeSheet.user_id}
-        actorName={formatUserName(currentUser)}
+        subjectName={allowDelegatedEditing && subjectUser ? formatUserName(subjectUser) : undefined}
+        actorName={allowDelegatedEditing ? formatUserName(currentUser) : undefined}
         isDelegated={isDelegated}
+        allowDelegatedEditing={allowDelegatedEditing}
         canReopenForEdits={canReopenForEdits}
         onReopenForEdits={openReopenDialog}
         onSubmitTimeSheet={handleSubmitTimeSheet}

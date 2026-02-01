@@ -11,6 +11,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import { fetchTimePeriods, fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '../../../actions/timeEntryDelegationActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 
 interface TimeTrackingProps {
@@ -20,14 +21,29 @@ interface TimeTrackingProps {
 
 export default function TimeTracking({ currentUser, isManager: _isManager }: TimeTrackingProps) {
   const router = useRouter();
+  const { enabled: delegatedTimeEntryEnabled, loading: delegatedTimeEntryLoading } = useFeatureFlag(
+    'delegated-time-entry',
+    { defaultValue: false }
+  );
+  const isDelegatedTimeEntryUIEnabled = delegatedTimeEntryEnabled && !delegatedTimeEntryLoading;
+
   const [subjectUsers, setSubjectUsers] = useState<IUser[]>([]);
   const [subjectUserId, setSubjectUserId] = useState(currentUser.user_id);
   const [timePeriods, setTimePeriods] = useState<ITimePeriodWithStatusView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!isDelegatedTimeEntryUIEnabled) {
+      setSubjectUsers([currentUser]);
+      if (subjectUserId !== currentUser.user_id) {
+        setSubjectUserId(currentUser.user_id);
+      }
+      return;
+    }
+
     void loadEligibleSubjects();
-  }, [currentUser.user_id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.user_id, isDelegatedTimeEntryUIEnabled]);
 
   useEffect(() => {
     setTimePeriods([]);
@@ -67,7 +83,7 @@ export default function TimeTracking({ currentUser, isManager: _isManager }: Tim
     return <SkeletonTimeSheet />;
   }
 
-  const showSubjectSelector = subjectUsers.length > 1;
+  const showSubjectSelector = isDelegatedTimeEntryUIEnabled && subjectUsers.length > 1;
 
   return (
     <div className="space-y-4">

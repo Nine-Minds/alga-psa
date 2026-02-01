@@ -13,7 +13,8 @@ describe('/msp/time-entry subject selector (static)', () => {
       'packages/scheduling/src/components/time-management/time-entry/TimeTracking.tsx'
     );
     expect(src).toContain('useState(currentUser.user_id)');
-    expect(src).toContain('const showSubjectSelector = subjectUsers.length > 1');
+    expect(src).toContain("useFeatureFlag(\n    'delegated-time-entry'");
+    expect(src).toContain('const showSubjectSelector = isDelegatedTimeEntryUIEnabled && subjectUsers.length > 1');
   });
 
   it('uses UserPicker populated from eligible-subjects server action', () => {

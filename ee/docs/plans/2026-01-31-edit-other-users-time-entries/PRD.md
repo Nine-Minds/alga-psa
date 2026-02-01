@@ -66,6 +66,11 @@ When generating invoices, admins frequently find missing time (e.g., a technicia
 - Add a **“User” selector** to the Time Entry landing page (`/msp/time-entry`) for users who can act on behalf of others.
   - Default selection: current user.
   - For non-authorized users, hide the selector (or show it disabled).
+- The delegated time-entry UI (subject selector + delegated timesheet editing UX) is gated behind the PostHog feature flag **`delegated-time-entry`** (UI-only).
+  - When disabled: the UI only supports working with the current user’s own time sheets; delegated sheets (if accessed directly) are read-only and show an explanation.
+- Bundled tickets (tickets that are part of a ticket bundle) cannot have time logged directly; the UI should:
+  - show bundled tickets as **disabled/greyed out** in ticket pickers
+  - explain why (e.g. “Bundled ticket — log time on the master ticket”)
 - Timesheet view (`/msp/time-entry/timesheet/[id]`) must clearly indicate:
   - “Time Sheet for {Subject Name}”
   - Optional small text: “Edited by {Actor Name}” for transparency (audit UI).
@@ -136,3 +141,4 @@ Behavior:
 - A user without these capabilities cannot view or edit another user’s time sheets/entries (even if they know IDs).
 - Attempting to modify invoiced time is blocked with a clear error.
 - Time entry records capture “who entered/edited” via audit fields.
+- Bundled tickets are visibly non-selectable in the UI with clear messaging about logging time on the master ticket.

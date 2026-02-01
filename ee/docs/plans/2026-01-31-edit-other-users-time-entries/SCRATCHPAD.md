@@ -82,6 +82,7 @@
 - 2026-01-31: F036 — Removed client-supplied team scoping from `fetchTimeSheetsForApproval`; server now computes manager scope via joins (updated `ManagerApprovalDashboard` call signature).
 - 2026-01-31: F037 — Hardened remaining time entry reads to prevent ID-guessing: `fetchTimeEntriesForTimeSheet` and `getTimeEntryById` now enforce owner-or-delegate via `assertCanActOnBehalf` in `packages/scheduling/src/actions/timeEntryCrudActions.ts`.
 - 2026-01-31: F038 — Added unit/static coverage for delegation auth + invoiced constraints (see Test log + new tests under `server/src/test/unit/**`).
+- 2026-01-31: F039 — UX: Bundled tickets cannot accept time entries; update ticket selection UI to show bundled tickets as disabled with a clear explanation (“log time on master ticket”).
 
 ## Test log
 - 2026-01-31: T001 — `python3 scripts/validate_plan.py ee/docs/plans/2026-01-31-edit-other-users-time-entries` ✅

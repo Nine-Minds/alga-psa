@@ -17,6 +17,7 @@ interface TimeSheetHeaderProps {
     subjectName?: string;
     actorName?: string;
     isDelegated?: boolean;
+    allowDelegatedEditing?: boolean;
     canReopenForEdits?: boolean;
     onReopenForEdits?: () => Promise<void>;
     onSubmit: () => Promise<void>;
@@ -39,6 +40,7 @@ export function TimeSheetHeader({
     subjectName,
     actorName,
     isDelegated = false,
+    allowDelegatedEditing = true,
     canReopenForEdits = false,
     onReopenForEdits,
     onSubmit,
@@ -65,6 +67,7 @@ export function TimeSheetHeader({
     };
 
     const statusDisplay = getStatusDisplay(status);
+    const showDelegationInfo = isDelegated && allowDelegatedEditing;
 
     return (
         <>
@@ -80,9 +83,9 @@ export function TimeSheetHeader({
                     </Button>
                     <div className="min-w-0">
                         <h2 className="text-2xl font-bold truncate">
-                            {subjectName ? `Time Sheet for ${subjectName}` : 'Time Sheet'}
+                            {showDelegationInfo && subjectName ? `Time Sheet for ${subjectName}` : 'Time Sheet'}
                         </h2>
-                        {isDelegated && actorName && (
+                        {showDelegationInfo && actorName && (
                             <div className="text-xs text-gray-500 truncate">Edited by {actorName}</div>
                         )}
                     </div>

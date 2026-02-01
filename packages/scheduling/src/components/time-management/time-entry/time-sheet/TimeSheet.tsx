@@ -42,6 +42,7 @@ interface TimeSheetProps {
     subjectName?: string;
     actorName?: string;
     isDelegated?: boolean;
+    allowDelegatedEditing?: boolean;
     canReopenForEdits?: boolean;
     onReopenForEdits?: () => Promise<void>;
     onSubmitTimeSheet: () => Promise<void>;
@@ -78,6 +79,7 @@ export function TimeSheet({
     subjectName,
     actorName,
     isDelegated = false,
+    allowDelegatedEditing = true,
     canReopenForEdits = false,
     onReopenForEdits,
     onSubmitTimeSheet,
@@ -584,6 +586,8 @@ export function TimeSheet({
         : dateNavigator;
 
     const isEditable = timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED';
+    const delegatedEditingBlocked = isDelegated && !allowDelegatedEditing;
+    const effectiveIsEditable = isEditable && !delegatedEditingBlocked;
 
     // Register the main TimeSheet container for UI automation
     const { automationIdProps: timeSheetProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -592,7 +596,7 @@ export function TimeSheet({
         label: 'Time Sheet Management',
     }, () => [
         CommonActions.focus('Focus on time sheet'),
-        ...(isEditable ? [
+        ...(effectiveIsEditable ? [
             {
                 type: 'click' as const,
                 available: true,
@@ -605,12 +609,19 @@ export function TimeSheet({
     return (
         <ReflectionContainer id="timesheet-main" label="Time Sheet Management">
             <div className="h-full overflow-y-auto" {...timeSheetProps}>
+                {delegatedEditingBlocked && (
+                    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        Delegated time entry is currently disabled. Enable the <span className="font-mono">delegated-time-entry</span> feature flag to
+                        edit other users&#39; time sheets.
+                    </div>
+                )}
                 <TimeSheetHeader
                 status={timeSheet.approval_status}
-                isEditable={isEditable}
+                isEditable={effectiveIsEditable}
                 subjectName={subjectName}
                 actorName={actorName}
                 isDelegated={isDelegated}
+                allowDelegatedEditing={allowDelegatedEditing}
                 canReopenForEdits={canReopenForEdits}
                 onReopenForEdits={onReopenForEdits}
                 onSubmit={handleSubmitTimeSheet}
@@ -644,7 +655,7 @@ export function TimeSheet({
                     <IntervalSection
                         userId={timeSheet.user_id}
                         timePeriod={timeSheet.time_period}
-                        onCreateTimeEntry={handleSaveTimeEntry}
+                        onCreateTimeEntry={effectiveIsEditable ? handleSaveTimeEntry : async (_timeEntry) => {}}
                     />
                 </div>
             )}
@@ -654,7 +665,7 @@ export function TimeSheet({
                     dates={dates}
                     workItemsByType={workItemsByType}
                     groupedTimeEntries={groupedTimeEntries}
-                    isEditable={isEditable}
+                    isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={setSelectedCell}
                     onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
@@ -668,7 +679,7 @@ export function TimeSheet({
                     dates={dates}
                     workItemsByType={workItemsByType}
                     groupedTimeEntries={groupedTimeEntries}
-                    isEditable={isEditable}
+                    isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={setSelectedCell}
                     onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
@@ -677,7 +688,7 @@ export function TimeSheet({
                 />
             )}
 
-            {selectedCell && isEditable && timeSheet.time_period && (
+            {selectedCell && effectiveIsEditable && timeSheet.time_period && (
                 <TimeEntryDialog
                     id="time-entry-dialog"
                     isOpen={true}
