@@ -126,6 +126,15 @@ async function sendNotificationIfEnabled(
   recipientUserId?: string
 ): Promise<void> {
   try {
+    if (!isValidEmail(params.to)) {
+      logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
+        recipient: params.to,
+        subtypeName,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
     const { knex } = await createTenantKnex();
 
     // 1. Check global notification settings
@@ -238,6 +247,22 @@ async function sendNotificationIfEnabled(
     }
 
   } catch (error) {
+    const isEmailProviderError =
+      typeof error === 'object' &&
+      error !== null &&
+      (error as any).name === 'EmailProviderError' &&
+      typeof (error as any).isRetryable === 'boolean';
+
+    if (isEmailProviderError && (error as any).isRetryable === false) {
+      logger.warn('[TicketEmailSubscriber] Non-retryable email send failure; skipping:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        subtypeName,
+        recipient: params.to,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
     logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,
