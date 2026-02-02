@@ -434,7 +434,7 @@ export default function AdminSessionManagement() {
                       </div>
 
                       {session.login_method && ['google', 'microsoft'].includes(session.login_method) && !session.is_current && (
-                        <div className="mt-2 flex items-start gap-2 text-xs text-amber-600 dark:text-amber-500">
+                        <div className="mt-2 flex items-start gap-2 text-xs text-amber-600">
                           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                           <span>
                             Revoking this session will not revoke {session.login_method === 'google' ? 'Google' : 'Microsoft'} OAuth access. Revoke access from your {session.login_method === 'google' ? 'Google' : 'Microsoft'} account settings.

@@ -162,15 +162,15 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                         // Display Mode
                         <div className="space-y-2">
                             <div>
-                                <span className="font-semibold text-sm text-gray-600 dark:text-gray-400">Region:</span>
+                                <span className="font-semibold text-sm text-gray-600">Region:</span>
                                 <span className="ml-2 text-sm">{regionName}</span>
                             </div>
                             <div>
-                                <span className="font-semibold text-sm text-gray-600 dark:text-gray-400">Tax Percentage:</span>
+                                <span className="font-semibold text-sm text-gray-600">Tax Percentage:</span>
                                 <span className="ml-2 text-sm">{taxPercentage !== undefined ? `${taxPercentage}%` : 'N/A'}</span>
                             </div>
                             <div>
-                                <span className="font-semibold text-sm text-gray-600 dark:text-gray-400">Description:</span>
+                                <span className="font-semibold text-sm text-gray-600">Description:</span>
                                 <span className="ml-2 text-sm">{description || 'N/A'}</span>
                             </div>
                         </div>
