@@ -3,14 +3,43 @@
 import { Suspense, useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
-import { SlaPolicyList, SlaPolicyForm, SlaPauseSettings, BusinessHoursSettings, EscalationManagerSettings } from '@alga-psa/sla/components';
-import { ISlaPolicy } from '@alga-psa/sla/types';
+import {
+  SlaPolicyList,
+  SlaPolicyForm,
+  SlaPauseSettings,
+  BusinessHoursSettings,
+  EscalationManagerSettings,
+  SlaMetricsCards,
+  SlaComplianceGauge,
+  SlaTrendChart,
+  SlaBreachChart,
+  SlaBreachesTable,
+  SlaTicketsAtRisk
+} from '@alga-psa/sla/components';
+import {
+  getSlaOverview,
+  getSlaTrend,
+  getBreachRateByPriority,
+  getRecentBreaches,
+  getTicketsAtRisk
+} from '@alga-psa/sla/actions';
+import {
+  ISlaPolicy,
+  ISlaOverview,
+  ISlaTrendDataPoint,
+  ISlaBreachRateByDimension,
+  ISlaRecentBreach,
+  ISlaTicketAtRisk,
+  ISlaReportingFilters
+} from '@alga-psa/sla/types';
 import { Button } from '@alga-psa/ui/components/Button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 // Map URL slugs to tab labels
 const TAB_SLUG_TO_LABEL: Record<string, string> = {
+  'dashboard': 'Dashboard',
   'policies': 'Policies',
   'business-hours': 'Business Hours',
   'pause-rules': 'Pause Rules',
@@ -19,13 +48,23 @@ const TAB_SLUG_TO_LABEL: Record<string, string> = {
 
 // Map tab labels to URL slugs
 const TAB_LABEL_TO_SLUG: Record<string, string> = {
+  'Dashboard': 'dashboard',
   'Policies': 'policies',
   'Business Hours': 'business-hours',
   'Pause Rules': 'pause-rules',
   'Escalation': 'escalation',
 };
 
-const DEFAULT_TAB = 'Policies';
+const DEFAULT_TAB = 'Dashboard';
+
+type DateRangeOption = '7d' | '14d' | '30d' | '90d';
+
+const DATE_RANGE_OPTIONS: { value: DateRangeOption; label: string }[] = [
+  { value: '7d', label: 'Last 7 days' },
+  { value: '14d', label: 'Last 14 days' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: '90d', label: 'Last 90 days' }
+];
 
 export default function SlaSettingsPage() {
   const searchParams = useSearchParams();
@@ -34,6 +73,15 @@ export default function SlaSettingsPage() {
   // State for policy form management
   const [editingPolicy, setEditingPolicy] = useState<ISlaPolicy | null>(null);
   const [isAddingPolicy, setIsAddingPolicy] = useState(false);
+
+  // Dashboard state
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRangeOption>('30d');
+  const [overview, setOverview] = useState<ISlaOverview | null>(null);
+  const [trendData, setTrendData] = useState<ISlaTrendDataPoint[]>([]);
+  const [breachByPriority, setBreachByPriority] = useState<ISlaBreachRateByDimension[]>([]);
+  const [recentBreaches, setRecentBreaches] = useState<ISlaRecentBreach[]>([]);
+  const [atRiskTickets, setAtRiskTickets] = useState<ISlaTicketAtRisk[]>([]);
 
   // Determine initial tab from URL
   const getInitialTab = (): string => {
@@ -103,6 +151,52 @@ export default function SlaSettingsPage() {
     setIsAddingPolicy(false);
   }, []);
 
+  // Dashboard data fetching
+  const getFilters = useCallback((): ISlaReportingFilters => {
+    const days = parseInt(dateRange.replace('d', ''));
+    const dateFrom = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return { dateFrom };
+  }, [dateRange]);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setDashboardLoading(true);
+      const filters = getFilters();
+      const days = parseInt(dateRange.replace('d', ''));
+
+      const [
+        overviewData,
+        trendResult,
+        breachByPriorityResult,
+        recentBreachesResult,
+        atRiskResult
+      ] = await Promise.all([
+        getSlaOverview(filters),
+        getSlaTrend(filters, days),
+        getBreachRateByPriority(filters),
+        getRecentBreaches(filters, 10),
+        getTicketsAtRisk(10)
+      ]);
+
+      setOverview(overviewData);
+      setTrendData(trendResult);
+      setBreachByPriority(breachByPriorityResult);
+      setRecentBreaches(recentBreachesResult);
+      setAtRiskTickets(atRiskResult);
+    } catch (error) {
+      console.error('Error fetching SLA dashboard data:', error);
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, [getFilters, dateRange]);
+
+  // Fetch dashboard data when switching to Dashboard tab or when date range changes
+  useEffect(() => {
+    if (currentTab === 'Dashboard') {
+      fetchDashboardData();
+    }
+  }, [currentTab, dateRange, fetchDashboardData]);
+
   // Determine if we're showing the form or the list for the Policies tab
   const showPolicyForm = isAddingPolicy || editingPolicy !== null;
 
@@ -153,7 +247,77 @@ export default function SlaSettingsPage() {
     );
   };
 
+  // Render the dashboard tab content
+  const renderDashboardContent = () => {
+    if (dashboardLoading && !overview) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator
+            layout="stacked"
+            text="Loading SLA dashboard..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Header with date range and refresh */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <CustomSelect
+              options={DATE_RANGE_OPTIONS}
+              value={dateRange}
+              onValueChange={(value) => setDateRange(value as DateRangeOption)}
+              placeholder="Select date range"
+            />
+          </div>
+          <Button
+            id="refresh-sla-dashboard"
+            variant="outline"
+            size="sm"
+            onClick={fetchDashboardData}
+            disabled={dashboardLoading}
+            className="gap-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${dashboardLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Metrics Cards */}
+        <SlaMetricsCards data={overview} loading={dashboardLoading} />
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SlaTrendChart data={trendData} loading={dashboardLoading} />
+          <SlaComplianceGauge
+            overallRate={overview?.compliance?.overallRate ?? 0}
+            responseRate={overview?.compliance?.responseRate ?? 0}
+            resolutionRate={overview?.compliance?.resolutionRate ?? 0}
+            loading={dashboardLoading}
+          />
+        </div>
+
+        {/* Breach Chart */}
+        <SlaBreachChart data={breachByPriority} loading={dashboardLoading} />
+
+        {/* Tables Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SlaTicketsAtRisk data={atRiskTickets} loading={dashboardLoading} />
+          <SlaBreachesTable data={recentBreaches} loading={dashboardLoading} />
+        </div>
+      </div>
+    );
+  };
+
   const tabs = [
+    {
+      label: 'Dashboard',
+      content: renderDashboardContent(),
+    },
     {
       label: 'Policies',
       content: renderPoliciesContent(),
