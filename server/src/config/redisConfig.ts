@@ -120,6 +120,16 @@ export async function getRedisClient() {
 
   const client = createClient(clientOptions);
 
+  // Prevent "Unhandled 'error' event" crashes and keep diagnostics in logs.
+  client.on('error', (error) => {
+    logger.error('[Redis] Client error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+  client.on('end', () => {
+    logger.warn('[Redis] Connection ended');
+  });
+
   await client.connect();
   return client;
 }
