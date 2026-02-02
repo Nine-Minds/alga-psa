@@ -29,6 +29,8 @@ export interface ITimePeriodSettings extends TenantEntity {
 
 export interface ITimeEntry extends TenantEntity  {
   entry_id?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
   work_item_id: string;
   work_item_type: WorkItemType;
   start_time: ISO8601String;

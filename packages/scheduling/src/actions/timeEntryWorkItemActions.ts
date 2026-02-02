@@ -5,6 +5,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateData } from '@alga-psa/validation';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
   FetchTimeEntriesParams,
@@ -26,6 +27,17 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
+
+  const timeSheet = await db('time_sheets')
+    .where({ id: validatedParams.timeSheetId, tenant })
+    .select('user_id')
+    .first();
+
+  if (!timeSheet) {
+    throw new Error(`Time sheet with id ${validatedParams.timeSheetId} not found`);
+  }
+
+  await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
   // Get tickets
   const tickets = await db('tickets')

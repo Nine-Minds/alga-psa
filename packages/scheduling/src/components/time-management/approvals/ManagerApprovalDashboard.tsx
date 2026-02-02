@@ -35,7 +35,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   const [showApproved, setShowApproved] = useState(false);
   const [reverseConfirmOpen, setReverseConfirmOpen] = useState(false);
   const [timeSheetToReverse, setTimeSheetToReverse] = useState<ITimeSheetApprovalView | null>(null);
-  const { isManager, managedTeams } = useTeamAuth(currentUser);
+  const { isManager } = useTeamAuth(currentUser);
   const { openDrawer, closeDrawer } = useDrawer();
 
   useEffect(() => {
@@ -45,10 +45,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   }, [isManager, showApproved]);
 
   const loadTimeSheets = async () => {
-    const sheets = await fetchTimeSheetsForApproval(
-      managedTeams.map((team):string => team.team_id),
-      showApproved
-    );
+    const sheets = await fetchTimeSheetsForApproval(showApproved);
     setTimeSheets(sheets);
   };
 

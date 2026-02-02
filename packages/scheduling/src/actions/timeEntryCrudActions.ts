@@ -21,6 +21,8 @@ import {
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { toPlainDate } from '@alga-psa/core';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -40,6 +42,17 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
+
+  const timeSheet = await db('time_sheets')
+    .where({ id: validatedParams.timeSheetId, tenant })
+    .select('user_id')
+    .first();
+
+  if (!timeSheet) {
+    throw new Error('Time sheet not found');
+  }
+
+  await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
   const timeEntries = await db('time_entries')
     .where({
@@ -223,9 +236,29 @@ export const saveTimeEntry = withAuth(async (
   // Validate input
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
-  const userId = user.user_id;
+  const actorUserId = user.user_id;
+  let timeEntryUserId = validatedTimeEntry.user_id;
 
   try {
+    if (validatedTimeEntry.entry_id) {
+      const existing = await db('time_entries')
+        .where({ entry_id: validatedTimeEntry.entry_id, tenant })
+        .select('user_id', 'invoiced')
+        .first();
+
+      if (!existing) {
+        throw new Error(`Original time entry with ID ${validatedTimeEntry.entry_id} not found for update.`);
+      }
+
+      if (existing.invoiced) {
+        throw new Error('This time entry has already been invoiced and cannot be modified.');
+      }
+
+      timeEntryUserId = existing.user_id;
+    }
+
+    await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
+
     if (validatedTimeEntry.work_item_type === 'ticket') {
       const ticket = await db('tickets')
         .select('ticket_id', 'master_ticket_id')
@@ -253,8 +286,43 @@ export const saveTimeEntry = withAuth(async (
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
-    const userTimeZone = await resolveUserTimeZone(db, tenant, userId);
-    const { work_date, work_timezone } = computeWorkDateFields(start_time, userTimeZone);
+    const subjectTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
+    const { work_date, work_timezone } = computeWorkDateFields(start_time, subjectTimeZone);
+    const { work_date: end_work_date } = computeWorkDateFields(end_time, subjectTimeZone);
+
+    if (time_sheet_id) {
+      const timeSheetWithPeriod = await db('time_sheets')
+        .join('time_periods', function joinPeriods() {
+          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+        })
+        .where({
+          'time_sheets.id': time_sheet_id,
+          'time_sheets.tenant': tenant
+        })
+        .select('time_sheets.user_id', 'time_periods.start_date', 'time_periods.end_date')
+        .first();
+
+      if (!timeSheetWithPeriod) {
+        throw new Error('Time sheet not found');
+      }
+
+      if (timeSheetWithPeriod.user_id !== timeEntryUserId) {
+        throw new Error('Time entry user does not match time sheet owner');
+      }
+
+      const periodStart = toPlainDate(timeSheetWithPeriod.start_date).toString();
+      const periodEnd = toPlainDate(timeSheetWithPeriod.end_date).toString();
+
+      if (
+        work_date < periodStart ||
+        work_date > periodEnd ||
+        end_work_date < periodStart ||
+        end_work_date > periodEnd
+      ) {
+        throw new Error('Time entry must fall within the time period for the time sheet');
+      }
+    }
 
     const startDate = new Date(start_time);
     const endDate = new Date(end_time);
@@ -288,7 +356,8 @@ export const saveTimeEntry = withAuth(async (
       tax_region,
       contract_line_id,
       tax_rate_id, // Add tax_rate_id to the object being saved
-      user_id: userId, // Always use user_id from withAuth
+      user_id: timeEntryUserId,
+      updated_by: actorUserId,
       tenant: tenant as string,
       updated_at: new Date().toISOString()
     };
@@ -355,7 +424,7 @@ export const saveTimeEntry = withAuth(async (
         oldDuration = originalEntryForUpdate.billable_duration || 0;
 
         // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
-        const { tenant: _tenant, ...updateData } = cleanedEntry;
+        const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry;
         const [updated] = await trx('time_entries')
           .where({ entry_id, tenant }) // Ensure tenant match
           .update(updateData)
@@ -399,7 +468,8 @@ export const saveTimeEntry = withAuth(async (
           .insert({
             ...cleanedEntry,
             entry_id: uuidv4(),
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            created_by: actorUserId
           })
           .returning('*');
 
@@ -453,19 +523,19 @@ export const saveTimeEntry = withAuth(async (
                 tenant,
               })
               .where(function() {
-                this.where('assigned_to', userId)
-                  .orWhere('additional_user_id', userId);
+                this.where('assigned_to', timeEntryUserId)
+                  .orWhere('additional_user_id', timeEntryUserId);
               })
               .first();
 
             // If task already has an assignee and it's not the current user
-            if (task.assigned_to && task.assigned_to !== userId) {
+            if (task.assigned_to && task.assigned_to !== timeEntryUserId) {
               // Only add as additional user if not already in resources
               if (!existingResource) {
                 await trx('task_resources').insert({
                   task_id: work_item_id,
                   assigned_to: task.assigned_to,
-                  additional_user_id: userId,
+                  additional_user_id: timeEntryUserId,
                   assigned_at: new Date(),
                   tenant,
                 });
@@ -478,7 +548,7 @@ export const saveTimeEntry = withAuth(async (
                   tenant,
                 })
                 .update({
-                  assigned_to: userId,
+                  assigned_to: timeEntryUserId,
                   updated_at: new Date(),
                 });
               // No task_resources record is created when there's no additional user
@@ -492,8 +562,8 @@ export const saveTimeEntry = withAuth(async (
               tenant,
             })
             .where(function() {
-              this.where('assigned_to', userId)
-                .orWhere('additional_user_id', userId);
+              this.where('assigned_to', timeEntryUserId)
+                .orWhere('additional_user_id', timeEntryUserId);
             })
             .first();
 
@@ -508,11 +578,11 @@ export const saveTimeEntry = withAuth(async (
 
             if (ticket) {
               // If ticket already has an assignee, add user as additional_user_id
-              if (ticket.assigned_to && ticket.assigned_to !== userId) {
+              if (ticket.assigned_to && ticket.assigned_to !== timeEntryUserId) {
                 await trx('ticket_resources').insert({
                   ticket_id: work_item_id,
                   assigned_to: ticket.assigned_to,
-                  additional_user_id: userId,
+                  additional_user_id: timeEntryUserId,
                   assigned_at: new Date(),
                   tenant,
                 });
@@ -526,9 +596,9 @@ export const saveTimeEntry = withAuth(async (
                     tenant,
                   })
                   .update({
-                    assigned_to: userId,
+                    assigned_to: timeEntryUserId,
                     updated_at: new Date().toISOString(),
-                    updated_by: userId,
+                    updated_by: actorUserId,
                   });
               }
             }
@@ -786,6 +856,12 @@ export const deleteTimeEntry = withAuth(async (
         throw new Error('Time entry not found');
       }
 
+      await assertCanActOnBehalf(user, tenant, timeEntry.user_id, trx);
+
+      if (timeEntry.invoiced) {
+        throw new Error('This time entry has already been invoiced and cannot be deleted.');
+      }
+
       // --- Bucket Usage Update Logic (Before Delete) ---
       if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
         let clientId: string | null = null;
@@ -886,6 +962,9 @@ export const deleteTimeEntry = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting time entry:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error('Failed to delete time entry');
   }
 });
@@ -915,6 +994,8 @@ export const getTimeEntryById = withAuth(async (
       if (!entry) {
         return null;
       }
+
+      await assertCanActOnBehalf(user, tenant, entry.user_id, db);
 
       // Fetch work item details based on the saved entry
       let workItemDetails: IWorkItem;
