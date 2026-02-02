@@ -583,7 +583,7 @@ export default function PermissionsMatrix() {
           <div>
             <button
               onClick={() => toggleRow(record.resource)}
-              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               {value.length} actions
@@ -676,7 +676,7 @@ export default function PermissionsMatrix() {
           <div>
             <button
               onClick={() => toggleRow(record.role_id)}
-              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               {value.length} actions
@@ -758,7 +758,7 @@ export default function PermissionsMatrix() {
         </div>
 
         {/* Stats */}
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-sm text-gray-600">
           {viewType === 'empty' ? 'Select a role or resource to view permissions' :
            viewType === 'all-roles-specific-resource' ? `${tableData.length} roles for ${selectedResource}` :
            `${tableData.length} resources • ${stats.assigned}/${stats.total} permissions`}
@@ -766,7 +766,7 @@ export default function PermissionsMatrix() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-md text-sm">
+          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
             {error}
           </div>
         )}

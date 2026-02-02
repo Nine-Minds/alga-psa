@@ -14,7 +14,7 @@ export default function FolderBreadcrumb({
 }: FolderBreadcrumbProps) {
   if (!folderPath) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-gray-600">
         <Home className="w-4 h-4" />
         <span>All Documents</span>
       </div>
@@ -32,7 +32,7 @@ export default function FolderBreadcrumb({
       <button
         id="breadcrumb-home"
         onClick={() => onNavigate(null)}
-        className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+        className="flex items-center gap-1 text-gray-600 hover:text-gray-900"
       >
         <Home className="w-4 h-4" />
       </button>
@@ -44,10 +44,10 @@ export default function FolderBreadcrumb({
             id={`breadcrumb-${crumb.path.replace(/\//g, '-')}`}
             onClick={() => onNavigate(crumb.path)}
             className={`
-              hover:text-gray-900 dark:hover:text-gray-100
+              hover:text-gray-900
               ${index === breadcrumbs.length - 1
-                ? 'text-gray-900 dark:text-gray-100 font-medium'
-                : 'text-gray-600 dark:text-gray-400'}
+                ? 'text-gray-900 font-medium'
+                : 'text-gray-600'}
             `}
           >
             {crumb.name}

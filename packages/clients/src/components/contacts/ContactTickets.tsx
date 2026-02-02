@@ -93,7 +93,22 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags, selectedAssignees, includeUnassigned]);
 
   // Pre-fetch tag permissions
   useTagPermissions(['ticket']);
@@ -495,7 +510,11 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
                   return filteredTickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }));
                 })()}
                 columns={columns}
-                pagination={false}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
               />
 
               {/* Load More Button */}

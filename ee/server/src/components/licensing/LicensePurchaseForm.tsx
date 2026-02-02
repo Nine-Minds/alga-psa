@@ -336,7 +336,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                     <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5" />
                     <div>
                       <p className="font-medium">Immediate charge</p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600">
                         You will be charged ${invoicePreview.amountDue.toFixed(2)} {invoicePreview.currency.toUpperCase()} now for the prorated amount.
                       </p>
                     </div>
@@ -351,7 +351,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                     <Calendar className="h-4 w-4 text-orange-500 mt-0.5" />
                     <div>
                       <p className="font-medium">Scheduled for period end</p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600">
                         License decrease will take effect on {periodEnd.toLocaleDateString()} at the end of your current billing period.
                       </p>
                     </div>
@@ -402,30 +402,30 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         <CardContent>
           {/* Current Usage Display */}
           {currentUsage && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+              <h3 className="text-sm font-medium text-blue-900 mb-2">
                 Current License Usage
               </h3>
               <div className="flex items-center gap-2">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className="text-2xl font-bold text-blue-600">
                   {currentUsage.used}
                 </div>
                 <span className="text-gray-500">/</span>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <div className="text-2xl font-bold text-gray-900">
                   {currentUsage.total !== null ? currentUsage.total : '∞'}
                 </div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">licenses used</span>
+                <span className="text-sm text-gray-600">licenses used</span>
               </div>
             </div>
           )}
 
           {/* Error Display */}
           {error && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-950 rounded-lg flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+            <div className="mb-4 p-4 bg-red-50 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">Error</p>
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <p className="text-sm font-medium text-red-800">Error</p>
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             </div>
           )}
@@ -457,12 +457,12 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                 Enter the new total number of licenses (minimum: {currentUsage?.total || 1}). Currently: {currentUsage?.total !== null && currentUsage?.total !== undefined ? currentUsage.total : 'None'}
               </p>
               {currentUsage && currentUsage.total !== null && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                <p className="text-xs text-blue-600 mt-1">
                   To reduce licenses, visit Account Management
                 </p>
               )}
               {currentUsage && currentUsage.total !== null && currentUsage.used > quantity && (
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 flex items-center gap-1">
+                <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   Warning: You have {currentUsage.used} users but setting total to {quantity}
                 </p>
@@ -471,20 +471,20 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
 
             {/* Pricing Summary */}
             {pricing && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-2">
+              <div className="p-4 bg-gray-50 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Price per license:</span>
+                  <span className="text-gray-600">Price per license:</span>
                   <span className="font-medium">
                     ${(pricing.unitAmount / 100).toFixed(2)}/{pricing.interval}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Quantity:</span>
+                  <span className="text-gray-600">Quantity:</span>
                   <span className="font-medium">{quantity}</span>
                 </div>
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
+                <div className="border-t border-gray-200 pt-2 flex justify-between">
                   <span className="font-semibold">Total:</span>
-                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-xl font-bold text-blue-600">
                     ${totalPrice.toFixed(2)}/{pricing.interval}
                   </span>
                 </div>

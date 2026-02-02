@@ -231,7 +231,7 @@ export function WorkItemList({
   return (
     <div className="flex-1 min-h-[200px] overflow-auto transition-all duration-300">
       <div className="h-full overflow-y-auto">
-        <div className="bg-white dark:bg-[rgb(var(--color-border-50))] rounded-md border border-[rgb(var(--color-border-200))]">
+        <div className="bg-white rounded-md border border-[rgb(var(--color-border-200))]">
           {items.length > 0 ? (
             <div>
               <ul className="divide-y divide-[rgb(var(--color-border-200))]">
