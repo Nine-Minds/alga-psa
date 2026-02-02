@@ -198,7 +198,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                    <p className="font-semibold">Compilation Failed:</p>
                    <p>{compilationError.error}</p>
                    {compilationError.details && (
-                     <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto">
+                     <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">
                        {compilationError.details}
                      </pre>
                    )}

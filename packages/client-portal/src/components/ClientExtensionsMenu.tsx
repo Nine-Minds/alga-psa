@@ -48,7 +48,7 @@ export function ClientExtensionsMenu() {
           {items.map((item) => (
              <DropdownMenu.Item
                 key={item.id}
-                className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+                className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
                 asChild
               >
                 <Link href={`/client-portal/extensions/${encodeURIComponent(item.id)}`}>

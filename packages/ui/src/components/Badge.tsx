@@ -16,7 +16,7 @@ function Badge({ className, variant = 'default', ref, ...props }: BadgeProps) {
         'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors',
         {
           'border-transparent bg-primary text-primary-foreground': variant === 'primary',
-          'border-transparent bg-secondary-100 text-secondary-800 dark:bg-secondary-900 dark:text-secondary-200': variant === 'secondary',
+          'border-transparent bg-secondary-100 text-secondary-800': variant === 'secondary',
           'border-transparent bg-success text-success-foreground': variant === 'success',
           'border-transparent bg-warning text-warning-foreground': variant === 'warning',
           'border-transparent bg-error text-error-foreground': variant === 'error',

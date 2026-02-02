@@ -820,7 +820,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                             </div>
                           )}
                           {recordWarnings.length > 0 && (
-                            <div className="text-gray-500 dark:text-gray-400">
+                            <div className="text-gray-500">
                               {recordWarnings.map((warning: string, i: number) => (
                                 <div key={`warning-${i}`} className="break-words">
                                   • {warning}

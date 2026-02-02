@@ -24,17 +24,17 @@ const AlertWidget = ({ value, options, id }: CustomAlertWidgetProps) => {
   let alertClasses = 'p-4 mb-4 text-sm rounded-lg';
   switch (alertType) {
     case 'success':
-      alertClasses += ' bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100';
+      alertClasses += ' bg-green-100 text-green-700';
       break;
     case 'warning':
-      alertClasses += ' bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-100';
+      alertClasses += ' bg-yellow-100 text-yellow-700';
       break;
     case 'error':
-      alertClasses += ' bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100';
+      alertClasses += ' bg-red-100 text-red-700';
       break;
     case 'info':
     default:
-      alertClasses += ' border bg-secondary-50 text-secondary-700 border-secondary-200 dark:bg-secondary-50 dark:text-secondary-700 dark:border-secondary-200';
+      alertClasses += ' border bg-secondary-50 text-secondary-700 border-secondary-200';
       break;
   }
 

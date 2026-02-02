@@ -429,7 +429,7 @@ const ImportExportSettings = (): React.JSX.Element => {
             onTabChange={handleTabChange}
             orientation="vertical"
             tabStyles={{
-              list: 'border-border/40 dark:border-border/50',
+              list: 'border-border/40',
               trigger: 'text-sm font-medium data-[state=active]:bg-primary-500/10 rounded-md transition-colors',
               content: 'min-h-[260px]'
             }}
