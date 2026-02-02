@@ -99,11 +99,14 @@ export type EmailSendCallback = (tenantId: string, params: BaseEmailParams) => P
 export class DelayedEmailQueue {
   private static instance: DelayedEmailQueue | null = null;
   private redis: RedisClientLike | null = null;
+  private redisGetter: RedisClientGetter | null = null;
   private config: DelayedEmailQueueConfig;
   private processingInterval: NodeJS.Timeout | null = null;
   private sendCallback: EmailSendCallback | null = null;
   private isProcessing = false;
   private isInitialized = false;
+  private lastRedisResetAt = 0;
+  private consecutiveZRangeTimeouts = 0;
 
   /** Key prefix for all queue-related Redis keys */
   private readonly prefix = 'alga-psa:email-ratelimit:';
@@ -157,6 +160,7 @@ export class DelayedEmailQueue {
     }
 
     try {
+      this.redisGetter = redisGetter;
       this.redis = await redisGetter();
       this.sendCallback = sendCallback;
       this.startProcessingLoop();
@@ -300,6 +304,127 @@ export class DelayedEmailQueue {
     });
   }
 
+  private getRedisClientState(): { isOpen?: boolean; isReady?: boolean } {
+    const redis = this.redis as any;
+    if (!redis) {
+      return {};
+    }
+
+    return {
+      isOpen: typeof redis.isOpen === 'boolean' ? redis.isOpen : undefined,
+      isReady: typeof redis.isReady === 'boolean' ? redis.isReady : undefined,
+    };
+  }
+
+  private async closeRedisClientIfPossible(redis: RedisClientLike): Promise<void> {
+    const maybeQuit = (redis as any)?.quit;
+    if (typeof maybeQuit === 'function') {
+      await Promise.race([
+        Promise.resolve(maybeQuit.call(redis)),
+        new Promise<void>((resolve) => setTimeout(resolve, 1000)),
+      ]);
+      return;
+    }
+
+    const maybeDisconnect = (redis as any)?.disconnect;
+    if (typeof maybeDisconnect === 'function') {
+      try {
+        maybeDisconnect.call(redis);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private async resetRedisClient(reason: string, error?: unknown): Promise<void> {
+    const resetBackoffMs = 30_000;
+    const now = Date.now();
+    if (now - this.lastRedisResetAt < resetBackoffMs) {
+      return;
+    }
+
+    this.lastRedisResetAt = now;
+
+    const previous = this.redis;
+    this.redis = null;
+
+    if (previous) {
+      try {
+        await this.closeRedisClientIfPossible(previous);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!this.redisGetter) {
+      return;
+    }
+
+    try {
+      this.redis = await this.redisGetter();
+      this.consecutiveZRangeTimeouts = 0;
+      logger.warn('[DelayedEmailQueue] Redis client reset', {
+        reason,
+        error: error instanceof Error ? error.message : undefined,
+      });
+    } catch (connectError) {
+      logger.warn('[DelayedEmailQueue] Failed to reset Redis client', {
+        reason,
+        error: connectError instanceof Error ? connectError.message : 'Unknown error',
+      });
+    }
+  }
+
+  private isOperationTimeout(error: unknown, operation: string): boolean {
+    return (
+      error instanceof Error &&
+      error.message.includes(`[DelayedEmailQueue] ${operation} timed out after`)
+    );
+  }
+
+  private async zRangeByScoreWithRecovery(
+    key: string,
+    min: number,
+    max: number,
+    options: { LIMIT?: { offset: number; count: number } } | undefined
+  ): Promise<string[]> {
+    if (!this.redis) {
+      throw new Error('[DelayedEmailQueue] Redis client not available');
+    }
+
+    try {
+      return await withTimeout(
+        this.redis.zRangeByScore(key, min, max, options),
+        this.config.redisTimeoutMs,
+        'zRangeByScore'
+      );
+    } catch (error) {
+      if (!this.isOperationTimeout(error, 'zRangeByScore')) {
+        throw error;
+      }
+
+      this.consecutiveZRangeTimeouts++;
+
+      logger.warn('[DelayedEmailQueue] zRangeByScore timed out; resetting Redis client', {
+        consecutiveTimeouts: this.consecutiveZRangeTimeouts,
+        redis: this.getRedisClientState(),
+      });
+
+      await this.resetRedisClient('zRangeByScore timeout', error);
+
+      if (!this.redis) {
+        throw error;
+      }
+
+      // Retry once after resetting the client. This operation is read-only and safe to retry.
+      return await withTimeout(
+        this.redis.zRangeByScore(key, min, max, options),
+        this.config.redisTimeoutMs,
+        'zRangeByScore'
+      );
+    }
+  }
+
   /**
    * Process all ready emails with fair processing across tenants
    *
@@ -317,13 +442,9 @@ export class DelayedEmailQueue {
 
     try {
       // Get all ready items (score <= now)
-      const readyIds = await withTimeout(
-        this.redis.zRangeByScore(queueKey, 0, now, {
-          LIMIT: { offset: 0, count: this.config.batchSize }
-        }),
-        this.config.redisTimeoutMs,
-        'zRangeByScore'
-      );
+      const readyIds = await this.zRangeByScoreWithRecovery(queueKey, 0, now, {
+        LIMIT: { offset: 0, count: this.config.batchSize }
+      });
 
       if (readyIds.length === 0) {
         return 0;
@@ -440,9 +561,18 @@ export class DelayedEmailQueue {
 
     } catch (error) {
       const durationMs = Date.now() - startTime;
-      logger.error('[DelayedEmailQueue] Error processing ready emails:', {
+      const isZRangeTimeout = this.isOperationTimeout(error, 'zRangeByScore');
+      const logFn = isZRangeTimeout ? logger.warn : logger.error;
+
+      logFn('[DelayedEmailQueue] Error processing ready emails:', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        durationMs
+        durationMs,
+        ...(isZRangeTimeout
+          ? {
+              consecutiveZRangeTimeouts: this.consecutiveZRangeTimeouts,
+              redis: this.getRedisClientState(),
+            }
+          : {}),
       });
       return 0;
     }
@@ -482,6 +612,7 @@ export class DelayedEmailQueue {
 
     this.isInitialized = false;
     this.redis = null;
+    this.redisGetter = null;
     DelayedEmailQueue.instance = null;
 
     logger.info('[DelayedEmailQueue] Shutdown complete');
