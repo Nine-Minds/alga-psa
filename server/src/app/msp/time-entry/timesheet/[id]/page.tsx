@@ -6,8 +6,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf, isManagerOfSubject } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 
-export default async function TimeSheetPage({ params }: { params: { id?: string } }) {
-  const id = params?.id;
+export default async function TimeSheetPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) {
     return notFound();
   }
