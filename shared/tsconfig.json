@@ -18,6 +18,8 @@
       "@shared/workflow/*": ["./workflow/*"],
       "@shared/lib/*": ["./lib/*"],
       "@alga-psa/shared/*": ["./*"],
+      "@enterprise": ["../packages/ee/src"],
+      "@enterprise/*": ["../packages/ee/src/*"],
       "@ee": ["../packages/ee/src"],
       "@ee/*": ["../packages/ee/src/*"],
       "@alga-psa/auth/sso/entry": ["../packages/auth/src/components/SsoProviderButtons.tsx"],

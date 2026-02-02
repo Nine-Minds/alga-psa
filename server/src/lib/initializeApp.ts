@@ -33,6 +33,7 @@ import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
 import { getRedisClient } from '../config/redisConfig';
+import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 
 let isFunctionExecuted = false;
 
@@ -251,29 +252,18 @@ export async function initializeApp() {
       // (NextAuth provider callbacks call into @alga-psa/auth's registry; EE must register the real implementations)
       try {
         const { registerSSOProvider } = await import('@alga-psa/auth/lib/sso/registry');
-        const {
-          mapOAuthProfileToExtendedUser,
-          applyOAuthAccountHints,
-          decodeOAuthJwtPayload,
-        } = await import('@ee/lib/auth/ssoProviders');
-        const {
-          upsertOAuthAccountLink,
-          findOAuthAccountLink,
-          listOAuthAccountLinksForUser,
-        } = await import('@ee/lib/auth/oauthAccountLinks');
-        const { isAutoLinkEnabledForTenant } = await import('@ee/lib/auth/ssoAutoLink');
+        const { loadEnterpriseSsoProviderRegistryImpl } = await import(
+          '@alga-psa/auth/lib/sso/enterpriseRegistryEntry'
+        );
 
-        registerSSOProvider({
-          mapOAuthProfileToExtendedUser,
-          applyOAuthAccountHints,
-          decodeOAuthJwtPayload,
-          upsertOAuthAccountLink,
-          findOAuthAccountLink,
-          listOAuthAccountLinksForUser,
-          isAutoLinkEnabledForTenant,
-        });
+        const impl = await loadEnterpriseSsoProviderRegistryImpl();
+        if (impl) {
+          registerSSOProvider(impl);
+          logger.info('Registered Enterprise SSO provider implementations');
+        } else {
+          logger.info('Enterprise SSO provider implementations not available');
+        }
 
-        logger.info('Registered Enterprise SSO provider implementations');
       } catch (error) {
         logger.error('Failed to register Enterprise SSO provider implementations:', error);
       }
@@ -290,12 +280,10 @@ export async function initializeApp() {
 
       // Register enterprise storage providers for runtime factory
        try {
-         const { S3StorageProvider } = await import('@ee/lib/storage/providers/S3StorageProvider');
-         (global as any).S3StorageProvider = S3StorageProvider;
-         logger.info('Registered S3StorageProvider for enterprise edition');
-      } catch (error) {
+         await registerEnterpriseStorageProviders();
+       } catch (error) {
          logger.warn('S3StorageProvider not available; continuing without S3 provider');
-      }
+       }
     }
 
     // Development environment setup (non-critical)

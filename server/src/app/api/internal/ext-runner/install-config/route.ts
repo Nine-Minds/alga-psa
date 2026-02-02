@@ -19,7 +19,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   }
 
   if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@ee/app/api/internal/ext-runner/install-config/route')
+    eeRouteModulePromise = import('@enterprise/app/api/internal/ext-runner/install-config/route')
       .then((module) => module as EeRouteModule)
       .catch((error) => {
         console.error('[internal/ext-runner/install-config] Failed to load EE route', error);
@@ -47,4 +47,3 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   return eeRoute.POST(request);
 }
-

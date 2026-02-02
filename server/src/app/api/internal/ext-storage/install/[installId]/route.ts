@@ -19,7 +19,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   }
 
   if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@ee/app/api/internal/ext-storage/install/[installId]/route')
+    eeRouteModulePromise = import('@enterprise/app/api/internal/ext-storage/install/[installId]/route')
       .then(module => module as EeRouteModule)
       .catch(error => {
         console.error('[internal/ext-storage] Failed to load EE route', error);

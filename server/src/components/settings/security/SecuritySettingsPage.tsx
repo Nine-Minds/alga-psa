@@ -35,7 +35,7 @@ const AdminApiKeysSetup = dynamic(() => import('@alga-psa/auth/components/settin
 });
 
 const SsoBulkAssignment = dynamic(
-  () => import('@ee/components/settings/security/SsoBulkAssignment'),
+  () => import('@enterprise/components/settings/security/SsoBulkAssignment'),
   {
     loading: () => (
       <SettingsTabSkeleton
