@@ -398,13 +398,13 @@ export class EventBus {
           return;
         }
 
+        const subscriptionLookup = new Map(subscriptions.map((sub) => [sub.stream, sub]));
+
         if (streamEntries) {
           logger.info('[EventBus] Received stream entries:', {
             streamsWithMessages: streamEntries.length,
             totalMessages: streamEntries.reduce((sum, s) => sum + s.messages.length, 0)
           });
-
-          const subscriptionLookup = new Map(subscriptions.map((sub) => [sub.stream, sub]));
 
           for (const { name: stream, messages } of streamEntries) {
             const subscription = subscriptionLookup.get(stream);
@@ -414,77 +414,12 @@ export class EventBus {
             }
 
             for (const message of messages) {
-              try {
-                const rawEventPayload = message.message.event;
-                if (!rawEventPayload) {
-                  logger.warn('[EventBus] Missing event payload in message', {
-                    stream,
-                    messageId: message.id
-                  });
-                  await client.xAck(stream, config.eventBus.consumerGroup, message.id);
-                  continue;
-                }
-
-                const rawEvent = JSON.parse(rawEventPayload);
-                const baseEvent = BaseEventSchema.parse(rawEvent);
-                const eventSchema = EventSchemas[baseEvent.eventType];
-
-                if (!eventSchema) {
-                  logger.error('[EventBus] Unknown event type:', {
-                    eventType: baseEvent.eventType,
-                    availableTypes: Object.keys(EventSchemas)
-                  });
-                  await client.xAck(stream, config.eventBus.consumerGroup, message.id);
-                  continue;
-                }
-
-                const event = eventSchema.parse(rawEvent) as Event;
-                const handlers = subscription.handlers;
-                const handler = handlers.values().next().value as EventHandler | undefined;
-
-                if (handler) {
-                  const isProcessed = await this.isEventProcessed(event);
-                  if (!isProcessed) {
-                    try {
-                      await handler(event);
-                      await this.markEventProcessed(event);
-                    } catch (error) {
-                      logger.error('[EventBus] Error in event handler:', {
-                        error,
-                        eventType: baseEvent.eventType,
-                        handler: handler.name,
-                        channel: subscription.channel
-                      });
-                      // Don't acknowledge message on error to allow retry
-                      continue;
-                    }
-                  } else {
-                    logger.info('[EventBus] Skipping already processed event:', {
-                      eventId: event.id,
-                      eventType: event.eventType,
-                      channel: subscription.channel
-                    });
-                  }
-                } else {
-                  logger.warn('[EventBus] No handlers registered when processing message', {
-                    eventType: baseEvent.eventType,
-                    channel: subscription.channel
-                  });
-                }
-
-                await client.xAck(stream, config.eventBus.consumerGroup, message.id);
-              } catch (error) {
-                logger.error('[EventBus] Error processing message:', {
-                  error,
-                  stream,
-                  messageId: message.id
-                });
-              }
+              await this.processStreamMessage(client, config, stream, subscription, message);
             }
           }
         }
 
-        await this.claimPendingMessages();
+        await this.claimPendingMessages(subscriptionLookup);
         setImmediate(processEvents);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -512,11 +447,90 @@ export class EventBus {
     processEvents();
   }
 
-  private async claimPendingMessages() {
+  private async processStreamMessage(
+    client: Awaited<ReturnType<typeof createRedisClient>>,
+    config: ReturnType<typeof getRedisConfig>,
+    stream: string,
+    subscription: { channel: string; handlers: Set<EventHandler> },
+    message: { id: string; message: Record<string, string> }
+  ): Promise<void> {
+    try {
+      const rawEventPayload = message.message.event;
+      if (!rawEventPayload) {
+        logger.warn('[EventBus] Missing event payload in message', {
+          stream,
+          messageId: message.id
+        });
+        await client.xAck(stream, config.eventBus.consumerGroup, message.id);
+        return;
+      }
+
+      const rawEvent = JSON.parse(rawEventPayload);
+      const baseEvent = BaseEventSchema.parse(rawEvent);
+      const eventSchema = EventSchemas[baseEvent.eventType];
+
+      if (!eventSchema) {
+        logger.error('[EventBus] Unknown event type:', {
+          eventType: baseEvent.eventType,
+          availableTypes: Object.keys(EventSchemas)
+        });
+        await client.xAck(stream, config.eventBus.consumerGroup, message.id);
+        return;
+      }
+
+      const event = eventSchema.parse(rawEvent) as Event;
+      const handler = subscription.handlers.values().next().value as EventHandler | undefined;
+
+      if (handler) {
+        const isProcessed = await this.isEventProcessed(event);
+        if (!isProcessed) {
+          try {
+            await handler(event);
+            await this.markEventProcessed(event);
+          } catch (error) {
+            logger.error('[EventBus] Error in event handler:', {
+              error,
+              eventType: baseEvent.eventType,
+              handler: handler.name,
+              channel: subscription.channel
+            });
+            // Don't acknowledge message on error to allow retry
+            return;
+          }
+        } else {
+          logger.info('[EventBus] Skipping already processed event:', {
+            eventId: event.id,
+            eventType: event.eventType,
+            channel: subscription.channel
+          });
+        }
+      } else {
+        logger.warn('[EventBus] No handlers registered when processing message', {
+          eventType: baseEvent.eventType,
+          channel: subscription.channel
+        });
+      }
+
+      await client.xAck(stream, config.eventBus.consumerGroup, message.id);
+    } catch (error) {
+      logger.error('[EventBus] Error processing message:', {
+        error,
+        stream,
+        messageId: message.id
+      });
+    }
+  }
+
+  private async claimPendingMessages(
+    subscriptionLookup: Map<
+      string,
+      { eventType: EventType; channel: string; stream: string; handlers: Set<EventHandler> }
+    >
+  ) {
     try {
       const client = await getClient();
       const config = getRedisConfig();
-      const subscriptions = this.getActiveSubscriptions();
+      const subscriptions = Array.from(subscriptionLookup.values());
 
       for (const { stream } of subscriptions) {
         const pendingInfo = await client.xPending(
@@ -534,19 +548,25 @@ export class EventBus {
           );
 
           if (pendingMessages && pendingMessages.length > 0) {
-            const now = Date.now();
             const claimIds = pendingMessages
-              .filter(msg => (now - msg.millisecondsSinceLastDelivery) > config.eventBus.claimTimeout)
+              .filter(msg => msg.millisecondsSinceLastDelivery > config.eventBus.claimTimeout)
               .map(msg => msg.id);
 
             if (claimIds.length > 0) {
-              await client.xClaim(
+              const claimed = await client.xClaim(
                 stream,
                 config.eventBus.consumerGroup,
                 this.consumerName,
                 config.eventBus.claimTimeout,
                 claimIds
               );
+
+              const subscription = subscriptionLookup.get(stream);
+              if (subscription && Array.isArray(claimed) && claimed.length > 0) {
+                for (const message of claimed as Array<{ id: string; message: Record<string, string> }>) {
+                  await this.processStreamMessage(client, config, stream, subscription, message);
+                }
+              }
             }
           }
         }
