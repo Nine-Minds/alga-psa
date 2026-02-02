@@ -102,7 +102,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags]);
+  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags, selectedAssignees, includeUnassigned]);
 
   // Pre-fetch tag permissions
   useTagPermissions(['ticket']);
