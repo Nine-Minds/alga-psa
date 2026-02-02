@@ -9,12 +9,83 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '../components/ResponseStateBadge';
+import { SlaIndicator } from '@alga-psa/sla/components';
+import type { SlaTimerStatus } from '@alga-psa/sla/types';
+
+/**
+ * Calculate SLA status from ticket data
+ */
+function calculateSlaStatus(ticket: ITicketListItem): {
+  status: SlaTimerStatus;
+  remainingMinutes: number | undefined;
+  isPaused: boolean;
+} | null {
+  // No SLA if no policy assigned
+  if (!ticket.sla_policy_id) {
+    return null;
+  }
+
+  const now = new Date();
+  const isPaused = ticket.sla_paused_at !== null && ticket.sla_paused_at !== undefined;
+
+  // Check response SLA first (if not yet responded)
+  if (!ticket.sla_response_at && ticket.sla_response_due_at) {
+    const responseDue = new Date(ticket.sla_response_due_at);
+    const remainingMs = responseDue.getTime() - now.getTime();
+    const remainingMinutes = Math.round(remainingMs / 60000);
+
+    if (isPaused) {
+      return { status: 'paused', remainingMinutes, isPaused: true };
+    }
+
+    if (remainingMinutes < 0) {
+      return { status: 'response_breached', remainingMinutes, isPaused: false };
+    }
+
+    // At risk if less than 20% time remaining (rough estimate)
+    const totalMs = responseDue.getTime() - new Date(ticket.sla_started_at || ticket.entered_at || '').getTime();
+    const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+
+    if (elapsedPercent >= 80) {
+      return { status: 'at_risk', remainingMinutes, isPaused: false };
+    }
+
+    return { status: 'on_track', remainingMinutes, isPaused: false };
+  }
+
+  // Check resolution SLA (if not yet resolved)
+  if (!ticket.sla_resolution_at && ticket.sla_resolution_due_at) {
+    const resolutionDue = new Date(ticket.sla_resolution_due_at);
+    const remainingMs = resolutionDue.getTime() - now.getTime();
+    const remainingMinutes = Math.round(remainingMs / 60000);
+
+    if (isPaused) {
+      return { status: 'paused', remainingMinutes, isPaused: true };
+    }
+
+    if (remainingMinutes < 0) {
+      return { status: 'resolution_breached', remainingMinutes, isPaused: false };
+    }
+
+    const totalMs = resolutionDue.getTime() - new Date(ticket.sla_started_at || ticket.entered_at || '').getTime();
+    const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+
+    if (elapsedPercent >= 80) {
+      return { status: 'at_risk', remainingMinutes, isPaused: false };
+    }
+
+    return { status: 'on_track', remainingMinutes, isPaused: false };
+  }
+
+  return null;
+}
 
 type TicketListColumnKey =
   | 'ticket_number'
   | 'title'
   | 'status'
   | 'priority'
+  | 'sla'
   | 'board'
   | 'category'
   | 'client'
@@ -76,6 +147,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     title: true,
     status: true,
     priority: true,
+    sla: true,
     board: true,
     category: true,
     client: true,
@@ -247,6 +319,34 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               />
               <span>{value || 'No Priority'}</span>
             </div>
+          );
+        },
+      }
+    });
+  }
+
+  // SLA Status
+  if (columnVisibility.sla) {
+    columns.push({
+      key: 'sla',
+      col: {
+        title: 'SLA',
+        dataIndex: 'sla_policy_id',
+        width: '8%',
+        sortable: false,
+        render: (_value: string | null, record: ITicketListItem) => {
+          const slaStatus = calculateSlaStatus(record);
+
+          if (!slaStatus) {
+            return <span className="text-gray-400 text-xs">-</span>;
+          }
+
+          return (
+            <SlaIndicator
+              status={slaStatus.status}
+              remainingMinutes={slaStatus.remainingMinutes}
+              isPaused={slaStatus.isPaused}
+            />
           );
         },
       }

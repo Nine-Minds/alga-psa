@@ -380,19 +380,96 @@ async function sendEscalationInAppNotification(
  * Send email notification for escalation.
  */
 async function sendEscalationEmailNotification(
-  _trx: Knex.Transaction,
-  _tenant: string,
-  _userId: string,
-  _email: string,
-  _ticketId: string,
-  _ticketNumber: string,
-  _ticketTitle: string,
-  _level: number
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  email: string,
+  ticketId: string,
+  ticketNumber: string,
+  ticketTitle: string,
+  level: number
 ): Promise<boolean> {
   try {
-    // TODO: Integrate with email notification service
-    // For now, just log that we would send an email
-    console.log(`[Escalation] Would send email notification to ${_email} for ticket #${_ticketNumber} escalation to level ${_level}`);
+    // Import the email notification service
+    const { getEmailNotificationService } = await import(
+      '@alga-psa/notifications/notifications/email'
+    );
+
+    const emailService = getEmailNotificationService();
+
+    // Get the SLA Escalation notification subtype ID
+    const subtype = await trx('notification_subtypes')
+      .where({ name: 'SLA Escalation' })
+      .first();
+
+    if (!subtype) {
+      console.warn('SLA Escalation notification subtype not found, falling back to SLA Warning');
+      // Try to fall back to SLA Warning subtype
+      const fallbackSubtype = await trx('notification_subtypes')
+        .where({ name: 'SLA Warning' })
+        .first();
+
+      if (!fallbackSubtype) {
+        console.error('No suitable notification subtype found for escalation email');
+        return false;
+      }
+    }
+
+    // Get additional ticket context for the email template
+    const ticketDetails = await trx('tickets as t')
+      .leftJoin('companies as c', function() {
+        this.on('t.company_id', 'c.company_id')
+            .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('priorities as p', function() {
+        this.on('t.priority_id', 'p.priority_id')
+            .andOn('t.tenant', 'p.tenant');
+      })
+      .leftJoin('users as u', function() {
+        this.on('t.assigned_to', 'u.user_id')
+            .andOn('t.tenant', 'u.tenant');
+      })
+      .where('t.tenant', tenant)
+      .where('t.ticket_id', ticketId)
+      .select(
+        'c.company_name as client_name',
+        'p.priority_name',
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as assignee_name")
+      )
+      .first();
+
+    // Get recipient name
+    const recipient = await trx('users')
+      .where({ tenant, user_id: userId })
+      .select('first_name', 'last_name')
+      .first();
+
+    const recipientName = recipient
+      ? `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim() || 'Team Member'
+      : 'Team Member';
+
+    // Build template data matching sla-escalation template variables
+    const templateData = {
+      recipientName,
+      ticketNumber,
+      ticketTitle,
+      escalationLevel: level,
+      escalationReason: `SLA threshold reached - escalated to level ${level}`,
+      priority: ticketDetails?.priority_name || 'Not set',
+      clientName: ticketDetails?.client_name || 'Unknown',
+      assigneeName: ticketDetails?.assignee_name || 'Unassigned',
+      ticketUrl: `/msp/tickets/${ticketId}`
+    };
+
+    await emailService.sendNotification({
+      tenant,
+      userId,
+      subtypeId: subtype?.id || 1,
+      emailAddress: email,
+      templateName: 'SLA Escalation',
+      data: templateData as Record<string, string | number | boolean>
+    });
+
     return true;
   } catch (error) {
     console.error('Error sending escalation email notification:', error);
