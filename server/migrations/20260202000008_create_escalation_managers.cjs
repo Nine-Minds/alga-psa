@@ -13,9 +13,9 @@ exports.up = async function(knex) {
   await knex.schema.createTable('escalation_managers', (table) => {
     table.uuid('config_id').notNullable();
     table.uuid('tenant').notNullable();
-    table.uuid('board_id').references('board_id').inTable('boards').onDelete('CASCADE');
+    table.uuid('board_id').notNullable();
     table.integer('escalation_level').notNullable().checkBetween([1, 3]);
-    table.uuid('manager_user_id').references('user_id').inTable('users').onDelete('SET NULL');
+    table.uuid('manager_user_id').nullable();
     table.specificType('notify_via', 'TEXT[]').defaultTo('{in_app,email}');
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());
@@ -30,14 +30,29 @@ exports.up = async function(knex) {
     table.index(['tenant', 'board_id']);
   });
 
-  // Add tenant foreign key constraint
+  // Add foreign key constraints with composite keys for Citus compatibility
   await knex.raw(`
     ALTER TABLE escalation_managers
     ADD CONSTRAINT escalation_managers_tenant_fkey
     FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE
+  `);
+
+  await knex.raw(`
+    ALTER TABLE escalation_managers
+    ADD CONSTRAINT escalation_managers_board_fkey
+    FOREIGN KEY (tenant, board_id) REFERENCES boards(tenant, board_id) ON DELETE CASCADE
+  `);
+
+  await knex.raw(`
+    ALTER TABLE escalation_managers
+    ADD CONSTRAINT escalation_managers_manager_fkey
+    FOREIGN KEY (tenant, manager_user_id) REFERENCES users(tenant, user_id) ON DELETE SET NULL
   `);
 };
 
 exports.down = async function(knex) {
   await knex.schema.dropTableIfExists('escalation_managers');
 };
+
+// Citus requires foreign key constraint creation to run outside a transaction block
+exports.config = { transaction: false };
