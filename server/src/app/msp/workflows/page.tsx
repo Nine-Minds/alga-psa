@@ -60,10 +60,7 @@ export default function WorkflowsPage() {
                 This feature is experimental and is not enabled for your tenant.
               </p>
             </div>
-            <Alert
-              variant="warning"
-              className="text-[rgba(255,174,0,1)] [&>svg]:text-[rgba(255,174,0,1)]"
-            >
+            <Alert variant="warning">
               <AlertTitle>Experimental</AlertTitle>
               <AlertDescription>
                 Enable Workflow Automation in Settings to access workflow automation features.
