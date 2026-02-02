@@ -154,7 +154,7 @@ export const CustomTabs = ({
     : '';
 
   const defaultListClass = orientation === 'vertical'
-    ? 'flex flex-col border-r border-border/60 dark:border-border/40 space-y-1 pr-4'
+    ? 'flex flex-col border-r border-border/60 space-y-1 pr-4'
     : 'flex items-center border-b border-gray-200 mb-4';
 
   const defaultTriggerClass = orientation === 'vertical'

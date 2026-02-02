@@ -241,7 +241,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
 
   return (
     <div className="flex flex-col h-auto max-h-[70vh] min-h-[200px] transition-all duration-300 ease-in-out">
-      <div className="flex-none bg-white dark:bg-[rgb(var(--color-border-50))] pb-4 overflow-visible">
+      <div className="flex-none bg-white pb-4 overflow-visible">
         <div className="flex justify-between items-center mb-4">
           {!showAdHocForm ? (
             <Button
@@ -357,7 +357,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search work items..."
-              className="pl-8 bg-white dark:bg-[rgb(var(--color-border-50))] border-[rgb(var(--color-border-200))]"
+              className="pl-8 bg-white border-[rgb(var(--color-border-200))]"
             />
             <svg
               className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[rgb(var(--color-text-400))]"

@@ -81,6 +81,18 @@ interface NotificationSubtypeRecord {
   is_default_enabled: boolean;
 }
 
+interface TenantNotificationSubtypeSettingRecord {
+  tenant: string;
+  subtype_id: number;
+  is_enabled: boolean;
+}
+
+interface TenantNotificationCategorySettingRecord {
+  tenant: string;
+  category_id: number;
+  is_enabled: boolean;
+}
+
 interface UserNotificationPreferenceRecord {
   id: number;
   tenant: string;
@@ -138,6 +150,8 @@ const notificationSettingsStore = new Map<string, NotificationSettingRecord>();
 const notificationCategoriesStore = new Map<number, NotificationCategoryRecord>();
 const notificationSubtypesStore = new Map<number, NotificationSubtypeRecord>();
 const notificationSubtypesByName = new Map<string, NotificationSubtypeRecord>();
+const tenantNotificationSubtypeSettingsStore = new Map<string, TenantNotificationSubtypeSettingRecord>();
+const tenantNotificationCategorySettingsStore = new Map<string, TenantNotificationCategorySettingRecord>();
 const userNotificationPreferencesStore = new Map<string, UserNotificationPreferenceRecord>();
 const notificationLogs: NotificationLogRecord[] = [];
 
@@ -182,6 +196,8 @@ function resetNotificationState() {
   notificationCategoriesStore.clear();
   notificationSubtypesStore.clear();
   notificationSubtypesByName.clear();
+  tenantNotificationSubtypeSettingsStore.clear();
+  tenantNotificationCategorySettingsStore.clear();
   userNotificationPreferencesStore.clear();
   notificationLogs.length = 0;
   notificationSettingsIdCounter = 1;
@@ -267,6 +283,46 @@ function setSubtypeEnabled(name: string, isEnabled: boolean): NotificationSubtyp
   return updated;
 }
 
+function tenantSubtypeSettingKey(tenant: string, subtypeId: number): string {
+  return `${tenant}:${subtypeId}`;
+}
+
+function tenantCategorySettingKey(tenant: string, categoryId: number): string {
+  return `${tenant}:${categoryId}`;
+}
+
+function setTenantSubtypeEnabled(
+  tenant: string,
+  subtypeName: string,
+  isEnabled: boolean,
+): TenantNotificationSubtypeSettingRecord {
+  const subtype = ensureNotificationSubtype(subtypeName);
+  const key = tenantSubtypeSettingKey(tenant, subtype.id);
+  const record: TenantNotificationSubtypeSettingRecord = {
+    tenant,
+    subtype_id: subtype.id,
+    is_enabled: isEnabled,
+  };
+  tenantNotificationSubtypeSettingsStore.set(key, record);
+  return record;
+}
+
+function setTenantCategoryEnabled(
+  tenant: string,
+  categoryName: string,
+  isEnabled: boolean,
+): TenantNotificationCategorySettingRecord {
+  const category = ensureNotificationCategory(categoryName);
+  const key = tenantCategorySettingKey(tenant, category.id);
+  const record: TenantNotificationCategorySettingRecord = {
+    tenant,
+    category_id: category.id,
+    is_enabled: isEnabled,
+  };
+  tenantNotificationCategorySettingsStore.set(key, record);
+  return record;
+}
+
 function preferenceKey(tenant: string, userId: string, subtypeId: number): string {
   return `${tenant}:${userId}:${subtypeId}`;
 }
@@ -322,6 +378,7 @@ function createQuery(getter: () => any) {
 function tenantTemplateBuilder() {
   const builder = createQuery(() => null);
   builder.where = () => builder;
+  builder.whereNull = () => builder;
   return builder;
 }
 
@@ -332,6 +389,7 @@ function systemTemplateBuilder() {
     templateName = conditions.name;
     return builder;
   };
+  builder.whereNull = () => builder;
   return builder;
 }
 
@@ -734,6 +792,86 @@ function notificationLogsTableBuilder() {
   return builder;
 }
 
+function tenantNotificationSubtypeSettingsTableBuilder() {
+  let rowsSnapshot: TenantNotificationSubtypeSettingRecord[] = Array.from(
+    tenantNotificationSubtypeSettingsStore.values(),
+  );
+  const builder: any = createQuery(() => rowsSnapshot);
+  const applyCondition = (key: string, value: any) => {
+    rowsSnapshot = rowsSnapshot.filter((row) => matchesCondition(row as any, key, value));
+  };
+  builder.where = (column: any, value?: any) => {
+    if (typeof column === 'object') {
+      Object.entries(column).forEach(([key, val]) => applyCondition(key, val));
+    } else if (value !== undefined) {
+      applyCondition(column, value);
+    }
+    return builder;
+  };
+  builder.insert = (data: any) => {
+    const rows = Array.isArray(data) ? data : [data];
+    for (const row of rows) {
+      const key = tenantSubtypeSettingKey(row.tenant, row.subtype_id);
+      tenantNotificationSubtypeSettingsStore.set(key, {
+        tenant: row.tenant,
+        subtype_id: row.subtype_id,
+        is_enabled: row.is_enabled ?? true,
+      });
+    }
+    rowsSnapshot = Array.from(tenantNotificationSubtypeSettingsStore.values());
+    return Promise.resolve();
+  };
+  builder.update = (updates: Partial<TenantNotificationSubtypeSettingRecord>) => {
+    rowsSnapshot = rowsSnapshot.map((row) => {
+      const updated = { ...row, ...updates } as TenantNotificationSubtypeSettingRecord;
+      tenantNotificationSubtypeSettingsStore.set(tenantSubtypeSettingKey(updated.tenant, updated.subtype_id), updated);
+      return updated;
+    });
+    return Promise.resolve(rowsSnapshot);
+  };
+  return builder;
+}
+
+function tenantNotificationCategorySettingsTableBuilder() {
+  let rowsSnapshot: TenantNotificationCategorySettingRecord[] = Array.from(
+    tenantNotificationCategorySettingsStore.values(),
+  );
+  const builder: any = createQuery(() => rowsSnapshot);
+  const applyCondition = (key: string, value: any) => {
+    rowsSnapshot = rowsSnapshot.filter((row) => matchesCondition(row as any, key, value));
+  };
+  builder.where = (column: any, value?: any) => {
+    if (typeof column === 'object') {
+      Object.entries(column).forEach(([key, val]) => applyCondition(key, val));
+    } else if (value !== undefined) {
+      applyCondition(column, value);
+    }
+    return builder;
+  };
+  builder.insert = (data: any) => {
+    const rows = Array.isArray(data) ? data : [data];
+    for (const row of rows) {
+      const key = tenantCategorySettingKey(row.tenant, row.category_id);
+      tenantNotificationCategorySettingsStore.set(key, {
+        tenant: row.tenant,
+        category_id: row.category_id,
+        is_enabled: row.is_enabled ?? true,
+      });
+    }
+    rowsSnapshot = Array.from(tenantNotificationCategorySettingsStore.values());
+    return Promise.resolve();
+  };
+  builder.update = (updates: Partial<TenantNotificationCategorySettingRecord>) => {
+    rowsSnapshot = rowsSnapshot.map((row) => {
+      const updated = { ...row, ...updates } as TenantNotificationCategorySettingRecord;
+      tenantNotificationCategorySettingsStore.set(tenantCategorySettingKey(updated.tenant, updated.category_id), updated);
+      return updated;
+    });
+    return Promise.resolve(rowsSnapshot);
+  };
+  return builder;
+}
+
 function createMockKnex() {
   const knexFn: any = (tableName: string) => {
     switch (tableName) {
@@ -759,6 +897,10 @@ function createMockKnex() {
         return notificationCategoriesTableBuilder();
       case 'notification_subtypes':
         return notificationSubtypesTableBuilder();
+      case 'tenant_notification_subtype_settings':
+        return tenantNotificationSubtypeSettingsTableBuilder();
+      case 'tenant_notification_category_settings':
+        return tenantNotificationCategorySettingsTableBuilder();
       case 'user_notification_preferences':
         return userNotificationPreferencesTableBuilder();
       case 'notification_logs':
@@ -782,10 +924,30 @@ vi.mock('../../lib/db/db', () => ({
   getConnection: async () => mockKnex,
 }));
 
-vi.mock('../../lib/services/TenantEmailService', () => ({
+vi.mock('@alga-psa/email', () => ({
   __esModule: true,
   TenantEmailService: {
     getInstance: () => ({ sendEmail: sendEmailMock }),
+    getTenantEmailSettings: async () => null,
+  },
+}));
+
+vi.mock('@alga-psa/event-bus', () => ({
+  __esModule: true,
+  ServerEventPublisher: class {
+    async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string }) {
+      await publishMock(
+        {
+          eventType: 'TICKET_CREATED',
+          payload: {
+            tenantId: data.tenantId,
+            ticketId: data.ticketId,
+            userId: data.userId,
+          },
+        },
+        { channel: EMAIL_EVENT_CHANNEL },
+      );
+    }
   },
 }));
 
@@ -1058,6 +1220,7 @@ describe('ticket email subscriber reply markers', () => {
     const tenantId = randomUUID();
     const ticketId = randomUUID();
     const commentId = randomUUID();
+    const authorId = randomUUID();
 
     setTicket({
       ticket_id: ticketId,
@@ -1067,6 +1230,14 @@ describe('ticket email subscriber reply markers', () => {
       email_metadata: { threadId: 'thread-3' },
     });
 
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -1074,7 +1245,7 @@ describe('ticket email subscriber reply markers', () => {
       payload: {
         tenantId,
         ticketId,
-        userId: randomUUID(),
+        userId: authorId,
         comment: {
           id: commentId,
           content: 'Follow up',
@@ -1284,6 +1455,64 @@ describe('ticket email subscriber deduplication', () => {
     const sharedCount = recipients.filter((email) => email === sharedEmail).length;
     expect(sharedCount).toBe(1);
   });
+
+  it('sends one ticket comment email when additional resource shares email with assignee', async () => {
+    seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const authorId = randomUUID();
+    const assignedUserId = randomUUID();
+    const additionalUserId = randomUUID();
+    const sharedEmail = 'shared-comment@example.com';
+    const contactEmail = 'contact@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0305',
+      title: 'Comment Dedup Ticket',
+      contact_email: contactEmail,
+      client_email: null,
+      assigned_to_email: sharedEmail,
+      assigned_to: assignedUserId,
+      email_metadata: { threadId: 'thread-comment-dedup' },
+    });
+
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
+    setResources([
+      { email: sharedEmail, user_id: additionalUserId },
+    ] as any);
+
+    await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: authorId,
+        comment: {
+          id: commentId,
+          content: 'Follow up',
+          author: 'agent@example.com',
+          isInternal: false,
+        },
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const recipients = sendEmailMock.mock.calls.map((call) => call[0].to);
+    expect(recipients.filter((email) => email === contactEmail).length).toBe(1);
+    expect(recipients.filter((email) => email === sharedEmail).length).toBe(1);
+  });
 });
 
 describe('ticket email subscriber notification gating (known gap)', () => {
@@ -1333,7 +1562,7 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     });
 
     setNotificationSettings(tenantId, { is_enabled: true });
-    setSubtypeEnabled('Ticket Created', false);
+    setTenantSubtypeEnabled(tenantId, 'Ticket Created', false);
 
     setTicket({
       ticket_id: ticketId,
@@ -1463,7 +1692,7 @@ describe('ticket email subscriber link routing', () => {
     const externalProcessed = await processedCall(0);
     const internalProcessed = await processedCall(1);
 
-    expect(externalProcessed.html).toContain('https://portal.acme.test/client-portal/tickets?ticket=T-PORTAL');
+    expect(externalProcessed.html).toContain(`https://portal.acme.test/client-portal/tickets/${ticketId}`);
     expect(externalProcessed.html).not.toContain('/msp/tickets/');
     expect(internalProcessed.html).toContain(`https://msp.example.com/msp/tickets/${ticketId}`);
     expect(internalProcessed.html).not.toContain('portal.acme.test/client-portal/tickets');
@@ -1507,7 +1736,8 @@ describe('ticket email subscriber link routing', () => {
     const externalProcessed = await processedCall(0);
     const internalProcessed = await processedCall(1);
 
-    expect(externalProcessed.html).toContain('https://msp.example.com/client-portal/tickets?ticket=T-FALLBACK');
+    expect(externalProcessed.html).toContain(`https://msp.example.com/client-portal/tickets/${ticketId}`);
+    expect(externalProcessed.html).toContain('tenant&#x3D;');
     expect(externalProcessed.html).not.toContain('/msp/tickets/');
     expect(internalProcessed.html).toContain(`https://msp.example.com/msp/tickets/${ticketId}`);
   });
@@ -1529,6 +1759,7 @@ describe('ticket email subscriber rich text formatting', () => {
     const tenantId = randomUUID();
     const ticketId = randomUUID();
     const commentId = randomUUID();
+    const authorId = randomUUID();
 
     const richTextContent = JSON.stringify([
       {
@@ -1569,6 +1800,14 @@ describe('ticket email subscriber rich text formatting', () => {
       email_metadata: { threadId: 'thread-rich-text' },
     });
 
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
     await handlerFor('TICKET_COMMENT_ADDED')({
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
@@ -1576,7 +1815,7 @@ describe('ticket email subscriber rich text formatting', () => {
       payload: {
         tenantId,
         ticketId,
-        userId: randomUUID(),
+        userId: authorId,
         comment: {
           id: commentId,
           content: richTextContent,

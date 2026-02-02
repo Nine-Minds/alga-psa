@@ -4,6 +4,8 @@ import { Temporal } from '@js-temporal/polyfill';
 
 // Basic validation utilities
 
+const basicEmailSchema = z.string().email();
+
 /**
  * Simple email format validation - null-safe wrapper
  * Use this for quick email checks before sending notifications
@@ -11,8 +13,7 @@ import { Temporal } from '@js-temporal/polyfill';
 export function isValidEmail(email: string | undefined | null): boolean {
   if (!email || typeof email !== 'string') return false;
   const trimmed = email.trim();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(trimmed);
+  return basicEmailSchema.safeParse(trimmed).success;
 }
 
 export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {

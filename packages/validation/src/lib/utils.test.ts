@@ -17,7 +17,10 @@ describe('@alga-psa/validation utils', () => {
     expect(isValidEmail('')).toBe(false);
     expect(isValidEmail('not-an-email')).toBe(false);
     expect(isValidEmail('a@b')).toBe(false);
+    expect(isValidEmail('a@b.c')).toBe(false);
+    expect(isValidEmail('a@b.123')).toBe(false);
     expect(isValidEmail('a@b.com')).toBe(true);
+    expect(isValidEmail('a@b.co')).toBe(true);
     expect(isValidEmail('  a@b.com  ')).toBe(true);
   });
 
@@ -48,4 +51,3 @@ describe('@alga-psa/validation utils', () => {
     expect(paginationSchema.parse({ page: 2, pageSize: 10 })).toEqual({ page: 2, pageSize: 10 });
   });
 });
-

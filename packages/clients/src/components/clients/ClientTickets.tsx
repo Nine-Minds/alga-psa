@@ -99,6 +99,11 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags, selectedAssignees, includeUnassigned]);
+
   // Pre-fetch tag permissions
   useTagPermissions(['ticket']);
 
