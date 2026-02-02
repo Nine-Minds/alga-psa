@@ -176,7 +176,12 @@ export default function ProjectDetail({
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
   const [animatingPhases, setAnimatingPhases] = useState<Set<string>>(new Set());
   const [taskDraggingOverPhaseId, setTaskDraggingOverPhaseId] = useState<string | null>(null); // Added state
-  
+
+  // All project tasks for phase count filtering (like list view)
+  const [allProjectTasks, setAllProjectTasks] = useState<IProjectTask[]>([]);
+  const [allProjectTaskResources, setAllProjectTaskResources] = useState<Record<string, ITaskResource[]>>({});
+  const [allProjectTaskTags, setAllProjectTaskTags] = useState<Record<string, ITag[]>>({});
+
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
@@ -369,6 +374,106 @@ export default function ProjectDetail({
     fetchTaskCounts();
   }, [project.project_id]);
 
+  // Load all project tasks for phase count filtering (like list view does)
+  useEffect(() => {
+    const fetchAllProjectTasks = async () => {
+      try {
+        const data = await getAllProjectTasksForListView(project.project_id);
+        setAllProjectTasks(data.tasks);
+        setAllProjectTaskResources(data.taskResources);
+        setAllProjectTaskTags(data.taskTags);
+      } catch (error) {
+        console.error('Error fetching all project tasks:', error);
+      }
+    };
+    fetchAllProjectTasks();
+  }, [project.project_id]);
+
+  // Filter all project tasks (same logic as list view) for phase count calculation
+  const allFilteredTasks = useMemo(() => {
+    let filtered = allProjectTasks;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+      filtered = filtered.filter(task => {
+        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const taskDescription = searchCaseSensitive
+          ? (task.description ?? '')
+          : (task.description?.toLowerCase() ?? '');
+
+        if (searchWholeWord) {
+          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+        } else {
+          return taskName.includes(query) || taskDescription.includes(query);
+        }
+      });
+    }
+
+    // Apply priority filter
+    if (selectedPriorityFilter !== 'all') {
+      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
+    }
+
+    // Apply tag filter
+    if (selectedTaskTags.length > 0) {
+      filtered = filtered.filter(task => {
+        const tags = allProjectTaskTags[task.task_id] || [];
+        const tagTexts = tags.map(tag => tag.tag_text);
+        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
+      });
+    }
+
+    // Apply agent filter
+    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+      filtered = filtered.filter(task => {
+        const isUnassigned = !task.assigned_to;
+
+        if (includeUnassignedAgents && isUnassigned) {
+          return true;
+        }
+
+        if (selectedAgentFilter.length > 0) {
+          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
+            return true;
+          }
+
+          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
+            const resources = allProjectTaskResources[task.task_id] || [];
+            const hasMatchingAdditionalAgent = resources.some(
+              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
+            );
+            if (hasMatchingAdditionalAgent) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      });
+    }
+
+    return filtered;
+  }, [allProjectTasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+
+  // Calculate filtered phase task counts (like list view's phaseGroups)
+  // Falls back to server-fetched counts while allProjectTasks is loading
+  const filteredPhaseTaskCounts = useMemo(() => {
+    // If allProjectTasks hasn't loaded yet, use server-fetched counts
+    if (allProjectTasks.length === 0 && Object.keys(phaseTaskCounts).length > 0) {
+      return phaseTaskCounts;
+    }
+    const counts: Record<string, number> = {};
+    allFilteredTasks.forEach(task => {
+      if (task.phase_id) {
+        counts[task.phase_id] = (counts[task.phase_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [allFilteredTasks, allProjectTasks, phaseTaskCounts]);
+
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -436,12 +541,10 @@ export default function ProjectDetail({
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
         await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
-        // Update task counts: decrement source, increment target
-        setPhaseTaskCounts(prev => ({
-          ...prev,
-          [task.phase_id]: Math.max((prev[task.phase_id] || 0) - 1, 0),
-          [newPhaseId]: (prev[newPhaseId] || 0) + 1
-        }));
+        // Update allProjectTasks for filtered counts
+        setAllProjectTasks(prev => prev.map(t =>
+          t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
+        ));
         toast.success('Task moved to new phase');
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
@@ -1130,12 +1233,10 @@ export default function ProjectDetail({
           task.task_id === updatedTask.task_id ? taskWithChecklist : task
         )
       );
-      // Update task counts: decrement source, increment target
-      setPhaseTaskCounts(prev => ({
-        ...prev,
-        [moveConfirmation.sourcePhase.phase_id]: Math.max((prev[moveConfirmation.sourcePhase.phase_id] || 0) - 1, 0),
-        [moveConfirmation.targetPhase.phase_id]: (prev[moveConfirmation.targetPhase.phase_id] || 0) + 1
-      }));
+      // Update allProjectTasks for filtered counts
+      setAllProjectTasks(prev => prev.map(t =>
+        t.task_id === updatedTask.task_id ? { ...t, phase_id: moveConfirmation.targetPhase.phase_id } : t
+      ));
 
       toast.success(`Task moved to ${moveConfirmation.targetPhase.phase_name}`);
     } catch (error) {
@@ -1184,11 +1285,8 @@ export default function ProjectDetail({
           } : null);
         }
 
-        // Update task count for the phase
-        setPhaseTaskCounts(prev => ({
-          ...prev,
-          [newTask.phase_id]: (prev[newTask.phase_id] || 0) + 1
-        }));
+        // Add to allProjectTasks for filtered counts
+        setAllProjectTasks(prev => [...prev, taskWithChecklist]);
         setShowQuickAdd(false);
         toast.success('New task added successfully!');
       } else {
@@ -1565,12 +1663,10 @@ export default function ProjectDetail({
           setProjectTasks(prevTasks =>
             prevTasks.filter(t => t.task_id !== movedTask.task_id)
           );
-          // Update task counts: decrement source, increment target
-          setPhaseTaskCounts(prev => ({
-            ...prev,
-            [taskToMove.phase_id]: Math.max((prev[taskToMove.phase_id] || 0) - 1, 0),
-            [targetPhaseId]: (prev[targetPhaseId] || 0) + 1
-          }));
+          // Update allProjectTasks for filtered counts
+          setAllProjectTasks(prev => prev.map(t =>
+            t.task_id === movedTask.task_id ? { ...t, phase_id: targetPhaseId, project_status_mapping_id: targetStatusId || t.project_status_mapping_id } : t
+          ));
           toast.success(`Task "${taskToMove.task_name}" moved to different phase successfully! Switch to the target phase to see it.`);
         } else {
           // Task moved within the same phase (to different status) - update in place
@@ -2001,7 +2097,7 @@ export default function ProjectDetail({
                   editingPhaseDescription={editingPhaseDescription}
                   editingStartDate={editingStartDate}
                   editingEndDate={editingEndDate}
-                  phaseTaskCounts={phaseTaskCounts}
+                  phaseTaskCounts={filteredPhaseTaskCounts}
                   phaseDropTarget={phaseDropTarget}
                   taskDraggingOverPhaseId={taskDraggingOverPhaseId}
                   animatingPhases={animatingPhases}
@@ -2143,11 +2239,8 @@ export default function ProjectDetail({
               const checklistItems = await getTaskChecklistItems(newTask.task_id);
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
-              // Update task count for the target phase
-              setPhaseTaskCounts(prev => ({
-                ...prev,
-                [newTask.phase_id]: (prev[newTask.phase_id] || 0) + 1
-              }));
+              // Add to allProjectTasks for filtered counts
+              setAllProjectTasks(prev => [...prev, taskWithChecklist]);
 
               toast.success(`Task "${newTask.task_name}" duplicated successfully!`);
               setIsDuplicateDialogOpen(false);
@@ -2186,11 +2279,8 @@ export default function ProjectDetail({
             try {
               await deleteTaskAction(taskToDelete.task_id);
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
-              // Update task count for the phase
-              setPhaseTaskCounts(prev => ({
-                ...prev,
-                [taskToDelete.phase_id]: Math.max((prev[taskToDelete.phase_id] || 0) - 1, 0)
-              }));
+              // Remove from allProjectTasks for filtered counts
+              setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               toast.success(`Task "${taskToDelete.task_name}" deleted successfully!`);
               setTaskToDelete(null);
             } catch (error) {
