@@ -2026,6 +2026,25 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       ? { email: ticketingFromAddress.email, name: senderName }
       : undefined;
 
+    const sentEmails = new Set<string>();
+    const normalizeEmail = (email: string) => email.trim().toLowerCase();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null,
+    ) => {
+      const email = params.to?.trim();
+      if (!isValidEmail(email)) {
+        return;
+      }
+      const key = normalizeEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+    };
+
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
     // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
     const isPublicComment = !payload.comment?.isInternal;
@@ -2073,7 +2092,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         emailParams.recipientClientId = ticket.client_id;
       }
 
-      await sendNotificationIfEnabled(emailParams, 'Ticket Comment Added');
+      await sendIfUnique(emailParams, 'Ticket Comment Added');
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
@@ -2107,16 +2126,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
       if (bundleChildren.length > 0) {
-        const sentTo = new Set<string>();
-        if (primaryEmail) sentTo.add(primaryEmail.toLowerCase());
-
         for (const child of bundleChildren) {
           const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
           if (!childPrimaryEmail) continue;
-
-          const normalizedEmail = childPrimaryEmail.toLowerCase();
-          if (sentTo.has(normalizedEmail)) continue;
-          sentTo.add(normalizedEmail);
 
           const childMeta = child.email_metadata || {};
           const childMessageId = childMeta.messageId;
@@ -2129,7 +2141,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
           const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
 
-          await sendNotificationIfEnabled({
+          await sendIfUnique({
             tenantId,
             to: childPrimaryEmail,
             subject: `New Comment on Ticket: ${ticket.title}`,
@@ -2163,7 +2175,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // The person who made the comment should not receive a notification about their own comment
     const isAssignedUserTheCommentAuthor = ticket.assigned_to === payload.userId;
     if (assignedEmail && assignedEmail !== primaryEmail && !isAssignedUserTheCommentAuthor) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
         to: assignedEmail,
         subject: `New Comment on Ticket: ${ticket.title}`,
@@ -2182,20 +2194,20 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     for (const resource of additionalResources) {
       // Skip if this resource is the comment author - they shouldn't be notified about their own comment
       const isResourceTheCommentAuthor = resource.user_id === payload.userId;
-      if (isValidEmail(resource.email) && !isResourceTheCommentAuthor) {
-        await sendNotificationIfEnabled({
+      if (!isResourceTheCommentAuthor) {
+        await sendIfUnique({
           tenantId,
           to: resource.email,
           subject: `New Comment on Ticket: ${ticket.title}`,
-        template: 'ticket-comment-added',
-        context: buildContext(internalUrl),
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          commentId: payload.comment?.id,
-          threadId: ticket.email_metadata?.threadId
-        },
-        from: fromAddress as any
-      }, 'Ticket Comment Added', resource.user_id);
+          template: 'ticket-comment-added',
+          context: buildContext(internalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: fromAddress as any
+        }, 'Ticket Comment Added', resource.user_id);
       }
     }
 
