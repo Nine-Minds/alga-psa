@@ -29,6 +29,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { SlaStatusBadge } from '@alga-psa/sla/components';
+import type { SlaTimerStatus } from '@alga-psa/sla/types';
 
 
 interface TicketInfoProps {
@@ -635,6 +637,72 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-primary-600",
   };
 
+  // Calculate SLA status from ticket data
+  const slaStatus = useMemo((): {
+    status: SlaTimerStatus;
+    responseRemainingMinutes?: number;
+    resolutionRemainingMinutes?: number;
+    isPaused: boolean;
+  } | null => {
+    if (!ticket.sla_policy_id) {
+      return null;
+    }
+
+    const now = new Date();
+    const isPaused = ticket.sla_paused_at !== null && ticket.sla_paused_at !== undefined;
+
+    let responseRemainingMinutes: number | undefined;
+    let resolutionRemainingMinutes: number | undefined;
+    let status: SlaTimerStatus = 'on_track';
+
+    // Calculate response remaining time
+    if (!ticket.sla_response_at && ticket.sla_response_due_at) {
+      const responseDue = new Date(ticket.sla_response_due_at);
+      responseRemainingMinutes = Math.round((responseDue.getTime() - now.getTime()) / 60000);
+
+      if (responseRemainingMinutes < 0) {
+        status = 'response_breached';
+      } else {
+        const totalMs = responseDue.getTime() - new Date(ticket.sla_started_at || ticket.entered_at || '').getTime();
+        const remainingMs = responseDue.getTime() - now.getTime();
+        const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+        if (elapsedPercent >= 80) {
+          status = 'at_risk';
+        }
+      }
+    }
+
+    // Calculate resolution remaining time
+    if (!ticket.sla_resolution_at && ticket.sla_resolution_due_at) {
+      const resolutionDue = new Date(ticket.sla_resolution_due_at);
+      resolutionRemainingMinutes = Math.round((resolutionDue.getTime() - now.getTime()) / 60000);
+
+      if (resolutionRemainingMinutes < 0 && status !== 'response_breached') {
+        status = 'resolution_breached';
+      } else if (status === 'on_track') {
+        const totalMs = resolutionDue.getTime() - new Date(ticket.sla_started_at || ticket.entered_at || '').getTime();
+        const remainingMs = resolutionDue.getTime() - now.getTime();
+        const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+        if (elapsedPercent >= 80) {
+          status = 'at_risk';
+        }
+      }
+    }
+
+    if (isPaused) {
+      status = 'paused';
+    }
+
+    return {
+      status,
+      responseRemainingMinutes,
+      resolutionRemainingMinutes,
+      isPaused
+    };
+  }, [ticket.sla_policy_id, ticket.sla_response_at, ticket.sla_response_due_at,
+      ticket.sla_resolution_at, ticket.sla_resolution_due_at, ticket.sla_paused_at,
+      ticket.sla_started_at, ticket.entered_at]);
+
   // If we don't have users data but have agentOptions, convert agentOptions to users format
   const usersList: IUserWithRoles[] = users.length > 0
     ? users
@@ -1035,7 +1103,34 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               })()}
             </div>
 
-            {/* Row 5: Tags */}
+            {/* Row 5: SLA Status */}
+            {slaStatus && (
+              <div className="col-span-2">
+                <h5 className="font-bold mb-2">SLA Status</h5>
+                <div className="flex items-center gap-3">
+                  <SlaStatusBadge
+                    status={slaStatus.status}
+                    responseRemainingMinutes={slaStatus.responseRemainingMinutes}
+                    resolutionRemainingMinutes={slaStatus.resolutionRemainingMinutes}
+                    isPaused={slaStatus.isPaused}
+                    size="md"
+                    showIcon={true}
+                  />
+                  {ticket.sla_response_met === false && (
+                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                      Response SLA breached
+                    </span>
+                  )}
+                  {ticket.sla_resolution_met === false && (
+                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                      Resolution SLA breached
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Row 6: Tags */}
             <div className="col-span-2">
               <h5 className="font-bold mb-2">Tags</h5>
               {onTagsChange && ticket.ticket_id ? (
