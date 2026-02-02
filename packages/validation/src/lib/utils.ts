@@ -14,11 +14,12 @@ export type ISO8601String = string;
  * Simple email format validation - null-safe wrapper
  * Use this for quick email checks before sending notifications
  */
+const basicEmailSchema = z.string().email();
+
 export function isValidEmail(email: string | undefined | null): boolean {
   if (!email || typeof email !== 'string') return false;
   const trimmed = email.trim();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(trimmed);
+  return basicEmailSchema.safeParse(trimmed).success;
 }
 
 /**
