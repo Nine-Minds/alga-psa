@@ -2,7 +2,7 @@
 
 import type { IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { unparseCSV } from '@alga-psa/core';
+import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
 import { withAuth } from '@alga-psa/auth';
@@ -1052,13 +1052,15 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         console.log(`Deleted ${deletedBillingSettings} client billing settings records`);
       }
 
-      // Delete payment customer records (Stripe/payment provider associations)
-      const deletedPaymentCustomers = await trx('client_payment_customers')
-        .where({ client_id: clientId, tenant })
-        .delete();
+      // Delete payment customer records (Stripe/payment provider associations) - EE only
+      if (isEnterprise) {
+        const deletedPaymentCustomers = await trx('client_payment_customers')
+          .where({ client_id: clientId, tenant })
+          .delete();
 
-      if (deletedPaymentCustomers > 0) {
-        console.log(`Deleted ${deletedPaymentCustomers} client payment customer records`);
+        if (deletedPaymentCustomers > 0) {
+          console.log(`Deleted ${deletedPaymentCustomers} client payment customer records`);
+        }
       }
 
       // Clean up client locations (addresses don't block deletion per PSA best practices)
