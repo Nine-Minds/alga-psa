@@ -1190,32 +1190,36 @@ function PriorityPickerModal({
         ) : null}
 
         <View style={{ marginTop: spacing.lg }}>
-          {priorities.map((p) => (
-            <Pressable
-              key={p.priority_id}
-              accessibilityRole="button"
-              accessibilityLabel={`Set priority ${p.priority_name}`}
-              disabled={busy}
-              onPress={() => {
-                onSelect(p.priority_id);
-              }}
-              style={({ pressed }) => ({
-                paddingVertical: spacing.sm,
-                paddingHorizontal: spacing.md,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: p.priority_id === currentPriorityId ? colors.primary : colors.border,
-                backgroundColor: colors.card,
-                opacity: busy ? 0.65 : pressed ? 0.95 : 1,
-                marginBottom: spacing.sm,
-              })}
-            >
-              <Text style={{ ...typography.body, color: colors.text }}>
-                {p.priority_name}
-                {p.priority_id === currentPriorityId ? " ✓" : ""}
-              </Text>
-            </Pressable>
-          ))}
+          {priorities.map((p) => {
+            const isCurrent = p.priority_id === currentPriorityId;
+            const disabled = busy || isCurrent;
+            return (
+              <Pressable
+                key={p.priority_id}
+                accessibilityRole="button"
+                accessibilityLabel={`Set priority ${p.priority_name}`}
+                disabled={disabled}
+                onPress={() => {
+                  onSelect(p.priority_id);
+                }}
+                style={({ pressed }) => ({
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: p.priority_id === currentPriorityId ? colors.primary : colors.border,
+                  backgroundColor: colors.card,
+                  opacity: disabled ? 0.65 : pressed ? 0.95 : 1,
+                  marginBottom: spacing.sm,
+                })}
+              >
+                <Text style={{ ...typography.body, color: colors.text }}>
+                  {p.priority_name}
+                  {p.priority_id === currentPriorityId ? " ✓" : ""}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <View style={{ flex: 1 }} />

@@ -1466,7 +1466,7 @@
   {
     "id": "F184",
     "description": "[Mobile:Tickets:Updates] Implement updates - priority picker disables invalid choices (if server provides)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
