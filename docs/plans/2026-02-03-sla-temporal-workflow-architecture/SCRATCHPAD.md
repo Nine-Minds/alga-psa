@@ -42,6 +42,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) TemporalSlaBackend getSlaStatus queries workflow state via getState
 - (2026-02-03) slaService.startSlaForTicket now triggers backend.startSlaTracking after recording SLA start
 - (2026-02-03) slaPauseService pause/resume now signal SLA backend unless skipBackend is set
+- (2026-02-03) slaPauseService.resumeSla now signals backend resume by default
 
 ## Discoveries / Constraints
 
