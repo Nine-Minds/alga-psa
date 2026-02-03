@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "[Mobile:Foundation] Add pull-to-refresh and background refresh on app resume",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
