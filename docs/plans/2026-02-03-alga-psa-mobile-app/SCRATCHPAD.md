@@ -294,3 +294,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T066 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).
 - 2026-02-03: T067 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).
 - 2026-02-03: T068 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).
+- 2026-02-03: T069 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).

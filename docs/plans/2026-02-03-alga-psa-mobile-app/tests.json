@@ -546,7 +546,7 @@
   {
     "id": "T069",
     "description": "E2E: Preserve draft on failure/navigation and allow retry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
