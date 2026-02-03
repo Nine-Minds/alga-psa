@@ -44,7 +44,7 @@ interface WorkerConfig {
  */
 function getWorkerConfig(): WorkerConfig {
   // Include alga-jobs queue for generic job execution
-  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs"];
+  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs", "sla-workflows"];
   const queuesEnv =
     process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
@@ -60,9 +60,13 @@ function getWorkerConfig(): WorkerConfig {
     : defaultQueues;
 
   // Always ensure the shared job queue is present, even when env overrides are used.
-  const taskQueues = parsedQueues.includes("alga-jobs")
+  let taskQueues = parsedQueues.includes("alga-jobs")
     ? parsedQueues
     : [...parsedQueues, "alga-jobs"];
+
+  if (!taskQueues.includes("sla-workflows")) {
+    taskQueues = [...taskQueues, "sla-workflows"];
+  }
 
   return {
     temporalAddress:

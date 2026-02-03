@@ -254,7 +254,7 @@
   {
     "id": "F043",
     "description": "Add sla-workflows task queue to Temporal worker configuration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
