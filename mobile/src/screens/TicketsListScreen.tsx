@@ -17,6 +17,7 @@ import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
+import { formatDateShort } from "../ui/formatters/dateTime";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -616,7 +617,7 @@ const TicketRow = memo(function TicketRow({
   const handlePress = useCallback(() => onPressTicket(ticketId), [onPressTicket, ticketId]);
 
   const updated = item.updated_at ?? item.entered_at;
-  const updatedLabel = useMemo(() => (updated ? new Date(updated).toLocaleDateString() : ""), [updated]);
+  const updatedLabel = useMemo(() => (updated ? formatDateShort(updated) : ""), [updated]);
   const status = item.status_name ?? "Unknown";
   const priority = item.priority_name ?? null;
 

@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "[Mobile:Quality] Handle timezone/locale formatting consistently",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

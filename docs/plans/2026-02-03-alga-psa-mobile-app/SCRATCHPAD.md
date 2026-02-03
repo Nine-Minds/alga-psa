@@ -94,3 +94,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F088 added a persisted “Hide sensitive notifications” toggle (future-facing) stored in secure storage and exposed in Settings alongside biometric lock.
 - 2026-02-03: F089 optimized `TicketsListScreen` list rendering (memoized row, stable callbacks, tuned FlatList virtualization props) to reduce re-renders while typing/searching.
 - 2026-02-03: F090 added `?fields=` support for `GET /api/v1/tickets` and a `fields=mobile_list` preset to return a slim ticket list payload; mobile list now requests `fields=mobile_list`.
+- 2026-02-03: F091 centralized locale-aware date/time formatting in `mobile/src/ui/formatters/dateTime.ts` (including safe handling of `YYYY-MM-DD` date-only strings) and used it in ticket list + detail.
