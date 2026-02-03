@@ -1010,7 +1010,7 @@
   {
     "id": "T127",
     "description": "Unit: Implement secure handling of deep link URLs (reject unexpected hosts/paths)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]

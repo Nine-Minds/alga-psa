@@ -352,3 +352,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T124 added a unit test to ensure aborted requests return a `canceled` API error kind (mobile/src/api/client.cancel.test.ts).
 - 2026-02-03: T125 marked request deduplication as covered by unit tests (mobile/src/api/client.dedupe.test.ts).
 - 2026-02-03: T126 marked correlation id header as covered by unit tests (mobile/src/api/client.correlation.test.ts).
+- 2026-02-03: T127 added unit tests covering deep link allowlist filtering (known paths allowed, unexpected paths rejected) (`mobile/src/navigation/linking.security.test.ts`).
