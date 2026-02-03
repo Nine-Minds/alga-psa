@@ -794,7 +794,7 @@
   {
     "id": "T100",
     "description": "Integration: Add API endpoint to exchange OTT for mobile API credential (short-lived) and refresh token/rotation mechanism",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100"
     ]
