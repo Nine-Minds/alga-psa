@@ -1610,7 +1610,7 @@
   {
     "id": "T202",
     "description": "Integration: Implement server mobile auth - ticket status update endpoint validates transitions and returns updated summary",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F202"
     ]

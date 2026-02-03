@@ -427,3 +427,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T199 marked as covered: Ticket list supports assignee filters used by mobile (assigned_to, has_assignment=false).
 - 2026-02-03: T200 marked as covered: Ticket detail returns required fields for mobile header/detail and is permission-checked.
 - 2026-02-03: T201 marked as covered: Ticket comments endpoint supports pagination/ordering used by mobile.
+- 2026-02-03: T202 marked as covered: Ticket status update validates status_id and returns updated ticket summary.
