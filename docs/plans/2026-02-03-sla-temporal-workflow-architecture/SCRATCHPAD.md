@@ -33,6 +33,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) checkAndEscalate activity calls escalationService check + escalate paths
 - (2026-02-03) updateSlaStatus activity updates ticket SLA met fields on breach
 - (2026-02-03) recordSlaAuditLog activity writes entries to sla_audit_log
+- (2026-02-03) Implemented EE TemporalSlaBackend to start SLA ticket workflows via Temporal client
 
 ## Discoveries / Constraints
 
