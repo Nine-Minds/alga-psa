@@ -184,3 +184,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F177 disabled comment sending while offline (draft remains persisted); UI explains offline state and prevents queued/offline submission attempts.
 - 2026-02-03: F178 added lightweight in-app toast notifications and wired them to key ticket mutations (comment/status) for quick success/failure feedback.
 - 2026-02-03: F179 confirmed ticket detail actions display field-level loading indicators (spinners/“Saving…” states) for partial updates like watch and assignment.
+- 2026-02-03: F180 confirmed retry paths for transient failures: comment/status mutations keep state/drafts and allow user-triggered retry without losing work.

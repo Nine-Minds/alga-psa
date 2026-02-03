@@ -1434,7 +1434,7 @@
   {
     "id": "F180",
     "description": "[Mobile:Tickets:Updates] Implement updates - retry mechanism for transient failures",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
