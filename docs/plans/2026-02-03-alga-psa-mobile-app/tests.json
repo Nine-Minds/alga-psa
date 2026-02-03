@@ -458,7 +458,7 @@
   {
     "id": "T058",
     "description": "E2E: Render comments/timeline with pagination",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
