@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Create recordSlaAuditLog activity that inserts entries into sla_audit_log table",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
