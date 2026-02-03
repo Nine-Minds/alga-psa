@@ -874,7 +874,7 @@
   {
     "id": "T110",
     "description": "Integration: Add migrations for new tables/columns used by mobile auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]

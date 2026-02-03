@@ -351,3 +351,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T108 marked as covered: ticket comment create supports is_internal (public vs internal).
 - 2026-02-03: T109 marked as covered: undefined
 - 2026-02-03: T109 marked as covered: mobile endpoints use standard API error shape ({error:{code,message,details}}).
+- 2026-02-03: T110 marked as covered: undefined
+- 2026-02-03: T110 marked as covered: DB migration added for mobile auth tables (20260203210000_add_mobile_auth_tables.cjs).
