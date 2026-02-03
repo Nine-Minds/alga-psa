@@ -130,3 +130,20 @@ export function getTicketComments(
     },
   });
 }
+
+export function addTicketComment(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; comment_text: string; is_internal: boolean },
+): Promise<ApiResult<SuccessResponse<TicketComment>>> {
+  return client.request<SuccessResponse<TicketComment>>({
+    method: "POST",
+    path: `/api/v1/tickets/${params.ticketId}/comments`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+    body: {
+      comment_text: params.comment_text,
+      is_internal: params.is_internal,
+    },
+  });
+}

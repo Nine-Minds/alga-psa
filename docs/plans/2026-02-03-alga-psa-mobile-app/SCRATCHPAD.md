@@ -68,3 +68,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F062 ticket detail now shows friendly 403/404 UX (no-access vs not-found) and preserves cached detail when possible.
 - 2026-02-03: F063 ticket detail reads from and writes to TTL cache (`ticketDetailCache`) for faster back-navigation and repeat opens.
 - 2026-02-03: F064 ticket detail fetch uses server-enforced RBAC (API v1 permission checks) and surfaces 403 as “No access”.
+- 2026-02-03: F065 added add-comment composer (multiline) with send action via `POST /api/v1/tickets/:id/comments` (defaults to internal until visibility selector is added).

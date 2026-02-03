@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "[Mobile:Tickets:Updates] Implement add-comment composer (multiline) with send action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

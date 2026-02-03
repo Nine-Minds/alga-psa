@@ -1,17 +1,18 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { getTicketById, getTicketComments, type TicketComment, type TicketDetail } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, type TicketComment, type TicketDetail } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
 import { Badge } from "../ui/components/Badge";
+import { PrimaryButton } from "../ui/components/PrimaryButton";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -50,6 +51,9 @@ function TicketDetailBody({
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentSendError, setCommentSendError] = useState<string | null>(null);
+  const [commentSending, setCommentSending] = useState(false);
 
   const fetchTicket = useCallback(async () => {
     if (!client || !session) return;
@@ -123,6 +127,33 @@ function TicketDetailBody({
     return <ErrorState title="Ticket not found" description="This ticket is unavailable." />;
   }
 
+  const sendComment = async () => {
+    if (!client || !session) return;
+    const text = commentDraft.trim();
+    if (!text) {
+      setCommentSendError("Comment cannot be empty.");
+      return;
+    }
+    setCommentSending(true);
+    setCommentSendError(null);
+    try {
+      const result = await addTicketComment(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        comment_text: text,
+        is_internal: true,
+      });
+      if (!result.ok) {
+        setCommentSendError("Unable to send comment. Please try again.");
+        return;
+      }
+      setCommentDraft("");
+      await fetchComments();
+    } finally {
+      setCommentSending(false);
+    }
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -190,6 +221,14 @@ function TicketDetailBody({
           error={commentsError}
         />
         <View style={{ height: spacing.sm }} />
+        <CommentComposer
+          draft={commentDraft}
+          onChangeDraft={setCommentDraft}
+          onSend={() => void sendComment()}
+          sending={commentSending}
+          error={commentSendError}
+        />
+        <View style={{ height: spacing.sm }} />
         <KeyValue label="Created" value={formatDateWithRelative(ticket.entered_at)} />
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
@@ -199,6 +238,63 @@ function TicketDetailBody({
         <KeyValue label="Ticket ID" value={ticket.ticket_id} />
       </View>
     </ScrollView>
+  );
+}
+
+function CommentComposer({
+  draft,
+  onChangeDraft,
+  onSend,
+  sending,
+  error,
+}: {
+  draft: string;
+  onChangeDraft: (value: string) => void;
+  onSend: () => void;
+  sending: boolean;
+  error: string | null;
+}) {
+  return (
+    <View
+      style={{
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 10,
+      }}
+    >
+      <Text style={{ ...typography.caption, color: colors.mutedText }}>Add comment</Text>
+      <TextInput
+        value={draft}
+        onChangeText={onChangeDraft}
+        multiline
+        placeholder="Write an update…"
+        accessibilityLabel="Comment text"
+        style={{
+          minHeight: 80,
+          marginTop: spacing.sm,
+          padding: spacing.sm,
+          borderWidth: 1,
+          borderColor: colors.border,
+          borderRadius: 10,
+          backgroundColor: colors.background,
+          color: colors.text,
+          textAlignVertical: "top",
+        }}
+      />
+      {error ? (
+        <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+          {error}
+        </Text>
+      ) : null}
+      <View style={{ marginTop: spacing.sm }}>
+        <PrimaryButton onPress={onSend} disabled={sending} accessibilityLabel="Send comment">
+          {sending ? "Sending…" : "Send"}
+        </PrimaryButton>
+      </View>
+    </View>
   );
 }
 
