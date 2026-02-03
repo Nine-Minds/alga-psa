@@ -16,6 +16,7 @@ import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
 import { getBiometricGateEnabled } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
+import { analytics } from "../analytics/analytics";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
@@ -85,15 +86,21 @@ export function AppRoot() {
       });
 
       if (!result.ok) {
+        analytics.trackEvent("auth.refresh.failed", {
+          errorKind: result.error.kind,
+          status: result.status ?? null,
+        });
         if (
           result.error.kind === "http" &&
           (result.status === 401 || result.status === 403)
         ) {
+          analytics.trackEvent("auth.refresh.revoked", { status: result.status });
           setSession(null);
         }
         return false;
       }
 
+      analytics.trackEvent("auth.refresh.succeeded", { expiresInSec: result.data.expiresInSec });
       setSession({
         ...session,
         accessToken: result.data.accessToken,
@@ -104,6 +111,7 @@ export function AppRoot() {
       return true;
     } catch (e) {
       logger.warn("Refresh attempt failed", { error: e });
+      analytics.trackEvent("auth.refresh.failed", { errorKind: "exception" });
       return false;
     } finally {
       refreshInFlight.current = false;
@@ -144,6 +152,7 @@ export function AppRoot() {
 
   const logout = useCallback(async () => {
     const currentSession = session;
+    analytics.trackEvent("auth.logout", { hadSession: Boolean(currentSession) });
     try {
       if (baseUrl && currentSession) {
         const client = createApiClient({

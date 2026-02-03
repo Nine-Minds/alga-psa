@@ -738,7 +738,7 @@
   {
     "id": "F093",
     "description": "[Mobile:Quality] Add observability events for auth success/failure and API error rates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

@@ -12,6 +12,7 @@ import { createApiClient } from "../api";
 import { exchangeOtt } from "../api/mobileAuth";
 import { useAuth } from "../auth/AuthContext";
 import { getStableDeviceId } from "../device/clientMetadata";
+import { analytics } from "../analytics/analytics";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 
@@ -29,17 +30,20 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         const callbackError = route.params?.error;
 
         if (callbackError) {
+          analytics.trackEvent("auth.callback.failed", { reason: "callback_error" });
           setError(callbackError);
           return;
         }
 
         if (!ott || !state) {
+          analytics.trackEvent("auth.callback.failed", { reason: "missing_params" });
           setError("Missing required sign-in parameters.");
           return;
         }
 
         const pending = await getPendingMobileAuth();
         if (!pending || pending.state !== state) {
+          analytics.trackEvent("auth.callback.failed", { reason: "state_mismatch" });
           setError("This sign-in link is not valid for the current session. Please try again.");
           return;
         }
@@ -68,6 +72,10 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
 
         const exchanged = await exchangeOtt(client, { ott, state, device });
         if (!exchanged.ok) {
+          analytics.trackEvent("auth.exchange.failed", {
+            errorKind: exchanged.error.kind,
+            status: exchanged.status ?? null,
+          });
           const message =
             exchanged.error.kind === "http"
               ? `Sign-in failed (HTTP ${exchanged.status ?? "error"}).`
@@ -75,6 +83,10 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           setError(message);
           return;
         }
+
+        analytics.trackEvent("auth.exchange.succeeded", {
+          expiresInSec: exchanged.data.expiresInSec,
+        });
 
         const expiresAtMs = Date.now() + exchanged.data.expiresInSec * 1000;
         setSession({

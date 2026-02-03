@@ -8,6 +8,7 @@ import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri } from "../auth/mobileAuth";
 import { createApiClient } from "../api";
 import { getAuthCapabilities, type MobileAuthCapabilities } from "../api/mobileAuth";
+import { analytics } from "../analytics/analytics";
 
 export function SignInScreen() {
   const config = useMemo(() => getAppConfig(), []);
@@ -66,32 +67,39 @@ export function SignInScreen() {
 
   const onSignIn = async () => {
     if (!baseUrl) {
+      analytics.trackEvent("auth.sign_in.blocked", { reason: "missing_base_url" });
       setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
       return;
     }
     if (capabilities && !capabilities.mobileEnabled) {
+      analytics.trackEvent("auth.sign_in.blocked", { reason: "mobile_disabled" });
       setError("Mobile sign-in is not enabled for this server.");
       return;
     }
     if (!hostAllowed) {
+      analytics.trackEvent("auth.sign_in.blocked", { reason: "host_not_allowlisted" });
       setError("This base URL is not allowed for mobile sign-in.");
       return;
     }
     setError(null);
     setStatus("opening");
     try {
+      analytics.trackEvent("auth.sign_in.start");
       const pending = await createPendingMobileAuth();
       const redirectUri = getAuthCallbackRedirectUri();
       const loginUrl = buildWebSignInUrl({ baseUrl, redirectUri, state: pending.state });
 
       const canOpen = await Linking.canOpenURL(loginUrl);
       if (!canOpen) {
+        analytics.trackEvent("auth.sign_in.open_failed", { reason: "cannot_open_url" });
         setError("Unable to open browser for sign-in.");
         return;
       }
       await Linking.openURL(loginUrl);
+      analytics.trackEvent("auth.sign_in.opened_browser");
     } catch (e) {
       logger.error("Failed to open sign-in URL", { error: e });
+      analytics.trackEvent("auth.sign_in.open_failed", { reason: "exception" });
       setError("Failed to open browser. Please try again.");
     } finally {
       setStatus("idle");

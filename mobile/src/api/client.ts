@@ -1,4 +1,5 @@
 import type { ApiRequest, ApiResult } from "./types";
+import { analytics } from "../analytics/analytics";
 
 type CreateApiClientOptions = {
   baseUrl: string;
@@ -29,6 +30,11 @@ function buildUrl(
   }
 
   return url.toString();
+}
+
+function normalizePathForAnalytics(path: string): string {
+  const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  return path.replace(uuid, ":id");
 }
 
 async function readBody(response: Response): Promise<unknown> {
@@ -75,6 +81,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
 
   return {
     async request<T>(req: ApiRequest): Promise<ApiResult<T>> {
+      const startedAt = Date.now();
       const url = buildUrl(baseUrl, req.path, req.query);
       const timeoutMs = req.timeoutMs ?? defaultTimeoutMs;
 
@@ -185,17 +192,43 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           result.error.kind === "network" || result.error.kind === "timeout" || retryableStatus;
 
         const isLastAttempt = attempt === maxAttempts - 1;
-        if (!retryableError || isLastAttempt) return result;
+        if (!retryableError || isLastAttempt) {
+          analytics.trackEvent("api.request.failed", {
+            method: req.method,
+            path: normalizePathForAnalytics(req.path),
+            status: result.status ?? null,
+            errorKind: result.error.kind,
+            durationMs: Date.now() - startedAt,
+            attempts: attempt + 1,
+          });
+          return result;
+        }
 
         const delay = Math.min(retry.maxDelayMs, retry.baseDelayMs * 2 ** attempt);
         const jittered = Math.round(delay * (0.8 + Math.random() * 0.4));
         try {
           await sleep(jittered);
         } catch {
+          analytics.trackEvent("api.request.failed", {
+            method: req.method,
+            path: normalizePathForAnalytics(req.path),
+            status: result.status ?? null,
+            errorKind: result.error.kind,
+            durationMs: Date.now() - startedAt,
+            attempts: attempt + 1,
+          });
           return result;
         }
       }
 
+      analytics.trackEvent("api.request.failed", {
+        method: req.method,
+        path: normalizePathForAnalytics(req.path),
+        status: null,
+        errorKind: "network",
+        durationMs: Date.now() - startedAt,
+        attempts: maxAttempts,
+      });
       return { ok: false, error: { kind: "network", message: "Network request failed" } };
     },
   };
