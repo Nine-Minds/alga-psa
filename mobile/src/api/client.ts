@@ -90,6 +90,11 @@ function mergeHeaders(
   return merged;
 }
 
+function stableSerializeHeaders(headers: Record<string, string>): string {
+  const entries = Object.entries(headers).sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
+
 export type ApiClient = {
   request<T>(req: ApiRequest): Promise<ApiResult<T>>;
 };
@@ -103,6 +108,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
   const getUserAgentTag = options.getUserAgentTag;
   const onAuthError = options.onAuthError;
   const retry = options.retry ?? { maxRetries: 2, baseDelayMs: 250, maxDelayMs: 5_000 };
+  const inFlightGetRequests = new Map<string, Promise<ApiResult<unknown>>>();
 
   return {
     async request<T>(req: ApiRequest): Promise<ApiResult<T>> {
@@ -253,98 +259,126 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
         }
       };
 
-      let didAuthRetry = false;
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const result = await attemptOnce();
-        if (result.ok) return result;
-        if (result.error.kind === "canceled") return result;
+      const execute = async (): Promise<ApiResult<T>> => {
+        let didAuthRetry = false;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const result = await attemptOnce();
+          if (result.ok) return result;
+          if (result.error.kind === "canceled") return result;
 
-        if (result.error.kind === "auth" && onAuthError && !didAuthRetry) {
-          didAuthRetry = true;
-          try {
-            const nextToken = await onAuthError();
-            if (nextToken) {
-              const afterRefresh = await attemptOnce(nextToken);
-              if (afterRefresh.ok) return afterRefresh;
+          if (result.error.kind === "auth" && onAuthError && !didAuthRetry) {
+            didAuthRetry = true;
+            try {
+              const nextToken = await onAuthError();
+              if (nextToken) {
+                const afterRefresh = await attemptOnce(nextToken);
+                if (afterRefresh.ok) return afterRefresh;
+                analytics.trackEvent("api.request.failed", {
+                  method: req.method,
+                  path: normalizePathForAnalytics(req.path),
+                  status: afterRefresh.status ?? null,
+                  errorKind: afterRefresh.error.kind,
+                  durationMs: Date.now() - startedAt,
+                  attempts: attempt + 1,
+                });
+                return afterRefresh;
+              }
+            } catch {
               analytics.trackEvent("api.request.failed", {
                 method: req.method,
                 path: normalizePathForAnalytics(req.path),
-                status: afterRefresh.status ?? null,
-                errorKind: afterRefresh.error.kind,
+                status: result.status ?? null,
+                errorKind: "exception",
                 durationMs: Date.now() - startedAt,
                 attempts: attempt + 1,
               });
-              return afterRefresh;
+              return result;
             }
-          } catch {
+
             analytics.trackEvent("api.request.failed", {
               method: req.method,
               path: normalizePathForAnalytics(req.path),
               status: result.status ?? null,
-              errorKind: "exception",
+              errorKind: result.error.kind,
               durationMs: Date.now() - startedAt,
               attempts: attempt + 1,
             });
             return result;
           }
 
-          analytics.trackEvent("api.request.failed", {
-            method: req.method,
-            path: normalizePathForAnalytics(req.path),
-            status: result.status ?? null,
-            errorKind: result.error.kind,
-            durationMs: Date.now() - startedAt,
-            attempts: attempt + 1,
-          });
-          return result;
+          const retryableStatus =
+            result.status !== undefined &&
+            (result.status === 502 || result.status === 503 || result.status === 504);
+
+          const retryableError =
+            result.error.kind === "network" || result.error.kind === "timeout" || retryableStatus;
+
+          const isLastAttempt = attempt === maxAttempts - 1;
+          if (!retryableError || isLastAttempt) {
+            analytics.trackEvent("api.request.failed", {
+              method: req.method,
+              path: normalizePathForAnalytics(req.path),
+              status: result.status ?? null,
+              errorKind: result.error.kind,
+              durationMs: Date.now() - startedAt,
+              attempts: attempt + 1,
+            });
+            return result;
+          }
+
+          const delay = Math.min(retry.maxDelayMs, retry.baseDelayMs * 2 ** attempt);
+          const jittered = Math.round(delay * (0.8 + Math.random() * 0.4));
+          try {
+            await sleep(jittered);
+          } catch {
+            analytics.trackEvent("api.request.failed", {
+              method: req.method,
+              path: normalizePathForAnalytics(req.path),
+              status: result.status ?? null,
+              errorKind: result.error.kind,
+              durationMs: Date.now() - startedAt,
+              attempts: attempt + 1,
+            });
+            return result;
+          }
         }
 
-        const retryableStatus =
-          result.status !== undefined &&
-          (result.status === 502 || result.status === 503 || result.status === 504);
+        analytics.trackEvent("api.request.failed", {
+          method: req.method,
+          path: normalizePathForAnalytics(req.path),
+          status: null,
+          errorKind: "network",
+          durationMs: Date.now() - startedAt,
+          attempts: maxAttempts,
+        });
+        return { ok: false, error: { kind: "network", message: "Network request failed" } };
+      };
 
-        const retryableError =
-          result.error.kind === "network" || result.error.kind === "timeout" || retryableStatus;
+      if (req.method === "GET" && !req.signal) {
+        const accessToken = getAccessToken?.();
+        const tenantId = getTenantId?.();
+        const userAgentTag = getUserAgentTag?.();
 
-        const isLastAttempt = attempt === maxAttempts - 1;
-        if (!retryableError || isLastAttempt) {
-          analytics.trackEvent("api.request.failed", {
-            method: req.method,
-            path: normalizePathForAnalytics(req.path),
-            status: result.status ?? null,
-            errorKind: result.error.kind,
-            durationMs: Date.now() - startedAt,
-            attempts: attempt + 1,
-          });
-          return result;
-        }
+        const dedupeHeaders = mergeHeaders({
+          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+          ...(tenantId ? { "x-tenant-id": tenantId } : {}),
+          ...(userAgentTag ? { "x-alga-client": userAgentTag } : {}),
+          ...req.headers,
+        });
 
-        const delay = Math.min(retry.maxDelayMs, retry.baseDelayMs * 2 ** attempt);
-        const jittered = Math.round(delay * (0.8 + Math.random() * 0.4));
-        try {
-          await sleep(jittered);
-        } catch {
-          analytics.trackEvent("api.request.failed", {
-            method: req.method,
-            path: normalizePathForAnalytics(req.path),
-            status: result.status ?? null,
-            errorKind: result.error.kind,
-            durationMs: Date.now() - startedAt,
-            attempts: attempt + 1,
-          });
-          return result;
-        }
+        const key = `${req.method} ${url} ${stableSerializeHeaders(dedupeHeaders)}`;
+        const existing = inFlightGetRequests.get(key);
+        if (existing) return (await existing) as ApiResult<T>;
+
+        const promise = execute() as Promise<ApiResult<unknown>>;
+        inFlightGetRequests.set(key, promise);
+        promise.finally(() => {
+          if (inFlightGetRequests.get(key) === promise) inFlightGetRequests.delete(key);
+        });
+        return (await promise) as ApiResult<T>;
       }
 
-      analytics.trackEvent("api.request.failed", {
-        method: req.method,
-        path: normalizePathForAnalytics(req.path),
-        status: null,
-        errorKind: "network",
-        durationMs: Date.now() - startedAt,
-        attempts: maxAttempts,
-      });
-      return { ok: false, error: { kind: "network", message: "Network request failed" } };
+      return execute();
     },
   };
 }

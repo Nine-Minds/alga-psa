@@ -128,3 +128,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F122 added a global 401 handler in the mobile API client: on `auth` errors it calls `AuthContext.refreshSession()` once and retries the original request with the refreshed token, otherwise forces sign-in when refresh indicates revocation.
 - 2026-02-03: F123 added explicit “No access” UX for 403/permission errors on the Tickets list screen (and already on ticket detail), avoiding confusing generic error messaging when a user lacks ticket permissions.
 - 2026-02-03: F124 added cancellation for superseded ticket list/search requests using `AbortController` + `signal`; added a distinct `canceled` API error kind so canceled requests don’t show as timeouts/errors.
+- 2026-02-03: F125 added in-flight GET request deduplication in the mobile API client (no AbortSignal case) to avoid duplicate concurrent fetches; added unit tests and a Vitest setup shim for RN’s `__DEV__`.

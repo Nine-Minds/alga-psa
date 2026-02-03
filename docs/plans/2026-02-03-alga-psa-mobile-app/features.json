@@ -994,7 +994,7 @@
   {
     "id": "F125",
     "description": "[Mobile:Foundation] Implement request deduplication for concurrent identical GETs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
