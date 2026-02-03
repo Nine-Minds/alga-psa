@@ -5,6 +5,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
 import { RootNavigator } from "../navigation/RootNavigator";
+import { colors, spacing, typography } from "../ui/theme";
 
 type AuthState =
   | { status: "booting" }
@@ -37,7 +38,7 @@ export function AppRoot() {
   if (!config.ok) {
     return (
       <Centered>
-        <Text style={{ fontSize: 16, color: "#B91C1C", textAlign: "center" }}>
+        <Text style={{ ...typography.body, color: colors.danger, textAlign: "center" }}>
           {config.error}
         </Text>
       </Centered>
@@ -47,7 +48,7 @@ export function AppRoot() {
   if (authState.status === "booting") {
     return (
       <Centered>
-        <Text style={{ fontSize: 16 }}>Loading…</Text>
+        <Text style={{ ...typography.body, color: colors.mutedText }}>Loading…</Text>
       </Centered>
     );
   }
@@ -66,7 +67,8 @@ function Centered({ children }: { children: ReactNode }) {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
+        padding: spacing.xl,
+        backgroundColor: colors.background,
       }}
     >
       {children}

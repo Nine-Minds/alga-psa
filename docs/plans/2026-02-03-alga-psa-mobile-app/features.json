@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "[Mobile:Foundation] Add basic design system primitives (colors/typography/spacing) aligned with Alga web",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

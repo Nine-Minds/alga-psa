@@ -11,3 +11,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F005 added timeout + retry/backoff (GET/HEAD only) to `mobile/src/api/client.ts` (retries on network/timeout and 502/503/504).
 - 2026-02-03: F006 added basic app bootstrap/auth-gate skeleton in `mobile/src/app/AppRoot.tsx` with a minimal in-app loading sequence.
 - 2026-02-03: F007 wired React Navigation (tabs + stacks) and deep link routing (`alga://ticket/:ticketId`) via `mobile/src/navigation/*` and `mobile/app.json` scheme.
+- 2026-02-03: F008 added a minimal mobile theme (`mobile/src/ui/theme.ts`) and started using it across placeholder screens.

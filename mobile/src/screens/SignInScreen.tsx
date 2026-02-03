@@ -1,16 +1,23 @@
 import { Text, View } from "react-native";
+import { colors, spacing, typography } from "../ui/theme";
 
 export function SignInScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-      <Text style={{ fontSize: 20, fontWeight: "600", textAlign: "center" }}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        padding: spacing.xl,
+        backgroundColor: colors.background,
+      }}
+    >
+      <Text style={{ ...typography.title, textAlign: "center", color: colors.text }}>
         Alga PSA Mobile
       </Text>
-      <Text style={{ marginTop: 12, textAlign: "center" }}>
+      <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
         Sign-in flow is not implemented yet. This screen will launch the system browser to the
         hosted Alga login and handle the deep link callback.
       </Text>
     </View>
   );
 }
-
