@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Platform, Text, View } from "react-native";
 import { getAppConfig } from "../config/appConfig";
 import { logger } from "../logging/logger";
@@ -19,40 +19,35 @@ export function SignInScreen() {
 
   const baseUrl = config.ok ? config.baseUrl : null;
 
-  useEffect(() => {
+  const fetchCapabilities = useCallback(async () => {
     if (!baseUrl) return;
-    let canceled = false;
+    setCapabilitiesLoading(true);
+    setCapabilitiesError(null);
+    try {
+      const client = createApiClient({
+        baseUrl,
+        getUserAgentTag: () => `mobile/${Platform.OS}`,
+      });
+      const result = await getAuthCapabilities(client);
 
-    const run = async () => {
-      setCapabilitiesLoading(true);
-      setCapabilitiesError(null);
-      try {
-        const client = createApiClient({
-          baseUrl,
-          getUserAgentTag: () => `mobile/${Platform.OS}`,
-        });
-        const result = await getAuthCapabilities(client);
-        if (canceled) return;
-
-        if (!result.ok) {
-          setCapabilitiesError("Unable to verify mobile sign-in support on this server.");
-          setCapabilities(null);
-          return;
-        }
-
-        setCapabilities(result.data);
-      } catch {
-        if (!canceled) setCapabilitiesError("Unable to verify mobile sign-in support on this server.");
-      } finally {
-        if (!canceled) setCapabilitiesLoading(false);
+      if (!result.ok) {
+        setCapabilitiesError("Unable to verify mobile sign-in support on this server.");
+        setCapabilities(null);
+        return;
       }
-    };
 
-    void run();
-    return () => {
-      canceled = true;
-    };
+      setCapabilities(result.data);
+    } catch {
+      setCapabilitiesError("Unable to verify mobile sign-in support on this server.");
+      setCapabilities(null);
+    } finally {
+      setCapabilitiesLoading(false);
+    }
   }, [baseUrl]);
+
+  useEffect(() => {
+    void fetchCapabilities();
+  }, [fetchCapabilities]);
 
   const onSignIn = async () => {
     if (!baseUrl) {
@@ -146,9 +141,15 @@ export function SignInScreen() {
           Mobile sign-in is disabled for this server.
         </Text>
       ) : capabilitiesError ? (
-        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
-          {capabilitiesError}
-        </Text>
+        <View style={{ marginTop: spacing.md, alignItems: "center" }}>
+          <Text style={{ ...typography.caption, textAlign: "center", color: colors.mutedText }}>
+            {capabilitiesError}
+          </Text>
+          <View style={{ height: spacing.md }} />
+          <PrimaryButton onPress={() => void fetchCapabilities()} disabled={capabilitiesLoading}>
+            Retry
+          </PrimaryButton>
+        </View>
       ) : null}
     </View>
   );

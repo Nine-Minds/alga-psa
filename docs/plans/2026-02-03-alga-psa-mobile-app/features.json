@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "[Mobile:Auth] Implement resilient UX for auth outages (retry, clear messaging)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
