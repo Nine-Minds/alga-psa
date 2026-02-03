@@ -770,7 +770,7 @@
   {
     "id": "T097",
     "description": "Checklist: Add rollout checklist and rollback plan",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097"
     ]
