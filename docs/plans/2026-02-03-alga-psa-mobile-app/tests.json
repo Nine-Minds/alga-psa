@@ -1498,7 +1498,7 @@
   {
     "id": "T188",
     "description": "Integration: Implement server mobile auth - OTT includes nonce/state and is single-use",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
