@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "Unit: SlaTicketWorkflow resume signal clears pauseStartedAt and increments totalPauseMinutes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
