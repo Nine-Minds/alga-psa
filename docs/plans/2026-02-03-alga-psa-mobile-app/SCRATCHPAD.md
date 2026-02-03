@@ -335,3 +335,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T100 marked as covered: server exchange endpoint issues access+refresh tokens (/api/v1/mobile/auth/exchange).
 - 2026-02-03: T101 marked as covered: undefined
 - 2026-02-03: T101 marked as covered: mobile sign-in routes through existing web /auth/signin providers (Microsoft/Google) via callbackUrl to /auth/mobile/handoff.
+- 2026-02-03: T102 marked as covered: undefined
+- 2026-02-03: T102 marked as covered: server refresh endpoint rotates refresh tokens and invalidates prior credentials (/api/v1/mobile/auth/refresh).

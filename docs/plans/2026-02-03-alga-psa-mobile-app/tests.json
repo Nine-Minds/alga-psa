@@ -810,7 +810,7 @@
   {
     "id": "T102",
     "description": "Integration: Add API endpoint to refresh/rotate mobile credentials and invalidate old tokens",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
