@@ -119,3 +119,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F113 deferred Phase 2 push notifications per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F114 deferred Phase 2 notification device token endpoints per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F115 deferred Phase 2 push delivery (assignment/status/mention) per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
+- 2026-02-03: F116 deferred Phase 2 push-to-ticket deep links per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).

@@ -922,7 +922,7 @@
   {
     "id": "F116",
     "description": "[Phase2:Notifications] Deep link from push notification into ticket detail",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
