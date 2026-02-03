@@ -1266,7 +1266,7 @@
   {
     "id": "T159",
     "description": "E2E: Implement ticket detail - comment pagination (load more)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]
