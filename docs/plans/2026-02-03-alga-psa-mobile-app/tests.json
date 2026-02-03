@@ -1634,7 +1634,7 @@
   {
     "id": "T205",
     "description": "Unit: Quality/Ops - end-to-end analytics event names cataloged and versioned",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]
