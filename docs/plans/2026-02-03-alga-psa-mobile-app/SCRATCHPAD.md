@@ -436,3 +436,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T208 marked as covered: API latency telemetry event implemented and tested (mobile/src/api/client.ts, mobile/src/api/client.telemetry.test.ts).
 - 2026-02-03: T209 marked as covered: SLOs defined for key endpoints (docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md).
 - 2026-02-03: T210 marked as covered: Accessibility audit checklist recorded (docs/plans/2026-02-03-alga-psa-mobile-app/A11Y_AUDIT.md).
+- 2026-02-03: T211 marked as covered: Security review checklist recorded (docs/plans/2026-02-03-alga-psa-mobile-app/SECURITY_REVIEW.md).

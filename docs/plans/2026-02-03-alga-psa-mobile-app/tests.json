@@ -1682,7 +1682,7 @@
   {
     "id": "T211",
     "description": "Unit: Quality/Ops - security review checklist executed pre-release",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F211"
     ]
