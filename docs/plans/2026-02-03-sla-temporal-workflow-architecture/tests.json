@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "Unit: TemporalSlaBackend.resumeSla() sends resume signal to workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
