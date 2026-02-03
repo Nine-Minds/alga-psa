@@ -498,7 +498,7 @@
   {
     "id": "T063",
     "description": "E2E: Cache last-viewed ticket detail (TTL)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
