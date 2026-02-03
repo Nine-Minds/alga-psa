@@ -8,6 +8,7 @@ const messages: Record<Locale, Record<string, string>> = {
     "auth.signIn.title": "Sign in",
     "auth.signIn.cta": "Continue in browser",
     "auth.signIn.opening": "Opening…",
+    "auth.callback.title": "Signing in",
     "tickets.title": "Tickets",
     "settings.title": "Settings",
   },

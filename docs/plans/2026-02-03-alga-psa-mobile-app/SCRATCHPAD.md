@@ -27,3 +27,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F021 added mobile unit test harness (Vitest) + CI job (`mobile-tests`) and a first config unit test (`mobile/src/config/appConfig.test.ts`).
 - 2026-02-03: F022 expanded `mobile/README.md` with env/deep-link/quality-check and a draft build/release runbook.
 - 2026-02-03: F023 implemented Sign In screen CTA to open the system browser to hosted web login (`/auth/signin`) using configured `EXPO_PUBLIC_ALGA_BASE_URL`.
+- 2026-02-03: F024 added deep link auth callback handler screen (`AuthCallback`) that validates `state` against locally stored pending auth state and captures `ott` for later exchange.

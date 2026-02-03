@@ -7,6 +7,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
   config: {
     screens: {
       SignIn: "signin",
+      AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
       Tabs: {
         screens: {
@@ -21,4 +22,3 @@ export const linking: LinkingOptions<RootStackParamList> = {
     },
   },
 };
-

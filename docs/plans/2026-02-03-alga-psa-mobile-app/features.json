@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "[Mobile:Auth] Implement deep link callback handler with state validation and OTT capture",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

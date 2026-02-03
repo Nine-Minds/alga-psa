@@ -5,25 +5,27 @@ import { logger } from "../logging/logger";
 import { colors, spacing, typography } from "../ui/theme";
 import { t } from "../i18n/i18n";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
+import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri } from "../auth/mobileAuth";
 
 export function SignInScreen() {
   const config = useMemo(() => getAppConfig(), []);
   const [status, setStatus] = useState<"idle" | "opening">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const loginUrl = useMemo(() => {
-    if (!config.ok) return null;
-    return new URL("/auth/signin", config.baseUrl).toString();
-  }, [config]);
+  const baseUrl = config.ok ? config.baseUrl : null;
 
   const onSignIn = async () => {
-    if (!loginUrl) {
+    if (!baseUrl) {
       setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
       return;
     }
     setError(null);
     setStatus("opening");
     try {
+      const pending = await createPendingMobileAuth();
+      const redirectUri = getAuthCallbackRedirectUri();
+      const loginUrl = buildWebSignInUrl({ baseUrl, redirectUri, state: pending.state });
+
       const canOpen = await Linking.canOpenURL(loginUrl);
       if (!canOpen) {
         setError("Unable to open browser for sign-in.");
@@ -57,7 +59,7 @@ export function SignInScreen() {
       <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
         <PrimaryButton
           onPress={() => void onSignIn()}
-          disabled={status === "opening" || !loginUrl}
+          disabled={status === "opening" || !baseUrl}
           accessibilityLabel={t("auth.signIn.cta")}
           accessibilityHint="Opens the browser to complete sign-in."
         >
@@ -65,7 +67,7 @@ export function SignInScreen() {
         </PrimaryButton>
       </View>
 
-      {loginUrl ? (
+      {baseUrl ? (
         <Text
           style={{
             ...typography.caption,
@@ -74,7 +76,7 @@ export function SignInScreen() {
             color: colors.mutedText,
           }}
         >
-          {loginUrl}
+          {baseUrl}
         </Text>
       ) : null}
 
