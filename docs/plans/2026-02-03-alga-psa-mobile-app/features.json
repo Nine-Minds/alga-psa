@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "[Mobile:Tickets:Updates] Implement status picker using server-provided allowed statuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

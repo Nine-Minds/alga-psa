@@ -25,6 +25,7 @@ export type TicketListItem = {
   ticket_id: string;
   ticket_number: string;
   title: string;
+  status_id?: string | null;
   status_name?: string | null;
   status_is_closed?: boolean | null;
   priority_name?: string | null;
@@ -52,6 +53,12 @@ export type TicketComment = {
   is_internal?: boolean;
   created_by_name?: string | null;
   created_at?: string | null;
+};
+
+export type TicketStatus = {
+  status_id: string;
+  name: string;
+  is_closed: boolean;
 };
 
 export type ListTicketsParams = {
@@ -144,6 +151,19 @@ export function addTicketComment(
     body: {
       comment_text: params.comment_text,
       is_internal: params.is_internal,
+    },
+  });
+}
+
+export function getTicketStatuses(
+  client: ApiClient,
+  params: { apiKey: string },
+): Promise<ApiResult<SuccessResponse<TicketStatus[]>>> {
+  return client.request<SuccessResponse<TicketStatus[]>>({
+    method: "GET",
+    path: "/api/v1/tickets/statuses",
+    headers: {
+      "x-api-key": params.apiKey,
     },
   });
 }

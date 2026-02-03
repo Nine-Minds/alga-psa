@@ -1,12 +1,12 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, type TicketComment, type TicketDetail } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketStatuses, type TicketComment, type TicketDetail, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -59,6 +59,11 @@ function TicketDetailBody({
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [statusPickerOpen, setStatusPickerOpen] = useState(false);
+  const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
+  const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
+  const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
+  const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
 
   const draftKey = useMemo(() => {
     const userId = session?.user?.id ?? "anonymous";
@@ -159,6 +164,12 @@ function TicketDetailBody({
     return <ErrorState title="Ticket not found" description="This ticket is unavailable." />;
   }
 
+  const statusLabel = pendingStatusId
+    ? (statusOptions.find((s) => s.status_id === pendingStatusId)?.name ??
+      ticket.status_name ??
+      "Unknown")
+    : (ticket.status_name ?? "Unknown");
+
   const sendComment = async () => {
     if (!client || !session) return;
     if (commentSending) return;
@@ -193,91 +204,202 @@ function TicketDetailBody({
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: spacing.lg }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-    >
-      {error ? (
-        <View
-          style={{
-            padding: spacing.md,
-            borderRadius: 12,
-            backgroundColor: "#FEF3C7",
-            borderWidth: 1,
-            borderColor: "#F59E0B",
-            marginBottom: spacing.md,
-          }}
-        >
-          <Text style={{ ...typography.caption, color: "#7C2D12", fontWeight: "700" }}>{error.title}</Text>
-          <Text style={{ ...typography.caption, color: "#7C2D12", marginTop: 2 }}>{error.description}</Text>
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{ padding: spacing.lg }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+      >
+        {error ? (
+          <View
+            style={{
+              padding: spacing.md,
+              borderRadius: 12,
+              backgroundColor: "#FEF3C7",
+              borderWidth: 1,
+              borderColor: "#F59E0B",
+              marginBottom: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.caption, color: "#7C2D12", fontWeight: "700" }}>{error.title}</Text>
+            <Text style={{ ...typography.caption, color: "#7C2D12", marginTop: 2 }}>{error.description}</Text>
+          </View>
+        ) : null}
+
+        <Text style={{ ...typography.caption, color: colors.mutedText }}>
+          {ticket.ticket_number}
+          {ticket.client_name ? ` • ${ticket.client_name}` : ""}
+          {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
+        </Text>
+        <Text style={{ ...typography.title, marginTop: 2, color: colors.text }}>
+          {ticket.title}
+        </Text>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
+          <Badge label={statusLabel} tone={ticket.status_is_closed ? "neutral" : "info"} />
+          {ticket.priority_name ? <View style={{ width: spacing.sm }} /> : null}
+          {ticket.priority_name ? <Badge label={ticket.priority_name} tone="warning" /> : null}
         </View>
-      ) : null}
 
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>
-        {ticket.ticket_number}
-        {ticket.client_name ? ` • ${ticket.client_name}` : ""}
-        {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
-      </Text>
-      <Text style={{ ...typography.title, marginTop: 2, color: colors.text }}>
-        {ticket.title}
-      </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+          <ActionChip
+            label="Change status"
+            onPress={() => {
+              void (async () => {
+                if (!client || !session) return;
+                setStatusPickerOpen(true);
+                if (statusOptions.length > 0) return;
+                setStatusOptionsLoading(true);
+                setStatusOptionsError(null);
+                try {
+                  const res = await getTicketStatuses(client, { apiKey: session.accessToken });
+                  if (!res.ok) {
+                    setStatusOptionsError("Unable to load statuses.");
+                    return;
+                  }
+                  setStatusOptions(res.data.data);
+                } finally {
+                  setStatusOptionsLoading(false);
+                }
+              })();
+            }}
+          />
+        </View>
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
-        <Badge label={ticket.status_name ?? "Unknown"} tone={ticket.status_is_closed ? "neutral" : "info"} />
-        {ticket.priority_name ? <View style={{ width: spacing.sm }} /> : null}
-        {ticket.priority_name ? <Badge label={ticket.priority_name} tone="warning" /> : null}
-      </View>
+        <TicketActions
+          baseUrl={config.ok ? config.baseUrl : null}
+          ticketId={ticket.ticket_id}
+          ticketNumber={ticket.ticket_number}
+        />
 
-      <TicketActions
-        baseUrl={config.ok ? config.baseUrl : null}
-        ticketId={ticket.ticket_id}
-        ticketNumber={ticket.ticket_number}
+        {ticket.assigned_to_name ? (
+          <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.text }}>
+            Assigned to {ticket.assigned_to_name}
+          </Text>
+        ) : (
+          <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.mutedText }}>
+            Unassigned
+          </Text>
+        )}
+
+        <View style={{ marginTop: spacing.lg }}>
+          <KeyValue label="Requester" value={stringOrDash(ticket.contact_name)} />
+          <View style={{ height: spacing.sm }} />
+          <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
+          <View style={{ height: spacing.sm }} />
+          <DescriptionSection ticket={ticket} />
+          <View style={{ height: spacing.sm }} />
+          <CommentsSection
+            comments={comments}
+            visibleCount={commentsVisibleCount}
+            onLoadMore={() => setCommentsVisibleCount((c) => c + 20)}
+            error={commentsError}
+          />
+          <View style={{ height: spacing.sm }} />
+          <CommentComposer
+            draft={commentDraft}
+            onChangeDraft={setCommentDraft}
+            isInternal={commentIsInternal}
+            onChangeIsInternal={setCommentIsInternal}
+            onSend={() => void sendComment()}
+            sending={commentSending}
+            error={commentSendError}
+          />
+          <View style={{ height: spacing.sm }} />
+          <KeyValue label="Created" value={formatDateWithRelative(ticket.entered_at)} />
+          <View style={{ height: spacing.sm }} />
+          <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
+          <View style={{ height: spacing.sm }} />
+          <KeyValue label="Closed" value={formatDateWithRelative(ticket.closed_at)} />
+          <View style={{ height: spacing.sm }} />
+          <KeyValue label="Ticket ID" value={ticket.ticket_id} />
+        </View>
+      </ScrollView>
+
+      <StatusPickerModal
+        visible={statusPickerOpen}
+        loading={statusOptionsLoading}
+        error={statusOptionsError}
+        statuses={statusOptions}
+        currentStatusId={pendingStatusId ?? ticket.status_id ?? null}
+        onSelect={setPendingStatusId}
+        onClose={() => setStatusPickerOpen(false)}
       />
+    </>
+  );
+}
 
-      {ticket.assigned_to_name ? (
-        <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.text }}>
-          Assigned to {ticket.assigned_to_name}
-        </Text>
-      ) : (
-        <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.mutedText }}>
-          Unassigned
-        </Text>
-      )}
+function StatusPickerModal({
+  visible,
+  loading,
+  error,
+  statuses,
+  currentStatusId,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  loading: boolean;
+  error: string | null;
+  statuses: TicketStatus[];
+  currentStatusId: string | null | undefined;
+  onSelect: (statusId: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
+        <Text style={{ ...typography.title, color: colors.text }}>Select status</Text>
+        {loading ? (
+          <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+            <ActivityIndicator />
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+              Loading…
+            </Text>
+          </View>
+        ) : null}
+        {error ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+            {error}
+          </Text>
+        ) : null}
 
-      <View style={{ marginTop: spacing.lg }}>
-        <KeyValue label="Requester" value={stringOrDash(ticket.contact_name)} />
-        <View style={{ height: spacing.sm }} />
-        <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
-        <View style={{ height: spacing.sm }} />
-        <DescriptionSection ticket={ticket} />
-        <View style={{ height: spacing.sm }} />
-        <CommentsSection
-          comments={comments}
-          visibleCount={commentsVisibleCount}
-          onLoadMore={() => setCommentsVisibleCount((c) => c + 20)}
-          error={commentsError}
-        />
-        <View style={{ height: spacing.sm }} />
-        <CommentComposer
-          draft={commentDraft}
-          onChangeDraft={setCommentDraft}
-          isInternal={commentIsInternal}
-          onChangeIsInternal={setCommentIsInternal}
-          onSend={() => void sendComment()}
-          sending={commentSending}
-          error={commentSendError}
-        />
-        <View style={{ height: spacing.sm }} />
-        <KeyValue label="Created" value={formatDateWithRelative(ticket.entered_at)} />
-        <View style={{ height: spacing.sm }} />
-        <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
-        <View style={{ height: spacing.sm }} />
-        <KeyValue label="Closed" value={formatDateWithRelative(ticket.closed_at)} />
-        <View style={{ height: spacing.sm }} />
-        <KeyValue label="Ticket ID" value={ticket.ticket_id} />
+        <View style={{ marginTop: spacing.lg }}>
+          {statuses.map((s) => (
+            <Pressable
+              key={s.status_id}
+              accessibilityRole="button"
+              accessibilityLabel={`Set status ${s.name}`}
+              onPress={() => {
+                onSelect(s.status_id);
+                onClose();
+              }}
+              style={({ pressed }) => ({
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: s.status_id === currentStatusId ? colors.primary : colors.border,
+                backgroundColor: colors.card,
+                opacity: pressed ? 0.95 : 1,
+                marginBottom: spacing.sm,
+              })}
+            >
+              <Text style={{ ...typography.body, color: colors.text }}>
+                {s.name}
+                {s.status_id === currentStatusId ? " ✓" : ""}
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: 2 }}>
+                {s.is_closed ? "Closed" : "Open"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={{ flex: 1 }} />
+        <PrimaryButton onPress={onClose}>Done</PrimaryButton>
       </View>
-    </ScrollView>
+    </Modal>
   );
 }
 
