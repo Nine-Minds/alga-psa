@@ -43,10 +43,14 @@ export class PgBossSlaBackend implements ISlaBackend {
   ): Promise<void> {
     await this.withTicketTransaction(ticketId, async (trx, tenant) => {
       if (type === 'response') {
-        await recordFirstResponse(trx, tenant, ticketId, new Date());
+        await recordFirstResponse(trx, tenant, ticketId, new Date(), undefined, {
+          skipBackend: true,
+        });
         return;
       }
-      await recordResolution(trx, tenant, ticketId, new Date());
+      await recordResolution(trx, tenant, ticketId, new Date(), undefined, {
+        skipBackend: true,
+      });
     });
   }
 

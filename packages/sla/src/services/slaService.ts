@@ -201,7 +201,8 @@ export async function recordFirstResponse(
   tenant: string,
   ticketId: string,
   respondedAt: Date = new Date(),
-  respondedBy?: string
+  respondedBy?: string,
+  options?: { skipBackend?: boolean }
 ): Promise<RecordSlaEventResult> {
   try {
     // Get current ticket SLA state
@@ -251,6 +252,15 @@ export async function recordFirstResponse(
       pause_minutes: ticket.sla_total_pause_minutes,
       met
     });
+
+    if (!options?.skipBackend && met !== null) {
+      try {
+        const backend = await SlaBackendFactory.getBackend();
+        await backend.completeSla(ticketId, 'response', met);
+      } catch (error) {
+        console.warn('Failed to complete SLA backend response:', error);
+      }
+    }
 
     return { success: true, met, recorded_at: respondedAt };
   } catch (error) {
