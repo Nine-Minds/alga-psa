@@ -100,6 +100,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: TemporalSlaBackend workflow ID format validated (T038)
 - (2026-02-03) Tests: TemporalSlaBackend.pauseSla sends pause signal (T039)
 - (2026-02-03) Tests: TemporalSlaBackend.resumeSla sends resume signal (T040)
+- (2026-02-03) Tests: TemporalSlaBackend.completeSla(response) signals workflow (T041)
 
 ## Discoveries / Constraints
 
