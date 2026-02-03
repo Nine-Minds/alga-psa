@@ -39,6 +39,7 @@
       "@alga-psa/ui-kit/*": ["packages/ui-kit/src/*"],
       "@alga-psa/auth": ["packages/auth/src"],
       "@alga-psa/auth/*": ["packages/auth/src/*", "packages/auth/src/lib/*"],
+      "@alga-psa/auth/sso/entry": ["packages/auth/src/components/SsoProviderButtons.tsx"],
       "@alga-psa/clients": ["packages/clients/src"],
       "@alga-psa/clients/*": ["packages/clients/src/*"],
       "@alga-psa/billing": ["packages/billing/src"],
