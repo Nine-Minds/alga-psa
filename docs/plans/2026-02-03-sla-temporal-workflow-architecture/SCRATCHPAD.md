@@ -143,3 +143,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - What specific timezone issues have been observed? Need to investigate and document
 - Should workflow query replace database reads for real-time SLA status display?
 - How to handle Temporal worker scaling for high-volume tenants?
+
+## Progress Log
+
+- (2026-02-03) Added integration coverage for EE ticket start triggering Temporal workflow in `packages/sla/src/services/__tests__/slaBackendIntegration.test.ts` (T052).

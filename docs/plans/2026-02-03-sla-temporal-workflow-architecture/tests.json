@@ -308,7 +308,7 @@
   {
     "id": "T052",
     "description": "Integration: New ticket in EE starts Temporal workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F021", "F028"]
   },
   {
