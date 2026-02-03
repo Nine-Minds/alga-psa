@@ -374,7 +374,7 @@
   {
     "id": "T063",
     "description": "Integration: SLA policy change cancels old workflow and starts new one",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
