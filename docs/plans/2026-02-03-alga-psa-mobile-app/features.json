@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "[Mobile:Tickets:Updates] Include mobile client metadata on update calls (audit)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

@@ -77,3 +77,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F071 added a “Change status” picker modal on ticket detail backed by a new `GET /api/v1/tickets/statuses` endpoint (server lists tenant statuses via API key auth).
 - 2026-02-03: F072 wired status selection to `PUT /api/v1/tickets/:id/status`, refetches ticket detail on success, and updates ticket list rows on return using cached detail reconciliation on screen focus.
 - 2026-02-03: F073 added explicit 409 conflict handling for status changes (alert + refresh CTA) to recover when a ticket has changed elsewhere.
+- 2026-02-03: F074 added standard mobile audit headers (platform/app version/build/device id) on ticket mutation calls (comment + status update) and centralized stable device id storage.

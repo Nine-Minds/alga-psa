@@ -140,13 +140,20 @@ export function getTicketComments(
 
 export function addTicketComment(
   client: ApiClient,
-  params: { apiKey: string; ticketId: string; comment_text: string; is_internal: boolean },
+  params: {
+    apiKey: string;
+    ticketId: string;
+    comment_text: string;
+    is_internal: boolean;
+    auditHeaders?: Record<string, string | undefined>;
+  },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
   return client.request<SuccessResponse<TicketComment>>({
     method: "POST",
     path: `/api/v1/tickets/${params.ticketId}/comments`,
     headers: {
       "x-api-key": params.apiKey,
+      ...params.auditHeaders,
     },
     body: {
       comment_text: params.comment_text,
@@ -170,13 +177,14 @@ export function getTicketStatuses(
 
 export function updateTicketStatus(
   client: ApiClient,
-  params: { apiKey: string; ticketId: string; status_id: string },
+  params: { apiKey: string; ticketId: string; status_id: string; auditHeaders?: Record<string, string | undefined> },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
   return client.request<SuccessResponse<TicketDetail>>({
     method: "PUT",
     path: `/api/v1/tickets/${params.ticketId}/status`,
     headers: {
       "x-api-key": params.apiKey,
+      ...params.auditHeaders,
     },
     body: {
       status_id: params.status_id,

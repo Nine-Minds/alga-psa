@@ -14,6 +14,7 @@ import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCa
 import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
+import { getClientMetadataHeaders } from "../device/clientMetadata";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -184,14 +185,16 @@ function TicketDetailBody({
       setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
       return;
     }
-    setCommentSending(true);
-    setCommentSendError(null);
+      setCommentSending(true);
+      setCommentSendError(null);
     try {
+      const auditHeaders = await getClientMetadataHeaders();
       const result = await addTicketComment(client, {
         apiKey: session.accessToken,
         ticketId,
         comment_text: text,
         is_internal: commentIsInternal,
+        auditHeaders,
       });
       if (!result.ok) {
         setCommentSendError("Unable to send comment. Please try again.");
@@ -213,10 +216,12 @@ function TicketDetailBody({
       setStatusUpdateError(null);
       setStatusUpdating(true);
       try {
+        const auditHeaders = await getClientMetadataHeaders();
         const res = await updateTicketStatus(client, {
           apiKey: session.accessToken,
           ticketId,
           status_id: statusId,
+          auditHeaders,
         });
         if (!res.ok) {
           if (res.error.kind === "http" && res.status === 409) {

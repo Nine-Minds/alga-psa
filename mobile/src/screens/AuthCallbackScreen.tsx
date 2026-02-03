@@ -11,6 +11,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { exchangeOtt } from "../api/mobileAuth";
 import { useAuth } from "../auth/AuthContext";
+import { getStableDeviceId } from "../device/clientMetadata";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 
@@ -56,12 +57,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           getUserAgentTag: () => `mobile/${Platform.OS}`,
         });
 
-        const deviceId =
-          Platform.OS === "ios"
-            ? (await Application.getIosIdForVendorAsync()) ?? undefined
-            : Platform.OS === "android"
-              ? (await Application.getAndroidId()) ?? undefined
-              : undefined;
+        const deviceId = await getStableDeviceId();
 
         const device = {
           platform: Platform.OS,
