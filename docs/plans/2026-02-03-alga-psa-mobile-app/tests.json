@@ -378,7 +378,7 @@
   {
     "id": "T048",
     "description": "E2E: Persist last-used filters per user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
