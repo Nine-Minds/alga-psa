@@ -442,3 +442,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T214 marked as covered: Store listing copy drafted (docs/plans/2026-02-03-alga-psa-mobile-app/STORE_LISTING.md).
 - 2026-02-03: T215 marked as covered: Screenshot capture plan documented (docs/plans/2026-02-03-alga-psa-mobile-app/SCREENSHOTS_PLAN.md).
 - 2026-02-03: T216 marked as covered: Internal beta distribution runbook documented (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
+- 2026-02-03: T217 marked as covered: Auth support escalation runbook documented (docs/plans/2026-02-03-alga-psa-mobile-app/AUTH_SUPPORT_RUNBOOK.md).

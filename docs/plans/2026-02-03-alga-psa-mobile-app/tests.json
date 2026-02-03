@@ -1730,7 +1730,7 @@
   {
     "id": "T217",
     "description": "Checklist: Release - support escalation runbook for auth issues",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F217"
     ]
