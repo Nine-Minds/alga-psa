@@ -160,3 +160,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Confirmed policy change cancels and restarts SLA backend in integration test (T063).
 - (2026-02-03) Verified CE ticket start avoids Temporal backend in integration test (T064).
 - (2026-02-03) Added slaTimerHandler integration test confirming polling path still processes tickets (T065).
+- (2026-02-03) Added worker registration test validating workflow export for Temporal startup (T066).
