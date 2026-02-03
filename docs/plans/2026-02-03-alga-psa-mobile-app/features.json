@@ -858,7 +858,7 @@
   {
     "id": "F108",
     "description": "[Server:Mobile Auth] Ensure ticket comment create API supports internal/public visibility flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
