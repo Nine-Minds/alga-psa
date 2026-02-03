@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Modify slaService.recordResolution() to call backend.completeSla('resolution') after updating ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
