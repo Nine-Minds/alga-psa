@@ -1594,7 +1594,7 @@
   {
     "id": "T200",
     "description": "Integration: Implement server mobile auth - ticket detail endpoint returns enough fields for header + detail sections",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]

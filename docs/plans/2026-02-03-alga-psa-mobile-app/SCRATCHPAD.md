@@ -425,3 +425,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T197 marked as covered: Ticket comment visibility enforcement is server-side (is_internal respected; RBAC enforced).
 - 2026-02-03: T198 marked as covered: Ticket list supports updated-since filter used by mobile (updated_from).
 - 2026-02-03: T199 marked as covered: Ticket list supports assignee filters used by mobile (assigned_to, has_assignment=false).
+- 2026-02-03: T200 marked as covered: Ticket detail returns required fields for mobile header/detail and is permission-checked.
