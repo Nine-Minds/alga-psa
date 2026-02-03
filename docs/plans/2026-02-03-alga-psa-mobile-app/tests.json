@@ -1290,7 +1290,7 @@
   {
     "id": "T162",
     "description": "E2E: Implement ticket detail - cache invalidation after posting comment/status change",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
