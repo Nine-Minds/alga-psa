@@ -17,6 +17,7 @@ export * from "./calendar-webhook-maintenance-activities";
 export * from "./ninjaone-sync-activities";
 export * from "./tenant-deletion-activities";
 export * from "./tenant-export-activities";
+export * from "./sla-activities";
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

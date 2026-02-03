@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Create calculateNextWakeTime activity that computes wall-clock time for next threshold using business hours calculator",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

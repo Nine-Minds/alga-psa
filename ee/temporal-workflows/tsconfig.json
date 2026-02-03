@@ -50,6 +50,8 @@
       "@alga-psa/types/*": ["../../packages/types/src/*"],
       "@alga-psa/db/admin": ["../../packages/db/src/lib/admin.ts"],
       "@alga-psa/db/admin.js": ["../../packages/db/src/lib/admin.ts"],
+      "@alga-psa/sla": ["../../packages/sla/src"],
+      "@alga-psa/sla/*": ["../../packages/sla/src/*"],
       "@temporalio/activity": ["../../node_modules/@temporalio/activity"],
       "@temporalio/workflow": ["../../node_modules/@temporalio/workflow"],
       "@temporalio/worker": ["../../node_modules/@temporalio/worker"],
