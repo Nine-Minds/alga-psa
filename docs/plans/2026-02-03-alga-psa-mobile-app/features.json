@@ -1210,7 +1210,7 @@
   {
     "id": "F152",
     "description": "[Mobile:Tickets:List] Implement List:Perf - prefetch next page threshold tuning",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

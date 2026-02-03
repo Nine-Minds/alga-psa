@@ -50,6 +50,8 @@ const DEFAULT_FILTERS: TicketListFilters = {
   sortOrder: "desc",
 };
 
+const NEXT_PAGE_PREFETCH_THRESHOLD = 0.6;
+
 function dateOnlyToIsoUtc(dateOnly: string): string | null {
   const trimmed = dateOnly.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
@@ -61,6 +63,7 @@ export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
+  const loadingMoreRef = useRef(false);
   const network = useNetworkStatus();
   const isOffline = network.isConnected === false || network.isInternetReachable === false;
 
@@ -324,15 +327,17 @@ export function TicketsListScreen({ navigation }: Props) {
 
   const onEndReached = useCallback(async () => {
     if (!client || !session) return;
-    if (initialLoading || refreshing || loadingMore) return;
+    if (initialLoading || refreshing || loadingMoreRef.current) return;
     if (!hasNext) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       await loadPage({ pageToLoad: page + 1, replace: false });
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [client, hasNext, initialLoading, loadPage, loadingMore, page, refreshing, session]);
+  }, [client, hasNext, initialLoading, loadPage, page, refreshing, session]);
 
   if (!config.ok) {
     return <ErrorState title="Configuration error" description={config.error} />;
@@ -469,7 +474,7 @@ export function TicketsListScreen({ navigation }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         contentContainerStyle={{ padding: spacing.lg, backgroundColor: colors.background }}
         onEndReached={onEndReached}
-        onEndReachedThreshold={0.4}
+        onEndReachedThreshold={NEXT_PAGE_PREFETCH_THRESHOLD}
         ListHeaderComponent={header}
         renderItem={renderItem}
         ListFooterComponent={
