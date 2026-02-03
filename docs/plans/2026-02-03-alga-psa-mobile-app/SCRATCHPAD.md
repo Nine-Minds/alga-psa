@@ -156,3 +156,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F150 expanded mobile API retry/backoff to cover all 5xx responses for GET/HEAD (not just 502/503/504), so ticket list loads recover automatically from transient server errors.
 - 2026-02-03: F151 improved ticket list offline handling: when offline, shows a dedicated offline error message, disables retry until online, and auto-retries when connectivity returns.
 - 2026-02-03: F152 tuned next-page prefetch behavior: increased `onEndReachedThreshold` and added a ref-based guard to prevent duplicate `onEndReached` triggers before state updates.
+- 2026-02-03: F153 wired ticket list caching + invalidation: page-1 list results are cached per user/query, and ticket mutations now clear the list cache so stale summaries don’t persist across app restarts.

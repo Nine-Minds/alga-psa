@@ -22,13 +22,20 @@ export function setCachedTicketDetail(ticketId: string, value: unknown): void {
   ticketDetailCache.set(ticketId, value);
 }
 
-export function invalidateTicket(ticketId: string): void {
-  ticketDetailCache.delete(ticketId);
+export function invalidateTicketsListCache(): void {
   ticketsListCache.clear();
+}
+
+export function invalidateTicketDetail(ticketId: string): void {
+  ticketDetailCache.delete(ticketId);
+}
+
+export function invalidateTicket(ticketId: string): void {
+  invalidateTicketDetail(ticketId);
+  invalidateTicketsListCache();
 }
 
 export function clearTicketsCache(): void {
   ticketsListCache.clear();
   ticketDetailCache.clear();
 }
-

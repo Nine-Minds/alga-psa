@@ -16,7 +16,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch,
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
-import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
+import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 
@@ -37,6 +37,13 @@ type TicketListFilters = {
   updatedSinceDate: string;
   sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
   sortOrder: "asc" | "desc";
+};
+
+type TicketsListCacheValue = {
+  items: TicketListItem[];
+  page: number;
+  hasNext: boolean;
+  lastRefreshedAtIso: string | null;
 };
 
 const DEFAULT_FILTERS: TicketListFilters = {
@@ -163,6 +170,41 @@ export function TicketsListScreen({ navigation }: Props) {
     return out;
   }, [filters, session]);
 
+  const listCacheKey = useMemo(() => {
+    if (!session) return null;
+    const userId = session.user?.id ?? "anon";
+    return `alga.mobile.tickets.list.${userId}.${JSON.stringify({
+      search,
+      sort: filters.sortField,
+      order: filters.sortOrder,
+      filters: apiFilters ?? {},
+    })}`;
+  }, [apiFilters, filters.sortField, filters.sortOrder, search, session]);
+
+  useEffect(() => {
+    if (!listCacheKey) return;
+    const cached = getCachedTicketsList(listCacheKey);
+    if (!cached || typeof cached !== "object") {
+      setItems([]);
+      setPage(1);
+      setHasNext(true);
+      setError(null);
+      setNoAccess(false);
+      setLastRefreshedAtIso(null);
+      return;
+    }
+
+    const value = cached as Partial<TicketsListCacheValue>;
+    if (!Array.isArray(value.items)) return;
+    if (typeof value.page !== "number") return;
+    if (typeof value.hasNext !== "boolean") return;
+
+    setItems(value.items);
+    setPage(value.page);
+    setHasNext(value.hasNext);
+    setLastRefreshedAtIso(typeof value.lastRefreshedAtIso === "string" ? value.lastRefreshedAtIso : null);
+  }, [listCacheKey]);
+
   const loadPage = useCallback(
     async ({ pageToLoad, replace }: { pageToLoad: number; replace: boolean }) => {
       if (!client || !session) return;
@@ -214,7 +256,16 @@ export function TicketsListScreen({ navigation }: Props) {
       setHasNext(result.data.pagination.hasNext);
 
       if (replace && pageToLoad === 1) {
-        setLastRefreshedAtIso(new Date().toISOString());
+        const refreshedIso = new Date().toISOString();
+        setLastRefreshedAtIso(refreshedIso);
+        if (listCacheKey) {
+          setCachedTicketsList(listCacheKey, {
+            items: nextItems,
+            page: result.data.pagination.page,
+            hasNext: result.data.pagination.hasNext,
+            lastRefreshedAtIso: refreshedIso,
+          });
+        }
         const toPrefetch = nextItems.slice(0, 5);
         void Promise.all(
           toPrefetch.map(async (t) => {
@@ -225,7 +276,7 @@ export function TicketsListScreen({ navigation }: Props) {
         );
       }
     },
-    [apiFilters, client, filters.sortField, filters.sortOrder, isOffline, search, session],
+    [apiFilters, client, filters.sortField, filters.sortOrder, isOffline, listCacheKey, search, session],
   );
 
   const fetchStats = useCallback(async () => {

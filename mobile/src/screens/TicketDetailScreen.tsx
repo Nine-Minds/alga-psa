@@ -9,7 +9,7 @@ import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
-import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
+import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
 import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
@@ -240,7 +240,8 @@ function TicketDetailBody({
       }
       setCommentDraft("");
       await secureStorage.deleteItem(draftKey);
-      await fetchComments();
+      invalidateTicketsListCache();
+      await Promise.all([fetchTicket(), fetchComments()]);
     } finally {
       setCommentSending(false);
     }
@@ -290,6 +291,7 @@ function TicketDetailBody({
         setStatusUpdateError("Unable to change status. Please try again.");
         return;
       }
+      invalidateTicketsListCache();
       await fetchTicket();
       setPendingStatusId(null);
       setStatusPickerOpen(false);
@@ -324,6 +326,7 @@ function TicketDetailBody({
         setPriorityUpdateError("Unable to change priority. Please try again.");
         return;
       }
+      invalidateTicketsListCache();
       await fetchTicket();
       setPriorityPickerOpen(false);
     } finally {
@@ -358,6 +361,7 @@ function TicketDetailBody({
         setAssignmentError("Unable to update assignment. Please try again.");
         return;
       }
+      invalidateTicketsListCache();
       await fetchTicket();
     } finally {
       setAssignmentUpdating(false);
@@ -415,6 +419,7 @@ function TicketDetailBody({
         setDueDateError("Unable to update due date. Please try again.");
         return;
       }
+      invalidateTicketsListCache();
       await fetchTicket();
       setDueDateOpen(false);
     } finally {
@@ -490,6 +495,7 @@ function TicketDetailBody({
         return;
       }
 
+      invalidateTicketsListCache();
       await fetchTicket();
     } finally {
       setWatchUpdating(false);

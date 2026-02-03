@@ -1218,7 +1218,7 @@
   {
     "id": "F153",
     "description": "[Mobile:Tickets:List] Implement List:Perf - cache invalidation on updates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
