@@ -1,0 +1,208 @@
+[
+  { "id": "T001", "description": "Unit: workflow model ADR decisions are reflected in code-level invariants (schema forbids node steps)", "implemented": false, "featureIds": ["F002", "F003", "F045"] },
+  { "id": "T002", "description": "Unit: workflowDefinition schema accepts only control blocks + action steps (rejects non-control non-action shapes)", "implemented": false, "featureIds": ["F003", "F045"] },
+  { "id": "T003", "description": "Unit: publishValidation rejects workflows with duplicate step IDs", "implemented": false, "featureIds": ["F041", "F045"] },
+  { "id": "T004", "description": "Unit: baseline behavior snapshot harness can publish/start/resume a canonical workflow", "implemented": false, "featureIds": ["F007"] },
+
+  { "id": "T010", "description": "Unit: Effect schema serializes and deserializes deterministically", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T011", "description": "Unit: Effect persistence mapping produces correct workflow_run_waits rows for event wait", "implemented": false, "featureIds": ["F021", "F023"] },
+  { "id": "T012", "description": "Unit: Effect persistence mapping produces correct workflow_run_waits rows for human task", "implemented": false, "featureIds": ["F021", "F023"] },
+  { "id": "T013", "description": "Unit: effect application transitions run to WAITING and preserves node_path/pc pointer appropriately", "implemented": false, "featureIds": ["F023"] },
+  { "id": "T014", "description": "Unit: action-emitted effect is logged with stable redacted preview (no secrets)", "implemented": false, "featureIds": ["F030", "F031"] },
+  { "id": "T015", "description": "Unit: effect resolved log entry is emitted and links wait_id to run_id/step", "implemented": false, "featureIds": ["F032"] },
+
+  { "id": "T020", "description": "Integration: event wait action pauses run and resumes on submitWorkflowEventAction", "implemented": false, "featureIds": ["F024", "F023"] },
+  { "id": "T021", "description": "Integration: human task action pauses run and resumes when task completion event is submitted", "implemented": false, "featureIds": ["F025", "F023"] },
+  { "id": "T022", "description": "Integration: retry scheduling works when implemented via effects (WAITING retry with timeout)", "implemented": false, "featureIds": ["F029"] },
+  { "id": "T023", "description": "Integration: effect metadata is visible in run studio (wait type, key, event name, timeouts)", "implemented": false, "featureIds": ["F033"] },
+
+  { "id": "T030", "description": "Unit: assign action writes into vars/payload/meta with the same semantics as current transform.assign", "implemented": false, "featureIds": ["F026"] },
+  { "id": "T031", "description": "Unit: set-state action updates envelope meta.state", "implemented": false, "featureIds": ["F027"] },
+  { "id": "T032", "description": "Unit: email parse/render actions produce expected outputs and preserve redactions", "implemented": false, "featureIds": ["F028", "F031"] },
+
+  { "id": "T040", "description": "Unit: ActionStep schema accepts valid actionId/version/inputMapping and rejects missing fields", "implemented": false, "featureIds": ["F040"] },
+  { "id": "T041", "description": "Unit: ActionStep validation rejects unknown actionId@version", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T042", "description": "Unit: ActionStep validation enforces required fields via action input schema", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T043", "description": "Unit: action idempotencyKey expression is resolved and passed through consistently", "implemented": false, "featureIds": ["F040", "F042"] },
+
+  { "id": "T050", "description": "Unit: migrator rewrites known built-in node steps to ActionSteps (golden fixture)", "implemented": false, "featureIds": ["F046"] },
+  { "id": "T051", "description": "Unit: migrator leaves control blocks untouched and preserves step ordering", "implemented": false, "featureIds": ["F046"] },
+  { "id": "T052", "description": "Unit: publish gate auto-migrates drafts and blocks publish on unknown legacy shapes with actionable error", "implemented": false, "featureIds": ["F047"] },
+  { "id": "T053", "description": "Integration: admin validate-draft endpoint returns (a) migration preview (b) publishValidation results", "implemented": false, "featureIds": ["F048"] },
+
+  { "id": "T060", "description": "E2E: designer creates a new workflow using only ActionSteps + control blocks and publishes successfully", "implemented": false, "featureIds": ["F060", "F061", "F062"] },
+  { "id": "T061", "description": "E2E: designer edits an existing workflow and does not reintroduce deprecated node-step shapes", "implemented": false, "featureIds": ["F066"] },
+  { "id": "T062", "description": "E2E: palette displays wait/human-task as action-backed steps with correct configuration UI", "implemented": false, "featureIds": ["F060", "F063"] },
+  { "id": "T063", "description": "E2E: trigger payload mapping is migrated into explicit mapping ActionSteps and is visible in designer", "implemented": false, "featureIds": ["F064"] },
+  { "id": "T064", "description": "E2E: callWorkflow block is migrated to workflowKey and is visible in designer", "implemented": false, "featureIds": ["F065"] },
+  { "id": "T065", "description": "E2E: publish UI shows derived event schema ref as the workflow input contract", "implemented": false, "featureIds": ["F068"] },
+
+  { "id": "T070", "description": "DB migration: workflow key is required and uniqueness constraint prevents duplicates", "implemented": false, "featureIds": ["F080", "F081"] },
+  { "id": "T071", "description": "Integration: workflow key edit endpoint validates format and enforces reserved namespaces", "implemented": false, "featureIds": ["F082"] },
+  { "id": "T072", "description": "Unit: callWorkflow schema uses workflowKey and rejects workflowId shape", "implemented": false, "featureIds": ["F084"] },
+  { "id": "T073", "description": "Integration: runtime resolves workflowKey to workflowId and starts child run", "implemented": false, "featureIds": ["F085"] },
+  { "id": "T074", "description": "Unit: callWorkflow migrator rewrites workflowId to workflowKey when resolvable and reports when not", "implemented": false, "featureIds": ["F086"] },
+  { "id": "T075", "description": "Integration: bundle import preserves callWorkflow references by workflowKey across envs", "implemented": false, "featureIds": ["F087"] },
+
+  { "id": "T080", "description": "Unit: contract derivation picks effective source schema ref (catalog/override) deterministically", "implemented": false, "featureIds": ["F096", "F097"] },
+  { "id": "T081", "description": "Integration: event submission matches and resumes waits based on deterministic contract", "implemented": false, "featureIds": ["F099"] },
+  { "id": "T082", "description": "E2E: event catalog shows payload schema ref and indicates workflow dependencies", "implemented": false, "featureIds": ["F100"] },
+  { "id": "T083", "description": "Unit: workflow lint rule flags drafts lacking explicit mapping steps where required", "implemented": false, "featureIds": ["F101"] },
+
+  { "id": "T090", "description": "Unit: bundle import validates workflows via publishValidation and returns structured errors/warnings", "implemented": false, "featureIds": ["F112", "F113"] },
+  { "id": "T091", "description": "Unit: bundle dry-run mode performs no DB writes and returns a summary", "implemented": false, "featureIds": ["F114"] },
+  { "id": "T092", "description": "Integration: bundle import/export round-trip across envs with key identity and explicit contract", "implemented": false, "featureIds": ["F083", "F087", "F113", "F115"] },
+  { "id": "T093", "description": "Unit: bundle header validation remains strict (format + version) after schema simplification", "implemented": false, "featureIds": ["F116"] },
+
+  { "id": "T100", "description": "Unit: compiler produces a linear IR and source map for a simple if/else workflow", "implemented": false, "featureIds": ["F126", "F127"] },
+  { "id": "T101", "description": "Unit: compiler produces correct jump targets for try/catch and forEach", "implemented": false, "featureIds": ["F126", "F127"] },
+  { "id": "T102", "description": "Integration: publish stores compiled IR and runtime executes IR producing identical outcomes to interpreter", "implemented": false, "featureIds": ["F128", "F129"] },
+  { "id": "T103", "description": "Integration: logs/step history remain stable and readable when executing compiled IR", "implemented": false, "featureIds": ["F130"] },
+
+  { "id": "T110", "description": "Integration: bulk migration tool migrates keys + callWorkflow + trigger mapping + node->action in one pass", "implemented": false, "featureIds": ["F136"] },
+  { "id": "T111", "description": "Integration: migration tool is idempotent (second run is a no-op) and reports summary", "implemented": false, "featureIds": ["F136"] },
+  { "id": "T112", "description": "Integration: telemetry emits counters for successful migrations and blocked publishes", "implemented": false, "featureIds": ["F137"] },
+  { "id": "T113", "description": "Integration: rollout flag disables simplified-path publishes/execution when turned off", "implemented": false, "featureIds": ["F138"] },
+  { "id": "T114", "description": "Regression: runtime no longer requires node-type registry for execution in the simplified model", "implemented": false, "featureIds": ["F139"] },
+  { "id": "T115", "description": "Regression: payload schema mode/provenance removal does not break publish or event submission flows", "implemented": false, "featureIds": ["F140"] },
+  { "id": "T116", "description": "Regression: Ajv bundle schema plumbing removal does not reduce bundle safety (publishValidation catches errors)", "implemented": false, "featureIds": ["F141"] },
+  { "id": "T117", "description": "Docs: updated documentation matches actual behavior and code pointers are correct", "implemented": false, "featureIds": ["F142"] },
+
+  { "id": "T118", "description": "Unit: action catalog metadata is complete and stable for designer consumption", "implemented": false, "featureIds": ["F143"] },
+  { "id": "T119", "description": "Unit: action version policy resolves deterministically given a registry snapshot", "implemented": false, "featureIds": ["F144", "F145"] },
+  { "id": "T120", "description": "Integration: publish freezes resolved action versions into the published definition", "implemented": false, "featureIds": ["F146"] },
+  { "id": "T121", "description": "Regression: runtime executes the frozen action versions even if registry default changes later", "implemented": false, "featureIds": ["F145", "F146"] },
+
+  { "id": "T122", "description": "Unit: publishValidation validates effect configs (timeouts, required fields, wait types)", "implemented": false, "featureIds": ["F147"] },
+  { "id": "T123", "description": "Integration: canceling a run cleans up outstanding waits/tasks according to policy", "implemented": false, "featureIds": ["F148"] },
+  { "id": "T124", "description": "Integration: event wait timeout resumes run with resumeError and produces expected logs", "implemented": false, "featureIds": ["F149"] },
+
+  { "id": "T125", "description": "Unit: action runtime API surface (ctx.*) enforces invariants and returns consistent errors", "implemented": false, "featureIds": ["F150"] },
+  { "id": "T126", "description": "Unit: mapping action resolves expressions/secrets and produces redaction paths", "implemented": false, "featureIds": ["F151"] },
+  { "id": "T127", "description": "Unit: schema.assert action validates payload/vars against schemaRef and emits warnings/errors", "implemented": false, "featureIds": ["F152"] },
+
+  { "id": "T128", "description": "Unit: publishValidation emits actionable codes for action version pinning problems", "implemented": false, "featureIds": ["F153"] },
+  { "id": "T129", "description": "Integration: effect application failure produces a dead-letter entry with recoverability hint", "implemented": false, "featureIds": ["F154"] },
+  { "id": "T130", "description": "Integration: admin retry endpoint can replay a failed effect safely (idempotent semantics)", "implemented": false, "featureIds": ["F155"] },
+
+  { "id": "T131", "description": "Unit: workflow key linter enforces reserved prefixes and allowed characters", "implemented": false, "featureIds": ["F156"] },
+  { "id": "T132", "description": "Integration: workflow key rename constraints enforced (blocked when referenced/published unless forced)", "implemented": false, "featureIds": ["F157", "F161"] },
+  { "id": "T133", "description": "Integration: key backfill job generates stable keys and avoids collisions", "implemented": false, "featureIds": ["F158"] },
+
+  { "id": "T134", "description": "Unit: callWorkflow version selector resolves deterministically to an existing published version", "implemented": false, "featureIds": ["F159"] },
+  { "id": "T135", "description": "Integration: workflow reference index finds inbound callWorkflow references by workflowKey", "implemented": false, "featureIds": ["F160"] },
+  { "id": "T136", "description": "Integration: deletion is blocked when referenced unless forced and reports references", "implemented": false, "featureIds": ["F161"] },
+
+  { "id": "T137", "description": "Integration: schema-ref conflict on event submission is surfaced (UI/API) and tracked via telemetry", "implemented": false, "featureIds": ["F162"] },
+  { "id": "T138", "description": "Unit: publishValidation requires event catalog entry or explicit override for event triggers", "implemented": false, "featureIds": ["F163"] },
+  { "id": "T139", "description": "Integration: reconcile tool updates affected workflows when catalog schema refs change", "implemented": false, "featureIds": ["F164"] },
+
+  { "id": "T140", "description": "Integration: bundle import conflict resolution (key collisions) behaves correctly with force and without", "implemented": false, "featureIds": ["F165"] },
+  { "id": "T141", "description": "Integration: bundle partial import imports selected workflows and reports warnings for missing references", "implemented": false, "featureIds": ["F166"] },
+  { "id": "T142", "description": "Integration: bundle export transitive closure includes referenced workflows by workflowKey", "implemented": false, "featureIds": ["F167"] },
+
+  { "id": "T143", "description": "Unit: bundle manifest includes hashes and audit fields; hash changes on any workflow change", "implemented": false, "featureIds": ["F168"] },
+  { "id": "T144", "description": "Unit: stable JSON normalization makes bundle output diff-stable across runs", "implemented": false, "featureIds": ["F169"] },
+
+  { "id": "T145", "description": "Integration: IR compiler flag enabled -> publish stores IR; runtime still defaults to interpreter if configured", "implemented": false, "featureIds": ["F170"] },
+  { "id": "T146", "description": "Unit: IR source map allows mapping PC back to original step path for logs/UI", "implemented": false, "featureIds": ["F171"] },
+  { "id": "T147", "description": "Integration: IR conformance check asserts interpreter vs IR execution equivalence for canary workflows", "implemented": false, "featureIds": ["F172"] },
+
+  { "id": "T148", "description": "Integration: migration dashboard surfaces counts of drafts needing migration and top blocker codes", "implemented": false, "featureIds": ["F173"] },
+  { "id": "T149", "description": "Integration: tenant migration runner batch-migrates drafts safely and reports progress", "implemented": false, "featureIds": ["F174"] },
+  { "id": "T150", "description": "Integration: migration runner rate limits and supports dry-run and rollback strategy", "implemented": false, "featureIds": ["F175"] },
+
+  { "id": "T151", "description": "Regression: event submission, run studio, and task inbox still function after schema simplification", "implemented": false, "featureIds": ["F176"] },
+  { "id": "T152", "description": "Regression: compatibility shim allows older clients to read definitions during migration window", "implemented": false, "featureIds": ["F177"] },
+
+  { "id": "T153", "description": "Unit: publish-time validations catch missing schema refs and unsatisfiable inputs early with actionable errors", "implemented": false, "featureIds": ["F178"] },
+  { "id": "T154", "description": "Unit: error translator converts runtime error shapes to publish-time guidance text consistently", "implemented": false, "featureIds": ["F179"] },
+
+  { "id": "T155", "description": "Docs: action authoring guide covers effects, secrets, redactions, and idempotency and matches code", "implemented": false, "featureIds": ["F180"] },
+  { "id": "T156", "description": "Docs: workflow contract guide matches contract derivation and migration behavior", "implemented": false, "featureIds": ["F181"] },
+  { "id": "T157", "description": "Docs: bundle guide matches dry-run, conflict resolution, and auditing behavior", "implemented": false, "featureIds": ["F182"] },
+
+  { "id": "T158", "description": "Guard: CI fails if node-type runtime execution paths are reintroduced", "implemented": false, "featureIds": ["F183"] },
+  { "id": "T159", "description": "Guard: CI fails if payloadSchemaMode-based publish behavior is reintroduced", "implemented": false, "featureIds": ["F184"] },
+  { "id": "T160", "description": "Guard: CI fails if Ajv bundle schema validation plumbing is reintroduced", "implemented": false, "featureIds": ["F185"] },
+
+  { "id": "T161", "description": "Integration: cleanup checklist completion does not break existing canary workflows", "implemented": false, "featureIds": ["F186", "F187"] },
+  { "id": "T162", "description": "Unit: fixtures/templates produce valid simplified-model workflows and validate/publish successfully", "implemented": false, "featureIds": ["F188"] },
+  { "id": "T163", "description": "CI: canary workflow suite publishes, triggers, waits, resumes, and exports/imports successfully", "implemented": false, "featureIds": ["F189"] },
+
+  { "id": "T164", "description": "Unit: effect serialization rejects unknown wait types and preserves forward-compatible fields", "implemented": false, "featureIds": ["F020", "F147"] },
+  { "id": "T165", "description": "Unit: effect persistence stores correlation keys and event names exactly as resolved (string normalization)", "implemented": false, "featureIds": ["F021", "F024"] },
+  { "id": "T166", "description": "Unit: effect persistence enforces payload size limits and truncates log previews safely", "implemented": false, "featureIds": ["F021", "F031"] },
+  { "id": "T167", "description": "Integration: multiple outstanding waits for same key/event resolve FIFO and only once", "implemented": false, "featureIds": ["F023", "F024"] },
+  { "id": "T168", "description": "Integration: submitting an event with mismatched tenant does not resolve waits (tenant isolation)", "implemented": false, "featureIds": ["F023", "F099"] },
+
+  { "id": "T169", "description": "Unit: action.call inputMapping secret refs are validated and missing secrets are reported at publish", "implemented": false, "featureIds": ["F041", "F178"] },
+  { "id": "T170", "description": "Unit: action.call onError=continue records error in envelope and continues to next step", "implemented": false, "featureIds": ["F040", "F042"] },
+  { "id": "T171", "description": "Integration: action.call retry policy schedules retries and respects maxAttempts", "implemented": false, "featureIds": ["F029", "F042"] },
+  { "id": "T172", "description": "Integration: action.call defaultRetry is applied consistently for actions with retry hints", "implemented": false, "featureIds": ["F022", "F042"] },
+
+  { "id": "T173", "description": "Unit: publishValidation rejects workflows with invalid expressions in mappings and conditions", "implemented": false, "featureIds": ["F041", "F178"] },
+  { "id": "T174", "description": "Unit: publishValidation rejects non-JSON-serializable workflow definitions and reports root error", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T175", "description": "Unit: publishValidation collects secretRefs from both mappings and config and reports them", "implemented": false, "featureIds": ["F041", "F178"] },
+
+  { "id": "T176", "description": "E2E: publishing a migrated draft shows a migration summary and does not silently change semantics", "implemented": false, "featureIds": ["F047", "F064", "F065"] },
+  { "id": "T177", "description": "E2E: designer prevents saving invalid workflow key formats and shows inline validation", "implemented": false, "featureIds": ["F082", "F156"] },
+  { "id": "T178", "description": "E2E: designer action version pin UI produces expected persisted version pins", "implemented": false, "featureIds": ["F062", "F144", "F146"] },
+  { "id": "T179", "description": "E2E: action configuration UI is schema-driven and blocks invalid inputMapping keys", "implemented": false, "featureIds": ["F063", "F040"] },
+
+  { "id": "T180", "description": "Integration: workflow key uniqueness conflicts return 409 with structured details", "implemented": false, "featureIds": ["F081", "F082"] },
+  { "id": "T181", "description": "Integration: exporting workflows includes key and fails if key missing (no silent export)", "implemented": false, "featureIds": ["F083"] },
+  { "id": "T182", "description": "Integration: callWorkflow by key works with explicit version and with latest-published selector", "implemented": false, "featureIds": ["F084", "F159"] },
+  { "id": "T183", "description": "Integration: workflow reference index stays consistent after imports, deletions, and key renames", "implemented": false, "featureIds": ["F160", "F165"] },
+
+  { "id": "T184", "description": "Integration: contract derivation handles missing catalog schema refs by blocking publish with error", "implemented": false, "featureIds": ["F096", "F163"] },
+  { "id": "T185", "description": "Integration: event catalog schema ref changes trigger reconcile warnings for dependent workflows", "implemented": false, "featureIds": ["F164", "F100"] },
+  { "id": "T186", "description": "Regression: removal of trigger payloadMapping does not break event-triggered workflow starts when mapping steps exist", "implemented": false, "featureIds": ["F098", "F099"] },
+
+  { "id": "T187", "description": "Integration: bundle dry-run returns accurate diff summary (create/update/delete) without DB writes", "implemented": false, "featureIds": ["F114", "F165"] },
+  { "id": "T188", "description": "Integration: bundle partial import rejects selection that omits required referenced workflows unless forced", "implemented": false, "featureIds": ["F166", "F167"] },
+  { "id": "T189", "description": "Integration: bundle export transitive closure is stable and deterministic", "implemented": false, "featureIds": ["F167", "F169"] },
+  { "id": "T190", "description": "Integration: bundle manifest hashes detect tampering and are verified on import (when enabled)", "implemented": false, "featureIds": ["F168"] },
+
+  { "id": "T191", "description": "Integration: publish stores IR in workflow_definition_versions with compiler version metadata", "implemented": false, "featureIds": ["F127", "F128"] },
+  { "id": "T192", "description": "Integration: runtime executes IR for canary workflow and produces identical waits/logs", "implemented": false, "featureIds": ["F129", "F172"] },
+  { "id": "T193", "description": "Unit: IR source maps support jumping from run logs to designer step selection", "implemented": false, "featureIds": ["F171", "F067"] },
+  { "id": "T194", "description": "Regression: interpreter fallback still works when IR data is absent or invalid", "implemented": false, "featureIds": ["F129"] },
+
+  { "id": "T195", "description": "Integration: tenant migration runner reports per-workflow outcomes and top error codes", "implemented": false, "featureIds": ["F174", "F173"] },
+  { "id": "T196", "description": "Integration: migration runner supports dry-run mode and produces a stable report", "implemented": false, "featureIds": ["F175"] },
+  { "id": "T197", "description": "Integration: migration runner does not exceed rate limits and yields predictable progress", "implemented": false, "featureIds": ["F175"] },
+
+  { "id": "T198", "description": "Security: manage/publish/admin permissions are enforced consistently for new endpoints (validate draft, bundle dry-run, reconcile tool)", "implemented": false, "featureIds": ["F048", "F114", "F164"] },
+  { "id": "T199", "description": "Security: logs/snapshots redact secret-derived fields in mapping and effect payloads", "implemented": false, "featureIds": ["F031", "F178"] },
+
+  { "id": "T200", "description": "Observability: effect created/resolved events include correlation keys and step pointers consistently", "implemented": false, "featureIds": ["F030", "F032"] },
+  { "id": "T201", "description": "Observability: telemetry emitted for migration outcomes and publish failures includes tenant and workflow key safely", "implemented": false, "featureIds": ["F137"] },
+
+  { "id": "T202", "description": "Unit: rollout flag gates (a) publish auto-migration (b) runtime execution path selection", "implemented": false, "featureIds": ["F138"] },
+  { "id": "T203", "description": "Regression: rollout flag off keeps existing behavior and does not break running workflows", "implemented": false, "featureIds": ["F005", "F138"] },
+
+  { "id": "T204", "description": "Unit: code health gate for node-type runtime usage triggers on forbidden imports/exports", "implemented": false, "featureIds": ["F183"] },
+  { "id": "T205", "description": "Unit: code health gate for payloadSchemaMode triggers on forbidden field access patterns", "implemented": false, "featureIds": ["F184"] },
+  { "id": "T206", "description": "Unit: code health gate for Ajv bundle schema triggers on forbidden imports of bundle schema validator", "implemented": false, "featureIds": ["F185"] },
+
+  { "id": "T207", "description": "Integration: fixture workflows under simplified schema can be imported/published and executed", "implemented": false, "featureIds": ["F188", "F115"] },
+  { "id": "T208", "description": "Integration: cleanup phase removes deprecated paths without breaking canary suite", "implemented": false, "featureIds": ["F186", "F187", "F189"] },
+
+  { "id": "T209", "description": "Regression: workflow reference index and bundle transitive export remain correct after cleanup removals", "implemented": false, "featureIds": ["F160", "F167", "F187"] },
+  { "id": "T210", "description": "Regression: event catalog UX still loads and shows schema refs after contract unification cleanup", "implemented": false, "featureIds": ["F100", "F140"] },
+
+  { "id": "T211", "description": "Integration: admin effect retry endpoint is disabled by default and can be enabled with config", "implemented": false, "featureIds": ["F155", "F138"] },
+  { "id": "T212", "description": "Integration: schema.assert action produces warnings only (non-blocking) when configured for lint-style behavior", "implemented": false, "featureIds": ["F152", "F178"] },
+
+  { "id": "T213", "description": "Integration: bundle import validates schema refs exist in registry and reports missing refs clearly", "implemented": false, "featureIds": ["F113", "F178"] },
+  { "id": "T214", "description": "Integration: bundle import refuses to import workflows with unknown actions unless forced (policy)", "implemented": false, "featureIds": ["F113", "F165"] },
+  { "id": "T215", "description": "Unit: stable JSON normalization preserves numeric/string distinctions and ordering rules", "implemented": false, "featureIds": ["F169"] },
+
+  { "id": "T216", "description": "Integration: child workflow output mapping works when callWorkflow is key-addressed and definitions are migrated", "implemented": false, "featureIds": ["F084", "F085", "F086"] },
+  { "id": "T217", "description": "Integration: child workflow failures propagate as ActionError and are caught by try/catch correctly", "implemented": false, "featureIds": ["F042", "F126"] },
+  { "id": "T218", "description": "Integration: forEach concurrency still respects concurrency limits with action-backed steps", "implemented": false, "featureIds": ["F042", "F178"] },
+  { "id": "T219", "description": "Integration: continue-on-error semantics for forEach items remain correct after action-step unification", "implemented": false, "featureIds": ["F042", "F147"] },
+
+  { "id": "T220", "description": "E2E: end-to-end flow (event trigger -> mapping -> action.call -> human task -> resume -> child workflow call) succeeds under simplified model", "implemented": false, "featureIds": ["F024", "F025", "F040", "F084", "F098", "F189"] }
+]

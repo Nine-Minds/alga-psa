@@ -1,0 +1,1754 @@
+[
+  {
+    "id": "F001",
+    "description": "[Mobile:Foundation] Create React Native app (iOS + Android) in repo with reproducible dev/build workflow",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "[Mobile:Foundation] Define environment config for hosted dev/stage/prod (no self-hosted in V1)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "[Mobile:Foundation] Add typed REST API client wrapper with consistent error mapping",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "[Mobile:Foundation] Add request middleware for auth headers, tenant headers (if required), and user-agent tagging",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "[Mobile:Foundation] Add network timeouts and retry/backoff for safe idempotent requests",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "[Mobile:Foundation] Add global app state bootstrapping (auth gate) and splash/loading sequence",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "[Mobile:Foundation] Add navigation skeleton (tabs + stack) and deep link routing for ticket detail",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "[Mobile:Foundation] Add basic design system primitives (colors/typography/spacing) aligned with Alga web",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "[Mobile:Foundation] Add skeleton/loading/empty/error states standard library",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "[Mobile:Foundation] Add secure storage abstraction (Keychain/Keystore) for session secrets",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "[Mobile:Foundation] Add PII-safe logging abstraction with redaction and log level controls",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "[Mobile:Foundation] Add analytics scaffolding (screen views + key actions) with opt-out hook (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "[Mobile:Foundation] Add crash/error reporting hook (provider TBD) with PII redaction",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "[Mobile:Foundation] Add caching layer for ticket list/detail with TTL + invalidation on updates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "[Mobile:Foundation] Add pull-to-refresh and background refresh on app resume",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "[Mobile:Foundation] Add offline detection UX (always-connected warning + retry actions)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "[Mobile:Foundation] Add accessibility baseline (labels, focus order, touch target sizes)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "[Mobile:Foundation] Add localization scaffolding (en-US first)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "[Mobile:Foundation] Add Settings screen shell + diagnostics (version/build/environment)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "[Mobile:Foundation] Add CI job to lint/typecheck mobile app package",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "[Mobile:Foundation] Add CI job to run mobile unit tests",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "[Mobile:Foundation] Add documentation for mobile local dev and build/release process",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "[Mobile:Auth] Implement sign-in screen that launches system browser to Alga hosted login",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "[Mobile:Auth] Implement deep link callback handler with state validation and OTT capture",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "[Mobile:Auth] Exchange OTT for mobile API credential via server endpoint",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "[Mobile:Auth] Persist session securely and restore on cold start",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "[Mobile:Auth] Implement session refresh/rotation before expiry",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "[Mobile:Auth] Handle refresh failure (revoked/expired) by routing to sign-in",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "[Mobile:Auth] Implement logout that revokes server-side session and clears local storage",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "[Mobile:Auth] Support Microsoft SSO via web login (no provider-specific native SDK)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "[Mobile:Auth] Support Google SSO via web login (no provider-specific native SDK)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "[Mobile:Auth] Record device/app metadata with session issue (for audit/analytics)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "[Mobile:Auth] Implement optional biometric gate to re-open app (local-only)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "[Mobile:Auth] Ensure tokens are never logged or sent to crash reports",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "[Mobile:Auth] Implement auth capability discovery endpoint (mobile enabled, providers available)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "[Mobile:Auth] Implement resilient UX for auth outages (retry, clear messaging)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "[Mobile:Auth] Support vanity/hosted domains for login handoff (configurable allowlist)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "[Mobile:Tickets:List] Implement Tickets list screen with infinite scroll pagination",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "[Mobile:Tickets:List] Implement pull-to-refresh to reload first page",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "[Mobile:Tickets:List] Show ticket number/id, subject/title, status, priority, assignee, client/company, updated-at",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "[Mobile:Tickets:List] Render status and priority badges with accessible contrast",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "[Mobile:Tickets:List] Implement server-side sorting (default updated-at desc)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "[Mobile:Tickets:List] Implement server-side search with debounced input",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "[Mobile:Tickets:List] Implement filter UI for status, assignee, priority, updated-since",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "[Mobile:Tickets:List] Add quick filters: My tickets, Unassigned, High priority, Recently updated",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "[Mobile:Tickets:List] Support combining filters and show active filter summary",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "[Mobile:Tickets:List] Support clear-all filters",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "[Mobile:Tickets:List] Persist last-used filters per user",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "[Mobile:Tickets:List] Handle empty results and error retries gracefully",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "[Mobile:Tickets:List] Prefetch ticket detail for first visible rows (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "[Mobile:Tickets:List] Implement ticket stats summary header using tickets stats endpoint (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "[Mobile:Tickets:List] Ensure list results respect RBAC and data visibility",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "[Mobile:Tickets:Detail] Implement Ticket detail screen with loading skeleton and refresh",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "[Mobile:Tickets:Detail] Render ticket header (number/title/status/priority/assignee)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "[Mobile:Tickets:Detail] Render requester/contact and client/company summary",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "[Mobile:Tickets:Detail] Render key timestamps (created/updated/closed) with relative time",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "[Mobile:Tickets:Detail] Render description with safe link handling (optional markdown)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "[Mobile:Tickets:Detail] Render comments/timeline with pagination",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "[Mobile:Tickets:Detail] Differentiate internal vs public comments visually",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "[Mobile:Tickets:Detail] Show commenter identity and timestamp for entries",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "[Mobile:Tickets:Detail] Support copy ticket id/number and \u201copen in web\u201d link-out",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "[Mobile:Tickets:Detail] Handle 404/403 states with friendly UX",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "[Mobile:Tickets:Detail] Cache last-viewed ticket detail (TTL)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "[Mobile:Tickets:Detail] Ensure detail respects RBAC and field-level visibility",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "[Mobile:Tickets:Updates] Implement add-comment composer (multiline) with send action",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "[Mobile:Tickets:Updates] Support comment visibility selection (internal vs public)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "[Mobile:Tickets:Updates] Validate comment length and show inline errors",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "[Mobile:Tickets:Updates] Post comment and update timeline on success",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "[Mobile:Tickets:Updates] Preserve draft on failure/navigation and allow retry",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "[Mobile:Tickets:Updates] Prevent duplicate submissions while in-flight",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "[Mobile:Tickets:Updates] Implement status picker using server-provided allowed statuses",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "[Mobile:Tickets:Updates] Submit status change and update ticket header/list badges",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "[Mobile:Tickets:Updates] Handle 409 conflicts (ticket changed elsewhere) with refresh + retry UX",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "[Mobile:Tickets:Updates] Include mobile client metadata on update calls (audit)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "[Mobile:Tickets:Updates] Ensure updates respect RBAC and server-side validation",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "[Mobile:Tickets:Critical Updates] Implement assign-to-me action and reflect in UI",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "[Mobile:Tickets:Critical Updates] Implement unassign action when permitted",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "[Mobile:Tickets:Critical Updates] Implement priority update via picker",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "[Mobile:Tickets:Critical Updates] Implement due date update (if supported by API)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "[Mobile:Tickets:Critical Updates] Implement watchers/subscribers add/remove (if supported by API)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "[Mobile:Tickets:Critical Updates] Implement time entry creation from ticket (if supported by API)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "[Mobile:Tickets:Critical Updates] Surface validation errors clearly for partial updates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "[Mobile:Tickets:Critical Updates] Support field-level loading indicators for partial updates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "[Mobile:Settings] Implement Settings screen showing current user identity and tenant",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "[Mobile:Settings] Add \u201cclear cache\u201d action",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "[Mobile:Settings] Add \u201clogout\u201d action",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "[Mobile:Settings] Add \u201cabout/legal\u201d screens (privacy policy/terms)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "[Mobile:Settings] Add toggles: biometric gate, hide sensitive info in notifications (future)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "[Mobile:Quality] Optimize list rendering (virtualized list, avoid re-renders)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "[Mobile:Quality] Optimize payload sizes via slim DTOs / field selection (server support)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "[Mobile:Quality] Handle timezone/locale formatting consistently",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "[Mobile:Quality] Add privacy review checklist and PII inventory for mobile data flows",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "[Mobile:Quality] Add observability events for auth success/failure and API error rates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "[Mobile:Release] Set up iOS TestFlight and Android internal testing pipelines",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "[Mobile:Release] Define signing, versioning, and release notes process",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "[Mobile:Release] Add app icon/splash assets",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "[Mobile:Release] Add rollout checklist and rollback plan",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "[Server:Mobile Auth] Add mobile handoff endpoint/page that issues a short-lived, single-use OTT for authenticated web sessions",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "[Server:Mobile Auth] Add storage for mobile OTTs with expiry, single-use semantics, and tenant/user binding",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "[Server:Mobile Auth] Add API endpoint to exchange OTT for mobile API credential (short-lived) and refresh token/rotation mechanism",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "[Server:Mobile Auth] Integrate with existing Microsoft/Google SSO configurations used by web login",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "[Server:Mobile Auth] Add API endpoint to refresh/rotate mobile credentials and invalidate old tokens",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "[Server:Mobile Auth] Add API endpoint to revoke mobile sessions (logout)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "[Server:Mobile Auth] Add endpoint for mobile capability discovery (mobile enabled, providers available, TTLs)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "[Server:Mobile Auth] Add rate limiting for OTT issue/exchange/refresh endpoints",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "[Server:Mobile Auth] Add audit logging for mobile session issue/refresh/revoke events",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "[Server:Mobile Auth] Ensure ticket APIs used by mobile are available and documented (list/search/detail/comments/status/assignment/stats)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "[Server:Mobile Auth] Ensure ticket comment create API supports internal/public visibility flag",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "[Server:Mobile Auth] Ensure consistent error shape for validation/auth errors for mobile clients",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "[Server:Mobile Auth] Add migrations for new tables/columns used by mobile auth",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "[Server:Mobile Auth] Add tests for OTT single-use + expiry and credential rotation",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "[Server:Mobile Auth] Add documentation for mobile auth configuration and hosted domain allowlist",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "[Phase2:Notifications] Implement push notification registration (APNs/FCM) and device token management",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "[Phase2:Notifications] Add server endpoints to register/unregister device tokens",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "[Phase2:Notifications] Send push notifications for assignment/status/mention events",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "[Phase2:Notifications] Deep link from push notification into ticket detail",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "[Phase2:Notifications] Add notification preferences screen",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "[Phase2:Self-hosted] Add base URL selection and self-hosted domain onboarding UX",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "[Phase2:Self-hosted] Document self-hosted requirements for mobile handoff URLs and SSO callback domains",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "[Phase2:Self-hosted] Add self-hosted connectivity diagnostics and TLS certificate troubleshooting UX",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "[Mobile:Foundation] Implement standardized API error mapping: network vs validation vs auth vs permission vs server error",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "[Mobile:Foundation] Implement global HTTP 401 handler (attempt refresh once then force sign-in)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "[Mobile:Foundation] Implement global HTTP 403 handler (show no-access UX)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "[Mobile:Foundation] Implement request cancellation for superseded ticket search queries",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "[Mobile:Foundation] Implement request deduplication for concurrent identical GETs",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "[Mobile:Foundation] Implement app-level telemetry correlation id on every request",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "[Mobile:Foundation] Implement secure handling of deep link URLs (reject unexpected hosts/paths)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "[Mobile:Foundation] Implement \u201copen in web\u201d URL builder for hosted environments",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "[Mobile:Foundation] Implement clipboard helper that redacts sensitive fields by default (configurable)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "[Mobile:Foundation] Implement app state restoration for last-viewed tab and last-opened ticket (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "[Mobile:Foundation] Implement memory leak guardrails for large lists (profiling checklist)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "[Mobile:Foundation] Implement startup performance budget and measurement",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "[Mobile:Auth] Implement OTT exchange retry with exponential backoff and single-flight guard",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "[Mobile:Auth] Implement refresh token rotation handling with safe rollback on failures",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "[Mobile:Auth] Implement session revocation check on app resume (throttled)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "[Mobile:Auth] Implement sign-in error UX for invalid tenant/provider configuration",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "[Mobile:Auth] Implement sign-in error UX for user without required ticket permissions",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "[Mobile:Auth] Implement sign-in UX copy that clearly indicates \u201cinternal users only\u201d",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "[Mobile:Tickets:List] Implement List:Filters - status multi-select",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "[Mobile:Tickets:List] Implement List:Filters - assignee (me/unassigned) selector",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "[Mobile:Tickets:List] Implement List:Filters - priority selector",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "[Mobile:Tickets:List] Implement List:Filters - updated-since date picker",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "[Mobile:Tickets:List] Implement List:Filters - sort selector",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "[Mobile:Tickets:List] Implement List:UX - filter chip summary bar",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "[Mobile:Tickets:List] Implement List:UX - clear-all filters CTA",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "[Mobile:Tickets:List] Implement List:UX - last refreshed timestamp",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "[Mobile:Tickets:List] Implement List:UX - pull-to-refresh haptics (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "[Mobile:Tickets:List] Implement List:Errors - 401 handling (refresh then sign-in)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "[Mobile:Tickets:List] Implement List:Errors - 403 handling (no access)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "[Mobile:Tickets:List] Implement List:Errors - 5xx retry with backoff",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "[Mobile:Tickets:List] Implement List:Errors - network offline retry",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "[Mobile:Tickets:List] Implement List:Perf - prefetch next page threshold tuning",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "[Mobile:Tickets:List] Implement List:Perf - cache invalidation on updates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - sectioned layout (header/details/comments)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - pull-to-refresh indicator states",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - open-in-web uses stable URL format",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - copy actions for id/number",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - link handling opens external browser with confirmation (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - comment pagination (load more)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - internal/public comment badges",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - render system events (status/assignee changes) distinctly (if present)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - cache invalidation after posting comment/status change",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - optimistic UI for comment post with rollback on failure",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - optimistic UI for status change with rollback on failure",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - conflict resolution prompt on 409",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - consistent date formatting per locale",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - accessibility: headings for sections",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - accessibility: timeline entries read in sensible order",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - scroll-to-latest comment quick action (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "[Mobile:Tickets:Detail] Implement ticket detail - jump-to-top button on long timelines (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "[Mobile:Tickets:Updates] Implement updates - draft persistence per ticket",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "[Mobile:Tickets:Updates] Implement updates - draft cleared on successful send",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "[Mobile:Tickets:Updates] Implement updates - comment length limit enforcement matches server",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "[Mobile:Tickets:Updates] Implement updates - comment visibility default (internal) and remembered per user",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "[Mobile:Tickets:Updates] Implement updates - status list fetched and cached with TTL",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "[Mobile:Tickets:Updates] Implement updates - status transitions validated server-side with friendly error messages",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "[Mobile:Tickets:Updates] Implement updates - disable send while offline with queued draft (no offline send)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "[Mobile:Tickets:Updates] Implement updates - toast feedback for success/failure",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "[Mobile:Tickets:Updates] Implement updates - field-level spinners for partial updates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "[Mobile:Tickets:Updates] Implement updates - retry mechanism for transient failures",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "[Mobile:Tickets:Updates] Implement updates - prevent double-tap submits",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "[Mobile:Tickets:Updates] Implement updates - include app version/device id headers on mutations",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "[Mobile:Tickets:Updates] Implement updates - assign-to-me button shows disabled state when already assignee",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "[Mobile:Tickets:Updates] Implement updates - priority picker disables invalid choices (if server provides)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "[Mobile:Tickets:Updates] Implement updates - due date picker supports clearing due date (if allowed)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "[Mobile:Tickets:Updates] Implement updates - time entry form validates required fields and rounds durations per policy",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Functional Requirements"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - OTT is bound to user session id to prevent replay across sessions",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - OTT includes nonce/state and is single-use",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - OTT expiry configurable (default short, e.g., 60s)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - exchange endpoint validates OTT + state + device metadata shape",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - refresh token rotation with immediate invalidation of prior refresh token",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - capabilities endpoint returns providers enabled and mobile auth enabled flag",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - capabilities endpoint returns hosted domain allowlist",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - rate limiting per IP and per user for exchange/refresh",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - audit logs include device id, app version, user id, tenant, action",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - consistent error response schema for auth errors",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket comment visibility enforcement matches permissions (public vs internal)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket list endpoint supports updated-since filter used by mobile",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket list endpoint supports assignee=me and assignee=unassigned filters",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket detail endpoint returns enough fields for header + detail sections",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket comments endpoint supports pagination and ordering",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket status update endpoint validates transitions and returns updated summary",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - ticket assignment update endpoint supports assign-to-self without separate user lookup",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "[Server:Mobile Auth] Implement server mobile auth - time entry create endpoint validates ticket association and permissions",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "[Mobile:Quality] Quality/Ops - end-to-end analytics event names cataloged and versioned",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "[Mobile:Quality] Quality/Ops - crash reporting excludes request/response bodies by default",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "[Mobile:Quality] Quality/Ops - redaction rules cover ticket subjects and comment bodies",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "[Mobile:Quality] Quality/Ops - API latency measurement per route",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "[Mobile:Quality] Quality/Ops - SLOs defined for key endpoints (list/detail/mutate)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "[Mobile:Quality] Quality/Ops - accessibility audit checklist executed pre-release",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "[Mobile:Quality] Quality/Ops - security review checklist executed pre-release",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "[Mobile:Quality] Quality/Ops - dependency vulnerability scanning enabled for mobile package",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "[Mobile:Quality] Quality/Ops - mobile build reproducibility checks in CI",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Requirements:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "[Mobile:Release] Release - store listing draft (Phase 1)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "[Mobile:Release] Release - screenshot capture plan for App Store / Play Store",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "[Mobile:Release] Release - internal beta distribution runbook",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "[Mobile:Release] Release - support escalation runbook for auth issues",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "[Mobile:Release] Release - minimum OS support policy documented",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "[Mobile:Release] Release - feature gating to disable Phase 2 modules in production builds",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  }
+]

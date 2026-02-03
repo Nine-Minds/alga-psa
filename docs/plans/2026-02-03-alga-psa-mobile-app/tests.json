@@ -1,0 +1,1833 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: Create React Native app (iOS + Android) in repo with reproducible dev/build workflow",
+    "implemented": false,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: Define environment config for hosted dev/stage/prod (no self-hosted in V1)",
+    "implemented": false,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: Add typed REST API client wrapper with consistent error mapping",
+    "implemented": false,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: Add request middleware for auth headers, tenant headers (if required), and user-agent tagging",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: Add network timeouts and retry/backoff for safe idempotent requests",
+    "implemented": false,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: Add global app state bootstrapping (auth gate) and splash/loading sequence",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: Add navigation skeleton (tabs + stack) and deep link routing for ticket detail",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: Add basic design system primitives (colors/typography/spacing) aligned with Alga web",
+    "implemented": false,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: Add skeleton/loading/empty/error states standard library",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: Add secure storage abstraction (Keychain/Keystore) for session secrets",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: Add PII-safe logging abstraction with redaction and log level controls",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: Add analytics scaffolding (screen views + key actions) with opt-out hook (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: Add crash/error reporting hook (provider TBD) with PII redaction",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: Add caching layer for ticket list/detail with TTL + invalidation on updates",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: Add pull-to-refresh and background refresh on app resume",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: Add offline detection UX (always-connected warning + retry actions)",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: Add accessibility baseline (labels, focus order, touch target sizes)",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: Add localization scaffolding (en-US first)",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: Add Settings screen shell + diagnostics (version/build/environment)",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: Add CI job to lint/typecheck mobile app package",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: Add CI job to run mobile unit tests",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: Add documentation for mobile local dev and build/release process",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "E2E: Implement sign-in screen that launches system browser to Alga hosted login",
+    "implemented": false,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "E2E: Implement deep link callback handler with state validation and OTT capture",
+    "implemented": false,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "E2E: Exchange OTT for mobile API credential via server endpoint",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "E2E: Persist session securely and restore on cold start",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "E2E: Implement session refresh/rotation before expiry",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "E2E: Handle refresh failure (revoked/expired) by routing to sign-in",
+    "implemented": false,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "E2E: Implement logout that revokes server-side session and clears local storage",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "E2E: Support Microsoft SSO via web login (no provider-specific native SDK)",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "E2E: Support Google SSO via web login (no provider-specific native SDK)",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "E2E: Record device/app metadata with session issue (for audit/analytics)",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "E2E: Implement optional biometric gate to re-open app (local-only)",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "E2E: Ensure tokens are never logged or sent to crash reports",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "E2E: Implement auth capability discovery endpoint (mobile enabled, providers available)",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "E2E: Implement resilient UX for auth outages (retry, clear messaging)",
+    "implemented": false,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "E2E: Support vanity/hosted domains for login handoff (configurable allowlist)",
+    "implemented": false,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "E2E: Implement Tickets list screen with infinite scroll pagination",
+    "implemented": false,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "E2E: Implement pull-to-refresh to reload first page",
+    "implemented": false,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "E2E: Show ticket number/id, subject/title, status, priority, assignee, client/company, updated-at",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "E2E: Render status and priority badges with accessible contrast",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "E2E: Implement server-side sorting (default updated-at desc)",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "E2E: Implement server-side search with debounced input",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "E2E: Implement filter UI for status, assignee, priority, updated-since",
+    "implemented": false,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "E2E: Add quick filters: My tickets, Unassigned, High priority, Recently updated",
+    "implemented": false,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "E2E: Support combining filters and show active filter summary",
+    "implemented": false,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "E2E: Support clear-all filters",
+    "implemented": false,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "E2E: Persist last-used filters per user",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "E2E: Handle empty results and error retries gracefully",
+    "implemented": false,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "E2E: Prefetch ticket detail for first visible rows (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "E2E: Implement ticket stats summary header using tickets stats endpoint (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "E2E: Ensure list results respect RBAC and data visibility",
+    "implemented": false,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "E2E: Implement Ticket detail screen with loading skeleton and refresh",
+    "implemented": false,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "E2E: Render ticket header (number/title/status/priority/assignee)",
+    "implemented": false,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "E2E: Render requester/contact and client/company summary",
+    "implemented": false,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "E2E: Render key timestamps (created/updated/closed) with relative time",
+    "implemented": false,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "E2E: Render description with safe link handling (optional markdown)",
+    "implemented": false,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "E2E: Render comments/timeline with pagination",
+    "implemented": false,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "E2E: Differentiate internal vs public comments visually",
+    "implemented": false,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "E2E: Show commenter identity and timestamp for entries",
+    "implemented": false,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "E2E: Support copy ticket id/number and \u201copen in web\u201d link-out",
+    "implemented": false,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "E2E: Handle 404/403 states with friendly UX",
+    "implemented": false,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "E2E: Cache last-viewed ticket detail (TTL)",
+    "implemented": false,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "E2E: Ensure detail respects RBAC and field-level visibility",
+    "implemented": false,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "E2E: Implement add-comment composer (multiline) with send action",
+    "implemented": false,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "E2E: Support comment visibility selection (internal vs public)",
+    "implemented": false,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "E2E: Validate comment length and show inline errors",
+    "implemented": false,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "E2E: Post comment and update timeline on success",
+    "implemented": false,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "E2E: Preserve draft on failure/navigation and allow retry",
+    "implemented": false,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "E2E: Prevent duplicate submissions while in-flight",
+    "implemented": false,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "E2E: Implement status picker using server-provided allowed statuses",
+    "implemented": false,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "E2E: Submit status change and update ticket header/list badges",
+    "implemented": false,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "E2E: Handle 409 conflicts (ticket changed elsewhere) with refresh + retry UX",
+    "implemented": false,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "E2E: Include mobile client metadata on update calls (audit)",
+    "implemented": false,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "E2E: Ensure updates respect RBAC and server-side validation",
+    "implemented": false,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "E2E: Implement assign-to-me action and reflect in UI",
+    "implemented": false,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "E2E: Implement unassign action when permitted",
+    "implemented": false,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "E2E: Implement priority update via picker",
+    "implemented": false,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "E2E: Implement due date update (if supported by API)",
+    "implemented": false,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "E2E: Implement watchers/subscribers add/remove (if supported by API)",
+    "implemented": false,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "E2E: Implement time entry creation from ticket (if supported by API)",
+    "implemented": false,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "E2E: Surface validation errors clearly for partial updates",
+    "implemented": false,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "E2E: Support field-level loading indicators for partial updates",
+    "implemented": false,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Unit: Implement Settings screen showing current user identity and tenant",
+    "implemented": false,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Unit: Add \u201cclear cache\u201d action",
+    "implemented": false,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Unit: Add \u201clogout\u201d action",
+    "implemented": false,
+    "featureIds": [
+      "F086"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Unit: Add \u201cabout/legal\u201d screens (privacy policy/terms)",
+    "implemented": false,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Unit: Add toggles: biometric gate, hide sensitive info in notifications (future)",
+    "implemented": false,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Unit: Optimize list rendering (virtualized list, avoid re-renders)",
+    "implemented": false,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Unit: Optimize payload sizes via slim DTOs / field selection (server support)",
+    "implemented": false,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Unit: Handle timezone/locale formatting consistently",
+    "implemented": false,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Unit: Add privacy review checklist and PII inventory for mobile data flows",
+    "implemented": false,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Unit: Add observability events for auth success/failure and API error rates",
+    "implemented": false,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Checklist: Set up iOS TestFlight and Android internal testing pipelines",
+    "implemented": false,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Checklist: Define signing, versioning, and release notes process",
+    "implemented": false,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Checklist: Add app icon/splash assets",
+    "implemented": false,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "Checklist: Add rollout checklist and rollback plan",
+    "implemented": false,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Integration: Add mobile handoff endpoint/page that issues a short-lived, single-use OTT for authenticated web sessions",
+    "implemented": false,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Integration: Add storage for mobile OTTs with expiry, single-use semantics, and tenant/user binding",
+    "implemented": false,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Integration: Add API endpoint to exchange OTT for mobile API credential (short-lived) and refresh token/rotation mechanism",
+    "implemented": false,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Integration: Integrate with existing Microsoft/Google SSO configurations used by web login",
+    "implemented": false,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Integration: Add API endpoint to refresh/rotate mobile credentials and invalidate old tokens",
+    "implemented": false,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Integration: Add API endpoint to revoke mobile sessions (logout)",
+    "implemented": false,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Integration: Add endpoint for mobile capability discovery (mobile enabled, providers available, TTLs)",
+    "implemented": false,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Integration: Add rate limiting for OTT issue/exchange/refresh endpoints",
+    "implemented": false,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Integration: Add audit logging for mobile session issue/refresh/revoke events",
+    "implemented": false,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Integration: Ensure ticket APIs used by mobile are available and documented (list/search/detail/comments/status/assignment/stats)",
+    "implemented": false,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Integration: Ensure ticket comment create API supports internal/public visibility flag",
+    "implemented": false,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Integration: Ensure consistent error shape for validation/auth errors for mobile clients",
+    "implemented": false,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Integration: Add migrations for new tables/columns used by mobile auth",
+    "implemented": false,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Integration: Add tests for OTT single-use + expiry and credential rotation",
+    "implemented": false,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Integration: Add documentation for mobile auth configuration and hosted domain allowlist",
+    "implemented": false,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Deferred: Implement push notification registration (APNs/FCM) and device token management",
+    "implemented": false,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Deferred: Add server endpoints to register/unregister device tokens",
+    "implemented": false,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Deferred: Send push notifications for assignment/status/mention events",
+    "implemented": false,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Deferred: Deep link from push notification into ticket detail",
+    "implemented": false,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Deferred: Add notification preferences screen",
+    "implemented": false,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Deferred: Add base URL selection and self-hosted domain onboarding UX",
+    "implemented": false,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Deferred: Document self-hosted requirements for mobile handoff URLs and SSO callback domains",
+    "implemented": false,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Deferred: Add self-hosted connectivity diagnostics and TLS certificate troubleshooting UX",
+    "implemented": false,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Unit: Implement standardized API error mapping: network vs validation vs auth vs permission vs server error",
+    "implemented": false,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Unit: Implement global HTTP 401 handler (attempt refresh once then force sign-in)",
+    "implemented": false,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Unit: Implement global HTTP 403 handler (show no-access UX)",
+    "implemented": false,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Unit: Implement request cancellation for superseded ticket search queries",
+    "implemented": false,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Unit: Implement request deduplication for concurrent identical GETs",
+    "implemented": false,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Unit: Implement app-level telemetry correlation id on every request",
+    "implemented": false,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Unit: Implement secure handling of deep link URLs (reject unexpected hosts/paths)",
+    "implemented": false,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Unit: Implement \u201copen in web\u201d URL builder for hosted environments",
+    "implemented": false,
+    "featureIds": [
+      "F128"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "Unit: Implement clipboard helper that redacts sensitive fields by default (configurable)",
+    "implemented": false,
+    "featureIds": [
+      "F129"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "Unit: Implement app state restoration for last-viewed tab and last-opened ticket (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F130"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "Unit: Implement memory leak guardrails for large lists (profiling checklist)",
+    "implemented": false,
+    "featureIds": [
+      "F131"
+    ]
+  },
+  {
+    "id": "T132",
+    "description": "Unit: Implement startup performance budget and measurement",
+    "implemented": false,
+    "featureIds": [
+      "F132"
+    ]
+  },
+  {
+    "id": "T133",
+    "description": "E2E: Implement OTT exchange retry with exponential backoff and single-flight guard",
+    "implemented": false,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T134",
+    "description": "E2E: Implement refresh token rotation handling with safe rollback on failures",
+    "implemented": false,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T135",
+    "description": "E2E: Implement session revocation check on app resume (throttled)",
+    "implemented": false,
+    "featureIds": [
+      "F135"
+    ]
+  },
+  {
+    "id": "T136",
+    "description": "E2E: Implement sign-in error UX for invalid tenant/provider configuration",
+    "implemented": false,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T137",
+    "description": "E2E: Implement sign-in error UX for user without required ticket permissions",
+    "implemented": false,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T138",
+    "description": "E2E: Implement sign-in UX copy that clearly indicates \u201cinternal users only\u201d",
+    "implemented": false,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T139",
+    "description": "E2E: Implement List:Filters - status multi-select",
+    "implemented": false,
+    "featureIds": [
+      "F139"
+    ]
+  },
+  {
+    "id": "T140",
+    "description": "E2E: Implement List:Filters - assignee (me/unassigned) selector",
+    "implemented": false,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T141",
+    "description": "E2E: Implement List:Filters - priority selector",
+    "implemented": false,
+    "featureIds": [
+      "F141"
+    ]
+  },
+  {
+    "id": "T142",
+    "description": "E2E: Implement List:Filters - updated-since date picker",
+    "implemented": false,
+    "featureIds": [
+      "F142"
+    ]
+  },
+  {
+    "id": "T143",
+    "description": "E2E: Implement List:Filters - sort selector",
+    "implemented": false,
+    "featureIds": [
+      "F143"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "E2E: Implement List:UX - filter chip summary bar",
+    "implemented": false,
+    "featureIds": [
+      "F144"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "E2E: Implement List:UX - clear-all filters CTA",
+    "implemented": false,
+    "featureIds": [
+      "F145"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "E2E: Implement List:UX - last refreshed timestamp",
+    "implemented": false,
+    "featureIds": [
+      "F146"
+    ]
+  },
+  {
+    "id": "T147",
+    "description": "E2E: Implement List:UX - pull-to-refresh haptics (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F147"
+    ]
+  },
+  {
+    "id": "T148",
+    "description": "E2E: Implement List:Errors - 401 handling (refresh then sign-in)",
+    "implemented": false,
+    "featureIds": [
+      "F148"
+    ]
+  },
+  {
+    "id": "T149",
+    "description": "E2E: Implement List:Errors - 403 handling (no access)",
+    "implemented": false,
+    "featureIds": [
+      "F149"
+    ]
+  },
+  {
+    "id": "T150",
+    "description": "E2E: Implement List:Errors - 5xx retry with backoff",
+    "implemented": false,
+    "featureIds": [
+      "F150"
+    ]
+  },
+  {
+    "id": "T151",
+    "description": "E2E: Implement List:Errors - network offline retry",
+    "implemented": false,
+    "featureIds": [
+      "F151"
+    ]
+  },
+  {
+    "id": "T152",
+    "description": "E2E: Implement List:Perf - prefetch next page threshold tuning",
+    "implemented": false,
+    "featureIds": [
+      "F152"
+    ]
+  },
+  {
+    "id": "T153",
+    "description": "E2E: Implement List:Perf - cache invalidation on updates",
+    "implemented": false,
+    "featureIds": [
+      "F153"
+    ]
+  },
+  {
+    "id": "T154",
+    "description": "E2E: Implement ticket detail - sectioned layout (header/details/comments)",
+    "implemented": false,
+    "featureIds": [
+      "F154"
+    ]
+  },
+  {
+    "id": "T155",
+    "description": "E2E: Implement ticket detail - pull-to-refresh indicator states",
+    "implemented": false,
+    "featureIds": [
+      "F155"
+    ]
+  },
+  {
+    "id": "T156",
+    "description": "E2E: Implement ticket detail - open-in-web uses stable URL format",
+    "implemented": false,
+    "featureIds": [
+      "F156"
+    ]
+  },
+  {
+    "id": "T157",
+    "description": "E2E: Implement ticket detail - copy actions for id/number",
+    "implemented": false,
+    "featureIds": [
+      "F157"
+    ]
+  },
+  {
+    "id": "T158",
+    "description": "E2E: Implement ticket detail - link handling opens external browser with confirmation (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F158"
+    ]
+  },
+  {
+    "id": "T159",
+    "description": "E2E: Implement ticket detail - comment pagination (load more)",
+    "implemented": false,
+    "featureIds": [
+      "F159"
+    ]
+  },
+  {
+    "id": "T160",
+    "description": "E2E: Implement ticket detail - internal/public comment badges",
+    "implemented": false,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T161",
+    "description": "E2E: Implement ticket detail - render system events (status/assignee changes) distinctly (if present)",
+    "implemented": false,
+    "featureIds": [
+      "F161"
+    ]
+  },
+  {
+    "id": "T162",
+    "description": "E2E: Implement ticket detail - cache invalidation after posting comment/status change",
+    "implemented": false,
+    "featureIds": [
+      "F162"
+    ]
+  },
+  {
+    "id": "T163",
+    "description": "E2E: Implement ticket detail - optimistic UI for comment post with rollback on failure",
+    "implemented": false,
+    "featureIds": [
+      "F163"
+    ]
+  },
+  {
+    "id": "T164",
+    "description": "E2E: Implement ticket detail - optimistic UI for status change with rollback on failure",
+    "implemented": false,
+    "featureIds": [
+      "F164"
+    ]
+  },
+  {
+    "id": "T165",
+    "description": "E2E: Implement ticket detail - conflict resolution prompt on 409",
+    "implemented": false,
+    "featureIds": [
+      "F165"
+    ]
+  },
+  {
+    "id": "T166",
+    "description": "E2E: Implement ticket detail - consistent date formatting per locale",
+    "implemented": false,
+    "featureIds": [
+      "F166"
+    ]
+  },
+  {
+    "id": "T167",
+    "description": "E2E: Implement ticket detail - accessibility: headings for sections",
+    "implemented": false,
+    "featureIds": [
+      "F167"
+    ]
+  },
+  {
+    "id": "T168",
+    "description": "E2E: Implement ticket detail - accessibility: timeline entries read in sensible order",
+    "implemented": false,
+    "featureIds": [
+      "F168"
+    ]
+  },
+  {
+    "id": "T169",
+    "description": "E2E: Implement ticket detail - scroll-to-latest comment quick action (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F169"
+    ]
+  },
+  {
+    "id": "T170",
+    "description": "E2E: Implement ticket detail - jump-to-top button on long timelines (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F170"
+    ]
+  },
+  {
+    "id": "T171",
+    "description": "E2E: Implement updates - draft persistence per ticket",
+    "implemented": false,
+    "featureIds": [
+      "F171"
+    ]
+  },
+  {
+    "id": "T172",
+    "description": "E2E: Implement updates - draft cleared on successful send",
+    "implemented": false,
+    "featureIds": [
+      "F172"
+    ]
+  },
+  {
+    "id": "T173",
+    "description": "E2E: Implement updates - comment length limit enforcement matches server",
+    "implemented": false,
+    "featureIds": [
+      "F173"
+    ]
+  },
+  {
+    "id": "T174",
+    "description": "E2E: Implement updates - comment visibility default (internal) and remembered per user",
+    "implemented": false,
+    "featureIds": [
+      "F174"
+    ]
+  },
+  {
+    "id": "T175",
+    "description": "E2E: Implement updates - status list fetched and cached with TTL",
+    "implemented": false,
+    "featureIds": [
+      "F175"
+    ]
+  },
+  {
+    "id": "T176",
+    "description": "E2E: Implement updates - status transitions validated server-side with friendly error messages",
+    "implemented": false,
+    "featureIds": [
+      "F176"
+    ]
+  },
+  {
+    "id": "T177",
+    "description": "E2E: Implement updates - disable send while offline with queued draft (no offline send)",
+    "implemented": false,
+    "featureIds": [
+      "F177"
+    ]
+  },
+  {
+    "id": "T178",
+    "description": "E2E: Implement updates - toast feedback for success/failure",
+    "implemented": false,
+    "featureIds": [
+      "F178"
+    ]
+  },
+  {
+    "id": "T179",
+    "description": "E2E: Implement updates - field-level spinners for partial updates",
+    "implemented": false,
+    "featureIds": [
+      "F179"
+    ]
+  },
+  {
+    "id": "T180",
+    "description": "E2E: Implement updates - retry mechanism for transient failures",
+    "implemented": false,
+    "featureIds": [
+      "F180"
+    ]
+  },
+  {
+    "id": "T181",
+    "description": "E2E: Implement updates - prevent double-tap submits",
+    "implemented": false,
+    "featureIds": [
+      "F181"
+    ]
+  },
+  {
+    "id": "T182",
+    "description": "E2E: Implement updates - include app version/device id headers on mutations",
+    "implemented": false,
+    "featureIds": [
+      "F182"
+    ]
+  },
+  {
+    "id": "T183",
+    "description": "E2E: Implement updates - assign-to-me button shows disabled state when already assignee",
+    "implemented": false,
+    "featureIds": [
+      "F183"
+    ]
+  },
+  {
+    "id": "T184",
+    "description": "E2E: Implement updates - priority picker disables invalid choices (if server provides)",
+    "implemented": false,
+    "featureIds": [
+      "F184"
+    ]
+  },
+  {
+    "id": "T185",
+    "description": "E2E: Implement updates - due date picker supports clearing due date (if allowed)",
+    "implemented": false,
+    "featureIds": [
+      "F185"
+    ]
+  },
+  {
+    "id": "T186",
+    "description": "E2E: Implement updates - time entry form validates required fields and rounds durations per policy",
+    "implemented": false,
+    "featureIds": [
+      "F186"
+    ]
+  },
+  {
+    "id": "T187",
+    "description": "Integration: Implement server mobile auth - OTT is bound to user session id to prevent replay across sessions",
+    "implemented": false,
+    "featureIds": [
+      "F187"
+    ]
+  },
+  {
+    "id": "T188",
+    "description": "Integration: Implement server mobile auth - OTT includes nonce/state and is single-use",
+    "implemented": false,
+    "featureIds": [
+      "F188"
+    ]
+  },
+  {
+    "id": "T189",
+    "description": "Integration: Implement server mobile auth - OTT expiry configurable (default short, e.g., 60s)",
+    "implemented": false,
+    "featureIds": [
+      "F189"
+    ]
+  },
+  {
+    "id": "T190",
+    "description": "Integration: Implement server mobile auth - exchange endpoint validates OTT + state + device metadata shape",
+    "implemented": false,
+    "featureIds": [
+      "F190"
+    ]
+  },
+  {
+    "id": "T191",
+    "description": "Integration: Implement server mobile auth - refresh token rotation with immediate invalidation of prior refresh token",
+    "implemented": false,
+    "featureIds": [
+      "F191"
+    ]
+  },
+  {
+    "id": "T192",
+    "description": "Integration: Implement server mobile auth - capabilities endpoint returns providers enabled and mobile auth enabled flag",
+    "implemented": false,
+    "featureIds": [
+      "F192"
+    ]
+  },
+  {
+    "id": "T193",
+    "description": "Integration: Implement server mobile auth - capabilities endpoint returns hosted domain allowlist",
+    "implemented": false,
+    "featureIds": [
+      "F193"
+    ]
+  },
+  {
+    "id": "T194",
+    "description": "Integration: Implement server mobile auth - rate limiting per IP and per user for exchange/refresh",
+    "implemented": false,
+    "featureIds": [
+      "F194"
+    ]
+  },
+  {
+    "id": "T195",
+    "description": "Integration: Implement server mobile auth - audit logs include device id, app version, user id, tenant, action",
+    "implemented": false,
+    "featureIds": [
+      "F195"
+    ]
+  },
+  {
+    "id": "T196",
+    "description": "Integration: Implement server mobile auth - consistent error response schema for auth errors",
+    "implemented": false,
+    "featureIds": [
+      "F196"
+    ]
+  },
+  {
+    "id": "T197",
+    "description": "Integration: Implement server mobile auth - ticket comment visibility enforcement matches permissions (public vs internal)",
+    "implemented": false,
+    "featureIds": [
+      "F197"
+    ]
+  },
+  {
+    "id": "T198",
+    "description": "Integration: Implement server mobile auth - ticket list endpoint supports updated-since filter used by mobile",
+    "implemented": false,
+    "featureIds": [
+      "F198"
+    ]
+  },
+  {
+    "id": "T199",
+    "description": "Integration: Implement server mobile auth - ticket list endpoint supports assignee=me and assignee=unassigned filters",
+    "implemented": false,
+    "featureIds": [
+      "F199"
+    ]
+  },
+  {
+    "id": "T200",
+    "description": "Integration: Implement server mobile auth - ticket detail endpoint returns enough fields for header + detail sections",
+    "implemented": false,
+    "featureIds": [
+      "F200"
+    ]
+  },
+  {
+    "id": "T201",
+    "description": "Integration: Implement server mobile auth - ticket comments endpoint supports pagination and ordering",
+    "implemented": false,
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T202",
+    "description": "Integration: Implement server mobile auth - ticket status update endpoint validates transitions and returns updated summary",
+    "implemented": false,
+    "featureIds": [
+      "F202"
+    ]
+  },
+  {
+    "id": "T203",
+    "description": "Integration: Implement server mobile auth - ticket assignment update endpoint supports assign-to-self without separate user lookup",
+    "implemented": false,
+    "featureIds": [
+      "F203"
+    ]
+  },
+  {
+    "id": "T204",
+    "description": "Integration: Implement server mobile auth - time entry create endpoint validates ticket association and permissions",
+    "implemented": false,
+    "featureIds": [
+      "F204"
+    ]
+  },
+  {
+    "id": "T205",
+    "description": "Unit: Quality/Ops - end-to-end analytics event names cataloged and versioned",
+    "implemented": false,
+    "featureIds": [
+      "F205"
+    ]
+  },
+  {
+    "id": "T206",
+    "description": "Unit: Quality/Ops - crash reporting excludes request/response bodies by default",
+    "implemented": false,
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T207",
+    "description": "Unit: Quality/Ops - redaction rules cover ticket subjects and comment bodies",
+    "implemented": false,
+    "featureIds": [
+      "F207"
+    ]
+  },
+  {
+    "id": "T208",
+    "description": "Unit: Quality/Ops - API latency measurement per route",
+    "implemented": false,
+    "featureIds": [
+      "F208"
+    ]
+  },
+  {
+    "id": "T209",
+    "description": "Unit: Quality/Ops - SLOs defined for key endpoints (list/detail/mutate)",
+    "implemented": false,
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T210",
+    "description": "Unit: Quality/Ops - accessibility audit checklist executed pre-release",
+    "implemented": false,
+    "featureIds": [
+      "F210"
+    ]
+  },
+  {
+    "id": "T211",
+    "description": "Unit: Quality/Ops - security review checklist executed pre-release",
+    "implemented": false,
+    "featureIds": [
+      "F211"
+    ]
+  },
+  {
+    "id": "T212",
+    "description": "Unit: Quality/Ops - dependency vulnerability scanning enabled for mobile package",
+    "implemented": false,
+    "featureIds": [
+      "F212"
+    ]
+  },
+  {
+    "id": "T213",
+    "description": "Unit: Quality/Ops - mobile build reproducibility checks in CI",
+    "implemented": false,
+    "featureIds": [
+      "F213"
+    ]
+  },
+  {
+    "id": "T214",
+    "description": "Checklist: Release - store listing draft (Phase 1)",
+    "implemented": false,
+    "featureIds": [
+      "F214"
+    ]
+  },
+  {
+    "id": "T215",
+    "description": "Checklist: Release - screenshot capture plan for App Store / Play Store",
+    "implemented": false,
+    "featureIds": [
+      "F215"
+    ]
+  },
+  {
+    "id": "T216",
+    "description": "Checklist: Release - internal beta distribution runbook",
+    "implemented": false,
+    "featureIds": [
+      "F216"
+    ]
+  },
+  {
+    "id": "T217",
+    "description": "Checklist: Release - support escalation runbook for auth issues",
+    "implemented": false,
+    "featureIds": [
+      "F217"
+    ]
+  },
+  {
+    "id": "T218",
+    "description": "Checklist: Release - minimum OS support policy documented",
+    "implemented": false,
+    "featureIds": [
+      "F218"
+    ]
+  },
+  {
+    "id": "T219",
+    "description": "Checklist: Release - feature gating to disable Phase 2 modules in production builds",
+    "implemented": false,
+    "featureIds": [
+      "F219"
+    ]
+  },
+  {
+    "id": "T220",
+    "description": "E2E: Login handoff -> exchange OTT -> land on ticket list",
+    "implemented": false,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F038"
+    ]
+  },
+  {
+    "id": "T221",
+    "description": "E2E: Open ticket -> add INTERNAL comment -> verify shown as internal",
+    "implemented": false,
+    "featureIds": [
+      "F053",
+      "F068",
+      "F066"
+    ]
+  },
+  {
+    "id": "T222",
+    "description": "E2E: Open ticket -> add PUBLIC comment -> verify shown as public",
+    "implemented": false,
+    "featureIds": [
+      "F053",
+      "F068",
+      "F066"
+    ]
+  },
+  {
+    "id": "T223",
+    "description": "E2E: Open ticket -> change status -> verify reflected in header and list",
+    "implemented": false,
+    "featureIds": [
+      "F053",
+      "F072",
+      "F072"
+    ]
+  },
+  {
+    "id": "T224",
+    "description": "E2E: Assign to me -> set priority -> verify list badges update",
+    "implemented": false,
+    "featureIds": [
+      "F053",
+      "F076",
+      "F078",
+      "F072"
+    ]
+  },
+  {
+    "id": "T225",
+    "description": "Integration: OTT single-use and expiry enforced",
+    "implemented": false,
+    "featureIds": [
+      "F099",
+      "F188"
+    ]
+  },
+  {
+    "id": "T226",
+    "description": "Integration: Mobile credential rotation invalidates prior token",
+    "implemented": false,
+    "featureIds": [
+      "F102",
+      "F134"
+    ]
+  },
+  {
+    "id": "T227",
+    "description": "Security: Mobile mutation endpoints enforce same RBAC as web",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F075"
+    ]
+  }
+]
