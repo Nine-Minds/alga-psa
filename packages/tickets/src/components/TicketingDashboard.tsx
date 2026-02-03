@@ -349,7 +349,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       params.set('responseState', selectedResponseState);
     }
     if (selectedTags.length > 0) {
-      params.set('tags', selectedTags.map(tag => encodeURIComponent(String(tag))).join(','));
+      params.set('tags', selectedTags.join(','));
     }
     if (sortBy && sortBy !== 'entered_at') {
       params.set('sortBy', sortBy);
