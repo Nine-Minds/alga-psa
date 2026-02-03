@@ -1386,7 +1386,7 @@
   {
     "id": "T174",
     "description": "E2E: Implement updates - comment visibility default (internal) and remembered per user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]
