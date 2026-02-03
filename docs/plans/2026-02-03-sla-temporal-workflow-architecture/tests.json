@@ -254,7 +254,7 @@
   {
     "id": "T043",
     "description": "Unit: TemporalSlaBackend.cancelSla() sends cancel signal to workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
