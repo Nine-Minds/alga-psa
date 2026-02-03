@@ -326,7 +326,7 @@
   {
     "id": "T055",
     "description": "Integration: Workflow sends notification at 90% threshold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
