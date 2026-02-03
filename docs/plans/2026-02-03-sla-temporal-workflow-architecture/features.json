@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Modify slaService.startSlaForTicket() to call backend.startSlaTracking() after setting up ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {

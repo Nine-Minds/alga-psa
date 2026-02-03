@@ -30,6 +30,7 @@ import {
   isWithinBusinessHours,
   formatRemainingTime
 } from './businessHoursCalculator';
+import { SlaBackendFactory } from './backends/SlaBackendFactory';
 
 /**
  * Result of starting SLA tracking for a ticket
@@ -150,6 +151,18 @@ export async function startSlaForTicket(
       response_due_at: responseDueAt?.toISOString(),
       resolution_due_at: resolutionDueAt?.toISOString()
     });
+
+    try {
+      const backend = await SlaBackendFactory.getBackend();
+      await backend.startSlaTracking(
+        ticketId,
+        policy.sla_policy_id,
+        [target],
+        schedule
+      );
+    } catch (error) {
+      console.warn('Failed to start SLA backend tracking:', error);
+    }
 
     return {
       success: true,
@@ -610,6 +623,7 @@ async function getBusinessHoursSchedule(
   // If target is 24x7, return a 24x7 schedule
   if (target.is_24x7) {
     return {
+      tenant,
       schedule_id: '24x7',
       schedule_name: '24x7',
       timezone: 'UTC',
@@ -670,6 +684,7 @@ async function getBusinessHoursSchedule(
 
   // Ultimate fallback: 24x7
   return {
+    tenant,
     schedule_id: '24x7-fallback',
     schedule_name: '24x7 (Fallback)',
     timezone: 'UTC',
