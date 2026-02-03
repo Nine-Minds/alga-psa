@@ -350,7 +350,7 @@
   {
     "id": "T059",
     "description": "Integration: Resuming ticket resumes workflow timer with adjusted time",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F024", "F030"]
   },
   {

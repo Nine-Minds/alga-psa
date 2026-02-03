@@ -153,3 +153,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Confirmed 100% threshold breach update via workflow integration test (T056).
 - (2026-02-03) Verified escalation checks at each SLA threshold via workflow integration test (T057).
 - (2026-02-03) Added integration coverage confirming pause stops SLA notifications until resume (T058).
+- (2026-02-03) Verified resume recalculates timers with pause minutes in workflow integration test (T059).
