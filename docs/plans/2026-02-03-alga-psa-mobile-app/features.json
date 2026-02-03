@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "[Mobile:Tickets:Critical Updates] Implement due date update (if supported by API)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

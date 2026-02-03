@@ -253,3 +253,25 @@ export function updateTicketPriority(
     },
   });
 }
+
+export function updateTicketAttributes(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    attributes: Record<string, unknown> | null;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      attributes: params.attributes,
+    },
+  });
+}

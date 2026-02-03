@@ -6,7 +6,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -73,6 +73,10 @@ function TicketDetailBody({
   const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
   const [priorityUpdating, setPriorityUpdating] = useState(false);
   const [priorityUpdateError, setPriorityUpdateError] = useState<string | null>(null);
+  const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [dueDateDraft, setDueDateDraft] = useState("");
+  const [dueDateUpdating, setDueDateUpdating] = useState(false);
+  const [dueDateError, setDueDateError] = useState<string | null>(null);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -226,98 +230,92 @@ function TicketDetailBody({
     }
   };
 
-  const submitStatus = useCallback(
-    async (statusId: string) => {
-      if (!client || !session) return;
-      if (statusUpdating) return;
-      setPendingStatusId(statusId);
-      setStatusUpdateError(null);
-      setStatusUpdating(true);
-      try {
-        const auditHeaders = await getClientMetadataHeaders();
-        const res = await updateTicketStatus(client, {
-          apiKey: session.accessToken,
-          ticketId,
-          status_id: statusId,
-          auditHeaders,
-        });
-        if (!res.ok) {
-          if (res.error.kind === "http" && res.status === 409) {
-            setStatusUpdateError("Ticket changed elsewhere. Refresh and try again.");
-            Alert.alert(
-              "Ticket updated elsewhere",
-              "This ticket changed on the server. Refresh and try your update again.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Refresh",
-                  onPress: () => {
-                    void fetchTicket();
-                  },
+  const submitStatus = async (statusId: string) => {
+    if (!client || !session) return;
+    if (statusUpdating) return;
+    setPendingStatusId(statusId);
+    setStatusUpdateError(null);
+    setStatusUpdating(true);
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      const res = await updateTicketStatus(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        status_id: statusId,
+        auditHeaders,
+      });
+      if (!res.ok) {
+        if (res.error.kind === "http" && res.status === 409) {
+          setStatusUpdateError("Ticket changed elsewhere. Refresh and try again.");
+          Alert.alert(
+            "Ticket updated elsewhere",
+            "This ticket changed on the server. Refresh and try your update again.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Refresh",
+                onPress: () => {
+                  void fetchTicket();
                 },
-              ],
-            );
-            return;
-          }
-          if (res.error.kind === "http" && res.status === 403) {
-            setStatusUpdateError("You don’t have permission to change this ticket’s status.");
-            return;
-          }
-          if (res.error.kind === "http" && res.status === 400) {
-            const msg = getApiErrorMessage(res.error.body);
-            setStatusUpdateError(msg ?? "Status change was rejected by the server.");
-            return;
-          }
-          setStatusUpdateError("Unable to change status. Please try again.");
+              },
+            ],
+          );
           return;
         }
-        await fetchTicket();
-        setPendingStatusId(null);
-        setStatusPickerOpen(false);
-      } finally {
-        setStatusUpdating(false);
-      }
-    },
-    [client, fetchTicket, session, statusUpdating, ticketId],
-  );
-
-  const submitPriority = useCallback(
-    async (priorityId: string) => {
-      if (!client || !session) return;
-      if (priorityUpdating) return;
-      setPriorityUpdateError(null);
-      setPriorityUpdating(true);
-      try {
-        const auditHeaders = await getClientMetadataHeaders();
-        const res = await updateTicketPriority(client, {
-          apiKey: session.accessToken,
-          ticketId,
-          priority_id: priorityId,
-          auditHeaders,
-        });
-        if (!res.ok) {
-          if (res.error.kind === "http" && res.status === 403) {
-            setPriorityUpdateError("You don’t have permission to change this ticket’s priority.");
-            return;
-          }
-          if (res.error.kind === "http" && res.status === 400) {
-            const msg = getApiErrorMessage(res.error.body);
-            setPriorityUpdateError(msg ?? "Priority change was rejected by the server.");
-            return;
-          }
-          setPriorityUpdateError("Unable to change priority. Please try again.");
+        if (res.error.kind === "http" && res.status === 403) {
+          setStatusUpdateError("You don’t have permission to change this ticket’s status.");
           return;
         }
-        await fetchTicket();
-        setPriorityPickerOpen(false);
-      } finally {
-        setPriorityUpdating(false);
+        if (res.error.kind === "http" && res.status === 400) {
+          const msg = getApiErrorMessage(res.error.body);
+          setStatusUpdateError(msg ?? "Status change was rejected by the server.");
+          return;
+        }
+        setStatusUpdateError("Unable to change status. Please try again.");
+        return;
       }
-    },
-    [client, fetchTicket, priorityUpdating, session, ticketId],
-  );
+      await fetchTicket();
+      setPendingStatusId(null);
+      setStatusPickerOpen(false);
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
-  const updateAssignment = useCallback(async (assignedTo: string | null, action: "assign" | "unassign") => {
+  const submitPriority = async (priorityId: string) => {
+    if (!client || !session) return;
+    if (priorityUpdating) return;
+    setPriorityUpdateError(null);
+    setPriorityUpdating(true);
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      const res = await updateTicketPriority(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        priority_id: priorityId,
+        auditHeaders,
+      });
+      if (!res.ok) {
+        if (res.error.kind === "http" && res.status === 403) {
+          setPriorityUpdateError("You don’t have permission to change this ticket’s priority.");
+          return;
+        }
+        if (res.error.kind === "http" && res.status === 400) {
+          const msg = getApiErrorMessage(res.error.body);
+          setPriorityUpdateError(msg ?? "Priority change was rejected by the server.");
+          return;
+        }
+        setPriorityUpdateError("Unable to change priority. Please try again.");
+        return;
+      }
+      await fetchTicket();
+      setPriorityPickerOpen(false);
+    } finally {
+      setPriorityUpdating(false);
+    }
+  };
+
+  const updateAssignment = async (assignedTo: string | null, action: "assign" | "unassign") => {
     if (!client || !session) return;
     if (assignmentUpdating) return;
     setAssignmentError(null);
@@ -349,9 +347,9 @@ function TicketDetailBody({
       setAssignmentUpdating(false);
       setAssignmentAction(null);
     }
-  }, [assignmentUpdating, client, fetchTicket, session, ticketId]);
+  };
 
-  const assignToMe = useCallback(async () => {
+  const assignToMe = async () => {
     if (!session) return;
     const me = session.user?.id;
     if (!me) {
@@ -359,11 +357,75 @@ function TicketDetailBody({
       return;
     }
     await updateAssignment(me, "assign");
-  }, [session, updateAssignment]);
+  };
 
-  const unassign = useCallback(async () => {
+  const unassign = async () => {
     await updateAssignment(null, "unassign");
-  }, [updateAssignment]);
+  };
+
+  const submitDueDateIso = async (nextIso: string | null) => {
+    if (!client || !session) return;
+    if (dueDateUpdating) return;
+    setDueDateError(null);
+    setDueDateUpdating(true);
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      const base = getTicketAttributes(ticket);
+      const next: Record<string, unknown> = { ...base };
+
+      if (nextIso === null) {
+        delete (next as any).due_date;
+      } else {
+        (next as any).due_date = nextIso;
+      }
+
+      const attributesToSend = Object.keys(next).length === 0 ? null : next;
+      const res = await updateTicketAttributes(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        attributes: attributesToSend,
+        auditHeaders,
+      });
+      if (!res.ok) {
+        if (res.error.kind === "http" && res.status === 403) {
+          setDueDateError("You don’t have permission to change this ticket’s due date.");
+          return;
+        }
+        if (res.error.kind === "http" && res.status === 400) {
+          const msg = getApiErrorMessage(res.error.body);
+          setDueDateError(msg ?? "Due date change was rejected by the server.");
+          return;
+        }
+        setDueDateError("Unable to update due date. Please try again.");
+        return;
+      }
+      await fetchTicket();
+      setDueDateOpen(false);
+    } finally {
+      setDueDateUpdating(false);
+    }
+  };
+
+  const saveDueDateFromDraft = async () => {
+    const trimmed = dueDateDraft.trim();
+    if (!trimmed) {
+      await submitDueDateIso(null);
+      return;
+    }
+    const iso = dateInputToIso(trimmed);
+    if (!iso) {
+      setDueDateError("Enter a date as YYYY-MM-DD.");
+      return;
+    }
+    await submitDueDateIso(iso);
+  };
+
+  const setDueDateInDays = async (days: number) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + days);
+    await submitDueDateIso(d.toISOString());
+  };
 
   return (
     <>
@@ -451,6 +513,15 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
+            label="Due date"
+            onPress={() => {
+              setDueDateError(null);
+              setDueDateDraft(isoToDateInput(getDueDateIso(ticket)) ?? "");
+              setDueDateOpen(true);
+            }}
+          />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
             label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
             disabled={assignmentUpdating}
             onPress={() => {
@@ -521,11 +592,26 @@ function TicketDetailBody({
           <View style={{ height: spacing.sm }} />
           <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
           <View style={{ height: spacing.sm }} />
+          <KeyValue label="Due" value={formatDateWithRelative(getDueDateIso(ticket))} />
+          <View style={{ height: spacing.sm }} />
           <KeyValue label="Closed" value={formatDateWithRelative(ticket.closed_at)} />
           <View style={{ height: spacing.sm }} />
           <KeyValue label="Ticket ID" value={ticket.ticket_id} />
         </View>
       </ScrollView>
+
+      <DueDateModal
+        visible={dueDateOpen}
+        currentDueDateIso={getDueDateIso(ticket)}
+        draft={dueDateDraft}
+        onChangeDraft={setDueDateDraft}
+        updating={dueDateUpdating}
+        error={dueDateError}
+        onClear={() => void submitDueDateIso(null)}
+        onSave={() => void saveDueDateFromDraft()}
+        onSetInDays={(days) => void setDueDateInDays(days)}
+        onClose={() => setDueDateOpen(false)}
+      />
 
       <PriorityPickerModal
         visible={priorityPickerOpen}
@@ -551,6 +637,134 @@ function TicketDetailBody({
         onClose={() => setStatusPickerOpen(false)}
       />
     </>
+  );
+}
+
+function DueDateModal({
+  visible,
+  currentDueDateIso,
+  draft,
+  onChangeDraft,
+  updating,
+  error,
+  onClear,
+  onSave,
+  onSetInDays,
+  onClose,
+}: {
+  visible: boolean;
+  currentDueDateIso: string | null;
+  draft: string;
+  onChangeDraft: (value: string) => void;
+  updating: boolean;
+  error: string | null;
+  onClear: () => void;
+  onSave: () => void;
+  onSetInDays: (days: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
+        <Text style={{ ...typography.title, color: colors.text }}>Due date</Text>
+        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+          Current: {formatDateWithRelative(currentDueDateIso)}
+        </Text>
+
+        {updating ? (
+          <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+            <ActivityIndicator />
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+              Saving…
+            </Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+            {error}
+          </Text>
+        ) : null}
+
+        <View style={{ marginTop: spacing.lg }}>
+          <Text style={{ ...typography.caption, color: colors.mutedText }}>Set a date (YYYY-MM-DD)</Text>
+          <TextInput
+            value={draft}
+            onChangeText={onChangeDraft}
+            placeholder="2026-02-03"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!updating}
+            style={{
+              marginTop: spacing.sm,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.card,
+              color: colors.text,
+            }}
+          />
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.lg }}>
+          <ActionChip
+            label="Today"
+            disabled={updating}
+            onPress={() => onSetInDays(0)}
+          />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
+            label="Tomorrow"
+            disabled={updating}
+            onPress={() => onSetInDays(1)}
+          />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
+            label="+7 days"
+            disabled={updating}
+            onPress={() => onSetInDays(7)}
+          />
+        </View>
+
+        <View style={{ flex: 1 }} />
+
+        <View style={{ flexDirection: "row" }}>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              onPress={onClear}
+              disabled={updating}
+            >
+              Clear
+            </PrimaryButton>
+          </View>
+          <View style={{ width: spacing.sm }} />
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              onPress={onSave}
+              disabled={updating}
+            >
+              Save
+            </PrimaryButton>
+          </View>
+        </View>
+
+        <View style={{ marginTop: spacing.sm }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close due date editor"
+            onPress={onClose}
+            disabled={updating}
+            style={({ pressed }) => ({ opacity: updating ? 0.5 : pressed ? 0.85 : 1, marginTop: spacing.sm })}
+          >
+            <Text style={{ ...typography.caption, color: colors.mutedText, textAlign: "center" }}>
+              Close
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -1057,6 +1271,36 @@ function extractDescription(ticket: TicketDetail): string | null {
     if (typeof c === "string" && c.trim()) return c.trim();
   }
   return null;
+}
+
+function getTicketAttributes(ticket: TicketDetail): Record<string, unknown> {
+  const attrs = (ticket as any).attributes as unknown;
+  if (!attrs || typeof attrs !== "object") return {};
+  return { ...(attrs as Record<string, unknown>) };
+}
+
+function getDueDateIso(ticket: TicketDetail): string | null {
+  const maybeColumn = (ticket as any).due_date as unknown;
+  if (typeof maybeColumn === "string" && maybeColumn.trim()) return maybeColumn;
+
+  const attrs = (ticket as any).attributes as unknown;
+  if (!attrs || typeof attrs !== "object") return null;
+  const due = (attrs as any).due_date as unknown;
+  return typeof due === "string" && due.trim() ? due : null;
+}
+
+function isoToDateInput(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function dateInputToIso(input: string): string | null {
+  const trimmed = input.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const d = new Date(`${trimmed}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 function extractLinks(text: string): string[] {
