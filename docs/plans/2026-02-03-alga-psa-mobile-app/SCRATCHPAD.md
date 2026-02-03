@@ -54,3 +54,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F048 persists ticket list filters per user in secure storage and restores them on next app launch.
 - 2026-02-03: F049 ticket list now shows explicit empty and error states with retry actions for recoverable failures.
 - 2026-02-03: F050 prefetches ticket detail for the first few list rows after loading page 1 to speed up ticket-open navigation.
+- 2026-02-03: F051 added optional ticket stats summary header using `GET /api/v1/tickets/stats` (open/unassigned/overdue counts).

@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "[Mobile:Tickets:List] Implement ticket stats summary header using tickets stats endpoint (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

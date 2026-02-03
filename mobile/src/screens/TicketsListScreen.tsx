@@ -10,7 +10,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { getTicketById, listTickets, type TicketListItem } from "../api/tickets";
+import { getTicketById, getTicketStats, listTickets, type TicketListItem, type TicketStats } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
@@ -59,6 +59,7 @@ export function TicketsListScreen({ navigation }: Props) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<TicketStats | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<TicketListFilters>(DEFAULT_FILTERS);
@@ -153,8 +154,15 @@ export function TicketsListScreen({ navigation }: Props) {
     [apiFilters, client, search, session],
   );
 
+  const fetchStats = useCallback(async () => {
+    if (!client || !session) return;
+    const result = await getTicketStats(client, { apiKey: session.accessToken });
+    if (!result.ok) return;
+    setStats(result.data.data);
+  }, [client, session]);
+
   const { refreshing, refresh } = usePullToRefresh(async () => {
-    await loadPage({ pageToLoad: 1, replace: true });
+    await Promise.all([loadPage({ pageToLoad: 1, replace: true }), fetchStats()]);
   });
 
   useAppResume(() => {
@@ -166,14 +174,14 @@ export function TicketsListScreen({ navigation }: Props) {
     const run = async () => {
       if (!client || !session) return;
       setInitialLoading(true);
-      await loadPage({ pageToLoad: 1, replace: true });
+      await Promise.all([loadPage({ pageToLoad: 1, replace: true }), fetchStats()]);
       if (!canceled) setInitialLoading(false);
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [client, loadPage, session, search]);
+  }, [client, fetchStats, loadPage, session, search]);
 
   const onEndReached = async () => {
     if (!client || !session) return;
@@ -230,6 +238,23 @@ export function TicketsListScreen({ navigation }: Props) {
         onEndReachedThreshold={0.4}
         ListHeaderComponent={
           <View style={{ marginBottom: spacing.md }}>
+            {stats ? (
+              <View
+                style={{
+                  padding: spacing.md,
+                  borderRadius: 12,
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: colors.mutedText }}>Summary</Text>
+                <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+                  Open {stats.open_tickets} • Unassigned {stats.unassigned_tickets} • Overdue {stats.overdue_tickets}
+                </Text>
+              </View>
+            ) : null}
             <View style={{ flexDirection: "row" }}>
               <View style={{ flex: 1 }}>
                 <TextInput

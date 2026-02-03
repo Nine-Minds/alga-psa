@@ -36,6 +36,14 @@ export type TicketListItem = {
 
 export type TicketDetail = TicketListItem & Record<string, unknown>;
 
+export type TicketStats = {
+  total_tickets: number;
+  open_tickets: number;
+  closed_tickets: number;
+  overdue_tickets: number;
+  unassigned_tickets: number;
+};
+
 export type ListTicketsParams = {
   apiKey: string;
   page: number;
@@ -81,6 +89,19 @@ export function getTicketById(
   return client.request<SuccessResponse<TicketDetail>>({
     method: "GET",
     path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function getTicketStats(
+  client: ApiClient,
+  params: { apiKey: string },
+): Promise<ApiResult<SuccessResponse<TicketStats>>> {
+  return client.request<SuccessResponse<TicketStats>>({
+    method: "GET",
+    path: "/api/v1/tickets/stats",
     headers: {
       "x-api-key": params.apiKey,
     },
