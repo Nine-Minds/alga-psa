@@ -1410,7 +1410,7 @@
   {
     "id": "T177",
     "description": "E2E: Implement updates - disable send while offline with queued draft (no offline send)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177"
     ]
