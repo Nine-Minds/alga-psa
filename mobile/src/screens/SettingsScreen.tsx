@@ -6,6 +6,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
+import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
 
 export function SettingsScreen() {
   const config = getAppConfig();
@@ -19,17 +20,21 @@ export function SettingsScreen() {
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
+  const [hideSensitiveEnabled, setHideSensitiveEnabled] = useState(false);
+  const [hideSensitiveBusy, setHideSensitiveBusy] = useState(false);
 
   useEffect(() => {
     let canceled = false;
     const run = async () => {
-      const [enabled, available] = await Promise.all([
+      const [enabled, available, hideSensitive] = await Promise.all([
         getBiometricGateEnabled(),
         canUseBiometrics(),
+        getHideSensitiveNotificationsEnabled(),
       ]);
       if (canceled) return;
       setBiometricEnabled(enabled);
       setBiometricAvailable(available);
+      setHideSensitiveEnabled(hideSensitive);
     };
     void run();
     return () => {
@@ -141,6 +146,28 @@ export function SettingsScreen() {
             {biometricError}
           </Text>
         ) : null}
+        <View style={{ height: spacing.sm }} />
+        <ToggleRow
+          label="Hide sensitive notifications"
+          value={hideSensitiveEnabled ? "On" : "Off"}
+          disabled={hideSensitiveBusy}
+          onPress={() => {
+            void (async () => {
+              if (hideSensitiveBusy) return;
+              setHideSensitiveBusy(true);
+              try {
+                const next = !hideSensitiveEnabled;
+                await setHideSensitiveNotificationsEnabled(next);
+                setHideSensitiveEnabled(next);
+              } finally {
+                setHideSensitiveBusy(false);
+              }
+            })();
+          }}
+        />
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+          Applies to future push notifications.
+        </Text>
       </View>
 
       <View style={{ marginTop: spacing.xl }}>

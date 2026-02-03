@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "[Mobile:Settings] Add toggles: biometric gate, hide sensitive info in notifications (future)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:UX / UI Notes"
     ]
