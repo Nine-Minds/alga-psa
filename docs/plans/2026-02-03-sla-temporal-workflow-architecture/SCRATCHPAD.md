@@ -168,3 +168,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Marked America/New_York timezone calculation test for calculateNextWakeTime (T071).
 - (2026-02-03) Marked Europe/London timezone calculation test for calculateNextWakeTime (T072).
 - (2026-02-03) Marked DST transition coverage for calculateNextWakeTime (T073).
+- (2026-02-03) Added worker restart integration test to validate workflow replay determinism (T074).
