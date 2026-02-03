@@ -954,7 +954,7 @@
   {
     "id": "T120",
     "description": "Deferred: Add self-hosted connectivity diagnostics and TLS certificate troubleshooting UX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]

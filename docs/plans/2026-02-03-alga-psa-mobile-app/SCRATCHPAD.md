@@ -345,3 +345,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T117 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
 - 2026-02-03: T118 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
 - 2026-02-03: T119 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
+- 2026-02-03: T120 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
