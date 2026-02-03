@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Unit: Add network timeouts and retry/backoff for safe idempotent requests",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
