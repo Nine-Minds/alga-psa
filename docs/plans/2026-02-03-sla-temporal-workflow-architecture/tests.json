@@ -380,7 +380,7 @@
   {
     "id": "T064",
     "description": "Integration: New ticket in CE does not start Temporal workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003"]
   },
   {
