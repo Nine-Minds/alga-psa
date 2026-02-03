@@ -642,8 +642,9 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label={watchUpdating ? "Updating…" : isWatching ? "Unwatch" : "Watch"}
-            disabled={watchUpdating || !meUserId}
+            label={isWatching ? "Unwatch" : "Watch"}
+            loading={watchUpdating}
+            disabled={!meUserId}
             onPress={() => {
               void toggleWatch();
             }}
@@ -658,6 +659,7 @@ function TicketDetailBody({
           <View style={{ width: spacing.sm }} />
           <ActionChip
             label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
+            loading={assignmentUpdating && assignmentAction === "assign"}
             disabled={assignmentUpdating}
             onPress={() => {
               void assignToMe();
@@ -668,6 +670,7 @@ function TicketDetailBody({
               <View style={{ width: spacing.sm }} />
               <ActionChip
                 label={assignmentUpdating && assignmentAction === "unassign" ? "Unassigning…" : "Unassign"}
+                loading={assignmentUpdating && assignmentAction === "unassign"}
                 disabled={assignmentUpdating}
                 onPress={() => {
                   void unassign();
@@ -1312,15 +1315,18 @@ function ActionChip({
   label,
   onPress,
   disabled,
+  loading,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
 }) {
+  const isDisabled = Boolean(disabled || loading);
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => ({
@@ -1330,10 +1336,15 @@ function ActionChip({
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.card,
-        opacity: disabled ? 0.6 : pressed ? 0.9 : 1,
+        opacity: isDisabled ? 0.6 : pressed ? 0.9 : 1,
       })}
     >
-      <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {loading ? <ActivityIndicator size="small" color={colors.mutedText} /> : null}
+        <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600", marginLeft: loading ? spacing.sm : 0 }}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }

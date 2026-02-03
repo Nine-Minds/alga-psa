@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "[Mobile:Tickets:Critical Updates] Support field-level loading indicators for partial updates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

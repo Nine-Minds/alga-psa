@@ -86,3 +86,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F080 implemented a minimal “Watch/Unwatch” toggle for the current user by persisting `attributes.watcher_user_ids` via `PUT /api/v1/tickets/:id` (no directory/user lookup required).
 - 2026-02-03: F081 added time entry creation from a ticket using `POST /api/v1/time-entries` with a lightweight duration+notes modal (work_item_type=ticket, work_item_id=ticket_id).
 - 2026-02-03: F082 improved validation error messaging by extracting first Zod detail (`error.details`) and surfacing `field: message` when server rejects a partial update.
+- 2026-02-03: F083 added explicit field-level loading indicators for in-flight partial updates by supporting spinners inside action chips (watch/assignment).
