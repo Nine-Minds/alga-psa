@@ -186,7 +186,7 @@
   {
     "id": "T024",
     "description": "E2E: Implement deep link callback handler with state validation and OTT capture",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -481,7 +481,7 @@
   },
   {
     "id": "T061",
-    "description": "E2E: Support copy ticket id/number and \u201copen in web\u201d link-out",
+    "description": "E2E: Support copy ticket id/number and “open in web” link-out",
     "implemented": false,
     "featureIds": [
       "F061"
@@ -673,7 +673,7 @@
   },
   {
     "id": "T085",
-    "description": "Unit: Add \u201cclear cache\u201d action",
+    "description": "Unit: Add “clear cache” action",
     "implemented": false,
     "featureIds": [
       "F085"
@@ -681,7 +681,7 @@
   },
   {
     "id": "T086",
-    "description": "Unit: Add \u201clogout\u201d action",
+    "description": "Unit: Add “logout” action",
     "implemented": false,
     "featureIds": [
       "F086"
@@ -689,7 +689,7 @@
   },
   {
     "id": "T087",
-    "description": "Unit: Add \u201cabout/legal\u201d screens (privacy policy/terms)",
+    "description": "Unit: Add “about/legal” screens (privacy policy/terms)",
     "implemented": false,
     "featureIds": [
       "F087"
@@ -1017,7 +1017,7 @@
   },
   {
     "id": "T128",
-    "description": "Unit: Implement \u201copen in web\u201d URL builder for hosted environments",
+    "description": "Unit: Implement “open in web” URL builder for hosted environments",
     "implemented": false,
     "featureIds": [
       "F128"
@@ -1097,7 +1097,7 @@
   },
   {
     "id": "T138",
-    "description": "E2E: Implement sign-in UX copy that clearly indicates \u201cinternal users only\u201d",
+    "description": "E2E: Implement sign-in UX copy that clearly indicates “internal users only”",
     "implemented": false,
     "featureIds": [
       "F138"
