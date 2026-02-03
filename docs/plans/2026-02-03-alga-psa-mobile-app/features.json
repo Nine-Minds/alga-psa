@@ -1386,7 +1386,7 @@
   {
     "id": "F174",
     "description": "[Mobile:Tickets:Updates] Implement updates - comment visibility default (internal) and remembered per user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

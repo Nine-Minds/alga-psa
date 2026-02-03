@@ -178,3 +178,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F172 confirmed comment drafts are cleared from secure storage after a successful send.
 - 2026-02-03: F173 aligned comment length enforcement between mobile and server by enforcing a shared 5000-character max on `POST /api/v1/tickets/:id/comments` (mobile already validates and shows a counter).
 - 2026-02-03: Gotcha: `npm -w server run test:e2e` currently fails locally with DB connection refused on `localhost:5433` (localtest harness deps not running).
+- 2026-02-03: F174 persisted comment visibility preference per user so internal/public selection is remembered across tickets (default remains internal).

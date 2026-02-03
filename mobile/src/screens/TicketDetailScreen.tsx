@@ -100,6 +100,11 @@ function TicketDetailBody({
     return `alga.mobile.ticketDraft.${userId}.${ticketId}`;
   }, [session?.user?.id, ticketId]);
 
+  const visibilityPrefKey = useMemo(() => {
+    const userId = session?.user?.id ?? "anonymous";
+    return `alga.mobile.ticketComment.visibility.${userId}`;
+  }, [session?.user?.id]);
+
   useEffect(() => {
     let canceled = false;
     const run = async () => {
@@ -108,6 +113,12 @@ function TicketDetailBody({
       if (saved) {
         setCommentDraft(saved.text);
         setCommentIsInternal(saved.isInternal);
+      } else {
+        const pref = await getSecureJson<boolean>(visibilityPrefKey);
+        if (canceled) return;
+        if (typeof pref === "boolean") {
+          setCommentIsInternal(pref);
+        }
       }
       setDraftLoaded(true);
     };
@@ -115,12 +126,17 @@ function TicketDetailBody({
     return () => {
       canceled = true;
     };
-  }, [draftKey]);
+  }, [draftKey, visibilityPrefKey]);
 
   useEffect(() => {
     if (!draftLoaded) return;
     void setSecureJson(draftKey, { text: commentDraft, isInternal: commentIsInternal });
   }, [commentDraft, commentIsInternal, draftKey, draftLoaded]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    void setSecureJson(visibilityPrefKey, commentIsInternal);
+  }, [commentIsInternal, draftLoaded, visibilityPrefKey]);
 
   const fetchTicket = useCallback(async () => {
     if (!client || !session) return;
