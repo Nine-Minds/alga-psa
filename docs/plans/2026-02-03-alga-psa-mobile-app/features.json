@@ -818,7 +818,7 @@
   {
     "id": "F103",
     "description": "[Server:Mobile Auth] Add API endpoint to revoke mobile sessions (logout)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

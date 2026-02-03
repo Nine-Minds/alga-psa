@@ -106,3 +106,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F100 implemented OTT exchange and mobile refresh/revoke endpoints (`/api/v1/mobile/auth/*`) issuing short-lived API keys + rotating refresh tokens stored hashed in `mobile_refresh_tokens`.
 - 2026-02-03: F101 mobile auth reuses existing web sign-in (`/auth/signin`) and configured SSO providers by using `callbackUrl` to route into `/auth/mobile/handoff`.
 - 2026-02-03: F102 refresh endpoint rotates refresh tokens and deactivates the prior short-lived API key to invalidate old credentials.
+- 2026-02-03: F103 implemented logout revocation endpoint that revokes the refresh token and deactivates the associated short-lived API key.
