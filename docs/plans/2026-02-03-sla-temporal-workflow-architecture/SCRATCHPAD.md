@@ -62,6 +62,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: added ISlaBackend interface signature test (T001)
 - (2026-02-03) Tests: SlaBackendFactory returns PgBoss in CE (T002)
 - (2026-02-03) Tests: SlaBackendFactory returns Temporal backend in EE when available (T003)
+- (2026-02-03) Tests: SlaBackendFactory falls back to PgBoss when Temporal unavailable (T004)
 
 ## Discoveries / Constraints
 
