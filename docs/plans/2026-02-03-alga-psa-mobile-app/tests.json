@@ -1002,7 +1002,7 @@
   {
     "id": "T126",
     "description": "Unit: Implement app-level telemetry correlation id on every request",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]
