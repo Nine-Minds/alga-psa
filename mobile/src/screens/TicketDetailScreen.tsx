@@ -17,6 +17,7 @@ import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureSt
 import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { createTimeEntry } from "../api/timeEntries";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
+import { buildTicketWebUrl } from "../urls/hostedUrls";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -1274,7 +1275,7 @@ function TicketActions({
   ticketId: string;
   ticketNumber: string;
 }) {
-  const openInWebUrl = baseUrl ? new URL(`/msp/tickets/${ticketId}`, baseUrl).toString() : null;
+  const openInWebUrl = baseUrl ? buildTicketWebUrl(baseUrl, ticketId) : null;
 
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>

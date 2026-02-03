@@ -1018,7 +1018,7 @@
   {
     "id": "F128",
     "description": "[Mobile:Foundation] Implement \u201copen in web\u201d URL builder for hosted environments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

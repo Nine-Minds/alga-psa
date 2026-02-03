@@ -6,6 +6,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
+import { tryBuildHostedPathUrl } from "../urls/hostedUrls";
 import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
 
 export function SettingsScreen() {
@@ -224,8 +225,8 @@ export function SettingsScreen() {
       <LegalModal
         visible={legalOpen}
         onClose={() => setLegalOpen(false)}
-        privacyUrl={config.ok ? new URL("/legal/privacy", config.baseUrl).toString() : null}
-        termsUrl={config.ok ? new URL("/legal/terms", config.baseUrl).toString() : null}
+        privacyUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/privacy")}
+        termsUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/terms")}
       />
     </View>
   );

@@ -131,3 +131,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F125 added in-flight GET request deduplication in the mobile API client (no AbortSignal case) to avoid duplicate concurrent fetches; added unit tests and a Vitest setup shim for RN’s `__DEV__`.
 - 2026-02-03: F126 added per-request `x-correlation-id` header (stable across retries) via `mobile/src/telemetry/correlation.ts` and unit tests to ensure it’s applied on every request.
 - 2026-02-03: F127 hardened deep link handling by filtering initial/subscribed URLs to known prefixes and known safe paths (`signin`, `auth/callback`, `tickets`, `settings`, `ticket/:uuid`), ignoring unexpected hosts/paths.
+- 2026-02-03: F128 centralized hosted web URL construction in `mobile/src/urls/hostedUrls.ts` (ticket + legal URLs) and added unit tests; replaced ad-hoc `new URL()` usage in ticket detail/settings.
