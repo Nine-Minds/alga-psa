@@ -154,7 +154,7 @@
   {
     "id": "T020",
     "description": "Unit: Add CI job to lint/typecheck mobile app package",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
