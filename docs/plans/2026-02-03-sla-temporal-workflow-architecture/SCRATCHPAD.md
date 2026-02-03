@@ -105,6 +105,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: TemporalSlaBackend.cancelSla sends cancel signal (T043)
 - (2026-02-03) Tests: TemporalSlaBackend.getSlaStatus queries workflow state (T044)
 - (2026-02-03) Tests: slaService.startSlaForTicket calls backend.startSlaTracking (T045)
+- (2026-02-03) Tests: slaPauseService.pauseSla calls backend.pauseSla (T046)
 
 ## Discoveries / Constraints
 

@@ -272,7 +272,7 @@
   {
     "id": "T046",
     "description": "Unit: slaPauseService.pauseSla() calls backend.pauseSla()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
