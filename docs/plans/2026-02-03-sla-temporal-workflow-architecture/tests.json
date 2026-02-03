@@ -332,7 +332,7 @@
   {
     "id": "T056",
     "description": "Integration: Workflow marks breach at 100% threshold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041"]
   },
   {
