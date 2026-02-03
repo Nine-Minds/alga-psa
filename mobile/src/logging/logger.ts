@@ -18,7 +18,8 @@ function parseLogLevel(value: unknown): LogLevel {
 const currentLevel = parseLogLevel(process.env.EXPO_PUBLIC_LOG_LEVEL);
 
 const REDACTED = "[REDACTED]";
-const REDACT_KEYS = new Set([
+const REDACT_KEYS = new Set(
+  [
   "authorization",
   "token",
   "ott",
@@ -31,7 +32,20 @@ const REDACT_KEYS = new Set([
   "apiKey",
   "cookie",
   "set-cookie",
-]);
+  ].map((k) => k.toLowerCase()),
+);
+
+// PII-ish fields from ticketing payloads (subjects and comment bodies).
+// Keep this narrowly scoped: redact fields likely to contain freeform user text.
+const REDACT_TEXT_KEYS = new Set(
+  [
+    "subject",
+    "title",
+    "description",
+    "comment_text",
+    "event_text",
+  ].map((k) => k.toLowerCase()),
+);
 
 function redactString(value: string): string {
   let out = value;
@@ -60,7 +74,9 @@ function redactAny(value: unknown, depth: number): unknown {
     const obj = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(obj)) {
-      out[key] = REDACT_KEYS.has(key) ? REDACTED : redactAny(v, depth - 1);
+      const lower = key.toLowerCase();
+      const shouldRedact = REDACT_KEYS.has(lower) || REDACT_TEXT_KEYS.has(lower);
+      out[key] = shouldRedact ? REDACTED : redactAny(v, depth - 1);
     }
     return out;
   }
