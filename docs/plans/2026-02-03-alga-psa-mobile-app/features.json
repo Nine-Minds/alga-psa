@@ -786,7 +786,7 @@
   {
     "id": "F099",
     "description": "[Server:Mobile Auth] Add storage for mobile OTTs with expiry, single-use semantics, and tenant/user binding",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
