@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "[Mobile:Tickets:Updates] Prevent duplicate submissions while in-flight",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

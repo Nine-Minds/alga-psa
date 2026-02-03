@@ -161,6 +161,7 @@ function TicketDetailBody({
 
   const sendComment = async () => {
     if (!client || !session) return;
+    if (commentSending) return;
     const text = commentDraft.trim();
     if (!text) {
       setCommentSendError("Comment cannot be empty.");

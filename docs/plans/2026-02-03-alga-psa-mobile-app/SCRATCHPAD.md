@@ -73,3 +73,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F067 added client-side comment length validation with inline errors and a live character counter.
 - 2026-02-03: F068 after posting a comment, the ticket timeline refreshes and shows the new entry.
 - 2026-02-03: F069 comment drafts are persisted per-ticket (secure storage) so drafts survive navigation and can be retried after failures.
+- 2026-02-03: F070 comment submission is single-flight; send is disabled and ignored while a request is in-flight to prevent duplicates.
