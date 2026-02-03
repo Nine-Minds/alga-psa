@@ -1242,7 +1242,7 @@
   {
     "id": "T156",
     "description": "E2E: Implement ticket detail - open-in-web uses stable URL format",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F156"
     ]
