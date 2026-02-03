@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 import { colors, spacing, typography } from "../ui/theme";
+import { t } from "../i18n/i18n";
 
 export function SignInScreen() {
   return (
@@ -12,7 +13,7 @@ export function SignInScreen() {
       }}
     >
       <Text style={{ ...typography.title, textAlign: "center", color: colors.text }}>
-        Alga PSA Mobile
+        {t("app.title")}
       </Text>
       <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
         Sign-in flow is not implemented yet. This screen will launch the system browser to the

@@ -3,6 +3,7 @@ import type { RootStackParamList } from "./types";
 import { TabsNavigator } from "./TabsNavigator";
 import { SignInScreen } from "../screens/SignInScreen";
 import { TicketDetailScreen } from "../screens/TicketDetailScreen";
+import { t } from "../i18n/i18n";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -19,9 +20,12 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
           />
         </>
       ) : (
-        <Stack.Screen name="SignIn" component={SignInScreen} options={{ title: "Sign in" }} />
+        <Stack.Screen
+          name="SignIn"
+          component={SignInScreen}
+          options={{ title: t("auth.signIn.title") }}
+        />
       )}
     </Stack.Navigator>
   );
 }
-

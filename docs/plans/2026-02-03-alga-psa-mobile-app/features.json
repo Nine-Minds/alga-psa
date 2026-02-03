@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "[Mobile:Foundation] Add localization scaffolding (en-US first)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
