@@ -1426,7 +1426,7 @@
   {
     "id": "F179",
     "description": "[Mobile:Tickets:Updates] Implement updates - field-level spinners for partial updates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
