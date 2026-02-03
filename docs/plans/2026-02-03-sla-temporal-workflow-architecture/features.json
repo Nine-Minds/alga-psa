@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Modify slaService.recordFirstResponse() to call backend.completeSla('response') after updating ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
