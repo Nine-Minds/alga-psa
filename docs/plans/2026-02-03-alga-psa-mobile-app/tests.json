@@ -1554,7 +1554,7 @@
   {
     "id": "T195",
     "description": "Integration: Implement server mobile auth - audit logs include device id, app version, user id, tenant, action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F195"
     ]
