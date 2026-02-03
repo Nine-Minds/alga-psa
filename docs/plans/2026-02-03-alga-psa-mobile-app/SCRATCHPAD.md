@@ -195,3 +195,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F188 server OTTs are scoped to the provided `state` and are single-use via an atomic `used_at` update during exchange.
 - 2026-02-03: F189 server OTT TTL is configurable via `ALGA_MOBILE_OTT_TTL_SEC` (defaults to 60s) and enforced on consumption.
 - 2026-02-03: F190 server OTT exchange validates request shape with Zod (`ott`, `state`, and optional device/app metadata fields).
+- 2026-02-03: F191 server refresh tokens rotate on every refresh; the old token is revoked immediately and linked via `replaced_by_id`, and prior access API keys are deactivated.

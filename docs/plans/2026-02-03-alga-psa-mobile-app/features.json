@@ -1522,7 +1522,7 @@
   {
     "id": "F191",
     "description": "[Server:Mobile Auth] Implement server mobile auth - refresh token rotation with immediate invalidation of prior refresh token",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
