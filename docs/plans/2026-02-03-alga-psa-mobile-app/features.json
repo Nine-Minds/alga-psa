@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "[Mobile:Foundation] Add network timeouts and retry/backoff for safe idempotent requests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
