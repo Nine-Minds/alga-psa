@@ -930,7 +930,7 @@
   {
     "id": "T117",
     "description": "Deferred: Add notification preferences screen",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117"
     ]
