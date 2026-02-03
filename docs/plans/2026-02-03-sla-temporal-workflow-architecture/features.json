@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "calculateNextWakeTime handles start time outside business hours by advancing to next business period",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

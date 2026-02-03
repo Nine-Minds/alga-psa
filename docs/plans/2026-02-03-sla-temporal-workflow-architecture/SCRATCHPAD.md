@@ -27,6 +27,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Cancel signal marks workflow cancelled and stops further threshold handling
 - (2026-02-03) Added getState query returning status, remaining time minutes, and pause state
 - (2026-02-03) Added SLA activities including calculateNextWakeTime using business hours calculator
+- (2026-02-03) calculateNextWakeTime leverages calculateDeadline to advance into next business period when starting outside hours
 
 ## Discoveries / Constraints
 
