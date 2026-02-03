@@ -474,7 +474,7 @@
   {
     "id": "T060",
     "description": "E2E: Show commenter identity and timestamp for entries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
