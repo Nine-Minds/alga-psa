@@ -906,7 +906,7 @@
   {
     "id": "T114",
     "description": "Deferred: Add server endpoints to register/unregister device tokens",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
