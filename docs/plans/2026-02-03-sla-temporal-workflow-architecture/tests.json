@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Unit: calculateNextWakeTime advances to Monday when start is Friday 4pm and target is 2 hours",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F015"]
   },
   {
