@@ -658,7 +658,7 @@
   {
     "id": "T083",
     "description": "E2E: Support field-level loading indicators for partial updates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
