@@ -1602,7 +1602,7 @@
   {
     "id": "T201",
     "description": "Integration: Implement server mobile auth - ticket comments endpoint supports pagination and ordering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
