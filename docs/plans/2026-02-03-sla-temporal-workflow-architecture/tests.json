@@ -434,7 +434,7 @@
   {
     "id": "T073",
     "description": "Unit: calculateNextWakeTime handles DST transition correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
