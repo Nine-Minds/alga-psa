@@ -1815,7 +1815,7 @@
   {
     "id": "T226",
     "description": "Integration: Mobile credential rotation invalidates prior token",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102",
       "F134"
