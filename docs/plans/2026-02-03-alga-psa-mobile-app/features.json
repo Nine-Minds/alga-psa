@@ -1194,7 +1194,7 @@
   {
     "id": "F150",
     "description": "[Mobile:Tickets:List] Implement List:Errors - 5xx retry with backoff",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

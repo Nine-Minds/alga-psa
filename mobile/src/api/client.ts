@@ -310,8 +310,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           }
 
           const retryableStatus =
-            result.status !== undefined &&
-            (result.status === 502 || result.status === 503 || result.status === 504);
+            result.status !== undefined && result.status >= 500 && result.status < 600;
 
           const retryableError =
             result.error.kind === "network" || result.error.kind === "timeout" || retryableStatus;
