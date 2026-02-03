@@ -22,6 +22,7 @@ import { MobileAnalyticsEvents } from "../analytics/events";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
+import { isOffline as isOfflineStatus } from "../network/isOffline";
 
 function getActiveRouteName(state: any): string | null {
   let current: any = state;
@@ -290,7 +291,7 @@ export function AppRoot() {
           <BiometricLockView onUnlocked={() => setIsBiometricLocked(false)} />
         ) : (
           <View style={{ flex: 1 }}>
-            {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+            {isOfflineStatus(network) ? <OfflineBanner onRetry={() => {}} /> : null}
             <View style={{ flex: 1 }}>
               <NavigationContainer
                 key={session ? "signed-in" : "signed-out"}

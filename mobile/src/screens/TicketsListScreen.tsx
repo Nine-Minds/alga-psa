@@ -19,6 +19,7 @@ import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
+import { isOffline as isOfflineStatus } from "../network/isOffline";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -72,7 +73,7 @@ export function TicketsListScreen({ navigation }: Props) {
   const listAbortRef = useRef<AbortController | null>(null);
   const loadingMoreRef = useRef(false);
   const network = useNetworkStatus();
-  const isOffline = network.isConnected === false || network.isInternetReachable === false;
+  const isOffline = isOfflineStatus(network);
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;

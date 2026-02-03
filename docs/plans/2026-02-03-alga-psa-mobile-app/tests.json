@@ -122,7 +122,7 @@
   {
     "id": "T016",
     "description": "Unit: Add offline detection UX (always-connected warning + retry actions)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]

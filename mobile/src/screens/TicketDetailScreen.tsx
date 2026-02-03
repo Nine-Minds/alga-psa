@@ -20,6 +20,7 @@ import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { buildTicketWebUrl } from "../urls/hostedUrls";
 import { copyToClipboard } from "../clipboard/clipboard";
 import { useNetworkStatus } from "../network/useNetworkStatus";
+import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
@@ -96,7 +97,7 @@ function TicketDetailBody({
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const network = useNetworkStatus();
-  const isOffline = network.isConnected === false || network.isInternetReachable === false;
+  const isOffline = isOfflineStatus(network);
   const commentSendInFlightRef = useRef(false);
   const statusUpdateInFlightRef = useRef(false);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
