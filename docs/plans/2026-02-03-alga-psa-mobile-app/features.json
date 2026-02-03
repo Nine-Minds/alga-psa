@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "[Mobile:Tickets:Detail] Implement Ticket detail screen with loading skeleton and refresh",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
