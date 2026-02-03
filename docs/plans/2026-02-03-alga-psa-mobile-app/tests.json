@@ -666,7 +666,7 @@
   {
     "id": "T084",
     "description": "Unit: Implement Settings screen showing current user identity and tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
