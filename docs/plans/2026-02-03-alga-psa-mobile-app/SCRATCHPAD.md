@@ -43,3 +43,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F037 added vanity domain allowlist handling via capabilities response (`hostedDomainAllowlist`); Sign In is disabled when configured base URL host is not allowlisted.
 - 2026-02-03: F038 implemented Tickets list with paginated fetch (`GET /api/v1/tickets?page=&limit=`) and infinite scroll; mobile uses `x-api-key` header (session access token) for API v1.
 - 2026-02-03: F039 wired pull-to-refresh to reload the first tickets page and replace existing list results.
+- 2026-02-03: F040 ticket list rows now render ticket number, title, status, priority, assignee, client, and updated date.

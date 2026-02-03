@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "[Mobile:Tickets:List] Show ticket number/id, subject/title, status, priority, assignee, client/company, updated-at",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
