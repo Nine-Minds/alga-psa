@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "Unit: calculateNextWakeTime returns correct wall-clock time for 8am-5pm Mon-Fri schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
