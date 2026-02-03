@@ -66,6 +66,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: PgBossSlaBackend startSlaTracking no-op (T005)
 - (2026-02-03) Tests: PgBossSlaBackend.pauseSla delegates to slaPauseService (T006)
 - (2026-02-03) Tests: PgBossSlaBackend.resumeSla delegates to slaPauseService (T007)
+- (2026-02-03) Tests: PgBossSlaBackend.completeSla(response) delegates to slaService.recordFirstResponse (T008)
 
 ## Discoveries / Constraints
 
