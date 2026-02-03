@@ -25,6 +25,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Complete response signal sets response complete and transitions workflow to resolution phase
 - (2026-02-03) Complete resolution signal marks workflow completed and allows termination
 - (2026-02-03) Cancel signal marks workflow cancelled and stops further threshold handling
+- (2026-02-03) Added getState query returning status, remaining time minutes, and pause state
 
 ## Discoveries / Constraints
 
