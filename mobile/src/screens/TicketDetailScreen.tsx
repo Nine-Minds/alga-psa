@@ -97,6 +97,8 @@ function TicketDetailBody({
   const scrollRef = useRef<ScrollView>(null);
   const network = useNetworkStatus();
   const isOffline = network.isConnected === false || network.isInternetReachable === false;
+  const commentSendInFlightRef = useRef(false);
+  const statusUpdateInFlightRef = useRef(false);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -235,21 +237,25 @@ function TicketDetailBody({
 
   const sendComment = async () => {
     if (!client || !session) return;
-    if (commentSending) return;
+    if (commentSendInFlightRef.current || commentSending) return;
+    commentSendInFlightRef.current = true;
     const originalDraft = commentDraft;
     const originalIsInternal = commentIsInternal;
     const text = originalDraft.trim();
     if (!text) {
       setCommentSendError("Comment cannot be empty.");
+      commentSendInFlightRef.current = false;
       return;
     }
     if (text.length > MAX_COMMENT_LENGTH) {
       setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
+      commentSendInFlightRef.current = false;
       return;
     }
     if (isOffline) {
       setCommentSendError("You’re offline. Your draft is saved and will be ready to send when you’re back online.");
       showToast({ message: "Offline — draft saved", tone: "info" });
+      commentSendInFlightRef.current = false;
       return;
     }
 
@@ -320,12 +326,14 @@ function TicketDetailBody({
       showToast({ message: "Comment sent", tone: "success" });
     } finally {
       setCommentSending(false);
+      commentSendInFlightRef.current = false;
     }
   };
 
   const submitStatus = async (statusId: string) => {
     if (!client || !session) return;
-    if (statusUpdating) return;
+    if (statusUpdateInFlightRef.current || statusUpdating) return;
+    statusUpdateInFlightRef.current = true;
     setPendingStatusId(statusId);
     setStatusUpdateError(null);
     setStatusUpdating(true);
@@ -382,6 +390,7 @@ function TicketDetailBody({
       showToast({ message: "Status updated", tone: "success" });
     } finally {
       setStatusUpdating(false);
+      statusUpdateInFlightRef.current = false;
     }
   };
 

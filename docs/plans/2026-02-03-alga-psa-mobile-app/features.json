@@ -1442,7 +1442,7 @@
   {
     "id": "F181",
     "description": "[Mobile:Tickets:Updates] Implement updates - prevent double-tap submits",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
