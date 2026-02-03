@@ -1258,7 +1258,7 @@
   {
     "id": "F158",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - link handling opens external browser with confirmation (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]

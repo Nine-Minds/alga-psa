@@ -161,3 +161,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F155 confirmed ticket detail supports pull-to-refresh with visible RefreshControl indicator states.
 - 2026-02-03: F156 confirmed ticket detail “Open in web” uses centralized hosted URL builder (`buildTicketWebUrl`) for stable link formatting.
 - 2026-02-03: F157 confirmed ticket detail provides copy actions for ticket number and ticket id via the redacting clipboard helper.
+- 2026-02-03: F158 confirmed ticket detail description link handling prompts for confirmation before opening external URLs.
