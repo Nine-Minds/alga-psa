@@ -138,6 +138,7 @@ export const updateTaskWithChecklist = withAuth(async (
                             assignedToId: updatedTask.assigned_to,
                             assignedToType: 'user',
                             assignedByUserId: user.user_id,
+                            assignedByName: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : undefined,
                             assignedAt: occurredAt,
                         }),
                     });
@@ -248,6 +249,7 @@ export const addTaskToPhase = withAuth(async (
                             assignedToId: newTask.assigned_to,
                             assignedToType: 'user',
                             assignedByUserId: user.user_id,
+                            assignedByName: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : undefined,
                             assignedAt: occurredAt,
                         }),
                     });
@@ -1177,6 +1179,7 @@ export const duplicateTaskToPhase = withAuth(async (
                         assignedToId: newTask.assigned_to,
                         assignedToType: 'user',
                         assignedByUserId: user.user_id,
+                        assignedByName: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : undefined,
                         assignedAt: occurredAt,
                     }),
                 });

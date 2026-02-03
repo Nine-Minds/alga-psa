@@ -63,6 +63,24 @@ describe('projectTaskEventBuilders', () => {
     expect(projectTaskAssignedEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
 
+  it('builds PROJECT_TASK_ASSIGNED payloads with assignedByName compatible with schema', () => {
+    const payload = buildWorkflowPayload(
+      buildProjectTaskAssignedPayload({
+        projectId,
+        taskId,
+        assignedToId: '3b99a3a6-85b7-4c8f-bd37-4b6b5c7d0d2d',
+        assignedToType: 'user',
+        assignedByUserId: actorUserId,
+        assignedByName: 'John Doe',
+        assignedAt: occurredAt,
+      }),
+      ctx
+    );
+
+    expect(projectTaskAssignedEventPayloadSchema.safeParse(payload).success).toBe(true);
+    expect(payload.assignedByName).toBe('John Doe');
+  });
+
   it('builds PROJECT_TASK_STATUS_CHANGED payloads compatible with schema', () => {
     const payload = buildWorkflowPayload(
       buildProjectTaskStatusChangedPayload({

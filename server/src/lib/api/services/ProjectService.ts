@@ -44,6 +44,22 @@ import {
   buildProjectTaskStatusChangedPayload,
 } from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 
+async function resolveUserName(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string | undefined
+): Promise<string | undefined> {
+  if (!userId) return undefined;
+  const user = await trx('users')
+    .where({ user_id: userId, tenant, is_inactive: false })
+    .select('first_name', 'last_name')
+    .first<{ first_name: string; last_name: string }>();
+  if (user?.first_name && user?.last_name) {
+    return `${user.first_name} ${user.last_name}`;
+  }
+  return undefined;
+}
+
 async function resolveProjectStatusInfo(
   trx: Knex.Transaction,
   tenant: string,
@@ -622,6 +638,7 @@ export class ProjectService extends BaseService<IProject> {
         });
 
         if (task.assigned_to) {
+          const assignedByName = await resolveUserName(trx, context.tenant, context.userId);
           await publishWorkflowEvent({
             eventType: 'PROJECT_TASK_ASSIGNED',
             ctx,
@@ -631,11 +648,12 @@ export class ProjectService extends BaseService<IProject> {
               assignedToId: task.assigned_to,
               assignedToType: 'user',
               assignedByUserId: context.userId,
+              assignedByName,
               assignedAt: occurredAt,
             }),
           });
         }
-  
+
         return task;
       });
     }
@@ -681,6 +699,7 @@ export class ProjectService extends BaseService<IProject> {
           };
 
           if (beforeTask.assigned_to !== task.assigned_to && task.assigned_to) {
+            const assignedByName = await resolveUserName(trx, context.tenant, context.userId);
             await publishWorkflowEvent({
               eventType: 'PROJECT_TASK_ASSIGNED',
               ctx,
@@ -690,6 +709,7 @@ export class ProjectService extends BaseService<IProject> {
                 assignedToId: task.assigned_to,
                 assignedToType: 'user',
                 assignedByUserId: context.userId,
+                assignedByName,
                 assignedAt: occurredAt,
               }),
             });

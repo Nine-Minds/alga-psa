@@ -972,6 +972,7 @@ export const importPhasesAndTasks = withAuth(async (
                   assignedToId: newTask.assigned_to,
                   assignedToType: 'user',
                   assignedByUserId: user.user_id,
+                  assignedByName: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : undefined,
                   assignedAt: occurredAt,
                 }),
               });

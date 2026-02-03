@@ -52,6 +52,7 @@ export const projectTaskAssignedEventPayloadSchema = BaseDomainEventPayloadSchem
   assignedToId: z.string().uuid(),
   assignedToType: assignedToTypeSchema,
   assignedByUserId: userIdSchema.optional(),
+  assignedByName: z.string().optional().describe('Display name of the user who assigned the task'),
   assignedAt: z.string().datetime().optional(),
 }).describe('Payload for PROJECT_TASK_ASSIGNED');
 
