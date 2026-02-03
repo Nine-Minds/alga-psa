@@ -1218,7 +1218,7 @@
   {
     "id": "T153",
     "description": "E2E: Implement List:Perf - cache invalidation on updates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153"
     ]
