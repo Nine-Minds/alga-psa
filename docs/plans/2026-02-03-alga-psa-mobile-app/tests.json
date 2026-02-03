@@ -1282,7 +1282,7 @@
   {
     "id": "T161",
     "description": "E2E: Implement ticket detail - render system events (status/assignee changes) distinctly (if present)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161"
     ]
