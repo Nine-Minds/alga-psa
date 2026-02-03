@@ -30,19 +30,34 @@ export class TemporalSlaBackend implements ISlaBackend {
     const client = await this.getClient();
     const workflowId = this.getWorkflowId(tenantId, ticketId);
 
-    await client.workflow.start('slaTicketWorkflow', {
-      args: [
-        {
+    try {
+      await client.workflow.start('slaTicketWorkflow', {
+        args: [
+          {
+            ticketId,
+            tenantId,
+            policyTargets: targets,
+            businessHoursSchedule: schedule,
+          },
+        ],
+        taskQueue: this.getTaskQueue(),
+        workflowId,
+        workflowExecutionTimeout: '365d',
+      });
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        (error as { name?: string }).name === 'WorkflowExecutionAlreadyStartedError'
+      ) {
+        logger.info('[TemporalSlaBackend] SLA workflow already running', {
+          workflowId,
           ticketId,
-          tenantId,
-          policyTargets: targets,
-          businessHoursSchedule: schedule,
-        },
-      ],
-      taskQueue: this.getTaskQueue(),
-      workflowId,
-      workflowExecutionTimeout: '365d',
-    });
+        });
+        return;
+      }
+      throw error;
+    }
   }
 
   async pauseSla(ticketId: string, reason: SlaPauseReason): Promise<void> {
