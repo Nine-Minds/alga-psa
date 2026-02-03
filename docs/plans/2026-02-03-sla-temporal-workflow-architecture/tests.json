@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "Unit: calculateNextWakeTime handles recurring holidays correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {

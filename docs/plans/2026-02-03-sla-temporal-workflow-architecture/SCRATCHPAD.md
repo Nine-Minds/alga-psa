@@ -87,6 +87,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: calculateNextWakeTime weekday schedule (T025)
 - (2026-02-03) Tests: calculateNextWakeTime advances across weekend (T026)
 - (2026-02-03) Tests: calculateNextWakeTime skips holidays (T027)
+- (2026-02-03) Tests: calculateNextWakeTime handles recurring holidays (T028)
 
 ## Discoveries / Constraints
 
