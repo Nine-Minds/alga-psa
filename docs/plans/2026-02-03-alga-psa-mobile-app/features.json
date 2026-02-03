@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "[Mobile:Tickets:Critical Updates] Implement watchers/subscribers add/remove (if supported by API)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

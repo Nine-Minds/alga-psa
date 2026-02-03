@@ -77,6 +77,8 @@ function TicketDetailBody({
   const [dueDateDraft, setDueDateDraft] = useState("");
   const [dueDateUpdating, setDueDateUpdating] = useState(false);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
+  const [watchUpdating, setWatchUpdating] = useState(false);
+  const [watchError, setWatchError] = useState<string | null>(null);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -185,6 +187,9 @@ function TicketDetailBody({
       ticket.status_name ??
       "Unknown")
     : (ticket.status_name ?? "Unknown");
+
+  const meUserId = session.user?.id;
+  const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
 
   const sendComment = async () => {
     if (!client || !session) return;
@@ -427,6 +432,59 @@ function TicketDetailBody({
     await submitDueDateIso(d.toISOString());
   };
 
+  const toggleWatch = async () => {
+    if (!client || !session) return;
+    if (watchUpdating) return;
+    const me = session.user?.id;
+    if (!me) {
+      setWatchError("Unable to determine current user. Please sign in again.");
+      return;
+    }
+
+    setWatchError(null);
+    setWatchUpdating(true);
+    try {
+      const base = getTicketAttributes(ticket);
+      const existing = getWatcherUserIds(ticket);
+      const nextIds = existing.includes(me)
+        ? existing.filter((id) => id !== me)
+        : [...existing, me];
+
+      const nextAttrs: Record<string, unknown> = { ...base };
+      if (nextIds.length > 0) {
+        (nextAttrs as any).watcher_user_ids = nextIds;
+      } else {
+        delete (nextAttrs as any).watcher_user_ids;
+      }
+
+      const auditHeaders = await getClientMetadataHeaders();
+      const res = await updateTicketAttributes(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        attributes: Object.keys(nextAttrs).length === 0 ? null : nextAttrs,
+        auditHeaders,
+      });
+
+      if (!res.ok) {
+        if (res.error.kind === "http" && res.status === 403) {
+          setWatchError("You don’t have permission to update watchers on this ticket.");
+          return;
+        }
+        if (res.error.kind === "http" && res.status === 400) {
+          const msg = getApiErrorMessage(res.error.body);
+          setWatchError(msg ?? "Watchers update was rejected by the server.");
+          return;
+        }
+        setWatchError("Unable to update watchers. Please try again.");
+        return;
+      }
+
+      await fetchTicket();
+    } finally {
+      setWatchUpdating(false);
+    }
+  };
+
   return (
     <>
       <ScrollView
@@ -522,6 +580,14 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
+            label={watchUpdating ? "Updating…" : isWatching ? "Unwatch" : "Watch"}
+            disabled={watchUpdating || !meUserId}
+            onPress={() => {
+              void toggleWatch();
+            }}
+          />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
             label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
             disabled={assignmentUpdating}
             onPress={() => {
@@ -541,6 +607,12 @@ function TicketDetailBody({
             </>
           ) : null}
         </View>
+
+        {watchError ? (
+          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+            {watchError}
+          </Text>
+        ) : null}
 
         {assignmentError ? (
           <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
@@ -1287,6 +1359,14 @@ function getDueDateIso(ticket: TicketDetail): string | null {
   if (!attrs || typeof attrs !== "object") return null;
   const due = (attrs as any).due_date as unknown;
   return typeof due === "string" && due.trim() ? due : null;
+}
+
+function getWatcherUserIds(ticket: TicketDetail): string[] {
+  const attrs = (ticket as any).attributes as unknown;
+  if (!attrs || typeof attrs !== "object") return [];
+  const raw = (attrs as any).watcher_user_ids as unknown;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((v) => typeof v === "string" && v.trim()) as string[];
 }
 
 function isoToDateInput(iso: string | null): string | null {
