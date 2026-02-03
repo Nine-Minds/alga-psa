@@ -107,6 +107,8 @@ const _middleware = auth((request) => {
       '/api/calendar/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
+      // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
+      '/api/v1/mobile/auth/',
       '/api/integrations/ninjaone/callback',
       // AI chat endpoints are session-authenticated (MSP UI)
       '/api/chat/',

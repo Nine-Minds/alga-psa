@@ -101,3 +101,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F095 documented signing/versioning/release notes process in `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md` and set initial iOS/Android build numbers in `mobile/app.json`.
 - 2026-02-03: F096 generated branded app icon/splash/adaptive icon assets (script: `mobile/scripts/generate-assets.mjs`) and updated `mobile/assets/*`.
 - 2026-02-03: F097 documented rollout checklist + rollback plan in `docs/plans/2026-02-03-alga-psa-mobile-app/ROLLOUT_PLAN.md`.
+- 2026-02-03: F098 implemented `/auth/mobile/handoff` as a route handler that issues a short-lived OTT for signed-in internal users and redirects back to the app deep link with `ott` + `state`.

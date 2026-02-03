@@ -778,7 +778,7 @@
   {
     "id": "F098",
     "description": "[Server:Mobile Auth] Add mobile handoff endpoint/page that issues a short-lived, single-use OTT for authenticated web sessions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
