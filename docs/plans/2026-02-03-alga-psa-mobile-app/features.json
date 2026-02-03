@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "[Mobile:Tickets:Updates] Submit status change and update ticket header/list badges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

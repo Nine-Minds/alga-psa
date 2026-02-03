@@ -75,3 +75,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F069 comment drafts are persisted per-ticket (secure storage) so drafts survive navigation and can be retried after failures.
 - 2026-02-03: F070 comment submission is single-flight; send is disabled and ignored while a request is in-flight to prevent duplicates.
 - 2026-02-03: F071 added a “Change status” picker modal on ticket detail backed by a new `GET /api/v1/tickets/statuses` endpoint (server lists tenant statuses via API key auth).
+- 2026-02-03: F072 wired status selection to `PUT /api/v1/tickets/:id/status`, refetches ticket detail on success, and updates ticket list rows on return using cached detail reconciliation on screen focus.

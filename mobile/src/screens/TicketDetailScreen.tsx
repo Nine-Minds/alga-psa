@@ -6,7 +6,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, getTicketStatuses, type TicketComment, type TicketDetail, type TicketStatus } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketStatuses, updateTicketStatus, type TicketComment, type TicketDetail, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -64,6 +64,8 @@ function TicketDetailBody({
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
   const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
   const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
 
   const draftKey = useMemo(() => {
     const userId = session?.user?.id ?? "anonymous";
@@ -203,6 +205,33 @@ function TicketDetailBody({
     }
   };
 
+  const submitStatus = useCallback(
+    async (statusId: string) => {
+      if (!client || !session) return;
+      if (statusUpdating) return;
+      setPendingStatusId(statusId);
+      setStatusUpdateError(null);
+      setStatusUpdating(true);
+      try {
+        const res = await updateTicketStatus(client, {
+          apiKey: session.accessToken,
+          ticketId,
+          status_id: statusId,
+        });
+        if (!res.ok) {
+          setStatusUpdateError("Unable to change status. Please try again.");
+          return;
+        }
+        await fetchTicket();
+        setPendingStatusId(null);
+        setStatusPickerOpen(false);
+      } finally {
+        setStatusUpdating(false);
+      }
+    },
+    [client, fetchTicket, session, statusUpdating, ticketId],
+  );
+
   return (
     <>
       <ScrollView
@@ -322,7 +351,9 @@ function TicketDetailBody({
         error={statusOptionsError}
         statuses={statusOptions}
         currentStatusId={pendingStatusId ?? ticket.status_id ?? null}
-        onSelect={setPendingStatusId}
+        updating={statusUpdating}
+        updateError={statusUpdateError}
+        onSelect={(id) => void submitStatus(id)}
         onClose={() => setStatusPickerOpen(false)}
       />
     </>
@@ -333,6 +364,8 @@ function StatusPickerModal({
   visible,
   loading,
   error,
+  updating,
+  updateError,
   statuses,
   currentStatusId,
   onSelect,
@@ -341,26 +374,34 @@ function StatusPickerModal({
   visible: boolean;
   loading: boolean;
   error: string | null;
+  updating: boolean;
+  updateError: string | null;
   statuses: TicketStatus[];
   currentStatusId: string | null | undefined;
   onSelect: (statusId: string) => void;
   onClose: () => void;
 }) {
+  const busy = loading || updating;
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
         <Text style={{ ...typography.title, color: colors.text }}>Select status</Text>
-        {loading ? (
+        {busy ? (
           <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-              Loading…
+              {loading ? "Loading…" : "Saving…"}
             </Text>
           </View>
         ) : null}
         {error ? (
           <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
             {error}
+          </Text>
+        ) : null}
+        {updateError ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+            {updateError}
           </Text>
         ) : null}
 
@@ -370,9 +411,9 @@ function StatusPickerModal({
               key={s.status_id}
               accessibilityRole="button"
               accessibilityLabel={`Set status ${s.name}`}
+              disabled={busy}
               onPress={() => {
                 onSelect(s.status_id);
-                onClose();
               }}
               style={({ pressed }) => ({
                 paddingVertical: spacing.sm,
@@ -381,7 +422,7 @@ function StatusPickerModal({
                 borderWidth: 1,
                 borderColor: s.status_id === currentStatusId ? colors.primary : colors.border,
                 backgroundColor: colors.card,
-                opacity: pressed ? 0.95 : 1,
+                opacity: busy ? 0.65 : pressed ? 0.95 : 1,
                 marginBottom: spacing.sm,
               })}
             >

@@ -167,3 +167,19 @@ export function getTicketStatuses(
     },
   });
 }
+
+export function updateTicketStatus(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; status_id: string },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}/status`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+    body: {
+      status_id: params.status_id,
+    },
+  });
+}

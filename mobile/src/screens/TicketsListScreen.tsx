@@ -1,4 +1,4 @@
-import type { CompositeScreenProps } from "@react-navigation/native";
+import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
@@ -182,6 +182,50 @@ export function TicketsListScreen({ navigation }: Props) {
       canceled = true;
     };
   }, [client, fetchStats, loadPage, session, search]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setItems((prev) => {
+        let changed = false;
+        const next = prev.map((item) => {
+          const cached = getCachedTicketDetail(item.ticket_id);
+          if (!cached || typeof cached !== "object") return item;
+          const detail = cached as Partial<TicketListItem>;
+
+          const merged: TicketListItem = { ...item };
+          const keys: (keyof TicketListItem)[] = [
+            "status_id",
+            "status_name",
+            "status_is_closed",
+            "priority_name",
+            "assigned_to_name",
+            "updated_at",
+            "closed_at",
+          ];
+          for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(detail, key)) {
+              (merged as any)[key] = (detail as any)[key];
+            }
+          }
+
+          if (
+            merged.status_id !== item.status_id ||
+            merged.status_name !== item.status_name ||
+            merged.status_is_closed !== item.status_is_closed ||
+            merged.priority_name !== item.priority_name ||
+            merged.assigned_to_name !== item.assigned_to_name ||
+            merged.updated_at !== item.updated_at ||
+            merged.closed_at !== item.closed_at
+          ) {
+            changed = true;
+            return merged;
+          }
+          return item;
+        });
+        return changed ? next : prev;
+      });
+    }, []),
+  );
 
   const onEndReached = async () => {
     if (!client || !session) return;
