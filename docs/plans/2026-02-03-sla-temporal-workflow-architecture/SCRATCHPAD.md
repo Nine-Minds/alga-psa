@@ -163,3 +163,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Added worker registration test validating workflow export for Temporal startup (T066).
 - (2026-02-03) Confirmed SLA activities are exported for worker startup (T067).
 - (2026-02-03) Added full EE SLA lifecycle workflow integration test with pause/resume and resolution notifications (T068).
+- (2026-02-03) Added CE lifecycle test covering create, poll notification, pause/resume, response, and resolution in `packages/sla/src/services/__tests__/slaCeLifecycle.test.ts` (T069).

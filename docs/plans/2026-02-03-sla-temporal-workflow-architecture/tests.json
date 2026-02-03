@@ -410,7 +410,7 @@
   {
     "id": "T069",
     "description": "E2E: Full ticket lifecycle in CE - create, poll-based 50% notification, pause, resume, first response, resolve",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
