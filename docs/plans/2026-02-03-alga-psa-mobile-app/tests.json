@@ -450,7 +450,7 @@
   {
     "id": "T057",
     "description": "E2E: Render description with safe link handling (optional markdown)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
