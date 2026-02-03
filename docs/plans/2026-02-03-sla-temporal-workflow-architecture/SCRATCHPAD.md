@@ -94,6 +94,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: checkAndEscalate activity calls escalation check (T032)
 - (2026-02-03) Tests: checkAndEscalate triggers escalation when needed (T033)
 - (2026-02-03) Tests: updateSlaStatus updates response met field (T034)
+- (2026-02-03) Tests: updateSlaStatus updates resolution met field (T035)
 
 ## Discoveries / Constraints
 
