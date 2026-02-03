@@ -291,7 +291,8 @@ export async function recordResolution(
   tenant: string,
   ticketId: string,
   resolvedAt: Date = new Date(),
-  resolvedBy?: string
+  resolvedBy?: string,
+  options?: { skipBackend?: boolean }
 ): Promise<RecordSlaEventResult> {
   try {
     // Get current ticket SLA state
@@ -341,6 +342,15 @@ export async function recordResolution(
       pause_minutes: ticket.sla_total_pause_minutes,
       met
     });
+
+    if (!options?.skipBackend && met !== null) {
+      try {
+        const backend = await SlaBackendFactory.getBackend();
+        await backend.completeSla(ticketId, 'resolution', met);
+      } catch (error) {
+        console.warn('Failed to complete SLA backend resolution:', error);
+      }
+    }
 
     return { success: true, met, recorded_at: resolvedAt };
   } catch (error) {
