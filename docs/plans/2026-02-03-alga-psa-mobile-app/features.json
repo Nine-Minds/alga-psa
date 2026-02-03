@@ -1394,7 +1394,7 @@
   {
     "id": "F175",
     "description": "[Mobile:Tickets:Updates] Implement updates - status list fetched and cached with TTL",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

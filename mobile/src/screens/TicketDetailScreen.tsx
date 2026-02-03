@@ -10,6 +10,7 @@ import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
+import { getCachedTicketStatuses, setCachedTicketStatuses } from "../cache/referenceDataCache";
 import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
@@ -663,28 +664,35 @@ function TicketDetailBody({
         </View>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
-          <ActionChip
-            label="Change status"
-            onPress={() => {
-              void (async () => {
-                if (!client || !session) return;
-                setStatusPickerOpen(true);
-                if (statusOptions.length > 0) return;
-                setStatusOptionsLoading(true);
-                setStatusOptionsError(null);
-                try {
-                  const res = await getTicketStatuses(client, { apiKey: session.accessToken });
-                  if (!res.ok) {
-                    setStatusOptionsError("Unable to load statuses.");
-                    return;
-                  }
-                  setStatusOptions(res.data.data);
-                } finally {
-                  setStatusOptionsLoading(false);
-                }
-              })();
-            }}
-          />
+	          <ActionChip
+	            label="Change status"
+	            onPress={() => {
+	              void (async () => {
+	                if (!client || !session) return;
+	                setStatusPickerOpen(true);
+	                if (statusOptions.length > 0) return;
+	                const tenantKey = session.tenantId ?? "unknownTenant";
+	                const cached = getCachedTicketStatuses(tenantKey);
+	                if (Array.isArray(cached) && cached.length > 0) {
+	                  setStatusOptions(cached as TicketStatus[]);
+	                  return;
+	                }
+	                setStatusOptionsLoading(true);
+	                setStatusOptionsError(null);
+	                try {
+	                  const res = await getTicketStatuses(client, { apiKey: session.accessToken });
+	                  if (!res.ok) {
+	                    setStatusOptionsError("Unable to load statuses.");
+	                    return;
+	                  }
+	                  setStatusOptions(res.data.data);
+	                  setCachedTicketStatuses(tenantKey, res.data.data);
+	                } finally {
+	                  setStatusOptionsLoading(false);
+	                }
+	              })();
+	            }}
+	          />
           <View style={{ width: spacing.sm }} />
           <ActionChip
             label="Change priority"
