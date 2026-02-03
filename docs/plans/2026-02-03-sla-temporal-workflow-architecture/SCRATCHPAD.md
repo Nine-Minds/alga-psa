@@ -89,6 +89,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: calculateNextWakeTime skips holidays (T027)
 - (2026-02-03) Tests: calculateNextWakeTime handles recurring holidays (T028)
 - (2026-02-03) Tests: calculateNextWakeTime accounts for pause minutes (T029)
+- (2026-02-03) Tests: calculateNextWakeTime for 24x7 schedule (T030)
 
 ## Discoveries / Constraints
 
