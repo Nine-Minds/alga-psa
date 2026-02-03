@@ -1706,7 +1706,7 @@
   {
     "id": "F214",
     "description": "[Mobile:Release] Release - store listing draft (Phase 1)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]
