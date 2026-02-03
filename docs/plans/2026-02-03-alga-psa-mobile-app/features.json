@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "[Mobile:Tickets:Detail] Show commenter identity and timestamp for entries",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
