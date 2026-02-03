@@ -354,7 +354,7 @@
   {
     "id": "T045",
     "description": "E2E: Add quick filters: My tickets, Unassigned, High priority, Recently updated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
