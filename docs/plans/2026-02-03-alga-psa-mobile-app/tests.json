@@ -362,7 +362,7 @@
   {
     "id": "T046",
     "description": "E2E: Support combining filters and show active filter summary",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
