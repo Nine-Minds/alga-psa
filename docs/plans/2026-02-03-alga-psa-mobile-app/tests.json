@@ -1210,7 +1210,7 @@
   {
     "id": "T152",
     "description": "E2E: Implement List:Perf - prefetch next page threshold tuning",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F152"
     ]
