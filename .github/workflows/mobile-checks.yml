@@ -88,3 +88,29 @@ jobs:
         with:
           name: mobile-npm-audit
           path: mobile/npm-audit.json
+
+  mobile-repro:
+    name: Mobile reproducibility checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        working-directory: mobile
+        run: npm ci --include=dev
+
+      - name: Ensure lockfile is unchanged
+        run: git diff --exit-code -- mobile/package-lock.json
+
+      - name: Verify Expo config resolves
+        working-directory: mobile
+        run: npx expo config --type public --json > /tmp/expo-config.json
