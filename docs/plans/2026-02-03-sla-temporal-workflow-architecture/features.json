@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Create SlaTicketWorkflow in ee/temporal-workflows/src/workflows/ with response and resolution phase tracking",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
