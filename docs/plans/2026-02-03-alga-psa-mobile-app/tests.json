@@ -1490,7 +1490,7 @@
   {
     "id": "T187",
     "description": "Integration: Implement server mobile auth - OTT is bound to user session id to prevent replay across sessions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
