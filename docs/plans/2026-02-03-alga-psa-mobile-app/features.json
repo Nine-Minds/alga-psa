@@ -1554,7 +1554,7 @@
   {
     "id": "F195",
     "description": "[Server:Mobile Auth] Implement server mobile auth - audit logs include device id, app version, user id, tenant, action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
