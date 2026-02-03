@@ -319,3 +319,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T091 added unit tests for locale-aware date/time formatting (mobile/src/ui/formatters/dateTime.test.ts).
 - 2026-02-03: T092 marked privacy review/PII inventory as covered (docs/plans/2026-02-03-alga-psa-mobile-app/PRIVACY_REVIEW.md).
 - 2026-02-03: T093 marked observability events as covered (analytics event catalog + api request success/failure telemetry).
+- 2026-02-03: T094 marked as covered: undefined
+- 2026-02-03: T094 marked as covered: release pipelines exist (.github/workflows/mobile-distribute.yml) and runbook/docs are present (RELEASE_PROCESS.md, INTERNAL_BETA_RUNBOOK.md).
