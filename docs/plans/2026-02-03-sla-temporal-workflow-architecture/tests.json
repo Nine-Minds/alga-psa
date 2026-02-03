@@ -296,7 +296,7 @@
   {
     "id": "T050",
     "description": "Unit: TemporalSlaBackend.startSlaTracking() handles duplicate workflow ID without error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
