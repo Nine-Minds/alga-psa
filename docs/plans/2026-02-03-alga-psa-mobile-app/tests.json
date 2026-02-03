@@ -522,7 +522,7 @@
   {
     "id": "T066",
     "description": "E2E: Support comment visibility selection (internal vs public)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
