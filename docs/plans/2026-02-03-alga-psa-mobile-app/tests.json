@@ -1298,7 +1298,7 @@
   {
     "id": "T163",
     "description": "E2E: Implement ticket detail - optimistic UI for comment post with rollback on failure",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
