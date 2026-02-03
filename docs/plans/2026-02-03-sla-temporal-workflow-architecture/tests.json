@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "Unit: SlaTicketWorkflow completeResponse signal transitions to resolution phase",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
