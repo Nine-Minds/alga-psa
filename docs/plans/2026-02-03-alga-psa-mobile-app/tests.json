@@ -1458,7 +1458,7 @@
   {
     "id": "T183",
     "description": "E2E: Implement updates - assign-to-me button shows disabled state when already assignee",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183"
     ]
