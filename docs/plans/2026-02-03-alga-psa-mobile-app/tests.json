@@ -58,7 +58,7 @@
   {
     "id": "T008",
     "description": "Unit: Add basic design system primitives (colors/typography/spacing) aligned with Alga web",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

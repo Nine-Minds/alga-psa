@@ -219,3 +219,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T005 added a unit test covering request timeout behavior (returns `timeout` kind) in addition to existing retry coverage (`mobile/src/api/client.timeout.test.ts`, `mobile/src/api/client.retry.test.ts`).
 - 2026-02-03: T006 extracted key bootstrapping timing/expiry logic into pure helpers and covered with unit tests (`mobile/src/app/bootstrapUtils.ts`, `mobile/src/app/bootstrapUtils.test.ts`).
 - 2026-02-03: T007 added a unit test verifying React Navigation deep link config includes `alga://` and ticket detail route (`mobile/src/navigation/linking.test.ts`).
+- 2026-02-03: T008 added unit tests for the mobile theme primitives (colors/spacing/typography) to prevent accidental regressions (`mobile/src/ui/theme.test.ts`).
