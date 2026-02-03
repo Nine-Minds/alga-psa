@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "[Mobile:Auth] Implement optional biometric gate to re-open app (local-only)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

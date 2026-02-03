@@ -14,11 +14,14 @@ import { createApiClient } from "../api";
 import { refreshSession, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
+import { getBiometricGateEnabled } from "../auth/biometricGate";
+import { BiometricLockView } from "./BiometricLockView";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
   const [bootStatus, setBootStatus] = useState<"booting" | "ready">("booting");
   const [session, setSessionState] = useState<MobileSession | null>(null);
+  const [isBiometricLocked, setIsBiometricLocked] = useState(false);
   const network = useNetworkStatus();
   const refreshInFlight = useRef(false);
 
@@ -27,9 +30,10 @@ export function AppRoot() {
   const setSession = useCallback(
     (next: MobileSession | null) => {
       setSessionState(next);
+      if (!next) setIsBiometricLocked(false);
       void (next ? storeSession(next) : clearStoredSession());
     },
-    [clearStoredSession, setSessionState, storeSession],
+    [clearStoredSession, setSessionState, setIsBiometricLocked, storeSession],
   );
 
   useEffect(() => {
@@ -48,6 +52,11 @@ export function AppRoot() {
         } else {
           await clearStoredSession();
         }
+      }
+
+      if (stored && stored.expiresAtMs > Date.now()) {
+        const biometricEnabled = await getBiometricGateEnabled();
+        if (biometricEnabled && !canceled) setIsBiometricLocked(true);
       }
 
       if (!canceled) setBootStatus("ready");
@@ -125,6 +134,14 @@ export function AppRoot() {
     }
   });
 
+  useAppResume(() => {
+    if (!session) return;
+    void (async () => {
+      const biometricEnabled = await getBiometricGateEnabled();
+      if (biometricEnabled) setIsBiometricLocked(true);
+    })();
+  });
+
   const logout = useCallback(async () => {
     const currentSession = session;
     try {
@@ -161,14 +178,18 @@ export function AppRoot() {
         logout,
       }}
     >
-      <View style={{ flex: 1 }}>
-        {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+      {session && isBiometricLocked ? (
+        <BiometricLockView onUnlocked={() => setIsBiometricLocked(false)} />
+      ) : (
         <View style={{ flex: 1 }}>
-          <NavigationContainer key={session ? "signed-in" : "signed-out"} linking={linking}>
-            <RootNavigator isSignedIn={session !== null} />
-          </NavigationContainer>
+          {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+          <View style={{ flex: 1 }}>
+            <NavigationContainer key={session ? "signed-in" : "signed-out"} linking={linking}>
+              <RootNavigator isSignedIn={session !== null} />
+            </NavigationContainer>
+          </View>
         </View>
-      </View>
+      )}
     </AuthContext.Provider>
   );
 }

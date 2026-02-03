@@ -36,3 +36,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F030 uses hosted web login (`/auth/signin`) for Microsoft SSO (no provider-specific native SDK).
 - 2026-02-03: F031 uses hosted web login (`/auth/signin`) for Google SSO (no provider-specific native SDK).
 - 2026-02-03: F032 includes device/app metadata on OTT exchange (platform, app version, build version, device id where available) for server-side audit/analytics.
+- 2026-02-03: F033 added optional biometric re-open gate using `expo-local-authentication` (locks on resume; toggle stored in secure storage and exposed in Settings).
