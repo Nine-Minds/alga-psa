@@ -172,11 +172,14 @@ jobs:
           df -h
         shell: bash
 
-      - name: Build server image with no cache
+      - name: Build images with no cache
         if: steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Building server image with --no-cache to ensure fresh build"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache server setup
+          echo "Building all required images with --no-cache to ensure fresh build"
+          # Build all images needed for e2e tests upfront
+          # Excludes: workflow-worker (EE only, not needed for CE e2e)
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache \
+            server setup imap-service hocuspocus
         shell: bash
 
       - name: Start foundational services (postgres and redis)
@@ -350,10 +353,12 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Setup completed successfully. Starting remaining services..."
-          # Explicitly list CE services needed for e2e tests
-          # Excludes: setup (completed), workflow-worker (EE), hocuspocus (EE)
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d \
-            server imap-service imap-test-server
+          # Start CE services needed for e2e tests (images already built earlier)
+          # Use --no-recreate to avoid restarting setup which already completed
+          # Use --no-deps to avoid waiting on setup dependency again
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d \
+            --no-recreate --no-deps \
+            server imap-service imap-test-server hocuspocus
         shell: bash
 
       - name: Collect initial container logs
