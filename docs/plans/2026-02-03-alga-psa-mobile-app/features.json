@@ -1514,7 +1514,7 @@
   {
     "id": "F190",
     "description": "[Server:Mobile Auth] Implement server mobile auth - exchange endpoint validates OTT + state + device metadata shape",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
