@@ -1434,7 +1434,7 @@
   {
     "id": "T180",
     "description": "E2E: Implement updates - retry mechanism for transient failures",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180"
     ]
