@@ -1,6 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import * as Clipboard from "expo-clipboard";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
@@ -18,6 +17,7 @@ import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { createTimeEntry } from "../api/timeEntries";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { buildTicketWebUrl } from "../urls/hostedUrls";
+import { copyToClipboard } from "../clipboard/clipboard";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -1283,8 +1283,8 @@ function TicketActions({
         label="Copy #"
         onPress={() => {
           void (async () => {
-            await Clipboard.setStringAsync(ticketNumber);
-            Alert.alert("Copied", ticketNumber);
+            const res = await copyToClipboard("ticket_number", ticketNumber);
+            Alert.alert("Copied", res.copiedText);
           })();
         }}
       />
@@ -1293,8 +1293,8 @@ function TicketActions({
         label="Copy ID"
         onPress={() => {
           void (async () => {
-            await Clipboard.setStringAsync(ticketId);
-            Alert.alert("Copied", ticketId);
+            const res = await copyToClipboard("ticket_id", ticketId);
+            Alert.alert("Copied", res.copiedText);
           })();
         }}
       />

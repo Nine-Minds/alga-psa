@@ -1026,7 +1026,7 @@
   {
     "id": "F129",
     "description": "[Mobile:Foundation] Implement clipboard helper that redacts sensitive fields by default (configurable)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
