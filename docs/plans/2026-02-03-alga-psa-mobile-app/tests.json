@@ -1018,7 +1018,7 @@
   {
     "id": "T128",
     "description": "Unit: Implement “open in web” URL builder for hosted environments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
