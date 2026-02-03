@@ -370,7 +370,7 @@
   {
     "id": "T047",
     "description": "E2E: Support clear-all filters",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
