@@ -250,3 +250,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F219 added dev-only Phase 2 feature gating (production hard-disabled) and documented the toggles (`mobile/src/features/phase2.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/PHASE2_GATING.md`).
 - 2026-02-03: T024 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T025 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
+- 2026-02-03: T026 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
