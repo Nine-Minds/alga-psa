@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "[Mobile:Foundation] Add analytics scaffolding (screen views + key actions) with opt-out hook (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
