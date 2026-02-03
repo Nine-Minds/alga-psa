@@ -1114,7 +1114,7 @@
   {
     "id": "F140",
     "description": "[Mobile:Tickets:List] Implement List:Filters - assignee (me/unassigned) selector",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

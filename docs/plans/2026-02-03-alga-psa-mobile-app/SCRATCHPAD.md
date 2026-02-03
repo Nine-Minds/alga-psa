@@ -143,3 +143,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F137 added a post-exchange permission check during sign-in (`GET /api/v1/tickets/stats`); if the user lacks ticket permissions (403), the app shows a clear “no ticket access” message instead of landing on an empty app shell.
 - 2026-02-03: F138 updated Sign In copy to clearly state the mobile app is for internal users only.
 - 2026-02-03: F139 implemented status multi-select for ticket list filters by fetching statuses and sending `status_ids` to the server; server ticket list now supports `status_ids` (comma-separated/JSON array) via schema + `whereIn` filtering.
+- 2026-02-03: F140 confirmed assignee filter selector (any/me/unassigned) is implemented in the ticket list Filters modal and wired to `assigned_to` / `has_assignment=false` server-side filters.
