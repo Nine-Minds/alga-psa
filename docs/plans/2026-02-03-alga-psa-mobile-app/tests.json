@@ -1066,7 +1066,7 @@
   {
     "id": "T134",
     "description": "E2E: Implement refresh token rotation handling with safe rollback on failures",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
