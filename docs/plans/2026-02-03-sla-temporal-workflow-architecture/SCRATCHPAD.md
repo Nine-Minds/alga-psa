@@ -76,6 +76,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA workflow threshold calculations include 50% (T014)
 - (2026-02-03) Tests: SLA workflow threshold calculations include 75% (T015)
 - (2026-02-03) Tests: SLA workflow threshold calculations include 90% (T016)
+- (2026-02-03) Tests: SLA workflow threshold calculations include 100% (T017)
 
 ## Discoveries / Constraints
 
