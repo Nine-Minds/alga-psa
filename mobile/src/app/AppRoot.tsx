@@ -8,11 +8,12 @@ import { ErrorState, LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { OfflineBanner } from "../ui/components/OfflineBanner";
 import { AuthContext, type MobileSession } from "../auth/AuthContext";
+import { clearStoredSession, getStoredSession, storeSession } from "../auth/sessionStorage";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
   const [bootStatus, setBootStatus] = useState<"booting" | "ready">("booting");
-  const [session, setSession] = useState<MobileSession | null>(null);
+  const [session, setSessionState] = useState<MobileSession | null>(null);
   const network = useNetworkStatus();
 
   useEffect(() => {
@@ -24,7 +25,15 @@ export function AppRoot() {
         return;
       }
 
-      await Promise.resolve();
+      const stored = await getStoredSession();
+      if (stored) {
+        if (stored.expiresAtMs > Date.now()) {
+          if (!canceled) setSessionState(stored);
+        } else {
+          await clearStoredSession();
+        }
+      }
+
       if (!canceled) setBootStatus("ready");
     };
 
@@ -45,7 +54,15 @@ export function AppRoot() {
   }
 
   return (
-    <AuthContext.Provider value={{ session, setSession }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        setSession: (next) => {
+          setSessionState(next);
+          void (next ? storeSession(next) : clearStoredSession());
+        },
+      }}
+    >
       <View style={{ flex: 1 }}>
         {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
         <View style={{ flex: 1 }}>

@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "[Mobile:Auth] Persist session securely and restore on cold start",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
