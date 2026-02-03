@@ -930,7 +930,7 @@
   {
     "id": "F117",
     "description": "[Phase2:Notifications] Add notification preferences screen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
