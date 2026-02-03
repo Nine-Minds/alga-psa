@@ -770,7 +770,7 @@
   {
     "id": "F097",
     "description": "[Mobile:Release] Add rollout checklist and rollback plan",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]

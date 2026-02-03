@@ -100,3 +100,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F094 added EAS build/submit profiles (`mobile/eas.json`) and a GitHub Actions workflow for TestFlight/Play internal distribution (`.github/workflows/mobile-distribute.yml`); set bundle/package ids in `mobile/app.json`.
 - 2026-02-03: F095 documented signing/versioning/release notes process in `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md` and set initial iOS/Android build numbers in `mobile/app.json`.
 - 2026-02-03: F096 generated branded app icon/splash/adaptive icon assets (script: `mobile/scripts/generate-assets.mjs`) and updated `mobile/assets/*`.
+- 2026-02-03: F097 documented rollout checklist + rollback plan in `docs/plans/2026-02-03-alga-psa-mobile-app/ROLLOUT_PLAN.md`.
