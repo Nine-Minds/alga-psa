@@ -422,6 +422,8 @@ export interface AssetQueryParams {
   rmm_managed?: boolean;
   maintenance_status?: MaintenanceStatus;
   maintenance_type?: MaintenanceType;
+  sort_by?: string;
+  sort_direction?: 'asc' | 'desc';
   page?: number;
   limit?: number;
   include_extension_data?: boolean;
