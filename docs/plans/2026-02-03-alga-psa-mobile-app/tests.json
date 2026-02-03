@@ -698,7 +698,7 @@
   {
     "id": "T088",
     "description": "Unit: Add toggles: biometric gate, hide sensitive info in notifications (future)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
