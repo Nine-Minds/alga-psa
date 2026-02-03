@@ -1482,7 +1482,7 @@
   {
     "id": "T186",
     "description": "E2E: Implement updates - time entry form validates required fields and rounds durations per policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
