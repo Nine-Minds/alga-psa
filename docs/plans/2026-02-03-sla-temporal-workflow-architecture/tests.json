@@ -428,7 +428,7 @@
   {
     "id": "T072",
     "description": "Unit: calculateNextWakeTime handles timezone correctly for Europe/London",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
