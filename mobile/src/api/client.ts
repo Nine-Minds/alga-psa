@@ -8,6 +8,7 @@ type CreateApiClientOptions = {
   getAccessToken?: () => string | undefined;
   getTenantId?: () => string | undefined;
   getUserAgentTag?: () => string | undefined;
+  onAuthError?: () => Promise<string | null>;
   retry?: {
     maxRetries: number;
     baseDelayMs: number;
@@ -100,6 +101,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
   const getAccessToken = options.getAccessToken;
   const getTenantId = options.getTenantId;
   const getUserAgentTag = options.getUserAgentTag;
+  const onAuthError = options.onAuthError;
   const retry = options.retry ?? { maxRetries: 2, baseDelayMs: 250, maxDelayMs: 5_000 };
 
   return {
@@ -136,7 +138,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           }
         });
 
-      const attemptOnce = async (): Promise<ApiResult<T>> => {
+      const attemptOnce = async (overrideAuthToken?: string): Promise<ApiResult<T>> => {
         const abortController = new AbortController();
         const timeoutHandle = setTimeout(() => abortController.abort(), timeoutMs);
 
@@ -150,20 +152,24 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
         }
 
         try {
-          const authToken = getAccessToken?.();
+          const authToken = overrideAuthToken ?? getAccessToken?.();
           const tenantId = getTenantId?.();
           const userAgentTag = getUserAgentTag?.();
 
+          const headers = mergeHeaders({
+            accept: "application/json",
+            ...(req.body === undefined ? {} : { "content-type": "application/json" }),
+            ...(tenantId ? { "x-tenant-id": tenantId } : {}),
+            ...(userAgentTag ? { "x-alga-client": userAgentTag } : {}),
+            ...req.headers,
+          });
+
+          if (authToken) headers.authorization = `Bearer ${authToken}`;
+          if (overrideAuthToken) headers["x-api-key"] = overrideAuthToken;
+
           const response = await fetchImpl(url, {
             method: req.method,
-            headers: mergeHeaders({
-              accept: "application/json",
-              ...(req.body === undefined ? {} : { "content-type": "application/json" }),
-              ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
-              ...(tenantId ? { "x-tenant-id": tenantId } : {}),
-              ...(userAgentTag ? { "x-alga-client": userAgentTag } : {}),
-              ...req.headers,
-            }),
+            headers,
             body: req.body === undefined ? undefined : JSON.stringify(req.body),
             signal: abortController.signal,
           });
@@ -240,9 +246,50 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
         }
       };
 
+      let didAuthRetry = false;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const result = await attemptOnce();
         if (result.ok) return result;
+
+        if (result.error.kind === "auth" && onAuthError && !didAuthRetry) {
+          didAuthRetry = true;
+          try {
+            const nextToken = await onAuthError();
+            if (nextToken) {
+              const afterRefresh = await attemptOnce(nextToken);
+              if (afterRefresh.ok) return afterRefresh;
+              analytics.trackEvent("api.request.failed", {
+                method: req.method,
+                path: normalizePathForAnalytics(req.path),
+                status: afterRefresh.status ?? null,
+                errorKind: afterRefresh.error.kind,
+                durationMs: Date.now() - startedAt,
+                attempts: attempt + 1,
+              });
+              return afterRefresh;
+            }
+          } catch {
+            analytics.trackEvent("api.request.failed", {
+              method: req.method,
+              path: normalizePathForAnalytics(req.path),
+              status: result.status ?? null,
+              errorKind: "exception",
+              durationMs: Date.now() - startedAt,
+              attempts: attempt + 1,
+            });
+            return result;
+          }
+
+          analytics.trackEvent("api.request.failed", {
+            method: req.method,
+            path: normalizePathForAnalytics(req.path),
+            status: result.status ?? null,
+            errorKind: result.error.kind,
+            durationMs: Date.now() - startedAt,
+            attempts: attempt + 1,
+          });
+          return result;
+        }
 
         const retryableStatus =
           result.status !== undefined &&

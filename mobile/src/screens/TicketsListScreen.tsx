@@ -43,7 +43,7 @@ const DEFAULT_FILTERS: TicketListFilters = {
 
 export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
-  const { session } = useAuth();
+  const { session, refreshSession } = useAuth();
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -51,8 +51,9 @@ export function TicketsListScreen({ navigation }: Props) {
       baseUrl: config.baseUrl,
       getTenantId: () => session.tenantId,
       getUserAgentTag: () => "mobile/tickets",
+      onAuthError: refreshSession,
     });
-  }, [config, session]);
+  }, [config, refreshSession, session]);
 
   const [items, setItems] = useState<TicketListItem[]>([]);
   const [page, setPage] = useState(1);

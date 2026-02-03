@@ -11,7 +11,7 @@ import { AuthContext, type MobileSession } from "../auth/AuthContext";
 import { clearStoredSession, getStoredSession, storeSession } from "../auth/sessionStorage";
 import { useAppResume } from "../hooks/useAppResume";
 import { createApiClient } from "../api";
-import { refreshSession, revokeSession } from "../api/mobileAuth";
+import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
 import { getBiometricGateEnabled } from "../auth/biometricGate";
@@ -22,6 +22,7 @@ export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
   const [bootStatus, setBootStatus] = useState<"booting" | "ready">("booting");
   const [session, setSessionState] = useState<MobileSession | null>(null);
+  const sessionRef = useRef<MobileSession | null>(null);
   const [isBiometricLocked, setIsBiometricLocked] = useState(false);
   const network = useNetworkStatus();
   const refreshInFlight = useRef(false);
@@ -30,6 +31,7 @@ export function AppRoot() {
 
   const setSession = useCallback(
     (next: MobileSession | null) => {
+      sessionRef.current = next;
       setSessionState(next);
       if (!next) setIsBiometricLocked(false);
       void (next ? storeSession(next) : clearStoredSession());
@@ -49,6 +51,7 @@ export function AppRoot() {
       const stored = await getStoredSession();
       if (stored) {
         if (stored.expiresAtMs > Date.now()) {
+          sessionRef.current = stored;
           if (!canceled) setSessionState(stored);
         } else {
           await clearStoredSession();
@@ -69,9 +72,10 @@ export function AppRoot() {
     };
   }, [config]);
 
-  const refreshNow = useCallback(async (): Promise<boolean> => {
-    if (!baseUrl || !session) return false;
-    if (refreshInFlight.current) return false;
+  const refreshSession = useCallback(async (): Promise<string | null> => {
+    const currentSession = sessionRef.current;
+    if (!baseUrl || !currentSession) return null;
+    if (refreshInFlight.current) return null;
 
     refreshInFlight.current = true;
     try {
@@ -80,8 +84,8 @@ export function AppRoot() {
         getUserAgentTag: () => `mobile/${Platform.OS}`,
       });
 
-      const result = await refreshSession(client, {
-        refreshToken: session.refreshToken,
+      const result = await refreshSessionApi(client, {
+        refreshToken: currentSession.refreshToken,
         device: { platform: Platform.OS },
       });
 
@@ -97,35 +101,40 @@ export function AppRoot() {
           analytics.trackEvent("auth.refresh.revoked", { status: result.status });
           setSession(null);
         }
-        return false;
+        return null;
       }
 
       analytics.trackEvent("auth.refresh.succeeded", { expiresInSec: result.data.expiresInSec });
+
+      const nextAccessToken = result.data.accessToken;
+      const nextRefreshToken = result.data.refreshToken;
+      const expiresAtMs = Date.now() + result.data.expiresInSec * 1000;
+
       setSession({
-        ...session,
-        accessToken: result.data.accessToken,
-        refreshToken: result.data.refreshToken,
-        expiresAtMs: Date.now() + result.data.expiresInSec * 1000,
+        ...currentSession,
+        accessToken: nextAccessToken,
+        refreshToken: nextRefreshToken,
+        expiresAtMs,
       });
 
-      return true;
+      return nextAccessToken;
     } catch (e) {
       logger.warn("Refresh attempt failed", { error: e });
       analytics.trackEvent("auth.refresh.failed", { errorKind: "exception" });
-      return false;
+      return null;
     } finally {
       refreshInFlight.current = false;
     }
-  }, [baseUrl, session, setSession]);
+  }, [baseUrl, setSession]);
 
   useEffect(() => {
     if (!baseUrl || !session) return;
 
     const skewMs = 60_000;
     const msUntilRefresh = Math.max(0, session.expiresAtMs - Date.now() - skewMs);
-    const handle = setTimeout(() => void refreshNow(), msUntilRefresh);
+    const handle = setTimeout(() => void refreshSession(), msUntilRefresh);
     return () => clearTimeout(handle);
-  }, [baseUrl, refreshNow, session?.expiresAtMs, session?.refreshToken]);
+  }, [baseUrl, refreshSession, session?.expiresAtMs, session?.refreshToken]);
 
   useEffect(() => {
     if (!session) return;
@@ -138,7 +147,7 @@ export function AppRoot() {
     if (!session) return;
     const skewMs = 120_000;
     if (session.expiresAtMs - Date.now() <= skewMs) {
-      void refreshNow();
+      void refreshSession();
     }
   });
 
@@ -184,6 +193,7 @@ export function AppRoot() {
       value={{
         session,
         setSession,
+        refreshSession,
         logout,
       }}
     >

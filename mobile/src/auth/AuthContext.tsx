@@ -11,6 +11,7 @@ export type MobileSession = {
 export type AuthContextValue = {
   session: MobileSession | null;
   setSession: (session: MobileSession | null) => void;
+  refreshSession: () => Promise<string | null>;
   logout: () => Promise<void>;
 };
 

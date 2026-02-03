@@ -24,9 +24,9 @@ const MAX_COMMENT_LENGTH = 5000;
 
 export function TicketDetailScreen({ route }: Props) {
   const config = useMemo(() => getAppConfig(), []);
-  const { session } = useAuth();
+  const { session, refreshSession } = useAuth();
   return (
-    <TicketDetailBody ticketId={route.params.ticketId} config={config} session={session} />
+    <TicketDetailBody ticketId={route.params.ticketId} config={config} session={session} refreshSession={refreshSession} />
   );
 }
 
@@ -34,10 +34,12 @@ function TicketDetailBody({
   ticketId,
   config,
   session,
+  refreshSession,
 }: {
   ticketId: string;
   config: ReturnType<typeof getAppConfig>;
   session: ReturnType<typeof useAuth>["session"];
+  refreshSession: ReturnType<typeof useAuth>["refreshSession"];
 }) {
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -45,8 +47,9 @@ function TicketDetailBody({
       baseUrl: config.baseUrl,
       getTenantId: () => session.tenantId,
       getUserAgentTag: () => "mobile/ticket-detail",
+      onAuthError: refreshSession,
     });
-  }, [config, session]);
+  }, [config, refreshSession, session]);
 
   const [ticket, setTicket] = useState<TicketDetail | null>(() => {
     const cached = getCachedTicketDetail(ticketId);
