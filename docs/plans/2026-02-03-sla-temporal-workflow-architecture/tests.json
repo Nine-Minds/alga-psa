@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "Unit: TemporalSlaBackend.completeSla('resolution') sends completeResolution signal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
