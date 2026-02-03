@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "TemporalSlaBackend.resumeSla() sends resume signal to running workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
