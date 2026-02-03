@@ -1106,7 +1106,7 @@
   {
     "id": "T139",
     "description": "E2E: Implement List:Filters - status multi-select",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F139"
     ]
