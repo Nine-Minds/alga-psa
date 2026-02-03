@@ -1722,7 +1722,7 @@
   {
     "id": "F216",
     "description": "[Mobile:Release] Release - internal beta distribution runbook",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]
