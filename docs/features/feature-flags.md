@@ -71,6 +71,19 @@ Controls access to the delegated time-entry UI (editing/viewing time sheets for 
 - When disabled: The UI only allows working with the current user’s own time periods/time sheets (delegated sheets are shown as read-only if accessed directly).
 - When enabled: Authorized users can select a subject user and edit/view that user’s time sheets via the UI.
 
+### 5. `invoice-template-gui-designer`
+Controls access to the new (experimental) invoice template visual designer.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Billing page at `/msp/billing` → **Invoice Templates** tab → Template editor view
+
+**Behavior:**
+- When disabled (default): Uses the existing AssemblyScript source editor only.
+- When enabled: Shows a **Visual** tab alongside the existing **Code** editor tab.
+  - The visual designer persists its workspace state alongside the template source (and uses local storage as a best-effort fallback).
+  - Invoice output remains driven by the AssemblyScript template (until the compilation pipeline is finalized).
+
 ## Implementation Details
 
 ### User Identification

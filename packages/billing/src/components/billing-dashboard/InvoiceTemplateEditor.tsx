@@ -11,6 +11,15 @@ import { getInvoiceTemplate, saveInvoiceTemplate } from '@alga-psa/billing/actio
 import { IInvoiceTemplate } from '@alga-psa/types';
 import BackNav from '@alga-psa/ui/components/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { DesignerShell } from '../invoice-designer/DesignerShell';
+import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
+import {
+  extractInvoiceDesignerStateFromSource,
+  getInvoiceDesignerLocalStorageKey,
+  upsertInvoiceDesignerStateInSource,
+} from '../invoice-designer/utils/persistence';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
@@ -19,6 +28,9 @@ interface InvoiceTemplateEditorProps {
 const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { enabled: guiDesignerEnabled, loading: guiDesignerLoading, error: guiDesignerError } = useFeatureFlag(
+    'invoice-template-gui-designer'
+  );
   const [template, setTemplate] = useState<Partial<IInvoiceTemplate> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // For generic errors
@@ -26,6 +38,13 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const isNewTemplate = templateId === null;
   const editorContainerRef = useRef<HTMLDivElement>(null); // Ref for editor container
   const [editorHeight, setEditorHeight] = useState<string | number>('320px'); // Default height (like h-80)
+  const [editorTab, setEditorTab] = useState<'visual' | 'code'>('code');
+  const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
+  const designerResetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
+  const designerExportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
+  const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
+
+  const canUseDesigner = guiDesignerEnabled && !guiDesignerLoading && !guiDesignerError;
 
   // Effect for fetching template data
   useEffect(() => {
@@ -48,6 +67,59 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     }
   }, [templateId, isNewTemplate]);
 
+  useEffect(() => {
+    if (canUseDesigner) {
+      setEditorTab((prev) => (prev === 'code' ? 'visual' : prev));
+      return;
+    }
+    setEditorTab('code');
+  }, [canUseDesigner]);
+
+  useEffect(() => {
+    if (!canUseDesigner || !template) {
+      return;
+    }
+
+    const hydrationKey = templateId ?? 'new';
+    if (designerHydratedFor === hydrationKey) {
+      return;
+    }
+
+    const source = template.assemblyScriptSource ?? '';
+    const fromSource = extractInvoiceDesignerStateFromSource(source);
+    if (fromSource) {
+      designerLoadWorkspace(fromSource.workspace);
+      setDesignerHydratedFor(hydrationKey);
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      const localKey = getInvoiceDesignerLocalStorageKey(templateId);
+      const stored = localStorage.getItem(localKey);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as ReturnType<typeof extractInvoiceDesignerStateFromSource>;
+          if (parsed?.version === 1 && parsed.workspace?.nodes) {
+            designerLoadWorkspace(parsed.workspace);
+            setDesignerHydratedFor(hydrationKey);
+            return;
+          }
+        } catch {
+          // Fall through to reset
+        }
+      }
+    }
+
+    designerResetWorkspace();
+    setDesignerHydratedFor(hydrationKey);
+  }, [
+    canUseDesigner,
+    designerHydratedFor,
+    designerLoadWorkspace,
+    designerResetWorkspace,
+    template,
+    templateId,
+  ]);
 
   // Effect for calculating editor height
   useEffect(() => {
@@ -103,6 +175,22 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         delete dataToSave.template_id;
       }
 
+      if (canUseDesigner) {
+        const workspace = designerExportWorkspace();
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(getInvoiceDesignerLocalStorageKey(templateId), JSON.stringify({ version: 1, workspace }));
+          } catch {
+            // Best-effort only
+          }
+        }
+
+        if (typeof dataToSave.assemblyScriptSource === 'string' && dataToSave.assemblyScriptSource.trim().length > 0) {
+          dataToSave.assemblyScriptSource = upsertInvoiceDesignerStateInSource(dataToSave.assemblyScriptSource, workspace);
+        }
+      }
+
       // Call the updated save action
       const result = await saveInvoiceTemplate(dataToSave as IInvoiceTemplate); // Type assertion might be needed
 
@@ -153,8 +241,6 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
          <h2 className="text-xl font-semibold mt-2">{isNewTemplate ? 'Create New Invoice Template' : `Edit Template: ${template?.name || templateId}`}</h2>
        </CardHeader>
        <CardContent>
-         <p>Template Editor Placeholder</p>
-         {/* Add form fields for template name, content, etc. here */}
          <div className="mt-4">
            <label htmlFor="templateName" className="block text-sm font-medium text-gray-700">Template Name</label>
            <Input
@@ -172,40 +258,94 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
              </Alert>
            )}
          </div>
-         <div className="mt-4">
-             <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">AssemblyScript Source</label>
-             {/* Removed h-80, added ref */}
-             <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
-               <Editor
-                 height={editorHeight} // Use calculated height state
-                 defaultLanguage="typescript"
-                 value={template?.assemblyScriptSource || ''}
-                 onChange={(value) => setTemplate(prev => ({ ...prev, assemblyScriptSource: value || '' }))}
-                 options={{
-                   minimap: { enabled: true },
-                   scrollBeyondLastLine: false,
-                   automaticLayout: true,
-                   fontSize: 14,
-                   readOnly: isLoading
-                 }}
-                 theme="vs-dark"
-               />
-             </div>
-             {/* Display Compilation Errors */}
-             {compilationError && (
-               <Alert variant="destructive" className="mt-4" id="template-compilation-error-alert">
-                 <AlertDescription>
-                   <p className="font-semibold">Compilation Failed:</p>
-                   <p>{compilationError.error}</p>
-                   {compilationError.details && (
-                     <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto">
-                       {compilationError.details}
-                     </pre>
-                   )}
-                 </AlertDescription>
-               </Alert>
-             )}
-         </div>
+         {!canUseDesigner ? (
+           <div className="mt-4">
+               <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">AssemblyScript Source</label>
+               {/* Removed h-80, added ref */}
+               <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
+                 <Editor
+                   height={editorHeight} // Use calculated height state
+                   defaultLanguage="typescript"
+                   value={template?.assemblyScriptSource || ''}
+                   onChange={(value) => setTemplate(prev => ({ ...prev, assemblyScriptSource: value || '' }))}
+                   options={{
+                     minimap: { enabled: true },
+                     scrollBeyondLastLine: false,
+                     automaticLayout: true,
+                     fontSize: 14,
+                     readOnly: isLoading
+                   }}
+                   theme="vs-dark"
+                 />
+               </div>
+               {/* Display Compilation Errors */}
+               {compilationError && (
+                 <Alert variant="destructive" className="mt-4" id="template-compilation-error-alert">
+                   <AlertDescription>
+                     <p className="font-semibold">Compilation Failed:</p>
+                     <p>{compilationError.error}</p>
+                     {compilationError.details && (
+                       <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto">
+                         {compilationError.details}
+                       </pre>
+                     )}
+                   </AlertDescription>
+                 </Alert>
+               )}
+           </div>
+         ) : (
+           <div className="mt-4">
+             <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}>
+               <TabsList>
+                 <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">Visual</TabsTrigger>
+                 <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">Code</TabsTrigger>
+               </TabsList>
+               <TabsContent value="visual" className="pt-4 space-y-3">
+                 <Alert variant="info">
+                   <AlertDescription>
+                     Visual designer is feature-flagged and stores its workspace state alongside the template source.
+                     Invoice output remains driven by the AssemblyScript template.
+                   </AlertDescription>
+                 </Alert>
+                 <div className="border rounded overflow-hidden bg-white" id="invoice-template-visual-designer">
+                   <DesignerShell />
+                 </div>
+               </TabsContent>
+               <TabsContent value="code" className="pt-4">
+                 <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">AssemblyScript Source</label>
+                 <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
+                   <Editor
+                     height={editorHeight}
+                     defaultLanguage="typescript"
+                     value={template?.assemblyScriptSource || ''}
+                     onChange={(value) => setTemplate(prev => ({ ...prev, assemblyScriptSource: value || '' }))}
+                     options={{
+                       minimap: { enabled: true },
+                       scrollBeyondLastLine: false,
+                       automaticLayout: true,
+                       fontSize: 14,
+                       readOnly: isLoading
+                     }}
+                     theme="vs-dark"
+                   />
+                 </div>
+                 {compilationError && (
+                   <Alert variant="destructive" className="mt-4" id="template-compilation-error-alert">
+                     <AlertDescription>
+                       <p className="font-semibold">Compilation Failed:</p>
+                       <p>{compilationError.error}</p>
+                       {compilationError.details && (
+                         <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto">
+                           {compilationError.details}
+                         </pre>
+                       )}
+                     </AlertDescription>
+                   </Alert>
+                 )}
+               </TabsContent>
+             </Tabs>
+           </div>
+         )}
         </CardContent>
         <CardFooter className="flex justify-between items-center gap-2"> {/* Updated class for layout */}
            <div className="text-sm text-gray-500"> {/* Container for timestamps */}
