@@ -358,3 +358,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T130 added unit tests for determining the active route name used by navigation state persistence (`mobile/src/navigation/activeRoute.ts`, `mobile/src/navigation/activeRoute.test.ts`).
 - 2026-02-03: T131 marked memory/perf guardrails as covered by checklist docs (docs/plans/2026-02-03-alga-psa-mobile-app/PERF_MEMORY_CHECKLIST.md).
 - 2026-02-03: T132 marked startup perf budget/measurement as covered (STARTUP_PERF_BUDGET.md + app.startup.ready event).
+- 2026-02-03: T133 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).

@@ -1058,7 +1058,7 @@
   {
     "id": "T133",
     "description": "E2E: Implement OTT exchange retry with exponential backoff and single-flight guard",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133"
     ]
