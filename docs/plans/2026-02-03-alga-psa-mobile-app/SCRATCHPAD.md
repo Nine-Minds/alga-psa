@@ -145,3 +145,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F139 implemented status multi-select for ticket list filters by fetching statuses and sending `status_ids` to the server; server ticket list now supports `status_ids` (comma-separated/JSON array) via schema + `whereIn` filtering.
 - 2026-02-03: F140 confirmed assignee filter selector (any/me/unassigned) is implemented in the ticket list Filters modal and wired to `assigned_to` / `has_assignment=false` server-side filters.
 - 2026-02-03: F141 added a priority selector in the ticket list Filters modal by fetching priorities and rendering selectable chips (still supports manual priority name entry).
+- 2026-02-03: F142 added an updated-since date input (YYYY-MM-DD) alongside relative presets; the list now prefers `updatedSinceDate` when set and falls back to relative day presets.

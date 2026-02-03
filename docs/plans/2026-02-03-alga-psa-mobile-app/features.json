@@ -1130,7 +1130,7 @@
   {
     "id": "F142",
     "description": "[Mobile:Tickets:List] Implement List:Filters - updated-since date picker",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

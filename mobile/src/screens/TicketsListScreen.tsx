@@ -33,6 +33,7 @@ type TicketListFilters = {
   assignee: "any" | "me" | "unassigned";
   priorityName: string;
   updatedSinceDays: number | null;
+  updatedSinceDate: string;
 };
 
 const DEFAULT_FILTERS: TicketListFilters = {
@@ -41,7 +42,15 @@ const DEFAULT_FILTERS: TicketListFilters = {
   assignee: "any",
   priorityName: "",
   updatedSinceDays: null,
+  updatedSinceDate: "",
 };
+
+function dateOnlyToIsoUtc(dateOnly: string): string | null {
+  const trimmed = dateOnly.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const d = new Date(`${trimmed}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
@@ -131,7 +140,11 @@ export function TicketsListScreen({ navigation }: Props) {
     const priority = filters.priorityName.trim();
     if (priority) out.priority_name = priority;
 
-    if (filters.updatedSinceDays) {
+    const updatedDate = filters.updatedSinceDate.trim();
+    if (updatedDate) {
+      const iso = dateOnlyToIsoUtc(updatedDate);
+      if (iso) out.updated_from = iso;
+    } else if (filters.updatedSinceDays) {
       out.updated_from = new Date(Date.now() - filters.updatedSinceDays * 24 * 60 * 60 * 1000).toISOString();
     }
 
@@ -402,7 +415,7 @@ export function TicketsListScreen({ navigation }: Props) {
             if (kind === "mine") setFilters({ ...filters, assignee: "me" });
             if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
             if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
-            if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7 });
+            if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7, updatedSinceDate: "" });
           }}
         />
       </View>
@@ -458,6 +471,7 @@ function ActiveFiltersSummary({
     assignee: "any" | "me" | "unassigned";
     priorityName: string;
     updatedSinceDays: number | null;
+    updatedSinceDate: string;
   };
 }) {
   const parts: string[] = [];
@@ -465,7 +479,9 @@ function ActiveFiltersSummary({
   else if (filters.status !== "any") parts.push(filters.status);
   if (filters.assignee !== "any") parts.push(filters.assignee);
   if (filters.priorityName.trim()) parts.push(`priority:${filters.priorityName.trim()}`);
-  if (filters.updatedSinceDays) parts.push(`updated:${filters.updatedSinceDays}d`);
+  const dateOnly = filters.updatedSinceDate.trim();
+  if (dateOnly) parts.push(`updated:${dateOnly}`);
+  else if (filters.updatedSinceDays) parts.push(`updated:${filters.updatedSinceDays}d`);
 
   if (parts.length === 0) return null;
   return (
@@ -532,6 +548,7 @@ function FiltersModal({
     assignee: "any" | "me" | "unassigned";
     priorityName: string;
     updatedSinceDays: number | null;
+    updatedSinceDate: string;
   };
   setFilters: Dispatch<
     SetStateAction<{
@@ -540,6 +557,7 @@ function FiltersModal({
       assignee: "any" | "me" | "unassigned";
       priorityName: string;
       updatedSinceDays: number | null;
+      updatedSinceDate: string;
     }>
   >;
   canFilterMe: boolean;
@@ -747,8 +765,29 @@ function FiltersModal({
             { label: "30d", value: 30 },
           ]}
           value={filters.updatedSinceDays}
-          onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays })}
+          onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays, updatedSinceDate: "" })}
         />
+        <TextInput
+          value={filters.updatedSinceDate}
+          onChangeText={(updatedSinceDate) => setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate })}
+          placeholder="YYYY-MM-DD"
+          autoCapitalize="none"
+          autoCorrect={false}
+          accessibilityLabel="Updated since date"
+          style={{
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            color: colors.text,
+            marginTop: spacing.sm,
+          }}
+        />
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+          Use a specific date (UTC) or pick a relative range above.
+        </Text>
 
         <View style={{ flex: 1 }} />
 
@@ -761,6 +800,7 @@ function FiltersModal({
                 assignee: "any",
                 priorityName: "",
                 updatedSinceDays: null,
+                updatedSinceDate: "",
               })
             }
           >
