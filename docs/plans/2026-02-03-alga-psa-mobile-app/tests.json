@@ -178,7 +178,7 @@
   {
     "id": "T023",
     "description": "E2E: Implement sign-in screen that launches system browser to Alga hosted login",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
