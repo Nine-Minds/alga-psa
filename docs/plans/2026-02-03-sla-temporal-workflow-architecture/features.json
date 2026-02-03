@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "SlaTicketWorkflow uses Temporal sleep() to wake at each threshold percentage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

@@ -19,6 +19,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Added `sla-ticket-workflow.ts` with response/resolution phase tracking and threshold orchestration (Temporal)
 - (2026-02-03) SLA workflow input includes ticketId, tenantId, policyTargets, and businessHoursSchedule
 - (2026-02-03) SLA workflow state tracks phase, pause state, notified thresholds, and response/resolution deadlines
+- (2026-02-03) SLA workflow uses Temporal sleep + condition race to wake at threshold times
 
 ## Discoveries / Constraints
 
