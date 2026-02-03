@@ -1074,7 +1074,7 @@
   {
     "id": "F135",
     "description": "[Mobile:Auth] Implement session revocation check on app resume (throttled)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

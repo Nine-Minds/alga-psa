@@ -44,6 +44,7 @@ export function AppRoot() {
   const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
+  const lastRevocationCheckAtMs = useRef(0);
 
   const baseUrl = config.ok ? config.baseUrl : null;
 
@@ -218,6 +219,15 @@ export function AppRoot() {
     if (session.expiresAtMs - Date.now() <= skewMs) {
       void refreshSession();
     }
+  });
+
+  useAppResume(() => {
+    if (!session) return;
+    const throttleMs = 10 * 60_000;
+    const now = Date.now();
+    if (now - lastRevocationCheckAtMs.current < throttleMs) return;
+    lastRevocationCheckAtMs.current = now;
+    void refreshSession();
   });
 
   useAppResume(() => {
