@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "[Mobile:Tickets:List] Prefetch ticket detail for first visible rows (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

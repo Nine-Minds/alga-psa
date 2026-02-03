@@ -16,6 +16,11 @@ export type PaginatedResponse<T> = {
   meta?: unknown;
 };
 
+export type SuccessResponse<T> = {
+  data: T;
+  meta?: unknown;
+};
+
 export type TicketListItem = {
   ticket_id: string;
   ticket_number: string;
@@ -28,6 +33,8 @@ export type TicketListItem = {
   updated_at?: string | null;
   entered_at?: string | null;
 };
+
+export type TicketDetail = TicketListItem & Record<string, unknown>;
 
 export type ListTicketsParams = {
   apiKey: string;
@@ -61,6 +68,19 @@ export function listTickets(
       search: params.search,
       ...(params.filters ?? {}),
     },
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function getTicketById(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "GET",
+    path: `/api/v1/tickets/${params.ticketId}`,
     headers: {
       "x-api-key": params.apiKey,
     },

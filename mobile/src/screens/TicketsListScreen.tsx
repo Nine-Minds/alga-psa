@@ -10,12 +10,13 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { listTickets, type TicketListItem } from "../api/tickets";
+import { getTicketById, listTickets, type TicketListItem } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -137,6 +138,17 @@ export function TicketsListScreen({ navigation }: Props) {
       setItems((prev) => (replace ? nextItems : [...prev, ...nextItems]));
       setPage(result.data.pagination.page);
       setHasNext(result.data.pagination.hasNext);
+
+      if (replace && pageToLoad === 1) {
+        const toPrefetch = nextItems.slice(0, 5);
+        void Promise.all(
+          toPrefetch.map(async (t) => {
+            if (getCachedTicketDetail(t.ticket_id)) return;
+            const detail = await getTicketById(client, { apiKey: session.accessToken, ticketId: t.ticket_id });
+            if (detail.ok) setCachedTicketDetail(t.ticket_id, detail.data.data);
+          }),
+        );
+      }
     },
     [apiFilters, client, search, session],
   );
