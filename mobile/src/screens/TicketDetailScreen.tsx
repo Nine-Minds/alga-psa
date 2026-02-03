@@ -16,6 +16,8 @@ import { PrimaryButton } from "../ui/components/PrimaryButton";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
+const MAX_COMMENT_LENGTH = 5000;
+
 export function TicketDetailScreen({ route }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session } = useAuth();
@@ -133,6 +135,10 @@ function TicketDetailBody({
     const text = commentDraft.trim();
     if (!text) {
       setCommentSendError("Comment cannot be empty.");
+      return;
+    }
+    if (text.length > MAX_COMMENT_LENGTH) {
+      setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
       return;
     }
     setCommentSending(true);
@@ -291,6 +297,15 @@ function CommentComposer({
           textAlignVertical: "top",
         }}
       />
+      <Text
+        style={{
+          ...typography.caption,
+          marginTop: spacing.sm,
+          color: draft.length > MAX_COMMENT_LENGTH ? colors.danger : colors.mutedText,
+        }}
+      >
+        {draft.length}/{MAX_COMMENT_LENGTH}
+      </Text>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
         <ActionChip label={isInternal ? "Internal ✓" : "Internal"} onPress={() => onChangeIsInternal(true)} />

@@ -70,3 +70,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F064 ticket detail fetch uses server-enforced RBAC (API v1 permission checks) and surfaces 403 as “No access”.
 - 2026-02-03: F065 added add-comment composer (multiline) with send action via `POST /api/v1/tickets/:id/comments` (defaults to internal until visibility selector is added).
 - 2026-02-03: F066 added internal/public visibility selector to the comment composer and includes the `is_internal` flag when posting.
+- 2026-02-03: F067 added client-side comment length validation with inline errors and a live character counter.

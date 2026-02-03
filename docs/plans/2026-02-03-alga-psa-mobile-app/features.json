@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "[Mobile:Tickets:Updates] Validate comment length and show inline errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
