@@ -1074,7 +1074,7 @@
   {
     "id": "T135",
     "description": "E2E: Implement session revocation check on app resume (throttled)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F135"
     ]
