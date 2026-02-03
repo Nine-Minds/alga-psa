@@ -180,3 +180,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: Gotcha: `npm -w server run test:e2e` currently fails locally with DB connection refused on `localhost:5433` (localtest harness deps not running).
 - 2026-02-03: F174 persisted comment visibility preference per user so internal/public selection is remembered across tickets (default remains internal).
 - 2026-02-03: F175 cached ticket status options with a TTL to reduce repeated `/tickets/statuses` calls across ticket detail interactions.
+- 2026-02-03: F176 added server-side validation for `status_id` updates (status must exist for the tenant) and ensured mobile surfaces returned validation messages clearly.

@@ -425,6 +425,22 @@ export class TicketService extends BaseService<ITicket> {
           delete (cleanedData as any)[key];
         }
       });
+
+      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
+        const status = await trx('statuses')
+          .where({
+            status_id: cleanedData.status_id,
+            tenant: context.tenant,
+            status_type: 'ticket'
+          })
+          .first();
+
+        if (!status) {
+          throw new ValidationError('Validation failed', [
+            { path: ['status_id'], message: 'Status not found' }
+          ]);
+        }
+      }
       
       const updateData = {
         ...cleanedData,

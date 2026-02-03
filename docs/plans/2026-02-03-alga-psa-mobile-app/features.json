@@ -1402,7 +1402,7 @@
   {
     "id": "F176",
     "description": "[Mobile:Tickets:Updates] Implement updates - status transitions validated server-side with friendly error messages",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
