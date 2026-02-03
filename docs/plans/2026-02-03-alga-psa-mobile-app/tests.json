@@ -90,7 +90,7 @@
   {
     "id": "T012",
     "description": "Unit: Add analytics scaffolding (screen views + key actions) with opt-out hook (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
