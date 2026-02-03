@@ -1610,7 +1610,7 @@
   {
     "id": "F202",
     "description": "[Server:Mobile Auth] Implement server mobile auth - ticket status update endpoint validates transitions and returns updated summary",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
