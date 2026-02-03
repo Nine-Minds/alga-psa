@@ -1330,7 +1330,7 @@
   {
     "id": "F167",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - accessibility: headings for sections",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]

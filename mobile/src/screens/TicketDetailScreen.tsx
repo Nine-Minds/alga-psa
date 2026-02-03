@@ -626,7 +626,7 @@ function TicketDetailBody({
           {ticket.client_name ? ` • ${ticket.client_name}` : ""}
           {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
         </Text>
-        <Text style={{ ...typography.title, marginTop: 2, color: colors.text }}>
+        <Text accessibilityRole="header" style={{ ...typography.title, marginTop: 2, color: colors.text }}>
           {ticket.title}
         </Text>
 
@@ -1425,7 +1425,9 @@ function CommentsSection({
         borderRadius: 10,
       }}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>Comments</Text>
+      <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
+        Comments
+      </Text>
 
       {error ? (
         <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.danger }}>{error}</Text>
@@ -1502,7 +1504,9 @@ function DescriptionSection({ ticket }: { ticket: TicketDetail }) {
         borderRadius: 10,
       }}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>Description</Text>
+      <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
+        Description
+      </Text>
       <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
         {description ?? "—"}
       </Text>

@@ -170,3 +170,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F164 status changes now behave optimistically but safely: the UI previews the selected status while updating, and reverts to the original status on failure.
 - 2026-02-03: F165 confirmed status update 409 conflicts show an explicit resolution prompt with a refresh action.
 - 2026-02-03: F166 confirmed ticket detail uses locale-aware absolute + relative time formatting via shared date formatter utilities.
+- 2026-02-03: F167 improved ticket detail accessibility by marking major section titles (ticket title, Description, Comments) as headings for screen readers.
