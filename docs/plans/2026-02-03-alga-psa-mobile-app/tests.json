@@ -1698,7 +1698,7 @@
   {
     "id": "T213",
     "description": "Unit: Quality/Ops - mobile build reproducibility checks in CI",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ]
