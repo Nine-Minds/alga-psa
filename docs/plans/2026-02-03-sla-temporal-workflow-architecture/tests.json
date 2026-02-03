@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Unit: SlaBackendFactory returns TemporalSlaBackend when isEnterprise is true and Temporal available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
