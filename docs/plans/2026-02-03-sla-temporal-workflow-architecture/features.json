@@ -296,7 +296,7 @@
   {
     "id": "F050",
     "description": "SlaTicketWorkflow handles 24x7 business hours schedule (no business hours adjustment)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3", "FR-4"]
   }
 ]
