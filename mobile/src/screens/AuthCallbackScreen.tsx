@@ -56,9 +56,18 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           getUserAgentTag: () => `mobile/${Platform.OS}`,
         });
 
+        const deviceId =
+          Platform.OS === "ios"
+            ? (await Application.getIosIdForVendorAsync()) ?? undefined
+            : Platform.OS === "android"
+              ? (await Application.getAndroidId()) ?? undefined
+              : undefined;
+
         const device = {
           platform: Platform.OS,
           appVersion: Application.nativeApplicationVersion ?? undefined,
+          buildVersion: Application.nativeBuildVersion ?? undefined,
+          deviceId,
         };
 
         const exchanged = await exchangeOtt(client, { ott, state, device });

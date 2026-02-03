@@ -7,6 +7,8 @@ export type ExchangeOttRequest = {
   device?: {
     platform?: string;
     appVersion?: string;
+    buildVersion?: string;
+    deviceId?: string;
   };
 };
 
@@ -34,6 +36,8 @@ export type RefreshSessionRequest = {
   device?: {
     platform?: string;
     appVersion?: string;
+    buildVersion?: string;
+    deviceId?: string;
   };
 };
 

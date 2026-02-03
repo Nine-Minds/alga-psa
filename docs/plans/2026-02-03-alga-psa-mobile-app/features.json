@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "[Mobile:Auth] Record device/app metadata with session issue (for audit/analytics)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
