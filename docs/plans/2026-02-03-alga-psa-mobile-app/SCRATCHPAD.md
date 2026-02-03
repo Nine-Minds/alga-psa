@@ -158,3 +158,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F152 tuned next-page prefetch behavior: increased `onEndReachedThreshold` and added a ref-based guard to prevent duplicate `onEndReached` triggers before state updates.
 - 2026-02-03: F153 wired ticket list caching + invalidation: page-1 list results are cached per user/query, and ticket mutations now clear the list cache so stale summaries don’t persist across app restarts.
 - 2026-02-03: F154 confirmed ticket detail uses a sectioned layout (header/actions, key fields/description, comments + composer).
+- 2026-02-03: F155 confirmed ticket detail supports pull-to-refresh with visible RefreshControl indicator states.

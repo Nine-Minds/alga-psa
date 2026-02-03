@@ -1234,7 +1234,7 @@
   {
     "id": "F155",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - pull-to-refresh indicator states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
