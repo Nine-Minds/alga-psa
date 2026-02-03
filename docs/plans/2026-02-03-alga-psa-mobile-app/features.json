@@ -1186,7 +1186,7 @@
   {
     "id": "F149",
     "description": "[Mobile:Tickets:List] Implement List:Errors - 403 handling (no access)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
