@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "[Mobile:Tickets:Critical Updates] Surface validation errors clearly for partial updates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

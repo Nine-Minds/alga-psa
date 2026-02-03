@@ -1571,7 +1571,22 @@ function getApiErrorMessage(body: unknown): string | null {
   const error = (body as any).error as unknown;
   if (!error || typeof error !== "object") return null;
   const message = (error as any).message as unknown;
-  if (typeof message !== "string") return null;
-  const trimmed = message.trim();
+  const trimmed = typeof message === "string" ? message.trim() : "";
+
+  const details = (error as any).details as unknown;
+  const detailMessage = (() => {
+    if (!details) return null;
+    if (typeof details === "string" && details.trim()) return details.trim();
+    if (Array.isArray(details) && details.length > 0) {
+      const first = details[0] as any;
+      const msg = typeof first?.message === "string" ? first.message.trim() : "";
+      const path = Array.isArray(first?.path) ? first.path.filter((p: any) => typeof p === "string" || typeof p === "number").join(".") : "";
+      if (!msg) return null;
+      return path ? `${path}: ${msg}` : msg;
+    }
+    return null;
+  })();
+
+  if (detailMessage) return detailMessage;
   return trimmed ? trimmed : null;
 }
