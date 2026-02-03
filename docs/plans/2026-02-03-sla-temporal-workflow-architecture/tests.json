@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "Unit: updateSlaStatus activity updates ticket sla_resolution_met field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
