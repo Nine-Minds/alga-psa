@@ -642,7 +642,7 @@
   {
     "id": "T081",
     "description": "E2E: Implement time entry creation from ticket (if supported by API)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
