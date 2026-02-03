@@ -81,3 +81,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F075 improved ticket mutation UX to surface server RBAC (403) and validation (400) errors clearly for status changes and comment posts (no client-side bypass).
 - 2026-02-03: F076 added an “Assign to me” action on ticket detail (PUT assignment to current user) and refetches ticket detail to reflect assignment updates.
 - 2026-02-03: F077 added an “Unassign” action (sets assignment to null) when a ticket is currently assigned, reusing the assignment endpoint and refetch flow.
+- 2026-02-03: F078 added priority picker backed by a new `GET /api/v1/tickets/priorities` endpoint and priority update via `PUT /api/v1/tickets/:id` (priority_id only) with refetch + cache update.

@@ -6,7 +6,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, getTicketStatuses, updateTicketAssignment, updateTicketStatus, type TicketComment, type TicketDetail, type TicketStatus } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -67,6 +67,12 @@ function TicketDetailBody({
   const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
+  const [priorityPickerOpen, setPriorityPickerOpen] = useState(false);
+  const [priorityOptions, setPriorityOptions] = useState<TicketPriority[]>([]);
+  const [priorityOptionsLoading, setPriorityOptionsLoading] = useState(false);
+  const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
+  const [priorityUpdating, setPriorityUpdating] = useState(false);
+  const [priorityUpdateError, setPriorityUpdateError] = useState<string | null>(null);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -275,6 +281,42 @@ function TicketDetailBody({
     [client, fetchTicket, session, statusUpdating, ticketId],
   );
 
+  const submitPriority = useCallback(
+    async (priorityId: string) => {
+      if (!client || !session) return;
+      if (priorityUpdating) return;
+      setPriorityUpdateError(null);
+      setPriorityUpdating(true);
+      try {
+        const auditHeaders = await getClientMetadataHeaders();
+        const res = await updateTicketPriority(client, {
+          apiKey: session.accessToken,
+          ticketId,
+          priority_id: priorityId,
+          auditHeaders,
+        });
+        if (!res.ok) {
+          if (res.error.kind === "http" && res.status === 403) {
+            setPriorityUpdateError("You don’t have permission to change this ticket’s priority.");
+            return;
+          }
+          if (res.error.kind === "http" && res.status === 400) {
+            const msg = getApiErrorMessage(res.error.body);
+            setPriorityUpdateError(msg ?? "Priority change was rejected by the server.");
+            return;
+          }
+          setPriorityUpdateError("Unable to change priority. Please try again.");
+          return;
+        }
+        await fetchTicket();
+        setPriorityPickerOpen(false);
+      } finally {
+        setPriorityUpdating(false);
+      }
+    },
+    [client, fetchTicket, priorityUpdating, session, ticketId],
+  );
+
   const updateAssignment = useCallback(async (assignedTo: string | null, action: "assign" | "unassign") => {
     if (!client || !session) return;
     if (assignmentUpdating) return;
@@ -386,6 +428,29 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
+            label="Change priority"
+            onPress={() => {
+              void (async () => {
+                if (!client || !session) return;
+                setPriorityPickerOpen(true);
+                if (priorityOptions.length > 0) return;
+                setPriorityOptionsLoading(true);
+                setPriorityOptionsError(null);
+                try {
+                  const res = await getTicketPriorities(client, { apiKey: session.accessToken });
+                  if (!res.ok) {
+                    setPriorityOptionsError("Unable to load priorities.");
+                    return;
+                  }
+                  setPriorityOptions(res.data.data);
+                } finally {
+                  setPriorityOptionsLoading(false);
+                }
+              })();
+            }}
+          />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
             label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
             disabled={assignmentUpdating}
             onPress={() => {
@@ -462,6 +527,18 @@ function TicketDetailBody({
         </View>
       </ScrollView>
 
+      <PriorityPickerModal
+        visible={priorityPickerOpen}
+        loading={priorityOptionsLoading}
+        error={priorityOptionsError}
+        priorities={priorityOptions}
+        currentPriorityId={(ticket as any).priority_id ?? null}
+        updating={priorityUpdating}
+        updateError={priorityUpdateError}
+        onSelect={(id) => void submitPriority(id)}
+        onClose={() => setPriorityPickerOpen(false)}
+      />
+
       <StatusPickerModal
         visible={statusPickerOpen}
         loading={statusOptionsLoading}
@@ -474,6 +551,87 @@ function TicketDetailBody({
         onClose={() => setStatusPickerOpen(false)}
       />
     </>
+  );
+}
+
+function PriorityPickerModal({
+  visible,
+  loading,
+  error,
+  priorities,
+  currentPriorityId,
+  updating,
+  updateError,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  loading: boolean;
+  error: string | null;
+  priorities: TicketPriority[];
+  currentPriorityId: string | null;
+  updating: boolean;
+  updateError: string | null;
+  onSelect: (priorityId: string) => void;
+  onClose: () => void;
+}) {
+  const busy = loading || updating;
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
+        <Text style={{ ...typography.title, color: colors.text }}>Select priority</Text>
+        {busy ? (
+          <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+            <ActivityIndicator />
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+              {loading ? "Loading…" : "Saving…"}
+            </Text>
+          </View>
+        ) : null}
+        {error ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+            {error}
+          </Text>
+        ) : null}
+        {updateError ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+            {updateError}
+          </Text>
+        ) : null}
+
+        <View style={{ marginTop: spacing.lg }}>
+          {priorities.map((p) => (
+            <Pressable
+              key={p.priority_id}
+              accessibilityRole="button"
+              accessibilityLabel={`Set priority ${p.priority_name}`}
+              disabled={busy}
+              onPress={() => {
+                onSelect(p.priority_id);
+              }}
+              style={({ pressed }) => ({
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: p.priority_id === currentPriorityId ? colors.primary : colors.border,
+                backgroundColor: colors.card,
+                opacity: busy ? 0.65 : pressed ? 0.95 : 1,
+                marginBottom: spacing.sm,
+              })}
+            >
+              <Text style={{ ...typography.body, color: colors.text }}>
+                {p.priority_name}
+                {p.priority_id === currentPriorityId ? " ✓" : ""}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={{ flex: 1 }} />
+        <PrimaryButton onPress={onClose}>Done</PrimaryButton>
+      </View>
+    </Modal>
   );
 }
 

@@ -61,6 +61,11 @@ export type TicketStatus = {
   is_closed: boolean;
 };
 
+export type TicketPriority = {
+  priority_id: string;
+  priority_name: string;
+};
+
 export type ListTicketsParams = {
   apiKey: string;
   page: number;
@@ -175,6 +180,19 @@ export function getTicketStatuses(
   });
 }
 
+export function getTicketPriorities(
+  client: ApiClient,
+  params: { apiKey: string },
+): Promise<ApiResult<SuccessResponse<TicketPriority[]>>> {
+  return client.request<SuccessResponse<TicketPriority[]>>({
+    method: "GET",
+    path: "/api/v1/tickets/priorities",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
 export function updateTicketStatus(
   client: ApiClient,
   params: { apiKey: string; ticketId: string; status_id: string; auditHeaders?: Record<string, string | undefined> },
@@ -210,6 +228,28 @@ export function updateTicketAssignment(
     },
     body: {
       assigned_to: params.assigned_to,
+    },
+  });
+}
+
+export function updateTicketPriority(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    priority_id: string;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      priority_id: params.priority_id,
     },
   });
 }

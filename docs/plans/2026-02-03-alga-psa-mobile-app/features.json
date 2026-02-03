@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "[Mobile:Tickets:Critical Updates] Implement priority update via picker",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
