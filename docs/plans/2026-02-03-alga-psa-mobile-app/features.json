@@ -1002,7 +1002,7 @@
   {
     "id": "F126",
     "description": "[Mobile:Foundation] Implement app-level telemetry correlation id on every request",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

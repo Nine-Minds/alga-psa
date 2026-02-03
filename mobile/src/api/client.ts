@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResult } from "./types";
 import { analytics } from "../analytics/analytics";
+import { nextCorrelationId } from "../telemetry/correlation";
 
 type CreateApiClientOptions = {
   baseUrl: string;
@@ -115,6 +116,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
       const startedAt = Date.now();
       const url = buildUrl(baseUrl, req.path, req.query);
       const timeoutMs = req.timeoutMs ?? defaultTimeoutMs;
+      const correlationId = nextCorrelationId();
 
       const isRetryableMethod = req.method === "GET" || req.method === "HEAD";
       const maxAttempts = isRetryableMethod ? retry.maxRetries + 1 : 1;
@@ -176,6 +178,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
 
           if (authToken) headers.authorization = `Bearer ${authToken}`;
           if (overrideAuthToken) headers["x-api-key"] = overrideAuthToken;
+          if (!headers["x-correlation-id"]) headers["x-correlation-id"] = correlationId;
 
           const response = await fetchImpl(url, {
             method: req.method,
