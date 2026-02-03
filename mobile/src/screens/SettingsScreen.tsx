@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Linking, Modal, Platform, Pressable, Text, View } from "react-native";
 import * as Application from "expo-application";
 import { getAppConfig } from "../config/appConfig";
 import { colors, spacing, typography } from "../ui/theme";
@@ -17,6 +17,8 @@ export function SettingsScreen() {
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -167,7 +169,134 @@ export function SettingsScreen() {
           }}
         />
       </View>
+
+      <View style={{ marginTop: spacing.xl }}>
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
+          About
+        </Text>
+        <ToggleRow
+          label="About"
+          value="Open"
+          onPress={() => setAboutOpen(true)}
+        />
+        <View style={{ height: spacing.sm }} />
+        <ToggleRow
+          label="Legal"
+          value="Open"
+          onPress={() => setLegalOpen(true)}
+        />
+      </View>
+
+      <AboutModal
+        visible={aboutOpen}
+        onClose={() => setAboutOpen(false)}
+        version={version}
+        build={build}
+        baseUrl={config.ok ? config.baseUrl : null}
+      />
+      <LegalModal
+        visible={legalOpen}
+        onClose={() => setLegalOpen(false)}
+        privacyUrl={config.ok ? new URL("/legal/privacy", config.baseUrl).toString() : null}
+        termsUrl={config.ok ? new URL("/legal/terms", config.baseUrl).toString() : null}
+      />
     </View>
+  );
+}
+
+function AboutModal({
+  visible,
+  onClose,
+  version,
+  build,
+  baseUrl,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  version: string;
+  build: string;
+  baseUrl: string | null;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
+        <Text style={{ ...typography.title, color: colors.text }}>About</Text>
+        <View style={{ height: spacing.md }} />
+        <Row label="App" value="Alga PSA Mobile" />
+        <View style={{ height: spacing.sm }} />
+        <Row label="Version" value={`${version} (${build})`} />
+        <View style={{ height: spacing.sm }} />
+        <Row label="Base URL" value={baseUrl ?? "—"} />
+
+        <View style={{ flex: 1 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close about"
+          onPress={onClose}
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+        >
+          <Text style={{ ...typography.body, color: colors.primary, fontWeight: "700" }}>
+            Close
+          </Text>
+        </Pressable>
+      </View>
+    </Modal>
+  );
+}
+
+function LegalModal({
+  visible,
+  onClose,
+  privacyUrl,
+  termsUrl,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  privacyUrl: string | null;
+  termsUrl: string | null;
+}) {
+  const openUrl = (url: string | null) => {
+    if (!url) return;
+    void Linking.openURL(url);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
+        <Text style={{ ...typography.title, color: colors.text }}>Legal</Text>
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+          Privacy policy and terms are currently hosted on the Alga web app.
+        </Text>
+
+        <View style={{ marginTop: spacing.lg }}>
+          <ToggleRow
+            label="Privacy policy"
+            value={privacyUrl ? "Open" : "Unavailable"}
+            disabled={!privacyUrl}
+            onPress={() => openUrl(privacyUrl)}
+          />
+          <View style={{ height: spacing.sm }} />
+          <ToggleRow
+            label="Terms of service"
+            value={termsUrl ? "Open" : "Unavailable"}
+            disabled={!termsUrl}
+            onPress={() => openUrl(termsUrl)}
+          />
+        </View>
+
+        <View style={{ flex: 1 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close legal"
+          onPress={onClose}
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+        >
+          <Text style={{ ...typography.body, color: colors.primary, fontWeight: "700" }}>
+            Close
+          </Text>
+        </Pressable>
+      </View>
+    </Modal>
   );
 }
 

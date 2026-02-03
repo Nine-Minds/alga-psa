@@ -90,3 +90,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F084 expanded Settings with an Account section showing signed-in status, current user identity, and tenant id from `AuthContext`.
 - 2026-02-03: F085 added a Settings action to clear in-memory ticket caches (`clearTicketsCache`) with confirm UX.
 - 2026-02-03: F086 added a Settings logout action wired to `AuthContext.logout()` with confirm UX and disabled state when signed out/in-flight.
+- 2026-02-03: F087 added About and Legal modals in Settings, including privacy/terms link-outs to `/legal/privacy` and `/legal/terms` under the configured base URL.

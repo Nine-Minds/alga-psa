@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "[Mobile:Settings] Add \u201cabout/legal\u201d screens (privacy policy/terms)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:UX / UI Notes"
     ]
