@@ -850,7 +850,7 @@
   {
     "id": "F107",
     "description": "[Server:Mobile Auth] Ensure ticket APIs used by mobile are available and documented (list/search/detail/comments/status/assignment/stats)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
