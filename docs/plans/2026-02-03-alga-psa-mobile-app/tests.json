@@ -402,7 +402,7 @@
   {
     "id": "T051",
     "description": "E2E: Implement ticket stats summary header using tickets stats endpoint (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
