@@ -1546,7 +1546,7 @@
   {
     "id": "F194",
     "description": "[Server:Mobile Auth] Implement server mobile auth - rate limiting per IP and per user for exchange/refresh",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

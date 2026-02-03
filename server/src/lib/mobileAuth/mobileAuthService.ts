@@ -6,6 +6,7 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
+import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
 
 let connectionFactory = getConnection;
 
@@ -254,6 +255,8 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
   const tenantId = consumed.tenant;
   const userId = consumed.user_id;
 
+  await enforceMobileOttExchangeLimit(`${tenantId}:${userId}`);
+
   if (consumed.session_id) {
     const tenantKnex = await connectionFactory(tenantId);
     const session = await tenantKnex('sessions')
@@ -341,6 +344,8 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
   if (!existing) {
     throw new UnauthorizedError('Invalid or expired refresh token');
   }
+
+  await enforceMobileRefreshLimit(`${existing.tenant}:${existing.user_id}`);
 
   const accessExpiresAt = new Date(Date.now() + config.accessTtlSec * 1000);
   const refreshExpiresAt = new Date(Date.now() + config.refreshTtlSec * 1000);

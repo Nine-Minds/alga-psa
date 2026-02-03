@@ -198,3 +198,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F191 server refresh tokens rotate on every refresh; the old token is revoked immediately and linked via `replaced_by_id`, and prior access API keys are deactivated.
 - 2026-02-03: F192 server capabilities endpoint returns `mobileEnabled` and provider availability flags for mobile clients to gate Sign In.
 - 2026-02-03: F193 server capabilities endpoint includes the hosted domain allowlist used by mobile to enforce approved base URL hosts.
+- 2026-02-03: F194 enforced mobile auth rate limiting both per IP (routes) and per user (service-level guards for exchange/refresh).
