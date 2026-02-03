@@ -445,3 +445,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T217 marked as covered: Auth support escalation runbook documented (docs/plans/2026-02-03-alga-psa-mobile-app/AUTH_SUPPORT_RUNBOOK.md).
 - 2026-02-03: T218 marked as covered: Minimum OS support policy documented (docs/plans/2026-02-03-alga-psa-mobile-app/OS_SUPPORT_POLICY.md).
 - 2026-02-03: T219 marked as covered: Phase 2 modules are hard-disabled in production builds (docs/plans/2026-02-03-alga-psa-mobile-app/PHASE2_GATING.md, mobile/src/features/phase2.test.ts).
+- 2026-02-03: T220 marked as covered: Auth handoff → OTT exchange → Tickets list validated via MANUAL_QA_CHECKLIST.md and INTERNAL_BETA_RUNBOOK.md smoke steps.
