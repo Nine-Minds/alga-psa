@@ -1154,7 +1154,7 @@
   {
     "id": "T145",
     "description": "E2E: Implement List:UX - clear-all filters CTA",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]
