@@ -14,3 +14,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F008 added a minimal mobile theme (`mobile/src/ui/theme.ts`) and started using it across placeholder screens.
 - 2026-02-03: F009 added standard empty/loading/error state components in `mobile/src/ui/states/*` and a basic `PrimaryButton`.
 - 2026-02-03: F010 added secure storage wrapper using `expo-secure-store` in `mobile/src/storage/secureStorage.ts` (with web fallback).
+- 2026-02-03: F011 added PII-safe logger with recursive redaction + log-level control in `mobile/src/logging/logger.ts` (configured via `EXPO_PUBLIC_LOG_LEVEL`).

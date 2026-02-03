@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "[Mobile:Foundation] Add PII-safe logging abstraction with redaction and log level controls",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
