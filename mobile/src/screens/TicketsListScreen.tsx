@@ -10,7 +10,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient, type ApiClient } from "../api";
-import { getTicketById, getTicketStats, getTicketStatuses, listTickets, type TicketListItem, type TicketStats, type TicketStatus } from "../api/tickets";
+import { getTicketById, getTicketPriorities, getTicketStats, getTicketStatuses, listTickets, type TicketListItem, type TicketPriority, type TicketStats, type TicketStatus } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
@@ -548,6 +548,9 @@ function FiltersModal({
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
   const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
+  const [priorityOptions, setPriorityOptions] = useState<TicketPriority[]>([]);
+  const [priorityOptionsLoading, setPriorityOptionsLoading] = useState(false);
+  const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -570,6 +573,28 @@ function FiltersModal({
       canceled = true;
     };
   }, [apiKey, client, statusOptions.length, visible]);
+
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      if (!visible) return;
+      if (!client || !apiKey) return;
+      if (priorityOptions.length > 0) return;
+      setPriorityOptionsLoading(true);
+      setPriorityOptionsError(null);
+      const res = await getTicketPriorities(client, { apiKey });
+      if (canceled) return;
+      if (!res.ok) {
+        setPriorityOptionsError("Unable to load priorities.");
+        return;
+      }
+      setPriorityOptions(res.data.data);
+    };
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [apiKey, client, priorityOptions.length, visible]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -653,6 +678,49 @@ function FiltersModal({
         ) : null}
 
         <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Priority</Text>
+        {priorityOptionsLoading ? (
+          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+            Loading priorities…
+          </Text>
+        ) : priorityOptionsError ? (
+          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+            {priorityOptionsError}
+          </Text>
+        ) : priorityOptions.length > 0 ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+            {priorityOptions.map((p) => {
+              const selected =
+                filters.priorityName.trim().toLowerCase() === p.priority_name.trim().toLowerCase();
+              return (
+                <View key={p.priority_id} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+                  <Pressable
+                    onPress={() => {
+                      setFilters({
+                        ...filters,
+                        priorityName: selected ? "" : p.priority_name,
+                      });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={p.priority_name}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? colors.primary : colors.card,
+                      opacity: pressed ? 0.95 : 1,
+                    })}
+                  >
+                    <Text style={{ ...typography.caption, color: selected ? "#fff" : colors.text, fontWeight: "600" }}>
+                      {p.priority_name}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
         <TextInput
           value={filters.priorityName}
           onChangeText={(priorityName) => setFilters({ ...filters, priorityName })}
