@@ -762,7 +762,7 @@
   {
     "id": "T096",
     "description": "Checklist: Add app icon/splash assets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]

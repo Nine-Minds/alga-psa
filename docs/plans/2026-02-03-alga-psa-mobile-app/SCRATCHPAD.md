@@ -323,3 +323,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T094 marked as covered: release pipelines exist (.github/workflows/mobile-distribute.yml) and runbook/docs are present (RELEASE_PROCESS.md, INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T095 marked as covered: undefined
 - 2026-02-03: T095 marked as covered: signing/versioning/release process documented (RELEASE_PROCESS.md).
+- 2026-02-03: T096 marked as covered: undefined
+- 2026-02-03: T096 marked as covered: icon/splash assets tracked under mobile/assets/ with generation script mobile/scripts/generate-assets.mjs.
