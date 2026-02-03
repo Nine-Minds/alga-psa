@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "Unit: calculateNextWakeTime returns immediate time for 24x7 schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F050"]
   },
   {
