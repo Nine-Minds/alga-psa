@@ -417,3 +417,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T189 marked as covered: OTT TTL configurable via ALGA_MOBILE_OTT_TTL_SEC (server config docs: docs/plans/2026-02-03-alga-psa-mobile-app/MOBILE_AUTH_CONFIG.md).
 - 2026-02-03: T190 marked as covered: Exchange endpoint validates request shape (Zod validation in server + standard API error schema).
 - 2026-02-03: T191 marked as covered: Refresh token rotation invalidates prior token (server implementation + unit tests: server/src/test/unit/mobileAuth.test.ts).
+- 2026-02-03: T192 marked as covered: Capabilities endpoint returns provider availability + mobile enabled flag (server /api/v1/mobile/auth/capabilities).

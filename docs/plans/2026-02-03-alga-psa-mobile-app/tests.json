@@ -1530,7 +1530,7 @@
   {
     "id": "T192",
     "description": "Integration: Implement server mobile auth - capabilities endpoint returns providers enabled and mobile auth enabled flag",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
