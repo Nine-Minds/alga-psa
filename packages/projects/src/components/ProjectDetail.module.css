@@ -1,12 +1,15 @@
 .pageContainer {
-  height: 100%;
+  min-height: 100vh;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .mainContent {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px);
+  flex: 1;
+  min-height: 0;
   padding: 1rem;
   position: relative;
   overflow: hidden; /* Prevent scrolling on main content when using kanban */
@@ -240,8 +243,8 @@
   min-width: 350px; /* Ensure minimum width */
   max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
-  height: calc(100vh - 260px); /* Full height minus header and padding */
-  max-height: calc(100vh - 260px);
+  height: 100%;
+  max-height: 100%;
   overflow: hidden; /* Prevent overflow on the column itself */
 }
 
