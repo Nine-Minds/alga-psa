@@ -730,7 +730,7 @@
   {
     "id": "F092",
     "description": "[Mobile:Quality] Add privacy review checklist and PII inventory for mobile data flows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
