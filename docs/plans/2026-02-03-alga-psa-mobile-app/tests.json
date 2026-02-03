@@ -714,7 +714,7 @@
   {
     "id": "T090",
     "description": "Unit: Optimize payload sizes via slim DTOs / field selection (server support)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
