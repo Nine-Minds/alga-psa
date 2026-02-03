@@ -1378,7 +1378,7 @@
   {
     "id": "T173",
     "description": "E2E: Implement updates - comment length limit enforcement matches server",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
