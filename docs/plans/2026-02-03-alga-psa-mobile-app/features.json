@@ -938,7 +938,7 @@
   {
     "id": "F118",
     "description": "[Phase2:Self-hosted] Add base URL selection and self-hosted domain onboarding UX",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
