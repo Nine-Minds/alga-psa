@@ -203,3 +203,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F196 server mobile auth routes use the standard API error shape `{ error: { code, message, details } }` via shared `handleApiError`.
 - 2026-02-03: F197 server ticket comment create enforces ticket update permission and persists/returns `is_internal`, so mobile internal/public visibility is server-enforced and not client-bypassed.
 - 2026-02-03: F198 server ticket list supports the updated-since filter (`updated_from`) used by mobile list queries.
+- 2026-02-03: F199 server ticket list supports assignee filters used by mobile (`assigned_to=<me>` and `has_assignment=false` for unassigned).
