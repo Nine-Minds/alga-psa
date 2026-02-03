@@ -150,3 +150,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F144 replaced the plain “active filters” line with an interactive chip summary bar showing active filters; tapping a chip opens the Filters modal.
 - 2026-02-03: F145 added a “Clear all” CTA to the active filter chip bar to reset list filters without opening the modal.
 - 2026-02-03: F146 added a “Last refreshed” timestamp under the list header (updates on successful page-1 reload) using locale-aware relative+absolute formatting.
+- 2026-02-03: F147 added optional pull-to-refresh haptics using a short vibration via `usePullToRefresh(..., { haptics: true })` on the ticket list.

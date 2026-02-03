@@ -227,7 +227,7 @@ export function TicketsListScreen({ navigation }: Props) {
 
   const { refreshing, refresh } = usePullToRefresh(async () => {
     await Promise.all([loadPage({ pageToLoad: 1, replace: true }), fetchStats()]);
-  });
+  }, { haptics: true });
 
   useAppResume(() => {
     void refresh();

@@ -1170,7 +1170,7 @@
   {
     "id": "F147",
     "description": "[Mobile:Tickets:List] Implement List:UX - pull-to-refresh haptics (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
