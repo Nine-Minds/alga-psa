@@ -19,3 +19,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F013 added crash/error reporting hook scaffold with PII redaction (`mobile/src/errors/*`), including a global handler + React error boundary.
 - 2026-02-03: F014 added a basic TTL cache utility + ticket list/detail cache helpers (`mobile/src/cache/*`) with invalidation hooks for future mutations.
 - 2026-02-03: F015 added `useAppResume` + `usePullToRefresh` hooks and wired the tickets placeholder screen with pull-to-refresh and resume-triggered refresh.
+- 2026-02-03: F016 added offline detection using `@react-native-community/netinfo` with a global `OfflineBanner` in `mobile/src/app/AppRoot.tsx`.
