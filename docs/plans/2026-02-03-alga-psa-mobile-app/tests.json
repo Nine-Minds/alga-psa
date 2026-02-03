@@ -74,7 +74,7 @@
   {
     "id": "T010",
     "description": "Unit: Add secure storage abstraction (Keychain/Keystore) for session secrets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
