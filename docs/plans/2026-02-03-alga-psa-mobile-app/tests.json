@@ -386,7 +386,7 @@
   {
     "id": "T049",
     "description": "E2E: Handle empty results and error retries gracefully",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
