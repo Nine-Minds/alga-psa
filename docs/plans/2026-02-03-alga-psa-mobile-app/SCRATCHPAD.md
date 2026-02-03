@@ -431,3 +431,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T203 marked as covered: Ticket assignment update supports assign-to-self without extra lookup.
 - 2026-02-03: T204 marked as covered: Time entry create validates ticket association + permissions (server enforcement).
 - 2026-02-03: T205 marked as covered: Analytics catalog is versioned and documented (docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md, mobile/src/analytics/events.ts).
+- 2026-02-03: T206 marked as covered: Crash/error reporting omits request/response bodies by default (mobile/src/errors/errorReporting.ts + unit test mobile/src/errors/errorReporting.test.ts).
