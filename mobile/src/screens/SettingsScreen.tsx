@@ -4,9 +4,11 @@ import * as Application from "expo-application";
 import { getAppConfig } from "../config/appConfig";
 import { colors, spacing, typography } from "../ui/theme";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
+import { useAuth } from "../auth/AuthContext";
 
 export function SettingsScreen() {
   const config = getAppConfig();
+  const { session } = useAuth();
   const version = Application.nativeApplicationVersion ?? "unknown";
   const build = Application.nativeBuildVersion ?? "unknown";
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -69,6 +71,20 @@ export function SettingsScreen() {
       </Text>
 
       <View style={{ marginTop: spacing.lg }}>
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
+          Account
+        </Text>
+        <Row label="Status" value={session ? "Signed in" : "Signed out"} />
+        <View style={{ height: spacing.sm }} />
+        <Row label="User" value={session?.user?.email ?? session?.user?.name ?? session?.user?.id ?? "—"} />
+        <View style={{ height: spacing.sm }} />
+        <Row label="Tenant" value={session?.tenantId ?? "—"} />
+      </View>
+
+      <View style={{ marginTop: spacing.lg }}>
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
+          Diagnostics
+        </Text>
         <Row label="App version" value={`${version} (${build})`} />
         <View style={{ height: spacing.sm }} />
         <Row label="Platform" value={`${Platform.OS}`} />

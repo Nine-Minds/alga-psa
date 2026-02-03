@@ -87,3 +87,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F081 added time entry creation from a ticket using `POST /api/v1/time-entries` with a lightweight duration+notes modal (work_item_type=ticket, work_item_id=ticket_id).
 - 2026-02-03: F082 improved validation error messaging by extracting first Zod detail (`error.details`) and surfacing `field: message` when server rejects a partial update.
 - 2026-02-03: F083 added explicit field-level loading indicators for in-flight partial updates by supporting spinners inside action chips (watch/assignment).
+- 2026-02-03: F084 expanded Settings with an Account section showing signed-in status, current user identity, and tenant id from `AuthContext`.

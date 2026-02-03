@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "[Mobile:Settings] Implement Settings screen showing current user identity and tenant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:UX / UI Notes"
     ]
