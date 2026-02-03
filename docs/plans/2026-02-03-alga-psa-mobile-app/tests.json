@@ -322,7 +322,7 @@
   {
     "id": "T041",
     "description": "E2E: Render status and priority badges with accessible contrast",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
