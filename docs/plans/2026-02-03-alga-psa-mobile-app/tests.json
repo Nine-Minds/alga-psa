@@ -898,7 +898,7 @@
   {
     "id": "T113",
     "description": "Deferred: Implement push notification registration (APNs/FCM) and device token management",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
