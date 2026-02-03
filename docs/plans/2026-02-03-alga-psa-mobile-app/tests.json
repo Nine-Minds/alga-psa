@@ -834,7 +834,7 @@
   {
     "id": "T105",
     "description": "Integration: Add rate limiting for OTT issue/exchange/refresh endpoints",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]

@@ -341,3 +341,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T103 marked as covered: server revoke endpoint invalidates refresh token and access key (/api/v1/mobile/auth/revoke).
 - 2026-02-03: T104 marked as covered: undefined
 - 2026-02-03: T104 marked as covered: server capabilities endpoint exists (/api/v1/mobile/auth/capabilities).
+- 2026-02-03: T105 marked as covered: undefined
+- 2026-02-03: T105 marked as covered: mobile auth endpoints rate limited (service + route guards).
