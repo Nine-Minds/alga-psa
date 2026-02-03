@@ -278,7 +278,7 @@
   {
     "id": "T047",
     "description": "Unit: slaPauseService.resumeSla() calls backend.resumeSla()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
