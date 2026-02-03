@@ -1378,7 +1378,7 @@
   {
     "id": "F173",
     "description": "[Mobile:Tickets:Updates] Implement updates - comment length limit enforcement matches server",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
