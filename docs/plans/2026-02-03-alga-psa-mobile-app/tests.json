@@ -82,7 +82,7 @@
   {
     "id": "T011",
     "description": "Unit: Add PII-safe logging abstraction with redaction and log level controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

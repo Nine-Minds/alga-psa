@@ -222,3 +222,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T008 added unit tests for the mobile theme primitives (colors/spacing/typography) to prevent accidental regressions (`mobile/src/ui/theme.test.ts`).
 - 2026-02-03: T009 added a lightweight unit test to ensure the standard UI state components are present/exported (`mobile/src/ui/states/states.test.ts`).
 - 2026-02-03: T010 added unit tests for the secure storage abstraction (web fallback behavior + JSON helpers) using module mocks for `react-native` and `expo-secure-store` (`mobile/src/storage/secureStorage.test.ts`).
+- 2026-02-03: T011 marked logger redaction coverage as tested via the existing unit test that verifies secret + ticket/comment redaction (`mobile/src/logging/logger.redaction.test.ts`).
