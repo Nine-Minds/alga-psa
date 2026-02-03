@@ -1082,7 +1082,7 @@
   {
     "id": "T136",
     "description": "E2E: Implement sign-in error UX for invalid tenant/provider configuration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136"
     ]
