@@ -187,3 +187,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F180 confirmed retry paths for transient failures: comment/status mutations keep state/drafts and allow user-triggered retry without losing work.
 - 2026-02-03: F181 hardened mutation actions against double-tap submits by adding immediate in-flight guards (refs) for comment send and status update.
 - 2026-02-03: F182 confirmed ticket mutations include device/app metadata audit headers (platform/app version/build/device id) via centralized `getClientMetadataHeaders()`.
+- 2026-02-03: F183 disabled “Assign to me” when the ticket is already assigned to the current user, avoiding redundant assignment calls.

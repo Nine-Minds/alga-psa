@@ -234,6 +234,8 @@ function TicketDetailBody({
 
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
+  const assignedToId = (ticket as any).assigned_to as string | null | undefined;
+  const isAssignedToMe = Boolean(meUserId && assignedToId && assignedToId === meUserId);
 
   const sendComment = async () => {
     if (!client || !session) return;
@@ -771,9 +773,15 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
+            label={
+              assignmentUpdating && assignmentAction === "assign"
+                ? "Assigning…"
+                : isAssignedToMe
+                  ? "Assigned to me"
+                  : "Assign to me"
+            }
             loading={assignmentUpdating && assignmentAction === "assign"}
-            disabled={assignmentUpdating}
+            disabled={assignmentUpdating || isAssignedToMe}
             onPress={() => {
               void assignToMe();
             }}

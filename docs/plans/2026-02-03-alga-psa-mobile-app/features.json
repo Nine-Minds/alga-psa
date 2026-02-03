@@ -1458,7 +1458,7 @@
   {
     "id": "F183",
     "description": "[Mobile:Tickets:Updates] Implement updates - assign-to-me button shows disabled state when already assignee",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
