@@ -1026,7 +1026,7 @@
   {
     "id": "T129",
     "description": "Unit: Implement clipboard helper that redacts sensitive fields by default (configurable)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F129"
     ]

@@ -354,3 +354,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T126 marked correlation id header as covered by unit tests (mobile/src/api/client.correlation.test.ts).
 - 2026-02-03: T127 added unit tests covering deep link allowlist filtering (known paths allowed, unexpected paths rejected) (`mobile/src/navigation/linking.security.test.ts`).
 - 2026-02-03: T128 marked hosted URL builder as covered by unit tests (mobile/src/urls/hostedUrls.test.ts).
+- 2026-02-03: T129 marked clipboard redaction helper as covered by unit tests (mobile/src/clipboard/clipboard.test.ts).
