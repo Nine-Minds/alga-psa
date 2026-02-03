@@ -23,6 +23,11 @@ cd mobile
 cp .env.example .env
 ```
 
+## Environment
+
+- `EXPO_PUBLIC_ALGA_ENV`: `dev|stage|prod`
+- `EXPO_PUBLIC_ALGA_BASE_URL`: hosted base URL (no trailing slash)
+
 ## Run
 
 ```bash
@@ -41,3 +46,28 @@ cd mobile
 npm run ios
 npm run android
 ```
+
+## Deep links
+
+- Scheme: `alga://`
+- Ticket detail route: `alga://ticket/:ticketId`
+
+## Quality checks
+
+```bash
+cd mobile
+npm run lint
+npm run typecheck
+npm run test
+```
+
+## Build / Release (draft)
+
+This repo currently uses Expo managed workflow. A typical path to internal distribution:
+
+1) Install EAS CLI: `npm i -g eas-cli`
+2) Authenticate: `eas login`
+3) Configure project: `eas build:configure`
+4) Build:
+   - iOS: `eas build -p ios --profile preview`
+   - Android: `eas build -p android --profile preview`

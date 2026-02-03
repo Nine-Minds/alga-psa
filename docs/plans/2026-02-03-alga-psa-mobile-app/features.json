@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "[Mobile:Foundation] Add documentation for mobile local dev and build/release process",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

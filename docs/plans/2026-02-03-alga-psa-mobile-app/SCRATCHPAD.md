@@ -25,3 +25,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F019 implemented Settings diagnostics (app version/build, platform, env/base URL) in `mobile/src/screens/SettingsScreen.tsx` using `expo-application`.
 - 2026-02-03: F020 added mobile CI checks (`.github/workflows/mobile-checks.yml`) and mobile `lint`/`typecheck` scripts with local `eslint.config.mjs`.
 - 2026-02-03: F021 added mobile unit test harness (Vitest) + CI job (`mobile-tests`) and a first config unit test (`mobile/src/config/appConfig.test.ts`).
+- 2026-02-03: F022 expanded `mobile/README.md` with env/deep-link/quality-check and a draft build/release runbook.
