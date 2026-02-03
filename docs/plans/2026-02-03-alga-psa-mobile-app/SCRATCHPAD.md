@@ -415,3 +415,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T187 marked as covered: OTT bound to web session id (server implementation + unit tests: server/src/test/unit/mobileAuth.test.ts).
 - 2026-02-03: T188 marked as covered: OTT uses state/nonce and enforces single-use (server implementation + unit tests: server/src/test/unit/mobileAuth.test.ts).
 - 2026-02-03: T189 marked as covered: OTT TTL configurable via ALGA_MOBILE_OTT_TTL_SEC (server config docs: docs/plans/2026-02-03-alga-psa-mobile-app/MOBILE_AUTH_CONFIG.md).
+- 2026-02-03: T190 marked as covered: Exchange endpoint validates request shape (Zod validation in server + standard API error schema).
