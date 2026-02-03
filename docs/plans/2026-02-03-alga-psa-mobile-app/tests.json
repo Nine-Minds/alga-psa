@@ -754,7 +754,7 @@
   {
     "id": "T095",
     "description": "Checklist: Define signing, versioning, and release notes process",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]
