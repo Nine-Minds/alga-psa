@@ -114,7 +114,7 @@
   {
     "id": "T015",
     "description": "Unit: Add pull-to-refresh and background refresh on app resume",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

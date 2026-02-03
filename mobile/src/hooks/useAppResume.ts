@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
+import { isResumeTransition } from "./appStateTransitions";
 
 export function useAppResume(onResume: () => void) {
   const lastState = useRef<AppStateStatus>(AppState.currentState);
@@ -9,7 +10,7 @@ export function useAppResume(onResume: () => void) {
       const prev = lastState.current;
       lastState.current = nextState;
 
-      if ((prev === "inactive" || prev === "background") && nextState === "active") {
+      if (isResumeTransition(prev, nextState)) {
         onResume();
       }
     });
@@ -17,4 +18,3 @@ export function useAppResume(onResume: () => void) {
     return () => sub.remove();
   }, [onResume]);
 }
-
