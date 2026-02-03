@@ -914,7 +914,7 @@
   {
     "id": "F115",
     "description": "[Phase2:Notifications] Send push notifications for assignment/status/mention events",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
