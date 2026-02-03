@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "[Mobile:Foundation] Add accessibility baseline (labels, focus order, touch target sizes)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
