@@ -1474,7 +1474,7 @@
   {
     "id": "T185",
     "description": "E2E: Implement updates - due date picker supports clearing due date (if allowed)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
