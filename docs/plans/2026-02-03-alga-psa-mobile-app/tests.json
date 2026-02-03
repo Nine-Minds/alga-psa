@@ -1618,7 +1618,7 @@
   {
     "id": "T203",
     "description": "Integration: Implement server mobile auth - ticket assignment update endpoint supports assign-to-self without separate user lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
