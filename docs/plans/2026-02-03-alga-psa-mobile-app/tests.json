@@ -1354,7 +1354,7 @@
   {
     "id": "T170",
     "description": "E2E: Implement ticket detail - jump-to-top button on long timelines (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
