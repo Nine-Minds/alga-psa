@@ -37,7 +37,7 @@ import KanbanZoomControl from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List, Search } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -47,6 +47,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
+const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
@@ -118,6 +119,19 @@ export default function ProjectDetail({
     {
       defaultValue: 50,
       localStorageKey: PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Header pinned state with persistence (default: false - not pinned/sticky)
+  const {
+    value: isHeaderPinned,
+    setValue: setIsHeaderPinned,
+  } = useUserPreference<boolean>(
+    PROJECT_HEADER_PINNED_SETTING,
+    {
+      defaultValue: false,
+      localStorageKey: PROJECT_HEADER_PINNED_SETTING,
       debounceMs: 300
     }
   );
@@ -1838,6 +1852,19 @@ export default function ProjectDetail({
               zoomLevel={kanbanZoomLevel}
               onZoomChange={setKanbanZoomLevel}
             />
+            <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+              <button
+                onClick={() => setIsHeaderPinned(!isHeaderPinned)}
+                className={`p-1.5 rounded-md transition-colors ${
+                  isHeaderPinned
+                    ? 'bg-primary-100 text-primary-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+              >
+                <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
+              </button>
+            </Tooltip>
             <ViewSwitcher
               currentView={viewMode}
               onChange={setViewMode}
@@ -2153,8 +2180,10 @@ export default function ProjectDetail({
             </div>
           )}
           <div className={styles.kanbanArea}>
-            {/* Sticky header - stays fixed when scrolling */}
-            {renderHeader()}
+            {/* Header - optionally sticky when pinned */}
+            <div className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}>
+              {renderHeader()}
+            </div>
             {/* Scrollable content area */}
             <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
               {renderContent()}

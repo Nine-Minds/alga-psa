@@ -3,12 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from '@alga-psa/types';
 import { createTag, deleteTag, getAllTags } from '../actions';
-import { TagList, TagInput, TagInputInline } from '@alga-psa/ui/components/tags';
+import { TagList, TagInput, TagInputInline, type TagSize } from '@alga-psa/ui/components/tags';
 import { toast } from 'react-hot-toast';
 import { useTags } from '../context/TagContext';
 import { handleError } from '@alga-psa/ui';
-
-type TagSize = 'sm' | 'md' | 'lg';
 
 interface TagManagerProps {
   id?: string;

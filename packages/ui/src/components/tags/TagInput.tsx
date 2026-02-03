@@ -10,8 +10,7 @@ import { generateEntityColor } from '../../lib/colorUtils';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from '@alga-psa/types';
-
-type TagSize = 'sm' | 'md' | 'lg';
+import { tagInputSizeConfig, type TagSize } from './tagSizeConfig';
 
 interface TagInputProps {
   id?: string;
@@ -23,13 +22,6 @@ interface TagInputProps {
   size?: TagSize;
 }
 
-// Size configurations for tag input
-const inputSizeConfig = {
-  sm: { buttonClass: '!p-0.5 !min-w-0 !h-5 !w-5', iconSize: 12, inputClass: 'px-1.5 py-0.5 text-xs w-24 h-6', saveClass: 'px-2 py-0.5 text-xs h-6' },
-  md: { buttonClass: '', iconSize: 16, inputClass: 'px-2 py-1 text-sm w-32', saveClass: 'px-3 py-1 text-sm' },
-  lg: { buttonClass: '', iconSize: 18, inputClass: 'px-2.5 py-1.5 text-base w-36', saveClass: 'px-4 py-1.5 text-base' },
-};
-
 export const TagInput: React.FC<TagInputProps> = ({
   id = 'tag-input',
   existingTags,
@@ -39,7 +31,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   placeholder = 'New tag',
   size = 'md'
 }) => {
-  const sizeConfig = inputSizeConfig[size];
+  const sizeConfig = tagInputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<ITag[]>([]);

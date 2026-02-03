@@ -12,7 +12,7 @@
   min-height: 0;
   padding: 1rem;
   position: relative;
-  overflow: hidden; /* Prevent scrolling on main content when using kanban */
+  overflow: visible;
 }
 
 .mainContent::-webkit-scrollbar {
@@ -36,7 +36,7 @@
 .contentWrapper {
   display: flex;
   flex: 1;
-  overflow: hidden; /* Remove auto scrolling at this level */
+  overflow: visible;
   gap: 1rem;
   margin-bottom: 8px;
   padding-bottom: 8px;
@@ -193,7 +193,22 @@
   display: flex;
   flex-direction: column;
   min-height: 0; /* Allow it to shrink */
-  overflow: hidden; /* Prevent overflow at this level */
+  overflow: visible;
+}
+
+.kanbanHeader {
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem 0.25rem;
+  margin-top: -0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.kanbanHeaderPinned {
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .kanbanContainer {

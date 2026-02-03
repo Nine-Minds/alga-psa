@@ -338,7 +338,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           </div>
           <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
             <Button
-              id="close-agent-picker-button"
+              id={`add-task-button-${status.status_id}`}
               variant="default"
               size="sm"
               onClick={() => onAddCard(status)}
