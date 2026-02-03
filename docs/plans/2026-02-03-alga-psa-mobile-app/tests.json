@@ -946,7 +946,7 @@
   {
     "id": "T119",
     "description": "Deferred: Document self-hosted requirements for mobile handoff URLs and SSO callback domains",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
