@@ -12,7 +12,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { getTicketById, getTicketStats, listTickets, type TicketListItem, type TicketStats } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
@@ -227,7 +227,21 @@ export function TicketsListScreen({ navigation }: Props) {
     }, []),
   );
 
-  const onEndReached = async () => {
+  const onPressTicket = useCallback(
+    (ticketId: string) => {
+      navigation.navigate("TicketDetail", { ticketId });
+    },
+    [navigation],
+  );
+
+  const keyExtractor = useCallback((item: TicketListItem) => item.ticket_id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: TicketListItem }) => <TicketRow item={item} onPressTicket={onPressTicket} />,
+    [onPressTicket],
+  );
+
+  const onEndReached = useCallback(async () => {
     if (!client || !session) return;
     if (initialLoading || refreshing || loadingMore) return;
     if (!hasNext) return;
@@ -237,7 +251,7 @@ export function TicketsListScreen({ navigation }: Props) {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [client, hasNext, initialLoading, loadPage, loadingMore, page, refreshing, session]);
 
   if (!config.ok) {
     return <ErrorState title="Configuration error" description={config.error} />;
@@ -271,89 +285,88 @@ export function TicketsListScreen({ navigation }: Props) {
     );
   }
 
+  const header = useMemo(() => {
+    return (
+      <View style={{ marginBottom: spacing.md }}>
+        {stats ? (
+          <View
+            style={{
+              padding: spacing.md,
+              borderRadius: 12,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              marginBottom: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.caption, color: colors.mutedText }}>Summary</Text>
+            <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+              Open {stats.open_tickets} • Unassigned {stats.unassigned_tickets} • Overdue {stats.overdue_tickets}
+            </Text>
+          </View>
+        ) : null}
+        <View style={{ flexDirection: "row" }}>
+          <View style={{ flex: 1 }}>
+            <TextInput
+              value={searchInput}
+              onChangeText={setSearchInput}
+              placeholder="Search tickets"
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Search tickets"
+              style={{
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                color: colors.text,
+              }}
+            />
+          </View>
+          <View style={{ width: spacing.sm }} />
+          <Pressable
+            onPress={() => setFiltersOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open filters"
+            style={({ pressed }) => ({
+              paddingHorizontal: spacing.md,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.card,
+              justifyContent: "center",
+              opacity: pressed ? 0.95 : 1,
+            })}
+          >
+            <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
+          </Pressable>
+        </View>
+        <ActiveFiltersSummary filters={filters} />
+        <QuickFilters
+          onSelect={(kind) => {
+            if (kind === "mine") setFilters({ ...filters, assignee: "me" });
+            if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
+            if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
+            if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7 });
+          }}
+        />
+      </View>
+    );
+  }, [filters, searchInput, stats]);
+
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         data={items}
-        keyExtractor={(item) => item.ticket_id}
+        keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         contentContainerStyle={{ padding: spacing.lg, backgroundColor: colors.background }}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.4}
-        ListHeaderComponent={
-          <View style={{ marginBottom: spacing.md }}>
-            {stats ? (
-              <View
-                style={{
-                  padding: spacing.md,
-                  borderRadius: 12,
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  marginBottom: spacing.md,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.mutedText }}>Summary</Text>
-                <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
-                  Open {stats.open_tickets} • Unassigned {stats.unassigned_tickets} • Overdue {stats.overdue_tickets}
-                </Text>
-              </View>
-            ) : null}
-            <View style={{ flexDirection: "row" }}>
-              <View style={{ flex: 1 }}>
-                <TextInput
-                  value={searchInput}
-                  onChangeText={setSearchInput}
-                  placeholder="Search tickets"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  accessibilityLabel="Search tickets"
-                  style={{
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.md,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.background,
-                    color: colors.text,
-                  }}
-                />
-              </View>
-              <View style={{ width: spacing.sm }} />
-              <Pressable
-                onPress={() => setFiltersOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Open filters"
-                style={({ pressed }) => ({
-                  paddingHorizontal: spacing.md,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                  justifyContent: "center",
-                  opacity: pressed ? 0.95 : 1,
-                })}
-              >
-                <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
-              </Pressable>
-          </View>
-          <ActiveFiltersSummary filters={filters} />
-          <QuickFilters
-            onSelect={(kind) => {
-              if (kind === "mine") setFilters({ ...filters, assignee: "me" });
-              if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
-              if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
-              if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7 });
-            }}
-          />
-        </View>
-      }
-      renderItem={({ item }) => (
-          <TicketRow
-            item={item}
-            onPress={() => navigation.navigate("TicketDetail", { ticketId: item.ticket_id })}
-          />
-        )}
+        ListHeaderComponent={header}
+        renderItem={renderItem}
         ListFooterComponent={
           loadingMore ? (
             <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
@@ -361,6 +374,13 @@ export function TicketsListScreen({ navigation }: Props) {
             </View>
           ) : null
         }
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        removeClippedSubviews
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
       />
 
       <FiltersModal
@@ -585,15 +605,24 @@ function OptionRow<T extends string | number | null>({
   );
 }
 
-function TicketRow({ item, onPress }: { item: TicketListItem; onPress: () => void }) {
+const TicketRow = memo(function TicketRow({
+  item,
+  onPressTicket,
+}: {
+  item: TicketListItem;
+  onPressTicket: (ticketId: string) => void;
+}) {
+  const ticketId = item.ticket_id;
+  const handlePress = useCallback(() => onPressTicket(ticketId), [onPressTicket, ticketId]);
+
   const updated = item.updated_at ?? item.entered_at;
-  const updatedLabel = updated ? new Date(updated).toLocaleDateString() : "";
+  const updatedLabel = useMemo(() => (updated ? new Date(updated).toLocaleDateString() : ""), [updated]);
   const status = item.status_name ?? "Unknown";
   const priority = item.priority_name ?? null;
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       accessibilityRole="button"
       accessibilityLabel={`Ticket ${item.ticket_number}: ${item.title}`}
       style={({ pressed }) => ({
@@ -617,9 +646,7 @@ function TicketRow({ item, onPress }: { item: TicketListItem; onPress: () => voi
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
         <Badge label={status} tone={item.status_is_closed ? "neutral" : "info"} />
-        {priority ? (
-          <View style={{ width: spacing.sm }} />
-        ) : null}
+        {priority ? <View style={{ width: spacing.sm }} /> : null}
         {priority ? <Badge label={priority} tone={priorityTone(priority)} /> : null}
       </View>
 
@@ -630,7 +657,7 @@ function TicketRow({ item, onPress }: { item: TicketListItem; onPress: () => voi
       ) : null}
     </Pressable>
   );
-}
+});
 
 function priorityTone(priorityName: string): "neutral" | "success" | "warning" | "danger" {
   const normalized = priorityName.trim().toLowerCase();

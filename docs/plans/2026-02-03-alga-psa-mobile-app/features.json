@@ -706,7 +706,7 @@
   {
     "id": "F089",
     "description": "[Mobile:Quality] Optimize list rendering (virtualized list, avoid re-renders)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
