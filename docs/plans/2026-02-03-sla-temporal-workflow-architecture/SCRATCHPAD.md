@@ -46,6 +46,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) slaService.recordFirstResponse now signals backend completeSla('response') unless skipped
 - (2026-02-03) slaService.recordResolution now signals backend completeSla('resolution') unless skipped
 - (2026-02-03) SlaBackendFactory falls back to PgBoss backend when Temporal backend load fails, with warning log
+- (2026-02-03) Fallback path logs warning via core logger
 
 ## Discoveries / Constraints
 

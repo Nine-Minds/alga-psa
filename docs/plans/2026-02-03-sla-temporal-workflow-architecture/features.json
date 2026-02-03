@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "Log warning when falling back from Temporal to pgboss",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["NFR-1"]
   },
   {
