@@ -762,7 +762,7 @@
   {
     "id": "F096",
     "description": "[Mobile:Release] Add app icon/splash assets",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]
