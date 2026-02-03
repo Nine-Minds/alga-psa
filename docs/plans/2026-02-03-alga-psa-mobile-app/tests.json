@@ -1785,7 +1785,7 @@
   {
     "id": "T223",
     "description": "E2E: Open ticket -> change status -> verify reflected in header and list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F072",
