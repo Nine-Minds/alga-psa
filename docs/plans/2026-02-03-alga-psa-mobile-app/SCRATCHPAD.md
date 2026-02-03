@@ -151,3 +151,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F145 added a “Clear all” CTA to the active filter chip bar to reset list filters without opening the modal.
 - 2026-02-03: F146 added a “Last refreshed” timestamp under the list header (updates on successful page-1 reload) using locale-aware relative+absolute formatting.
 - 2026-02-03: F147 added optional pull-to-refresh haptics using a short vibration via `usePullToRefresh(..., { haptics: true })` on the ticket list.
+- 2026-02-03: F148 ticket list 401 handling now retries once via global `onAuthError` refresh flow, then routes to sign-in if refresh fails.

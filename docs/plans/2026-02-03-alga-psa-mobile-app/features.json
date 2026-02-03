@@ -1178,7 +1178,7 @@
   {
     "id": "F148",
     "description": "[Mobile:Tickets:List] Implement List:Errors - 401 handling (refresh then sign-in)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
