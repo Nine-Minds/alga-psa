@@ -36,3 +36,25 @@ jobs:
         working-directory: mobile
         run: npm run typecheck
 
+  mobile-tests:
+    name: Mobile unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci --include=dev
+
+      - name: Test
+        working-directory: mobile
+        run: npm run test

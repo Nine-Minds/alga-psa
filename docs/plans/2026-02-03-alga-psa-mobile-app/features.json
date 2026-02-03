@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "[Mobile:Foundation] Add CI job to run mobile unit tests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
