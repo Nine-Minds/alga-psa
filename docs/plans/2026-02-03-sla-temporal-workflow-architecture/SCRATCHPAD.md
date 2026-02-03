@@ -98,6 +98,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: recordSlaAuditLog inserts audit entry (T036)
 - (2026-02-03) Tests: TemporalSlaBackend starts SLA workflow with correct ID (T037)
 - (2026-02-03) Tests: TemporalSlaBackend workflow ID format validated (T038)
+- (2026-02-03) Tests: TemporalSlaBackend.pauseSla sends pause signal (T039)
 
 ## Discoveries / Constraints
 
