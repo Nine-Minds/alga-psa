@@ -1538,7 +1538,7 @@
   {
     "id": "F193",
     "description": "[Server:Mobile Auth] Implement server mobile auth - capabilities endpoint returns hosted domain allowlist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
