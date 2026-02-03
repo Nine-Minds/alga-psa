@@ -404,7 +404,7 @@
   {
     "id": "T068",
     "description": "E2E: Full ticket lifecycle in EE - create, 50% notification, pause, resume, first response, 50% resolution notification, resolve",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F008", "F009", "F010", "F011", "F038"]
   },
   {
