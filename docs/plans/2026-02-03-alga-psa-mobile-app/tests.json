@@ -1775,7 +1775,7 @@
   {
     "id": "T222",
     "description": "E2E: Open ticket -> add PUBLIC comment -> verify shown as public",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F068",
