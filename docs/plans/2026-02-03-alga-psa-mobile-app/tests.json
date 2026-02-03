@@ -850,7 +850,7 @@
   {
     "id": "T107",
     "description": "Integration: Ensure ticket APIs used by mobile are available and documented (list/search/detail/comments/status/assignment/stats)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
