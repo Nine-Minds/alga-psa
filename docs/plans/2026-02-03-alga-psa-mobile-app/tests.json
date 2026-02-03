@@ -1234,7 +1234,7 @@
   {
     "id": "T155",
     "description": "E2E: Implement ticket detail - pull-to-refresh indicator states",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155"
     ]
