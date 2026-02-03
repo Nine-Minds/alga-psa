@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Unit: SlaTicketWorkflow resume signal recalculates next wake time with updated pause minutes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {

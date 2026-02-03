@@ -79,6 +79,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA workflow threshold calculations include 100% (T017)
 - (2026-02-03) Tests: SLA workflow pause signal sets pauseStartedAt (T018)
 - (2026-02-03) Tests: SLA workflow resume clears pauseStartedAt and increments total pause minutes (T019)
+- (2026-02-03) Tests: SLA workflow recalculates wake time after resume with pause minutes (T020)
 
 ## Discoveries / Constraints
 
