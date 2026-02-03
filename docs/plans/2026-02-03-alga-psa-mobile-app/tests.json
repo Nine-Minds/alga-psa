@@ -618,7 +618,7 @@
   {
     "id": "T078",
     "description": "E2E: Implement priority update via picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
