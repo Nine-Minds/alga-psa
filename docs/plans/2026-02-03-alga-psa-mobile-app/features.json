@@ -1730,7 +1730,7 @@
   {
     "id": "F217",
     "description": "[Mobile:Release] Release - support escalation runbook for auth issues",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Observability"
     ]
