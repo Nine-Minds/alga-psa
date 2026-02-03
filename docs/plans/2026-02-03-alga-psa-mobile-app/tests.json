@@ -1666,7 +1666,7 @@
   {
     "id": "T209",
     "description": "Unit: Quality/Ops - SLOs defined for key endpoints (list/detail/mutate)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]

@@ -434,3 +434,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T206 marked as covered: Crash/error reporting omits request/response bodies by default (mobile/src/errors/errorReporting.ts + unit test mobile/src/errors/errorReporting.test.ts).
 - 2026-02-03: T207 marked as covered: Logger redaction covers ticket subjects/comment bodies (mobile/src/logging/logger.redaction.test.ts).
 - 2026-02-03: T208 marked as covered: API latency telemetry event implemented and tested (mobile/src/api/client.ts, mobile/src/api/client.telemetry.test.ts).
+- 2026-02-03: T209 marked as covered: SLOs defined for key endpoints (docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md).
