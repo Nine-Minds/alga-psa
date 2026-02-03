@@ -13,6 +13,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
 import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
+import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -57,6 +58,34 @@ function TicketDetailBody({
   const [commentIsInternal, setCommentIsInternal] = useState(true);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  const draftKey = useMemo(() => {
+    const userId = session?.user?.id ?? "anonymous";
+    return `alga.mobile.ticketDraft.${userId}.${ticketId}`;
+  }, [session?.user?.id, ticketId]);
+
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      const saved = await getSecureJson<{ text: string; isInternal: boolean }>(draftKey);
+      if (canceled) return;
+      if (saved) {
+        setCommentDraft(saved.text);
+        setCommentIsInternal(saved.isInternal);
+      }
+      setDraftLoaded(true);
+    };
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    void setSecureJson(draftKey, { text: commentDraft, isInternal: commentIsInternal });
+  }, [commentDraft, commentIsInternal, draftKey, draftLoaded]);
 
   const fetchTicket = useCallback(async () => {
     if (!client || !session) return;
@@ -155,6 +184,7 @@ function TicketDetailBody({
         return;
       }
       setCommentDraft("");
+      await secureStorage.deleteItem(draftKey);
       await fetchComments();
     } finally {
       setCommentSending(false);

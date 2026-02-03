@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "[Mobile:Tickets:Updates] Preserve draft on failure/navigation and allow retry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

@@ -72,3 +72,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F066 added internal/public visibility selector to the comment composer and includes the `is_internal` flag when posting.
 - 2026-02-03: F067 added client-side comment length validation with inline errors and a live character counter.
 - 2026-02-03: F068 after posting a comment, the ticket timeline refreshes and shows the new entry.
+- 2026-02-03: F069 comment drafts are persisted per-ticket (secure storage) so drafts survive navigation and can be retried after failures.
