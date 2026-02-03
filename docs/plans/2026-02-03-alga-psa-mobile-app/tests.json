@@ -234,7 +234,7 @@
   {
     "id": "T030",
     "description": "E2E: Support Microsoft SSO via web login (no provider-specific native SDK)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
