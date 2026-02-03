@@ -13,6 +13,7 @@ import { exchangeOttWithRetry } from "../api/mobileAuth";
 import { useAuth } from "../auth/AuthContext";
 import { getStableDeviceId } from "../device/clientMetadata";
 import { analytics } from "../analytics/analytics";
+import { getTicketStats } from "../api/tickets";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 
@@ -110,6 +111,22 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         analytics.trackEvent("auth.exchange.succeeded", {
           expiresInSec: exchanged.data.expiresInSec,
         });
+
+        // Detect users who can authenticate but lack basic ticket permissions.
+        const ticketCheckClient = createApiClient({
+          baseUrl: config.baseUrl,
+          getUserAgentTag: () => `mobile/${Platform.OS}`,
+        });
+        const ticketCheck = await getTicketStats(ticketCheckClient, { apiKey: exchanged.data.accessToken });
+        if (!ticketCheck.ok && ticketCheck.error.kind === "permission") {
+          analytics.trackEvent("auth.exchange.failed", {
+            errorKind: "permission",
+            status: ticketCheck.status ?? null,
+          });
+          await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
+          setError("Your account does not have permission to view tickets. Please contact your administrator.");
+          return;
+        }
 
         const expiresAtMs = Date.now() + exchanged.data.expiresInSec * 1000;
         setSession({
