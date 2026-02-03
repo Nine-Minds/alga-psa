@@ -213,3 +213,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F206 hardened crash/error reporting payloads to omit request/response bodies by default (`mobile/src/errors/errorReporting.ts`) and added a unit test ensuring body-like fields are replaced with `[omitted]`.
 - 2026-02-03: F207 extended log/error redaction to cover ticket subjects/titles and comment bodies (`title`, `subject`, `comment_text`, `event_text`) and added a unit test to prevent regressions (`mobile/src/logging/logger.redaction.test.ts`).
 - 2026-02-03: T001 added a mobile scaffold smoke test to ensure the Expo app stays runnable/configured (`mobile/src/repoScaffold.test.ts`).
+- 2026-02-03: T002 marked environment config as covered by existing unit tests around config parsing/validation (`mobile/src/config/appConfig.test.ts`).
