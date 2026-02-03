@@ -344,7 +344,7 @@
   {
     "id": "T058",
     "description": "Integration: Pausing ticket pauses workflow timer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F023", "F029"]
   },
   {
