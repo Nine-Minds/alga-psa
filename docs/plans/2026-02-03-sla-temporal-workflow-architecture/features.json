@@ -278,7 +278,7 @@
   {
     "id": "F047",
     "description": "PgBossSlaBackend.startSlaTracking() is a no-op (deadlines already stored)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
