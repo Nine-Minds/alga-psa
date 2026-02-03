@@ -434,7 +434,7 @@
   {
     "id": "T055",
     "description": "E2E: Render requester/contact and client/company summary",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
