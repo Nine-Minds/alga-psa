@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "[Mobile:Auth] Support Google SSO via web login (no provider-specific native SDK)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

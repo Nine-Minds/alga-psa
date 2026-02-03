@@ -34,3 +34,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F028 routes users back to Sign In when refresh indicates a revoked/expired session (401/403) or the access token reaches expiry.
 - 2026-02-03: F029 added a shared `logout()` action that revokes the server-side mobile session (`POST /api/v1/mobile/auth/revoke`) and clears local secure storage/session state.
 - 2026-02-03: F030 uses hosted web login (`/auth/signin`) for Microsoft SSO (no provider-specific native SDK).
+- 2026-02-03: F031 uses hosted web login (`/auth/signin`) for Google SSO (no provider-specific native SDK).
