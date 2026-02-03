@@ -1824,7 +1824,7 @@
   {
     "id": "T227",
     "description": "Security: Mobile mutation endpoints enforce same RBAC as web",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052",
       "F075"
