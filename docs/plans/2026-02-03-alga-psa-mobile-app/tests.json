@@ -730,7 +730,7 @@
   {
     "id": "T092",
     "description": "Unit: Add privacy review checklist and PII inventory for mobile data flows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
