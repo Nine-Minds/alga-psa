@@ -1795,7 +1795,7 @@
   {
     "id": "T224",
     "description": "E2E: Assign to me -> set priority -> verify list badges update",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F076",

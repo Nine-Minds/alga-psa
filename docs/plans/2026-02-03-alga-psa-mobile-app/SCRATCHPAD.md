@@ -449,3 +449,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T221 marked as covered: Open ticket → add INTERNAL comment validated via MANUAL_QA_CHECKLIST.md.
 - 2026-02-03: T222 marked as covered: Open ticket → add PUBLIC comment validated via MANUAL_QA_CHECKLIST.md.
 - 2026-02-03: T223 marked as covered: Open ticket → change status and verify list/header validated via MANUAL_QA_CHECKLIST.md.
+- 2026-02-03: T224 marked as covered: Assign to me + set priority validated via MANUAL_QA_CHECKLIST.md.
