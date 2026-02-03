@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "[Mobile:Foundation] Add global app state bootstrapping (auth gate) and splash/loading sequence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
