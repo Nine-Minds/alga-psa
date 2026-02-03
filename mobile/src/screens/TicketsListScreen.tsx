@@ -1,9 +1,9 @@
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Pressable, Text, View } from "react-native";
+import { EmptyState } from "../ui/states";
+import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
-import { colors, spacing, typography } from "../ui/theme";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -15,25 +15,17 @@ type Props = CompositeScreenProps<
 
 export function TicketsListScreen({ navigation }: Props) {
   return (
-    <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
-      <Text style={{ ...typography.body, marginBottom: spacing.md, color: colors.mutedText }}>
-        Ticket list is not implemented yet.
-      </Text>
-      <Pressable
-        onPress={() => navigation.navigate("TicketDetail", { ticketId: "12345" })}
-        style={{
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.lg,
-          backgroundColor: colors.primary,
-          borderRadius: 10,
-          alignSelf: "flex-start",
-        }}
-        accessibilityRole="button"
-      >
-        <Text style={{ ...typography.body, color: colors.primaryText, fontWeight: "600" }}>
+    <EmptyState
+      title="Tickets"
+      description="Ticket list is not implemented yet."
+      action={
+        <PrimaryButton
+          onPress={() => navigation.navigate("TicketDetail", { ticketId: "12345" })}
+          accessibilityLabel="Open sample ticket"
+        >
           Open sample ticket
-        </Text>
-      </Pressable>
-    </View>
+        </PrimaryButton>
+      }
+    />
   );
 }

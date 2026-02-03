@@ -1,11 +1,9 @@
-import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Text, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
 import { RootNavigator } from "../navigation/RootNavigator";
-import { colors, spacing, typography } from "../ui/theme";
+import { ErrorState, LoadingState } from "../ui/states";
 
 type AuthState =
   | { status: "booting" }
@@ -37,41 +35,17 @@ export function AppRoot() {
 
   if (!config.ok) {
     return (
-      <Centered>
-        <Text style={{ ...typography.body, color: colors.danger, textAlign: "center" }}>
-          {config.error}
-        </Text>
-      </Centered>
+      <ErrorState title="Configuration error" description={config.error} />
     );
   }
 
   if (authState.status === "booting") {
-    return (
-      <Centered>
-        <Text style={{ ...typography.body, color: colors.mutedText }}>Loading…</Text>
-      </Centered>
-    );
+    return <LoadingState message="Loading…" />;
   }
 
   return (
     <NavigationContainer linking={linking}>
       <RootNavigator isSignedIn={authState.status === "signedIn"} />
     </NavigationContainer>
-  );
-}
-
-function Centered({ children }: { children: ReactNode }) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        padding: spacing.xl,
-        backgroundColor: colors.background,
-      }}
-    >
-      {children}
-    </View>
   );
 }
