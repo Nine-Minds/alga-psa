@@ -5,7 +5,7 @@ import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { WorkflowBundleImportError } from './workflowBundleImportErrors';
 import draft7MetaSchema from 'ajv/dist/refs/json-schema-draft-07.json';
-import schemaJson from '../../../../../ee/docs/schemas/workflow-bundle.v1.schema.json';
+import schemaJson from './workflow-bundle.v1.schema.json';
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: unknown[] };
 let cachedValidate: ValidateFn | null = null;
