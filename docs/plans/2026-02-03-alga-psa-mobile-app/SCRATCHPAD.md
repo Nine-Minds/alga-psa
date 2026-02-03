@@ -232,6 +232,7 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T018 added a unit test for i18n key lookup and fallback behavior using a mock locale (`mobile/src/i18n/i18n.test.ts`).
 - 2026-02-03: T019 added a unit test for Settings diagnostics formatting (version/build string) via a small extracted helper (`mobile/src/screens/settingsDiagnostics.ts`, `mobile/src/screens/settingsDiagnostics.test.ts`).
 - 2026-02-03: T020 marked the mobile lint/typecheck CI job as covered via the existing workflow (`.github/workflows/mobile-checks.yml`).
+- 2026-02-03: T021 marked the mobile unit test CI job as covered via the existing workflow (`.github/workflows/mobile-checks.yml`).
 - 2026-02-03: Added missing feature placeholders `F208`–`F219` because `tests.json` referenced them but they were absent from `features.json` (keeps plan artifacts consistent; will implement next).
 - 2026-02-03: F208 added a success telemetry event for API requests (`api.request.succeeded`) including normalized path + duration to support latency measurement; updated catalog docs and added a unit test (`mobile/src/api/client.ts`, `mobile/src/api/client.telemetry.test.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`).
 - 2026-02-03: F209 defined initial mobile SLO targets for ticketing/auth endpoints and measurement guidance (`docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md`).

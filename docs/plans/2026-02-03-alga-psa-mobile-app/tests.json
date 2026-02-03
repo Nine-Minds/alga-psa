@@ -162,7 +162,7 @@
   {
     "id": "T021",
     "description": "Unit: Add CI job to run mobile unit tests",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
