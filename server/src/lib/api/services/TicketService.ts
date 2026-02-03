@@ -29,6 +29,27 @@ import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
+const TICKET_MOBILE_LIST_FIELDS = [
+  'ticket_id',
+  'ticket_number',
+  'title',
+  'status_id',
+  'status_name',
+  'status_is_closed',
+  'priority_name',
+  'assigned_to_name',
+  'client_name',
+  'contact_name',
+  'updated_at',
+  'entered_at',
+  'closed_at',
+];
+
+const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
+  ...TICKET_MOBILE_LIST_FIELDS,
+  'mobile_list',
+]);
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -52,48 +73,14 @@ export class TicketService extends BaseService<ITicket> {
       limit = 25,
       filters = {} as TicketFilterData,
       sort,
-      order
+      order,
+      fields
     } = options;
 
+    const selectedFields = this.normalizeTicketListFields(fields);
+
     // Build base query with all necessary joins
-    let dataQuery = knex('tickets as t')
-      .leftJoin('clients as comp', function() {
-        this.on('t.client_id', '=', 'comp.client_id')
-            .andOn('t.tenant', '=', 'comp.tenant');
-      })
-      .leftJoin('contacts as cont', function() {
-        this.on('t.contact_name_id', '=', 'cont.contact_name_id')
-            .andOn('t.tenant', '=', 'cont.tenant');
-      })
-      .leftJoin('statuses as stat', function() {
-        this.on('t.status_id', '=', 'stat.status_id')
-            .andOn('t.tenant', '=', 'stat.tenant');
-      })
-      .leftJoin('priorities as pri', function() {
-        this.on('t.priority_id', '=', 'pri.priority_id')
-            .andOn('t.tenant', '=', 'pri.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', '=', 'cat.category_id')
-            .andOn('t.tenant', '=', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', '=', 'subcat.category_id')
-            .andOn('t.tenant', '=', 'subcat.tenant');
-      })
-      .leftJoin('boards as board', function() {
-        this.on('t.board_id', '=', 'board.board_id')
-            .andOn('t.tenant', '=', 'board.tenant');
-      })
-      .leftJoin('users as entered_user', function() {
-        this.on('t.entered_by', '=', 'entered_user.user_id')
-            .andOn('t.tenant', '=', 'entered_user.tenant');
-      })
-      .leftJoin('users as assigned_user', function() {
-        this.on('t.assigned_to', '=', 'assigned_user.user_id')
-            .andOn('t.tenant', '=', 'assigned_user.tenant');
-      })
-      .where('t.tenant', context.tenant);
+    let dataQuery = knex('tickets as t').where('t.tenant', context.tenant);
 
     let countQuery = knex('tickets as t')
       .where('t.tenant', context.tenant);
@@ -105,10 +92,47 @@ export class TicketService extends BaseService<ITicket> {
     // Apply sorting
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
-    
     // Map created_at to entered_at for tickets table
     const mappedSortField = sortField === 'created_at' ? 'entered_at' : sortField;
-    
+
+    const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
+
+    const needsClients = !selectedFields || wants('client_name') || mappedSortField === 'client_name';
+    const needsContacts = !selectedFields || wants('contact_name');
+    const needsStatuses = !selectedFields || wants('status_name') || wants('status_is_closed') || mappedSortField === 'status_name';
+    const needsPriorities = !selectedFields || wants('priority_name') || mappedSortField === 'priority_name';
+    const needsAssignedUser = !selectedFields || wants('assigned_to_name');
+
+    if (needsClients) {
+      dataQuery = dataQuery.leftJoin('clients as comp', function () {
+        this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
+      });
+    }
+
+    if (needsContacts) {
+      dataQuery = dataQuery.leftJoin('contacts as cont', function () {
+        this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
+      });
+    }
+
+    if (needsStatuses) {
+      dataQuery = dataQuery.leftJoin('statuses as stat', function () {
+        this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
+      });
+    }
+
+    if (needsPriorities) {
+      dataQuery = dataQuery.leftJoin('priorities as pri', function () {
+        this.on('t.priority_id', '=', 'pri.priority_id').andOn('t.tenant', '=', 'pri.tenant');
+      });
+    }
+
+    if (needsAssignedUser) {
+      dataQuery = dataQuery.leftJoin('users as assigned_user', function () {
+        this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
+      });
+    }
+
     // Handle sorting by related fields
     if (mappedSortField === 'client_name') {
       dataQuery = dataQuery.orderBy('comp.client_name', sortOrder);
@@ -125,27 +149,70 @@ export class TicketService extends BaseService<ITicket> {
     dataQuery = dataQuery.limit(limit).offset(offset);
 
     // Select fields
-    dataQuery = dataQuery.select(
-      't.*',
-      'comp.client_name',
-      'cont.full_name as contact_name',
-      'stat.name as status_name',
-      'stat.is_closed as status_is_closed',
-      'pri.priority_name',
-      'cat.category_name',
-      'subcat.category_name as subcategory_name',
-      'board.board_name as board_name',
-      knex.raw(`CASE 
-        WHEN entered_user.first_name IS NOT NULL AND entered_user.last_name IS NOT NULL 
-        THEN CONCAT(entered_user.first_name, ' ', entered_user.last_name) 
-        ELSE NULL 
-      END as entered_by_name`),
-      knex.raw(`CASE 
-        WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL 
-        THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
-        ELSE NULL 
-      END as assigned_to_name`)
-    );
+    if (!selectedFields) {
+      // Full payload (backward-compatible default)
+      dataQuery = dataQuery
+        .leftJoin('categories as cat', function () {
+          this.on('t.category_id', '=', 'cat.category_id').andOn('t.tenant', '=', 'cat.tenant');
+        })
+        .leftJoin('categories as subcat', function () {
+          this.on('t.subcategory_id', '=', 'subcat.category_id').andOn('t.tenant', '=', 'subcat.tenant');
+        })
+        .leftJoin('boards as board', function () {
+          this.on('t.board_id', '=', 'board.board_id').andOn('t.tenant', '=', 'board.tenant');
+        })
+        .leftJoin('users as entered_user', function () {
+          this.on('t.entered_by', '=', 'entered_user.user_id').andOn('t.tenant', '=', 'entered_user.tenant');
+        })
+        .select(
+          't.*',
+          'comp.client_name',
+          'cont.full_name as contact_name',
+          'stat.name as status_name',
+          'stat.is_closed as status_is_closed',
+          'pri.priority_name',
+          'cat.category_name',
+          'subcat.category_name as subcategory_name',
+          'board.board_name as board_name',
+          knex.raw(`CASE 
+            WHEN entered_user.first_name IS NOT NULL AND entered_user.last_name IS NOT NULL 
+            THEN CONCAT(entered_user.first_name, ' ', entered_user.last_name) 
+            ELSE NULL 
+          END as entered_by_name`),
+          knex.raw(`CASE 
+            WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL 
+            THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
+            ELSE NULL 
+          END as assigned_to_name`),
+        );
+    } else {
+      const selectParts: any[] = [];
+
+      if (selectedFields.includes('ticket_id')) selectParts.push('t.ticket_id');
+      if (selectedFields.includes('ticket_number')) selectParts.push('t.ticket_number');
+      if (selectedFields.includes('title')) selectParts.push('t.title');
+      if (selectedFields.includes('status_id')) selectParts.push('t.status_id');
+      if (selectedFields.includes('client_name')) selectParts.push('comp.client_name');
+      if (selectedFields.includes('contact_name')) selectParts.push('cont.full_name as contact_name');
+      if (selectedFields.includes('status_name')) selectParts.push('stat.name as status_name');
+      if (selectedFields.includes('status_is_closed')) selectParts.push('stat.is_closed as status_is_closed');
+      if (selectedFields.includes('priority_name')) selectParts.push('pri.priority_name');
+      if (selectedFields.includes('updated_at')) selectParts.push('t.updated_at');
+      if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
+      if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
+
+      if (selectedFields.includes('assigned_to_name')) {
+        selectParts.push(
+          knex.raw(`CASE 
+            WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL 
+            THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
+            ELSE NULL 
+          END as assigned_to_name`),
+        );
+      }
+
+      dataQuery = dataQuery.select(selectParts);
+    }
 
     // Execute queries
     const [tickets, [{ count }]] = await Promise.all([
@@ -157,6 +224,22 @@ export class TicketService extends BaseService<ITicket> {
       data: tickets as ITicket[],
       total: parseInt(count as string)
     };
+  }
+
+  private normalizeTicketListFields(fields?: string[]): string[] | null {
+    if (!fields || fields.length === 0) return null;
+    let requested = fields.map((f) => f.trim()).filter(Boolean);
+
+    if (requested.includes('mobile_list')) {
+      requested = [...TICKET_MOBILE_LIST_FIELDS];
+    }
+
+    const unknown = requested.filter((f) => !TICKET_LIST_FIELD_ALLOWLIST.has(f));
+    if (unknown.length > 0) {
+      throw new ValidationError(`Unknown fields requested: ${unknown.join(', ')}`);
+    }
+
+    return Array.from(new Set(requested));
   }
 
   /**

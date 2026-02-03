@@ -214,6 +214,10 @@ export abstract class ApiBaseController {
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
           const sort = url.searchParams.get('sort') || 'created_at';
           const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
+          const fields = (url.searchParams.get('fields') || '')
+            .split(',')
+            .map((f) => f.trim())
+            .filter(Boolean);
 
           const filters: any = { ...validatedQuery };
           delete filters.page;
@@ -221,7 +225,7 @@ export abstract class ApiBaseController {
           delete filters.sort;
           delete filters.order;
 
-          const listOptions = { page, limit, filters, sort, order };
+          const listOptions = { page, limit, filters, sort, order, fields: fields.length > 0 ? fields : undefined };
           const result = await this.service.list(listOptions, apiRequest.context);
           
           return createPaginatedResponse(

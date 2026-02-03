@@ -93,6 +93,7 @@ export function listTickets(
     query: {
       page: params.page,
       limit: params.limit,
+      fields: "mobile_list",
       sort: params.sort ?? "updated_at",
       order: params.order ?? "desc",
       search: params.search,
