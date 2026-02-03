@@ -415,7 +415,7 @@ export function TicketsListScreen({ navigation }: Props) {
             <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
           </Pressable>
         </View>
-        <ActiveFiltersSummary filters={filters} />
+        <FilterChipBar filters={filters} onPress={() => setFiltersOpen(true)} />
         <QuickFilters
           onSelect={(kind) => {
             if (kind === "mine") setFilters({ ...filters, assignee: "me" });
@@ -468,37 +468,34 @@ export function TicketsListScreen({ navigation }: Props) {
   );
 }
 
-function ActiveFiltersSummary({
+function FilterChipBar({
   filters,
+  onPress,
 }: {
-  filters: {
-    status: "any" | "open" | "closed";
-    statusIds: string[];
-    assignee: "any" | "me" | "unassigned";
-    priorityName: string;
-    updatedSinceDays: number | null;
-    updatedSinceDate: string;
-    sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
-    sortOrder: "asc" | "desc";
-  };
+  filters: TicketListFilters;
+  onPress: () => void;
 }) {
-  const parts: string[] = [];
-  if (filters.statusIds.length > 0) parts.push(`statuses:${filters.statusIds.length}`);
-  else if (filters.status !== "any") parts.push(filters.status);
-  if (filters.assignee !== "any") parts.push(filters.assignee);
-  if (filters.priorityName.trim()) parts.push(`priority:${filters.priorityName.trim()}`);
+  const chips: string[] = [];
+  if (filters.statusIds.length > 0) chips.push(`Statuses (${filters.statusIds.length})`);
+  else if (filters.status !== "any") chips.push(`Status: ${filters.status === "open" ? "Open" : "Closed"}`);
+  if (filters.assignee !== "any") chips.push(`Assignee: ${filters.assignee === "me" ? "Me" : "Unassigned"}`);
+  if (filters.priorityName.trim()) chips.push(`Priority: ${filters.priorityName.trim()}`);
   const dateOnly = filters.updatedSinceDate.trim();
-  if (dateOnly) parts.push(`updated:${dateOnly}`);
-  else if (filters.updatedSinceDays) parts.push(`updated:${filters.updatedSinceDays}d`);
+  if (dateOnly) chips.push(`Updated: ${dateOnly}`);
+  else if (filters.updatedSinceDays) chips.push(`Updated: ${filters.updatedSinceDays}d`);
   if (filters.sortField !== "updated_at" || filters.sortOrder !== "desc") {
-    parts.push(`sort:${filters.sortField}:${filters.sortOrder}`);
+    chips.push(`Sort: ${filters.sortField} ${filters.sortOrder}`);
   }
 
-  if (parts.length === 0) return null;
+  if (chips.length === 0) return null;
   return (
-    <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-      Filters: {parts.join(" • ")}
-    </Text>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+      {chips.map((label) => (
+        <View key={label} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+          <QuickChip label={label} onPress={onPress} />
+        </View>
+      ))}
+    </View>
   );
 }
 

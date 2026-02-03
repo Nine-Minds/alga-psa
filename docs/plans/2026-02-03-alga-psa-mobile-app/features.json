@@ -1146,7 +1146,7 @@
   {
     "id": "F144",
     "description": "[Mobile:Tickets:List] Implement List:UX - filter chip summary bar",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
