@@ -260,7 +260,7 @@
   {
     "id": "F044",
     "description": "Register SlaTicketWorkflow in Temporal worker workflow list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
