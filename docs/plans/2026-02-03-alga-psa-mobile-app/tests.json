@@ -1346,7 +1346,7 @@
   {
     "id": "T169",
     "description": "E2E: Implement ticket detail - scroll-to-latest comment quick action (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
