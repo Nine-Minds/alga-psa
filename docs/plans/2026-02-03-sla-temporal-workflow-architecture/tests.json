@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "Unit: SlaTicketWorkflow completeResolution signal terminates workflow with success",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
