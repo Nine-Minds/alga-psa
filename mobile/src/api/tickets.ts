@@ -53,6 +53,9 @@ export type TicketComment = {
   is_internal?: boolean;
   created_by_name?: string | null;
   created_at?: string | null;
+  kind?: "comment" | "event";
+  event_type?: string | null;
+  event_text?: string | null;
 };
 
 export type TicketStatus = {

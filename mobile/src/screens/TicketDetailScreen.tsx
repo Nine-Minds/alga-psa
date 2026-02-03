@@ -1392,20 +1392,31 @@ function CommentsSection({
         <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.mutedText }}>No comments.</Text>
       ) : (
         <View style={{ marginTop: spacing.sm }}>
-          {comments.slice(0, visibleCount).map((c, idx) => (
-            <View key={c.comment_id ?? String(idx)} style={{ marginTop: idx === 0 ? 0 : spacing.md }}>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
-                <Text style={{ ...typography.caption, color: colors.mutedText }}>
-                  {c.created_by_name ?? "Unknown"} • {formatDateTimeWithRelative(c.created_at)}
+          {comments.slice(0, visibleCount).map((c, idx) => {
+            const kind = (c as any).kind as TicketComment["kind"] | undefined;
+            const eventType = (c as any).event_type as TicketComment["event_type"] | undefined;
+            const isSystemEvent = kind === "event" || typeof eventType === "string";
+            const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${c.comment_text}` : c.comment_text);
+
+            return (
+              <View key={c.comment_id ?? String(idx)} style={{ marginTop: idx === 0 ? 0 : spacing.md }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
+                  <Text style={{ ...typography.caption, color: colors.mutedText }}>
+                    {c.created_by_name ?? "Unknown"} • {formatDateTimeWithRelative(c.created_at)}
+                  </Text>
+                  <View style={{ width: spacing.sm }} />
+                  {isSystemEvent ? (
+                    <Badge label="Event" tone="neutral" />
+                  ) : (
+                    <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
+                  )}
+                </View>
+                <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: isSystemEvent ? "italic" : "normal" }}>
+                  {isSystemEvent ? eventText : c.comment_text}
                 </Text>
-                <View style={{ width: spacing.sm }} />
-                <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
               </View>
-              <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
-                {c.comment_text}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
 
           {visibleCount < comments.length ? (
             <View style={{ marginTop: spacing.md }}>

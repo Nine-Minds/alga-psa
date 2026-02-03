@@ -1282,7 +1282,7 @@
   {
     "id": "F161",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - render system events (status/assignee changes) distinctly (if present)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
