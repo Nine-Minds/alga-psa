@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Unit: checkAndEscalate activity calls escalationService.checkEscalationNeeded()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
