@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "Unit: updateSlaStatus activity updates ticket sla_response_met field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
