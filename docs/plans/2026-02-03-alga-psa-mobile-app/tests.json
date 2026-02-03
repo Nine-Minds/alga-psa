@@ -490,7 +490,7 @@
   {
     "id": "T062",
     "description": "E2E: Handle 404/403 states with friendly UX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
