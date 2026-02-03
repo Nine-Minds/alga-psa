@@ -73,6 +73,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA ticket workflow initialization and input coverage (T012-T024)
 - (2026-02-03) Tests: SLA workflow initializes with input parameters (T012)
 - (2026-02-03) Tests: SLA workflow initial state phase and thresholds (T013)
+- (2026-02-03) Tests: SLA workflow threshold calculations include 50% (T014)
 
 ## Discoveries / Constraints
 
