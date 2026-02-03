@@ -103,3 +103,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F097 documented rollout checklist + rollback plan in `docs/plans/2026-02-03-alga-psa-mobile-app/ROLLOUT_PLAN.md`.
 - 2026-02-03: F098 implemented `/auth/mobile/handoff` as a route handler that issues a short-lived OTT for signed-in internal users and redirects back to the app deep link with `ott` + `state`.
 - 2026-02-03: F099 added persisted OTT storage via `mobile_auth_otts` (hashed token, tenant/user binding, expiry, single-use via `used_at`).
+- 2026-02-03: F100 implemented OTT exchange and mobile refresh/revoke endpoints (`/api/v1/mobile/auth/*`) issuing short-lived API keys + rotating refresh tokens stored hashed in `mobile_refresh_tokens`.

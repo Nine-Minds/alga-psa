@@ -794,7 +794,7 @@
   {
     "id": "F100",
     "description": "[Server:Mobile Auth] Add API endpoint to exchange OTT for mobile API credential (short-lived) and refresh token/rotation mechanism",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
