@@ -22,6 +22,7 @@
 
 import { Knex } from 'knex';
 import { SlaPauseReason } from '../types';
+import { SlaBackendFactory } from './backends/SlaBackendFactory';
 
 /**
  * Result of a pause/resume operation
@@ -54,7 +55,8 @@ export async function pauseSla(
   tenant: string,
   ticketId: string,
   reason: SlaPauseReason,
-  triggeredBy?: string
+  triggeredBy?: string,
+  options?: { skipBackend?: boolean }
 ): Promise<PauseResult> {
   try {
     // Get current ticket state
@@ -93,6 +95,15 @@ export async function pauseSla(
       triggered_by: triggeredBy
     });
 
+    if (!options?.skipBackend) {
+      try {
+        const backend = await SlaBackendFactory.getBackend();
+        await backend.pauseSla(ticketId, reason);
+      } catch (error) {
+        console.warn('Failed to pause SLA backend:', error);
+      }
+    }
+
     return { success: true, was_paused: false, is_now_paused: true };
   } catch (error) {
     console.error('Error pausing SLA:', error);
@@ -123,7 +134,8 @@ export async function resumeSla(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  triggeredBy?: string
+  triggeredBy?: string,
+  options?: { skipBackend?: boolean }
 ): Promise<PauseResult> {
   try {
     // Get current ticket state
@@ -168,6 +180,15 @@ export async function resumeSla(
       status_id: ticket.status_id,
       triggered_by: triggeredBy
     });
+
+    if (!options?.skipBackend) {
+      try {
+        const backend = await SlaBackendFactory.getBackend();
+        await backend.resumeSla(ticketId);
+      } catch (error) {
+        console.warn('Failed to resume SLA backend:', error);
+      }
+    }
 
     return {
       success: true,

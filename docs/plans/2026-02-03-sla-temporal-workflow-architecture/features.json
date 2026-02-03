@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Modify slaPauseService.pauseSla() to call backend.pauseSla() after updating ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {

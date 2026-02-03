@@ -41,6 +41,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) TemporalSlaBackend cancelSla sends cancel signal to workflow
 - (2026-02-03) TemporalSlaBackend getSlaStatus queries workflow state via getState
 - (2026-02-03) slaService.startSlaForTicket now triggers backend.startSlaTracking after recording SLA start
+- (2026-02-03) slaPauseService pause/resume now signal SLA backend unless skipBackend is set
 
 ## Discoveries / Constraints
 
