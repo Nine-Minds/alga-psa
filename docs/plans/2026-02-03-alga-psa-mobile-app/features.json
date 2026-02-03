@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "[Mobile:Settings] Add \u201clogout\u201d action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:UX / UI Notes"
     ]

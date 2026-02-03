@@ -9,13 +9,14 @@ import { clearTicketsCache } from "../cache/ticketsCache";
 
 export function SettingsScreen() {
   const config = getAppConfig();
-  const { session } = useAuth();
+  const { session, logout } = useAuth();
   const version = Application.nativeApplicationVersion ?? "unknown";
   const build = Application.nativeBuildVersion ?? "unknown";
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState<boolean | null>(null);
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricBusy, setBiometricBusy] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -80,6 +81,34 @@ export function SettingsScreen() {
         <Row label="User" value={session?.user?.email ?? session?.user?.name ?? session?.user?.id ?? "—"} />
         <View style={{ height: spacing.sm }} />
         <Row label="Tenant" value={session?.tenantId ?? "—"} />
+        <View style={{ height: spacing.sm }} />
+        <ToggleRow
+          label="Logout"
+          value="Sign out"
+          disabled={logoutBusy || !session}
+          onPress={() => {
+            Alert.alert("Sign out?", "You will need to sign in again to access tickets.", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Sign out",
+                style: "destructive",
+                onPress: () => {
+                  void (async () => {
+                    if (logoutBusy) return;
+                    setLogoutBusy(true);
+                    try {
+                      await logout();
+                    } catch {
+                      Alert.alert("Logout failed", "Unable to sign out. Please try again.");
+                    } finally {
+                      setLogoutBusy(false);
+                    }
+                  })();
+                },
+              },
+            ]);
+          }}
+        />
       </View>
 
       <View style={{ marginTop: spacing.lg }}>
