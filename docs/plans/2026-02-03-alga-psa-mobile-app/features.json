@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "[Mobile:Tickets:List] Render status and priority badges with accessible contrast",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

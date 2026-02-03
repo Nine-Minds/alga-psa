@@ -44,3 +44,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F038 implemented Tickets list with paginated fetch (`GET /api/v1/tickets?page=&limit=`) and infinite scroll; mobile uses `x-api-key` header (session access token) for API v1.
 - 2026-02-03: F039 wired pull-to-refresh to reload the first tickets page and replace existing list results.
 - 2026-02-03: F040 ticket list rows now render ticket number, title, status, priority, assignee, client, and updated date.
+- 2026-02-03: F041 added accessible status/priority badges to ticket list rows (high-contrast pill badges).

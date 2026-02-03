@@ -21,6 +21,7 @@ export type TicketListItem = {
   ticket_number: string;
   title: string;
   status_name?: string | null;
+  status_is_closed?: boolean | null;
   priority_name?: string | null;
   assigned_to_name?: string | null;
   client_name?: string | null;
@@ -56,4 +57,3 @@ export function listTickets(
     },
   });
 }
-

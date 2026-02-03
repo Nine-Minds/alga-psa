@@ -14,6 +14,7 @@ import { listTickets, type TicketListItem } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { logger } from "../logging/logger";
+import { Badge } from "../ui/components/Badge";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -156,6 +157,8 @@ export function TicketsListScreen({ navigation }: Props) {
 function TicketRow({ item, onPress }: { item: TicketListItem; onPress: () => void }) {
   const updated = item.updated_at ?? item.entered_at;
   const updatedLabel = updated ? new Date(updated).toLocaleDateString() : "";
+  const status = item.status_name ?? "Unknown";
+  const priority = item.priority_name ?? null;
 
   return (
     <Pressable
@@ -180,11 +183,28 @@ function TicketRow({ item, onPress }: { item: TicketListItem; onPress: () => voi
       <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }} numberOfLines={2}>
         {item.title}
       </Text>
-      <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-        {item.status_name ?? "—"}
-        {item.priority_name ? ` • ${item.priority_name}` : ""}
-        {item.assigned_to_name ? ` • ${item.assigned_to_name}` : ""}
-      </Text>
+
+      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+        <Badge label={status} tone={item.status_is_closed ? "neutral" : "info"} />
+        {priority ? (
+          <View style={{ width: spacing.sm }} />
+        ) : null}
+        {priority ? <Badge label={priority} tone={priorityTone(priority)} /> : null}
+      </View>
+
+      {item.assigned_to_name ? (
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+          Assigned to {item.assigned_to_name}
+        </Text>
+      ) : null}
     </Pressable>
   );
+}
+
+function priorityTone(priorityName: string): "neutral" | "success" | "warning" | "danger" {
+  const normalized = priorityName.trim().toLowerCase();
+  if (normalized.includes("high") || normalized.includes("urgent") || normalized.includes("critical")) return "danger";
+  if (normalized.includes("medium") || normalized.includes("normal")) return "warning";
+  if (normalized.includes("low")) return "success";
+  return "neutral";
 }
