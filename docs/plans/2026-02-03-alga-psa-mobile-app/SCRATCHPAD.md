@@ -349,3 +349,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T121 marked API error mapping as covered by unit tests (mobile/src/api/client.errors.test.ts).
 - 2026-02-03: T122 added a unit test covering the global 401 retry behavior via `onAuthError` (mobile/src/api/client.authRetry401.test.ts).
 - 2026-02-03: T123 marked 403/no-access UX as covered by manual QA checklist and 403 error mapping tests (MANUAL_QA_CHECKLIST.md, mobile/src/api/client.errors.test.ts).
+- 2026-02-03: T124 added a unit test to ensure aborted requests return a `canceled` API error kind (mobile/src/api/client.cancel.test.ts).

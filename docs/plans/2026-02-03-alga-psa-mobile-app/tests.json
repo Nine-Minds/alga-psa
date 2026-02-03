@@ -986,7 +986,7 @@
   {
     "id": "T124",
     "description": "Unit: Implement request cancellation for superseded ticket search queries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
