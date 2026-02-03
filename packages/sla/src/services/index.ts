@@ -65,5 +65,6 @@ export {
   type EscalationResult
 } from './escalationService';
 
-// SLA backend interface
+// SLA backend interface and factory
 export type { ISlaBackend } from './backends';
+export { SlaBackendFactory, PgBossSlaBackend } from './backends';
