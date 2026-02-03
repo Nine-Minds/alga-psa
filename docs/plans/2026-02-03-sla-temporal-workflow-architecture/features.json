@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "SlaTicketWorkflow accepts input: ticketId, tenantId, policyTargets, businessHoursSchedule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
