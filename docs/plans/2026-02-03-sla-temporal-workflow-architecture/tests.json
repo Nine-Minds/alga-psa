@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "Unit: TemporalSlaBackend.completeSla('response') sends completeResponse signal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
