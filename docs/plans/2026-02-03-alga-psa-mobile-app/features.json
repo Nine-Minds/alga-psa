@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "[Mobile:Foundation] Add secure storage abstraction (Keychain/Keystore) for session secrets",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
