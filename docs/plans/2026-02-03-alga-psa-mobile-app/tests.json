@@ -482,7 +482,7 @@
   {
     "id": "T061",
     "description": "E2E: Support copy ticket id/number and “open in web” link-out",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
