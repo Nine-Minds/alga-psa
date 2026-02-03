@@ -682,7 +682,7 @@
   {
     "id": "T086",
     "description": "Unit: Add “logout” action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
