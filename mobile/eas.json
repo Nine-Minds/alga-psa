@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 8.0.0"
+  },
+  "build": {
+    "testflight": {
+      "ios": {
+        "distribution": "store"
+      }
+    },
+    "playInternal": {
+      "android": {
+        "distribution": "store"
+      }
+    }
+  },
+  "submit": {
+    "testflight": {
+      "ios": {
+        "ascAppId": "REPLACE_ME_ASC_APP_ID"
+      }
+    },
+    "playInternal": {
+      "android": {
+        "track": "internal"
+      }
+    }
+  }
+}
+

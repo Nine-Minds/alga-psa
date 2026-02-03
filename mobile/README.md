@@ -69,5 +69,18 @@ This repo currently uses Expo managed workflow. A typical path to internal distr
 2) Authenticate: `eas login`
 3) Configure project: `eas build:configure`
 4) Build:
-   - iOS: `eas build -p ios --profile preview`
-   - Android: `eas build -p android --profile preview`
+   - iOS (TestFlight): `eas build -p ios --profile testflight`
+   - Android (Play Internal): `eas build -p android --profile playInternal`
+
+### CI distribution (GitHub Actions)
+
+Workflow: `.github/workflows/mobile-distribute.yml` (manual trigger).
+
+Required repo secrets:
+
+- `EXPO_TOKEN` (Expo access token for EAS)
+
+Notes:
+
+- `mobile/app.json` defines the bundle identifiers/package names used by EAS builds.
+- `mobile/eas.json` includes placeholder submit configuration (e.g. `ascAppId`); replace with real values before using `eas submit`.

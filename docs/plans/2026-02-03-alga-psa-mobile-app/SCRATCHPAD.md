@@ -97,3 +97,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F091 centralized locale-aware date/time formatting in `mobile/src/ui/formatters/dateTime.ts` (including safe handling of `YYYY-MM-DD` date-only strings) and used it in ticket list + detail.
 - 2026-02-03: F092 documented mobile privacy review checklist + PII inventory in `docs/plans/2026-02-03-alga-psa-mobile-app/PRIVACY_REVIEW.md`.
 - 2026-02-03: F093 added basic observability via `analytics.trackEvent` for auth funnel events (sign-in/OTT exchange/refresh/logout) and API request failures (method + normalized path + status + error kind).
+- 2026-02-03: F094 added EAS build/submit profiles (`mobile/eas.json`) and a GitHub Actions workflow for TestFlight/Play internal distribution (`.github/workflows/mobile-distribute.yml`); set bundle/package ids in `mobile/app.json`.

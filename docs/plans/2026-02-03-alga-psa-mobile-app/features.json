@@ -746,7 +746,7 @@
   {
     "id": "F094",
     "description": "[Mobile:Release] Set up iOS TestFlight and Android internal testing pipelines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]
