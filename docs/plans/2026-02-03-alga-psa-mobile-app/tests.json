@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "E2E: Implement session refresh/rotation before expiry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
