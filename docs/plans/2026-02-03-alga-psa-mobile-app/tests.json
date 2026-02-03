@@ -562,7 +562,7 @@
   {
     "id": "T071",
     "description": "E2E: Implement status picker using server-provided allowed statuses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
