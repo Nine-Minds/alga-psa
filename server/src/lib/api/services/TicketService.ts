@@ -557,7 +557,11 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Get ticket comments
    */
-  async getTicketComments(ticketId: string, context: ServiceContext): Promise<any[]> {
+  async getTicketComments(
+    ticketId: string,
+    context: ServiceContext,
+    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc' }
+  ): Promise<any[]> {
     const { knex } = await this.getKnex();
 
     const comments = await knex('comments as tc')
@@ -577,7 +581,11 @@ export class TicketService extends BaseService<ITicket> {
         'tc.ticket_id': ticketId,
         'tc.tenant': context.tenant
       })
-      .orderBy('tc.created_at', 'asc');
+      .orderBy('tc.created_at', options?.order ?? 'asc')
+      .modify((query) => {
+        if (options?.offset !== undefined) query.offset(options.offset);
+        if (options?.limit !== undefined) query.limit(options.limit);
+      });
 
     // Map database fields to API response format
     return comments.map(comment => ({

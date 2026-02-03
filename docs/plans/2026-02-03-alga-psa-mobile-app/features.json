@@ -1602,7 +1602,7 @@
   {
     "id": "F201",
     "description": "[Server:Mobile Auth] Implement server mobile auth - ticket comments endpoint supports pagination and ordering",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

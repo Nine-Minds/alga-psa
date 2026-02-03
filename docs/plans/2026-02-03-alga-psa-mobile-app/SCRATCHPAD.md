@@ -205,3 +205,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F198 server ticket list supports the updated-since filter (`updated_from`) used by mobile list queries.
 - 2026-02-03: F199 server ticket list supports assignee filters used by mobile (`assigned_to=<me>` and `has_assignment=false` for unassigned).
 - 2026-02-03: F200 server ticket detail endpoint includes required mobile fields (header + key fields + attributes) and remains permission-checked via API key RBAC.
+- 2026-02-03: F201 server ticket comments endpoint now supports pagination and ordering via optional `limit`, `offset`, and `order` query params (defaults unchanged).
