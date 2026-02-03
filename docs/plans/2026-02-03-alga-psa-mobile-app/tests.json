@@ -1466,7 +1466,7 @@
   {
     "id": "T184",
     "description": "E2E: Implement updates - priority picker disables invalid choices (if server provides)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ]
