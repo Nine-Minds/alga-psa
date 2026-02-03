@@ -1362,7 +1362,7 @@
   {
     "id": "F171",
     "description": "[Mobile:Tickets:Updates] Implement updates - draft persistence per ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
