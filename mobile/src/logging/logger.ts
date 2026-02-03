@@ -21,6 +21,8 @@ const REDACTED = "[REDACTED]";
 const REDACT_KEYS = new Set([
   "authorization",
   "token",
+  "ott",
+  "state",
   "accessToken",
   "refreshToken",
   "idToken",
@@ -36,6 +38,8 @@ function redactString(value: string): string {
   out = out.replace(/Bearer\\s+[^\\s]+/gi, `Bearer ${REDACTED}`);
   out = out.replace(/refresh[_-]?token\\s*[:=]\\s*[^\\s]+/gi, `refresh_token=${REDACTED}`);
   out = out.replace(/access[_-]?token\\s*[:=]\\s*[^\\s]+/gi, `access_token=${REDACTED}`);
+  out = out.replace(/ott\\s*[:=]\\s*[^\\s&]+/gi, `ott=${REDACTED}`);
+  out = out.replace(/state\\s*[:=]\\s*[^\\s&]+/gi, `state=${REDACTED}`);
   return out;
 }
 
@@ -90,4 +94,3 @@ export const logger = {
     console.error(message, meta === undefined ? undefined : redact(meta));
   },
 };
-

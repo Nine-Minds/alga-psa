@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "[Mobile:Auth] Ensure tokens are never logged or sent to crash reports",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
