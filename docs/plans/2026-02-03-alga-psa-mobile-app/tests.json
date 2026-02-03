@@ -1714,7 +1714,7 @@
   {
     "id": "T215",
     "description": "Checklist: Release - screenshot capture plan for App Store / Play Store",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]
