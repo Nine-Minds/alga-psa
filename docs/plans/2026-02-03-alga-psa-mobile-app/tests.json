@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Unit: Create React Native app (iOS + Android) in repo with reproducible dev/build workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
