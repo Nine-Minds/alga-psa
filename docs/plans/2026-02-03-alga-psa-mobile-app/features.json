@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "[Mobile:Foundation] Add typed REST API client wrapper with consistent error mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
