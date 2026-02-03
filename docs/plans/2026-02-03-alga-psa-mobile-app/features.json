@@ -1034,7 +1034,7 @@
   {
     "id": "F130",
     "description": "[Mobile:Foundation] Implement app state restoration for last-viewed tab and last-opened ticket (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

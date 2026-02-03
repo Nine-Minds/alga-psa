@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
+import type { InitialState } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
 import { RootNavigator } from "../navigation/RootNavigator";
@@ -17,6 +18,18 @@ import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
 import { getBiometricGateEnabled } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
+import { getSecureJson, setSecureJson } from "../storage/secureStorage";
+
+function getActiveRouteName(state: any): string | null {
+  let current: any = state;
+  while (current && Array.isArray(current.routes) && typeof current.index === "number") {
+    const route = current.routes[current.index];
+    if (!route) return null;
+    if (route.state) current = route.state;
+    else return typeof route.name === "string" ? route.name : null;
+  }
+  return null;
+}
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
@@ -24,8 +37,11 @@ export function AppRoot() {
   const [session, setSessionState] = useState<MobileSession | null>(null);
   const sessionRef = useRef<MobileSession | null>(null);
   const [isBiometricLocked, setIsBiometricLocked] = useState(false);
+  const [navInitialState, setNavInitialState] = useState<InitialState | undefined>(undefined);
+  const [navStateLoaded, setNavStateLoaded] = useState(false);
   const network = useNetworkStatus();
   const refreshInFlight = useRef(false);
+  const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const baseUrl = config.ok ? config.baseUrl : null;
 
@@ -71,6 +87,35 @@ export function AppRoot() {
       canceled = true;
     };
   }, [config]);
+
+  useEffect(() => {
+    let canceled = false;
+    const userId = session?.user?.id;
+
+    if (navPersistHandle.current) {
+      clearTimeout(navPersistHandle.current);
+      navPersistHandle.current = null;
+    }
+
+    const run = async () => {
+      if (!userId) {
+        setNavInitialState(undefined);
+        setNavStateLoaded(true);
+        return;
+      }
+
+      setNavStateLoaded(false);
+      const stored = await getSecureJson<InitialState>(`alga.mobile.navState.${userId}`);
+      if (canceled) return;
+      setNavInitialState(stored ?? undefined);
+      setNavStateLoaded(true);
+    };
+
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [session?.user?.id]);
 
   const refreshSession = useCallback(async (): Promise<string | null> => {
     const currentSession = sessionRef.current;
@@ -188,6 +233,10 @@ export function AppRoot() {
     return <LoadingState message="Loading…" />;
   }
 
+  if (!navStateLoaded) {
+    return <LoadingState message="Restoring state…" />;
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -203,7 +252,21 @@ export function AppRoot() {
         <View style={{ flex: 1 }}>
           {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
           <View style={{ flex: 1 }}>
-            <NavigationContainer key={session ? "signed-in" : "signed-out"} linking={linking}>
+            <NavigationContainer
+              key={session ? "signed-in" : "signed-out"}
+              linking={linking}
+              initialState={session ? navInitialState : undefined}
+              onStateChange={(state) => {
+                const userId = session?.user?.id;
+                if (!userId || !state) return;
+                const active = getActiveRouteName(state);
+                if (active === "SignIn" || active === "AuthCallback") return;
+                if (navPersistHandle.current) clearTimeout(navPersistHandle.current);
+                navPersistHandle.current = setTimeout(() => {
+                  void setSecureJson(`alga.mobile.navState.${userId}`, state);
+                }, 500);
+              }}
+            >
               <RootNavigator isSignedIn={session !== null} />
             </NavigationContainer>
           </View>
