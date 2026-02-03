@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "Handle ticket deletion by calling backend.cancelSla() to terminate any running workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
