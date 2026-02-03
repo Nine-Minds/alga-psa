@@ -299,6 +299,7 @@ function TicketDetailBody({
       });
       if (!res.ok) {
         if (res.error.kind === "http" && res.status === 409) {
+          setPendingStatusId(null);
           setStatusUpdateError("Ticket changed elsewhere. Refresh and try again.");
           Alert.alert(
             "Ticket updated elsewhere",
@@ -316,14 +317,17 @@ function TicketDetailBody({
           return;
         }
         if (res.error.kind === "permission") {
+          setPendingStatusId(null);
           setStatusUpdateError("You don’t have permission to change this ticket’s status.");
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
+          setPendingStatusId(null);
           setStatusUpdateError(msg ?? "Status change was rejected by the server.");
           return;
         }
+        setPendingStatusId(null);
         setStatusUpdateError("Unable to change status. Please try again.");
         return;
       }

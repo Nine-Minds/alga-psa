@@ -1306,7 +1306,7 @@
   {
     "id": "F164",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - optimistic UI for status change with rollback on failure",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
