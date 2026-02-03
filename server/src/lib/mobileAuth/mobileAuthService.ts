@@ -2,11 +2,20 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { getConnection } from '../db/db';
 import { ApiKeyService } from '../services/apiKeyService';
-import { UserSession } from '@alga-psa/db/models/UserSession';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
+
+let connectionFactory = getConnection;
+
+export function __setMobileAuthConnectionFactoryForTests(factory: typeof getConnection): void {
+  connectionFactory = factory;
+}
+
+export function __resetMobileAuthTestState(): void {
+  connectionFactory = getConnection;
+}
 
 export const mobileDeviceSchema = z
   .object({
@@ -89,7 +98,7 @@ export async function issueMobileOtt(input: {
   const ottHash = sha256(ott);
   const expiresAt = new Date(Date.now() + config.ottTtlSec * 1000);
 
-  const knex = await getConnection(null);
+  const knex = await connectionFactory(null);
   const [row] = await knex('mobile_auth_otts')
     .insert({
       tenant: input.tenantId,
@@ -132,7 +141,7 @@ async function consumeMobileOtt(input: {
   state: string;
   deviceId?: string;
 }): Promise<ConsumedOtt | null> {
-  const knex = await getConnection(null);
+  const knex = await connectionFactory(null);
   const ottHash = sha256(input.ott);
 
   const rows = await knex('mobile_auth_otts')
@@ -163,7 +172,7 @@ type RefreshTokenRow = {
 };
 
 async function getActiveRefreshTokenByHash(hash: string): Promise<RefreshTokenRow | null> {
-  const knex = await getConnection(null);
+  const knex = await connectionFactory(null);
   const row = await knex('mobile_refresh_tokens')
     .where({ token_hash: hash })
     .whereNull('revoked_at')
@@ -182,7 +191,7 @@ async function insertRefreshToken(input: {
 }): Promise<{ token: string; id: string }> {
   const token = generateOpaqueToken(32);
   const tokenHash = sha256(token);
-  const knex = await getConnection(null);
+  const knex = await connectionFactory(null);
 
   const [row] = await knex('mobile_refresh_tokens')
     .insert({
@@ -206,7 +215,7 @@ async function insertRefreshToken(input: {
 }
 
 async function revokeRefreshToken(input: { id: string; replacedById?: string | null }): Promise<void> {
-  const knex = await getConnection(null);
+  const knex = await connectionFactory(null);
   await knex('mobile_refresh_tokens')
     .where({ mobile_refresh_token_id: input.id })
     .update({
@@ -217,7 +226,7 @@ async function revokeRefreshToken(input: { id: string; replacedById?: string | n
 }
 
 async function setRefreshTokenLastUsed(id: string): Promise<void> {
-  const knex = await getConnection(null);
+  const knex = await connectionFactory(null);
   await knex('mobile_refresh_tokens')
     .where({ mobile_refresh_token_id: id })
     .update({ last_used_at: knex.fn.now() });
@@ -246,7 +255,11 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
   const userId = consumed.user_id;
 
   if (consumed.session_id) {
-    const session = await UserSession.findById(tenantId, consumed.session_id);
+    const tenantKnex = await connectionFactory(tenantId);
+    const session = await tenantKnex('sessions')
+      .where({ tenant: tenantId, session_id: consumed.session_id })
+      .first();
+
     if (!session || session.revoked_at || new Date(session.expires_at).getTime() <= Date.now()) {
       throw new UnauthorizedError('Login session is no longer valid');
     }
@@ -422,7 +435,7 @@ async function safeAuditLog(input: {
 }): Promise<void> {
   try {
     await runWithTenant(input.tenantId, async () => {
-      const knex = await getConnection(input.tenantId);
+      const knex = await connectionFactory(input.tenantId);
       await auditLog(knex, {
         userId: input.userId,
         operation: input.operation,

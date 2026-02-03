@@ -882,7 +882,7 @@
   {
     "id": "F111",
     "description": "[Server:Mobile Auth] Add tests for OTT single-use + expiry and credential rotation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
