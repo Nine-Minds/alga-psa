@@ -938,7 +938,7 @@
   {
     "id": "T118",
     "description": "Deferred: Add base URL selection and self-hosted domain onboarding UX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
