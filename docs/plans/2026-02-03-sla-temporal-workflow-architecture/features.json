@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "calculateNextWakeTime accounts for accumulated pause minutes when computing remaining time",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {
