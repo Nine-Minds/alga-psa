@@ -446,7 +446,7 @@
   {
     "id": "T075",
     "description": "Unit: SlaTicketWorkflow survives worker restart and continues from correct state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   }
 ]
