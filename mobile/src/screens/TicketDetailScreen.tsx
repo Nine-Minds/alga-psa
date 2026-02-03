@@ -7,7 +7,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
 import { Badge } from "../ui/components/Badge";
@@ -90,6 +90,7 @@ function TicketDetailBody({
   const [timeEntryNotes, setTimeEntryNotes] = useState("");
   const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -156,6 +157,10 @@ function TicketDetailBody({
   const refreshAll = useCallback(async () => {
     await Promise.all([fetchTicket(), fetchComments()]);
   }, [fetchComments, fetchTicket]);
+
+  const scrollToLatest = useCallback(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, []);
 
   const { refreshing, refresh } = usePullToRefresh(refreshAll);
 
@@ -598,13 +603,14 @@ function TicketDetailBody({
     }
   };
 
-  return (
-    <>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: spacing.lg }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      >
+      return (
+        <>
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1, backgroundColor: colors.background }}
+            contentContainerStyle={{ padding: spacing.lg }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+          >
         {error ? (
           <View
             style={{
@@ -770,6 +776,7 @@ function TicketDetailBody({
             comments={comments}
             visibleCount={commentsVisibleCount}
             onLoadMore={() => setCommentsVisibleCount((c) => c + 20)}
+            onJumpToLatest={scrollToLatest}
             error={commentsError}
           />
           <View style={{ height: spacing.sm }} />
@@ -1404,11 +1411,13 @@ function CommentsSection({
   comments,
   visibleCount,
   onLoadMore,
+  onJumpToLatest,
   error,
 }: {
   comments: TicketComment[];
   visibleCount: number;
   onLoadMore: () => void;
+  onJumpToLatest: () => void;
   error: string | null;
 }) {
   const startIndex = Math.max(0, comments.length - visibleCount);
@@ -1425,9 +1434,21 @@ function CommentsSection({
         borderRadius: 10,
       }}
     >
-      <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
-        Comments
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
+          Comments
+        </Text>
+        {comments.length > 0 ? (
+          <Pressable
+            onPress={onJumpToLatest}
+            accessibilityRole="button"
+            accessibilityLabel="Jump to latest comment"
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+          >
+            <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>Latest</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       {error ? (
         <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.danger }}>{error}</Text>
