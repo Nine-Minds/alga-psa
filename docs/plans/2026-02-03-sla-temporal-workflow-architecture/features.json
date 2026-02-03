@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Implement PgBossSlaBackend that delegates to existing slaPauseService and slaService methods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
