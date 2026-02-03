@@ -347,3 +347,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T106 marked as covered: audit logs recorded for mobile auth events (OTT issued/exchanged/refresh/revoke).
 - 2026-02-03: T107 marked as covered: undefined
 - 2026-02-03: T107 marked as covered: ticket API contract documented (API_CONTRACT.md) and endpoints are implemented.
+- 2026-02-03: T108 marked as covered: undefined
+- 2026-02-03: T108 marked as covered: ticket comment create supports is_internal (public vs internal).

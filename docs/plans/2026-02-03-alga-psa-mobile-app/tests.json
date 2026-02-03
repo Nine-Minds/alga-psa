@@ -858,7 +858,7 @@
   {
     "id": "T108",
     "description": "Integration: Ensure ticket comment create API supports internal/public visibility flag",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
