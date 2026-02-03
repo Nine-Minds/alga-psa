@@ -1322,7 +1322,7 @@
   {
     "id": "F166",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - consistent date formatting per locale",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
