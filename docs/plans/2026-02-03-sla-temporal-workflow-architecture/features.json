@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "SlaTicketWorkflow handles 'completeResolution' signal by marking resolution complete and terminating workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

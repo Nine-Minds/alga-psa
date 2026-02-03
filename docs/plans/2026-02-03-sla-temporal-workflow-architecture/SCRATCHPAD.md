@@ -23,6 +23,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Pause signal sets pauseStartedAt and pauses timers via condition wake-up
 - (2026-02-03) Resume signal clears pauseStartedAt, increments totalPauseMinutes, and triggers recalculation on next loop
 - (2026-02-03) Complete response signal sets response complete and transitions workflow to resolution phase
+- (2026-02-03) Complete resolution signal marks workflow completed and allows termination
 
 ## Discoveries / Constraints
 
