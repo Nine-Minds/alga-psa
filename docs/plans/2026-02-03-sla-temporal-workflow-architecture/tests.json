@@ -338,7 +338,7 @@
   {
     "id": "T057",
     "description": "Integration: Workflow checks escalation at each threshold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F042"]
   },
   {
