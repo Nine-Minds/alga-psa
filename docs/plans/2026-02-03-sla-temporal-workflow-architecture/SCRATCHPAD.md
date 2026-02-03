@@ -86,6 +86,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA workflow getState query returns status/remaining time (T024)
 - (2026-02-03) Tests: calculateNextWakeTime weekday schedule (T025)
 - (2026-02-03) Tests: calculateNextWakeTime advances across weekend (T026)
+- (2026-02-03) Tests: calculateNextWakeTime skips holidays (T027)
 
 ## Discoveries / Constraints
 
