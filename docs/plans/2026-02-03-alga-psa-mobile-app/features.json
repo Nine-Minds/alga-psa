@@ -1626,7 +1626,7 @@
   {
     "id": "F204",
     "description": "[Server:Mobile Auth] Implement server mobile auth - time entry create endpoint validates ticket association and permissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

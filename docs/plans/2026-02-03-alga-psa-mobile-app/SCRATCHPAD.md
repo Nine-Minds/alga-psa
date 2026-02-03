@@ -208,3 +208,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F201 server ticket comments endpoint now supports pagination and ordering via optional `limit`, `offset`, and `order` query params (defaults unchanged).
 - 2026-02-03: F202 server ticket status update endpoint validates `status_id` (must exist) and returns the updated ticket record (used by mobile to refresh header/list badges).
 - 2026-02-03: F203 server ticket assignment update supports setting `assigned_to` directly (including assign-to-self) via authenticated API key without additional user lookup endpoints.
+- 2026-02-03: F204 server time entry create now validates `work_item_type=ticket` requires `work_item_id`, enforces `ticket:read` permission, and rejects non-existent tickets to prevent attaching time entries to unauthorized/invalid tickets.
