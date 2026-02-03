@@ -1194,7 +1194,7 @@
   {
     "id": "T150",
     "description": "E2E: Implement List:Errors - 5xx retry with backoff",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150"
     ]
