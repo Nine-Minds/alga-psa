@@ -882,7 +882,7 @@
   {
     "id": "T111",
     "description": "Integration: Add tests for OTT single-use + expiry and credential rotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
