@@ -1,8 +1,43 @@
-import { Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Linking, Text, View } from "react-native";
+import { getAppConfig } from "../config/appConfig";
+import { logger } from "../logging/logger";
 import { colors, spacing, typography } from "../ui/theme";
 import { t } from "../i18n/i18n";
+import { PrimaryButton } from "../ui/components/PrimaryButton";
 
 export function SignInScreen() {
+  const config = useMemo(() => getAppConfig(), []);
+  const [status, setStatus] = useState<"idle" | "opening">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const loginUrl = useMemo(() => {
+    if (!config.ok) return null;
+    return new URL("/auth/signin", config.baseUrl).toString();
+  }, [config]);
+
+  const onSignIn = async () => {
+    if (!loginUrl) {
+      setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
+      return;
+    }
+    setError(null);
+    setStatus("opening");
+    try {
+      const canOpen = await Linking.canOpenURL(loginUrl);
+      if (!canOpen) {
+        setError("Unable to open browser for sign-in.");
+        return;
+      }
+      await Linking.openURL(loginUrl);
+    } catch (e) {
+      logger.error("Failed to open sign-in URL", { error: e });
+      setError("Failed to open browser. Please try again.");
+    } finally {
+      setStatus("idle");
+    }
+  };
+
   return (
     <View
       style={{
@@ -16,9 +51,45 @@ export function SignInScreen() {
         {t("app.title")}
       </Text>
       <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
-        Sign-in flow is not implemented yet. This screen will launch the system browser to the
-        hosted Alga login and handle the deep link callback.
+        Sign in using your Alga hosted account. We’ll open the system browser to complete login.
       </Text>
+
+      <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+        <PrimaryButton
+          onPress={() => void onSignIn()}
+          disabled={status === "opening" || !loginUrl}
+          accessibilityLabel={t("auth.signIn.cta")}
+          accessibilityHint="Opens the browser to complete sign-in."
+        >
+          {status === "opening" ? t("auth.signIn.opening") : t("auth.signIn.cta")}
+        </PrimaryButton>
+      </View>
+
+      {loginUrl ? (
+        <Text
+          style={{
+            ...typography.caption,
+            marginTop: spacing.md,
+            textAlign: "center",
+            color: colors.mutedText,
+          }}
+        >
+          {loginUrl}
+        </Text>
+      ) : null}
+
+      {error ? (
+        <Text
+          style={{
+            ...typography.body,
+            marginTop: spacing.md,
+            textAlign: "center",
+            color: colors.danger,
+          }}
+        >
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

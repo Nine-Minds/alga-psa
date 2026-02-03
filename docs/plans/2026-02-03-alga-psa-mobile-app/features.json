@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "[Mobile:Auth] Implement sign-in screen that launches system browser to Alga hosted login",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

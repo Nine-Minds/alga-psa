@@ -6,6 +6,8 @@ const messages: Record<Locale, Record<string, string>> = {
   "en-US": {
     "app.title": "Alga PSA Mobile",
     "auth.signIn.title": "Sign in",
+    "auth.signIn.cta": "Continue in browser",
+    "auth.signIn.opening": "Opening…",
     "tickets.title": "Tickets",
     "settings.title": "Settings",
   },
@@ -21,4 +23,3 @@ const locale = resolveLocale();
 export function t(key: string): string {
   return messages[locale][key] ?? messages["en-US"][key] ?? key;
 }
-
