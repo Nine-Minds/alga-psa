@@ -355,3 +355,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T127 added unit tests covering deep link allowlist filtering (known paths allowed, unexpected paths rejected) (`mobile/src/navigation/linking.security.test.ts`).
 - 2026-02-03: T128 marked hosted URL builder as covered by unit tests (mobile/src/urls/hostedUrls.test.ts).
 - 2026-02-03: T129 marked clipboard redaction helper as covered by unit tests (mobile/src/clipboard/clipboard.test.ts).
+- 2026-02-03: T130 added unit tests for determining the active route name used by navigation state persistence (`mobile/src/navigation/activeRoute.ts`, `mobile/src/navigation/activeRoute.test.ts`).

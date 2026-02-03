@@ -1034,7 +1034,7 @@
   {
     "id": "T130",
     "description": "Unit: Implement app state restoration for last-viewed tab and last-opened ticket (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F130"
     ]
