@@ -52,6 +52,7 @@ function TicketDetailBody({
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
   const [commentDraft, setCommentDraft] = useState("");
+  const [commentIsInternal, setCommentIsInternal] = useState(true);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
 
@@ -141,7 +142,7 @@ function TicketDetailBody({
         apiKey: session.accessToken,
         ticketId,
         comment_text: text,
-        is_internal: true,
+        is_internal: commentIsInternal,
       });
       if (!result.ok) {
         setCommentSendError("Unable to send comment. Please try again.");
@@ -224,6 +225,8 @@ function TicketDetailBody({
         <CommentComposer
           draft={commentDraft}
           onChangeDraft={setCommentDraft}
+          isInternal={commentIsInternal}
+          onChangeIsInternal={setCommentIsInternal}
           onSend={() => void sendComment()}
           sending={commentSending}
           error={commentSendError}
@@ -244,12 +247,16 @@ function TicketDetailBody({
 function CommentComposer({
   draft,
   onChangeDraft,
+  isInternal,
+  onChangeIsInternal,
   onSend,
   sending,
   error,
 }: {
   draft: string;
   onChangeDraft: (value: string) => void;
+  isInternal: boolean;
+  onChangeIsInternal: (value: boolean) => void;
   onSend: () => void;
   sending: boolean;
   error: string | null;
@@ -284,6 +291,12 @@ function CommentComposer({
           textAlignVertical: "top",
         }}
       />
+
+      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+        <ActionChip label={isInternal ? "Internal ✓" : "Internal"} onPress={() => onChangeIsInternal(true)} />
+        <View style={{ width: spacing.sm }} />
+        <ActionChip label={!isInternal ? "Public ✓" : "Public"} onPress={() => onChangeIsInternal(false)} />
+      </View>
       {error ? (
         <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
           {error}

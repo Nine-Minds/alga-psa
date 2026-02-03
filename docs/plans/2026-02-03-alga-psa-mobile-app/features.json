@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "[Mobile:Tickets:Updates] Support comment visibility selection (internal vs public)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
