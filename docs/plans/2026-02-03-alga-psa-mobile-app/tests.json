@@ -1098,7 +1098,7 @@
   {
     "id": "T138",
     "description": "E2E: Implement sign-in UX copy that clearly indicates “internal users only”",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138"
     ]
