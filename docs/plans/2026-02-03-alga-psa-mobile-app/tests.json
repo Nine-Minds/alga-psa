@@ -1314,7 +1314,7 @@
   {
     "id": "T165",
     "description": "E2E: Implement ticket detail - conflict resolution prompt on 409",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165"
     ]
