@@ -1450,7 +1450,7 @@
   {
     "id": "T182",
     "description": "E2E: Implement updates - include app version/device id headers on mutations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ]
