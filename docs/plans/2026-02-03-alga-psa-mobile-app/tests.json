@@ -250,7 +250,7 @@
   {
     "id": "T032",
     "description": "E2E: Record device/app metadata with session issue (for audit/analytics)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
