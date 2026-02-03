@@ -554,7 +554,7 @@
   {
     "id": "T070",
     "description": "E2E: Prevent duplicate submissions while in-flight",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
