@@ -1498,7 +1498,7 @@
   {
     "id": "F188",
     "description": "[Server:Mobile Auth] Implement server mobile auth - OTT includes nonce/state and is single-use",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
