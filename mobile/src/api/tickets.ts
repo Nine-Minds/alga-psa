@@ -80,6 +80,7 @@ export type ListTicketsParams = {
     assigned_to?: string;
     has_assignment?: boolean;
     priority_name?: string;
+    status_ids?: string;
     updated_from?: string;
   };
 };

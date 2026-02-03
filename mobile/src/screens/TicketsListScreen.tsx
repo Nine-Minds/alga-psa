@@ -9,8 +9,8 @@ import { useAppResume } from "../hooks/useAppResume";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
-import { createApiClient } from "../api";
-import { getTicketById, getTicketStats, listTickets, type TicketListItem, type TicketStats } from "../api/tickets";
+import { createApiClient, type ApiClient } from "../api";
+import { getTicketById, getTicketStats, getTicketStatuses, listTickets, type TicketListItem, type TicketStats, type TicketStatus } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
@@ -29,6 +29,7 @@ type Props = CompositeScreenProps<
 
 type TicketListFilters = {
   status: "any" | "open" | "closed";
+  statusIds: string[];
   assignee: "any" | "me" | "unassigned";
   priorityName: string;
   updatedSinceDays: number | null;
@@ -36,6 +37,7 @@ type TicketListFilters = {
 
 const DEFAULT_FILTERS: TicketListFilters = {
   status: "any",
+  statusIds: [],
   assignee: "any",
   priorityName: "",
   updatedSinceDays: null,
@@ -86,7 +88,10 @@ export function TicketsListScreen({ navigation }: Props) {
       }
       const saved = await getSecureJson<TicketListFilters>(`alga.mobile.tickets.filters.${userId}`);
       if (canceled) return;
-      if (saved) setFilters(saved);
+      if (saved) {
+        const statusIds = Array.isArray((saved as any).statusIds) ? ((saved as any).statusIds as string[]) : [];
+        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds });
+      }
       setFiltersLoaded(true);
     };
     void run();
@@ -109,8 +114,13 @@ export function TicketsListScreen({ navigation }: Props) {
   const apiFilters = useMemo(() => {
     if (!session) return undefined;
     const out: Record<string, unknown> = {};
-    if (filters.status === "open") out.is_open = true;
-    if (filters.status === "closed") out.is_closed = true;
+    const statusIds = (filters.statusIds ?? []).filter(Boolean);
+    if (statusIds.length > 0) {
+      out.status_ids = statusIds.join(",");
+    } else {
+      if (filters.status === "open") out.is_open = true;
+      if (filters.status === "closed") out.is_closed = true;
+    }
 
     if (filters.assignee === "me") {
       const me = session.user?.id;
@@ -428,6 +438,8 @@ export function TicketsListScreen({ navigation }: Props) {
 
       <FiltersModal
         visible={filtersOpen}
+        client={client}
+        apiKey={session.accessToken}
         filters={filters}
         setFilters={setFilters}
         canFilterMe={Boolean(session?.user?.id)}
@@ -442,13 +454,15 @@ function ActiveFiltersSummary({
 }: {
   filters: {
     status: "any" | "open" | "closed";
+    statusIds: string[];
     assignee: "any" | "me" | "unassigned";
     priorityName: string;
     updatedSinceDays: number | null;
   };
 }) {
   const parts: string[] = [];
-  if (filters.status !== "any") parts.push(filters.status);
+  if (filters.statusIds.length > 0) parts.push(`statuses:${filters.statusIds.length}`);
+  else if (filters.status !== "any") parts.push(filters.status);
   if (filters.assignee !== "any") parts.push(filters.assignee);
   if (filters.priorityName.trim()) parts.push(`priority:${filters.priorityName.trim()}`);
   if (filters.updatedSinceDays) parts.push(`updated:${filters.updatedSinceDays}d`);
@@ -502,14 +516,19 @@ function QuickChip({ label, onPress }: { label: string; onPress: () => void }) {
 
 function FiltersModal({
   visible,
+  client,
+  apiKey,
   filters,
   setFilters,
   canFilterMe,
   onClose,
 }: {
   visible: boolean;
+  client: ApiClient | null;
+  apiKey: string | null;
   filters: {
     status: "any" | "open" | "closed";
+    statusIds: string[];
     assignee: "any" | "me" | "unassigned";
     priorityName: string;
     updatedSinceDays: number | null;
@@ -517,6 +536,7 @@ function FiltersModal({
   setFilters: Dispatch<
     SetStateAction<{
       status: "any" | "open" | "closed";
+      statusIds: string[];
       assignee: "any" | "me" | "unassigned";
       priorityName: string;
       updatedSinceDays: number | null;
@@ -525,6 +545,32 @@ function FiltersModal({
   canFilterMe: boolean;
   onClose: () => void;
 }) {
+  const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
+  const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
+  const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      if (!visible) return;
+      if (!client || !apiKey) return;
+      if (statusOptions.length > 0) return;
+      setStatusOptionsLoading(true);
+      setStatusOptionsError(null);
+      const res = await getTicketStatuses(client, { apiKey });
+      if (canceled) return;
+      if (!res.ok) {
+        setStatusOptionsError("Unable to load statuses.");
+        return;
+      }
+      setStatusOptions(res.data.data);
+    };
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [apiKey, client, statusOptions.length, visible]);
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
@@ -538,8 +584,57 @@ function FiltersModal({
             { label: "Closed", value: "closed" },
           ]}
           value={filters.status}
-          onChange={(status) => setFilters({ ...filters, status })}
+          onChange={(status) => setFilters({ ...filters, status, statusIds: [] })}
         />
+
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.md }}>Specific statuses</Text>
+        {statusOptionsLoading ? (
+          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+            Loading statuses…
+          </Text>
+        ) : statusOptionsError ? (
+          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+            {statusOptionsError}
+          </Text>
+        ) : statusOptions.length > 0 ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+            {statusOptions.map((s) => {
+              const selected = filters.statusIds.includes(s.status_id);
+              return (
+                <View key={s.status_id} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+                  <Pressable
+                    onPress={() => {
+                      const next = selected
+                        ? filters.statusIds.filter((id) => id !== s.status_id)
+                        : [...filters.statusIds, s.status_id];
+                      setFilters({ ...filters, status: "any", statusIds: next });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={s.name}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? colors.primary : colors.card,
+                      opacity: pressed ? 0.95 : 1,
+                    })}
+                  >
+                    <Text style={{ ...typography.caption, color: selected ? "#fff" : colors.text, fontWeight: "600" }}>
+                      {selected ? "✓ " : ""}
+                      {s.name}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+            No statuses available.
+          </Text>
+        )}
 
         <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Assignee</Text>
         <OptionRow
@@ -594,6 +689,7 @@ function FiltersModal({
             onPress={() =>
               setFilters({
                 status: "any",
+                statusIds: [],
                 assignee: "any",
                 priorityName: "",
                 updatedSinceDays: null,

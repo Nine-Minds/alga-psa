@@ -1106,7 +1106,7 @@
   {
     "id": "F139",
     "description": "[Mobile:Tickets:List] Implement List:Filters - status multi-select",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

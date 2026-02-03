@@ -57,6 +57,7 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   location_id: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema.optional(),
+  status_ids: arrayTransform(uuidSchema).optional(),
   category_id: uuidSchema.optional(),
   subcategory_id: uuidSchema.optional(),
   entered_by: uuidSchema.optional(),

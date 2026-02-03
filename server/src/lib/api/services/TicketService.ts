@@ -889,11 +889,18 @@ export class TicketService extends BaseService<ITicket> {
         case 'location_id':
         case 'contact_name_id':
         case 'status_id':
+        case 'status_ids':
         case 'category_id':
         case 'subcategory_id':
         case 'entered_by':
         case 'assigned_to':
         case 'priority_id':
+          if (key === 'status_ids') {
+            if (Array.isArray(value) && value.length > 0) {
+              query.whereIn('t.status_id', value);
+            }
+            break;
+          }
           query.where(`t.${key}`, value);
           break;
         case 'is_open':
