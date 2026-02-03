@@ -362,7 +362,7 @@
   {
     "id": "T061",
     "description": "Integration: Resolution completes workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F032"]
   },
   {
