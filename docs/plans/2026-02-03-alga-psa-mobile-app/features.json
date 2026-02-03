@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "[Mobile:Foundation] Add crash/error reporting hook (provider TBD) with PII redaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
