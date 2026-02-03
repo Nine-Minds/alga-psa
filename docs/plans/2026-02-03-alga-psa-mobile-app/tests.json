@@ -274,7 +274,7 @@
   {
     "id": "T035",
     "description": "E2E: Implement auth capability discovery endpoint (mobile enabled, providers available)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
