@@ -394,7 +394,7 @@
   {
     "id": "T050",
     "description": "E2E: Prefetch ticket detail for first visible rows (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
