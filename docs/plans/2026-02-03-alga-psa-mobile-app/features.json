@@ -906,7 +906,7 @@
   {
     "id": "F114",
     "description": "[Phase2:Notifications] Add server endpoints to register/unregister device tokens",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
