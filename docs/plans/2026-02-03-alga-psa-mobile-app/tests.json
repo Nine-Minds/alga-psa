@@ -1765,7 +1765,7 @@
   {
     "id": "T221",
     "description": "E2E: Open ticket -> add INTERNAL comment -> verify shown as internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F068",
