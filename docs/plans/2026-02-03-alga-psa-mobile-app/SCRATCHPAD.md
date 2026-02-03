@@ -329,3 +329,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T097 marked as covered: rollout checklist + rollback plan documented (ROLLOUT_PLAN.md).
 - 2026-02-03: T098 marked as covered: undefined
 - 2026-02-03: T098 marked as covered: server implements /auth/mobile/handoff OTT issuance (server routes) and mobile uses it.
+- 2026-02-03: T099 marked as covered: undefined
+- 2026-02-03: T099 marked as covered: server persists OTTs with expiry/single-use (mobile_auth_otts table + migration).
