@@ -466,7 +466,7 @@
   {
     "id": "T059",
     "description": "E2E: Differentiate internal vs public comments visually",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
