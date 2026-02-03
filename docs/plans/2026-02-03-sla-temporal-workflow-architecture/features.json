@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "TemporalSlaBackend.startSlaTracking() is idempotent (handles duplicate workflow ID gracefully)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
