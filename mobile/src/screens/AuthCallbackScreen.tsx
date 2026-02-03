@@ -13,6 +13,7 @@ import { exchangeOttWithRetry } from "../api/mobileAuth";
 import { useAuth } from "../auth/AuthContext";
 import { getStableDeviceId } from "../device/clientMetadata";
 import { analytics } from "../analytics/analytics";
+import { MobileAnalyticsEvents } from "../analytics/events";
 import { getTicketStats } from "../api/tickets";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
@@ -53,20 +54,20 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         const callbackError = route.params?.error;
 
         if (callbackError) {
-          analytics.trackEvent("auth.callback.failed", { reason: callbackError });
+          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: callbackError });
           setError(mapAuthCallbackError(callbackError));
           return;
         }
 
         if (!ott || !state) {
-          analytics.trackEvent("auth.callback.failed", { reason: "missing_params" });
+          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "missing_params" });
           setError("Missing required sign-in parameters.");
           return;
         }
 
         const pending = await getPendingMobileAuth();
         if (!pending || pending.state !== state) {
-          analytics.trackEvent("auth.callback.failed", { reason: "state_mismatch" });
+          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "state_mismatch" });
           setError("This sign-in link is not valid for the current session. Please try again.");
           return;
         }
@@ -100,7 +101,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           abortController.signal,
         );
         if (!exchanged.ok) {
-          analytics.trackEvent("auth.exchange.failed", {
+          analytics.trackEvent(MobileAnalyticsEvents.authExchangeFailed, {
             errorKind: exchanged.error.kind,
             status: exchanged.status ?? null,
           });
@@ -108,7 +109,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           return;
         }
 
-        analytics.trackEvent("auth.exchange.succeeded", {
+        analytics.trackEvent(MobileAnalyticsEvents.authExchangeSucceeded, {
           expiresInSec: exchanged.data.expiresInSec,
         });
 
@@ -119,7 +120,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         });
         const ticketCheck = await getTicketStats(ticketCheckClient, { apiKey: exchanged.data.accessToken });
         if (!ticketCheck.ok && ticketCheck.error.kind === "permission") {
-          analytics.trackEvent("auth.exchange.failed", {
+          analytics.trackEvent(MobileAnalyticsEvents.authExchangeFailed, {
             errorKind: "permission",
             status: ticketCheck.status ?? null,
           });

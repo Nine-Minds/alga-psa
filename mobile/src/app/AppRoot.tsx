@@ -18,6 +18,7 @@ import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
 import { getBiometricGateEnabled } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
+import { MobileAnalyticsEvents } from "../analytics/events";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 
@@ -126,7 +127,7 @@ export function AppRoot() {
     if (bootStatus !== "ready") return;
     if (!navStateLoaded) return;
     startupReported.current = true;
-    analytics.trackEvent("app.startup.ready", {
+    analytics.trackEvent(MobileAnalyticsEvents.appStartupReady, {
       durationMs: Date.now() - startupStartedAt.current,
       signedIn: Boolean(session),
     });
@@ -150,7 +151,7 @@ export function AppRoot() {
       });
 
       if (!result.ok) {
-        analytics.trackEvent("auth.refresh.failed", {
+        analytics.trackEvent(MobileAnalyticsEvents.authRefreshFailed, {
           errorKind: result.error.kind,
           status: result.status ?? null,
         });
@@ -158,13 +159,13 @@ export function AppRoot() {
           result.error.kind === "auth" ||
           result.error.kind === "permission"
         ) {
-          analytics.trackEvent("auth.refresh.revoked", { status: result.status });
+          analytics.trackEvent(MobileAnalyticsEvents.authRefreshRevoked, { status: result.status });
           setSession(null);
         }
         return null;
       }
 
-      analytics.trackEvent("auth.refresh.succeeded", { expiresInSec: result.data.expiresInSec });
+      analytics.trackEvent(MobileAnalyticsEvents.authRefreshSucceeded, { expiresInSec: result.data.expiresInSec });
 
       const nextAccessToken = result.data.accessToken;
       const nextRefreshToken = result.data.refreshToken;
@@ -191,7 +192,7 @@ export function AppRoot() {
       return nextAccessToken;
     } catch (e) {
       logger.warn("Refresh attempt failed", { error: e });
-      analytics.trackEvent("auth.refresh.failed", { errorKind: "exception" });
+      analytics.trackEvent(MobileAnalyticsEvents.authRefreshFailed, { errorKind: "exception" });
       return null;
     } finally {
       refreshInFlight.current = false;
@@ -241,7 +242,7 @@ export function AppRoot() {
 
   const logout = useCallback(async () => {
     const currentSession = session;
-    analytics.trackEvent("auth.logout", { hadSession: Boolean(currentSession) });
+    analytics.trackEvent(MobileAnalyticsEvents.authLogout, { hadSession: Boolean(currentSession) });
     try {
       if (baseUrl && currentSession) {
         const client = createApiClient({

@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResult } from "./types";
 import { analytics } from "../analytics/analytics";
+import { MobileAnalyticsEvents } from "../analytics/events";
 import { nextCorrelationId } from "../telemetry/correlation";
 
 type CreateApiClientOptions = {
@@ -276,7 +277,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
               if (nextToken) {
                 const afterRefresh = await attemptOnce(nextToken);
                 if (afterRefresh.ok) return afterRefresh;
-                analytics.trackEvent("api.request.failed", {
+                analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
                   method: req.method,
                   path: normalizePathForAnalytics(req.path),
                   status: afterRefresh.status ?? null,
@@ -287,7 +288,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
                 return afterRefresh;
               }
             } catch {
-              analytics.trackEvent("api.request.failed", {
+              analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
                 method: req.method,
                 path: normalizePathForAnalytics(req.path),
                 status: result.status ?? null,
@@ -298,7 +299,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
               return result;
             }
 
-            analytics.trackEvent("api.request.failed", {
+            analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
               method: req.method,
               path: normalizePathForAnalytics(req.path),
               status: result.status ?? null,
@@ -317,7 +318,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
 
           const isLastAttempt = attempt === maxAttempts - 1;
           if (!retryableError || isLastAttempt) {
-            analytics.trackEvent("api.request.failed", {
+            analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
               method: req.method,
               path: normalizePathForAnalytics(req.path),
               status: result.status ?? null,
@@ -333,7 +334,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           try {
             await sleep(jittered);
           } catch {
-            analytics.trackEvent("api.request.failed", {
+            analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
               method: req.method,
               path: normalizePathForAnalytics(req.path),
               status: result.status ?? null,
@@ -345,7 +346,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           }
         }
 
-        analytics.trackEvent("api.request.failed", {
+        analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
           method: req.method,
           path: normalizePathForAnalytics(req.path),
           status: null,

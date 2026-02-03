@@ -9,6 +9,7 @@ import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri 
 import { createApiClient } from "../api";
 import { getAuthCapabilities, type MobileAuthCapabilities } from "../api/mobileAuth";
 import { analytics } from "../analytics/analytics";
+import { MobileAnalyticsEvents } from "../analytics/events";
 
 export function SignInScreen() {
   const config = useMemo(() => getAppConfig(), []);
@@ -73,39 +74,39 @@ export function SignInScreen() {
 
   const onSignIn = async () => {
     if (!baseUrl) {
-      analytics.trackEvent("auth.sign_in.blocked", { reason: "missing_base_url" });
+      analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "missing_base_url" });
       setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
       return;
     }
     if (capabilities && !capabilities.mobileEnabled) {
-      analytics.trackEvent("auth.sign_in.blocked", { reason: "mobile_disabled" });
+      analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "mobile_disabled" });
       setError("Mobile sign-in is not enabled for this server.");
       return;
     }
     if (!hostAllowed) {
-      analytics.trackEvent("auth.sign_in.blocked", { reason: "host_not_allowlisted" });
+      analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "host_not_allowlisted" });
       setError("This base URL is not allowed for mobile sign-in.");
       return;
     }
     setError(null);
     setStatus("opening");
     try {
-      analytics.trackEvent("auth.sign_in.start");
+      analytics.trackEvent(MobileAnalyticsEvents.authSignInStart);
       const pending = await createPendingMobileAuth();
       const redirectUri = getAuthCallbackRedirectUri();
       const loginUrl = buildWebSignInUrl({ baseUrl, redirectUri, state: pending.state });
 
       const canOpen = await Linking.canOpenURL(loginUrl);
       if (!canOpen) {
-        analytics.trackEvent("auth.sign_in.open_failed", { reason: "cannot_open_url" });
+        analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "cannot_open_url" });
         setError("Unable to open browser for sign-in.");
         return;
       }
       await Linking.openURL(loginUrl);
-      analytics.trackEvent("auth.sign_in.opened_browser");
+      analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenedBrowser);
     } catch (e) {
       logger.error("Failed to open sign-in URL", { error: e });
-      analytics.trackEvent("auth.sign_in.open_failed", { reason: "exception" });
+      analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "exception" });
       setError("Failed to open browser. Please try again.");
     } finally {
       setStatus("idle");

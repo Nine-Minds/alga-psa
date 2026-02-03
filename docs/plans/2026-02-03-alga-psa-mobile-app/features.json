@@ -1634,7 +1634,7 @@
   {
     "id": "F205",
     "description": "[Mobile:Quality] Quality/Ops - end-to-end analytics event names cataloged and versioned",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
