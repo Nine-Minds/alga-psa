@@ -368,7 +368,7 @@
   {
     "id": "T062",
     "description": "Integration: Ticket deletion cancels workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F036"]
   },
   {
