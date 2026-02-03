@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Create updateSlaStatus activity that updates ticket sla_* fields in database",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
