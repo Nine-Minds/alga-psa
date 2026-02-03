@@ -92,6 +92,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: calculateNextWakeTime for 24x7 schedule (T030)
 - (2026-02-03) Tests: sendSlaNotification activity calls notification service (T031)
 - (2026-02-03) Tests: checkAndEscalate activity calls escalation check (T032)
+- (2026-02-03) Tests: checkAndEscalate triggers escalation when needed (T033)
 
 ## Discoveries / Constraints
 
