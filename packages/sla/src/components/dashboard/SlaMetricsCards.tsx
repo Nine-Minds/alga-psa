@@ -23,7 +23,7 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
-              <div className="animate-pulse">
+              <div className="animate-pulse pt-6">
                 <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
                 <div className="h-8 bg-gray-200 rounded w-3/4"></div>
               </div>
@@ -60,8 +60,8 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
       value: data.atRiskCount.toString(),
       subtitle: 'tickets approaching breach',
       icon: AlertTriangle,
-      color: data.atRiskCount > 0 ? 'text-amber-600' : 'text-green-600',
-      bgColor: data.atRiskCount > 0 ? 'bg-amber-50' : 'bg-green-50'
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50'
     },
     {
       title: 'Currently Paused',
@@ -78,7 +78,7 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
       {metrics.map((metric, index) => (
         <Card key={index}>
           <CardContent className="p-6">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between pt-6">
               <div>
                 <p className="text-sm font-medium text-gray-600">{metric.title}</p>
                 <p className={`text-2xl font-bold mt-1 ${metric.color}`}>{metric.value}</p>

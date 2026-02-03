@@ -37,16 +37,16 @@ function applyFilters(
   query.where(`${tableAlias}.tenant`, tenant);
 
   if (filters.dateFrom) {
-    query.where(`${tableAlias}.created_at`, '>=', filters.dateFrom);
+    query.where(`${tableAlias}.entered_at`, '>=', filters.dateFrom);
   }
   if (filters.dateTo) {
-    query.where(`${tableAlias}.created_at`, '<=', filters.dateTo);
+    query.where(`${tableAlias}.entered_at`, '<=', filters.dateTo);
   }
   if (filters.boardId) {
     query.where(`${tableAlias}.board_id`, filters.boardId);
   }
   if (filters.clientId) {
-    query.where(`${tableAlias}.company_id`, filters.clientId);
+    query.where(`${tableAlias}.client_id`, filters.clientId);
   }
   if (filters.priorityId) {
     query.where(`${tableAlias}.priority_id`, filters.priorityId);
@@ -220,8 +220,8 @@ export const getBreachRateByPriority = withAuth(async (
           SUM(CASE WHEN t.sla_response_met = false OR t.sla_resolution_met = false THEN 1 ELSE 0 END) as breached_count
         `)
       )
-      .groupBy('t.priority_id', 'p.priority_name')
-      .orderBy('p.priority_order');
+      .groupBy('t.priority_id', 'p.priority_name', 'p.order_number')
+      .orderBy('p.order_number');
 
     return results.map(row => ({
       dimensionId: row.dimension_id,
@@ -293,8 +293,8 @@ export const getBreachRateByClient = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     let query = trx('tickets as t')
-      .join('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .join('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
       .whereNotNull('t.sla_policy_id')
@@ -307,14 +307,14 @@ export const getBreachRateByClient = withAuth(async (
 
     const results = await query
       .select(
-        't.company_id as dimension_id',
-        'c.company_name as dimension_name',
+        't.client_id as dimension_id',
+        'c.client_name as dimension_name',
         trx.raw('COUNT(*) as total_tickets'),
         trx.raw(`
           SUM(CASE WHEN t.sla_response_met = false OR t.sla_resolution_met = false THEN 1 ELSE 0 END) as breached_count
         `)
       )
-      .groupBy('t.company_id', 'c.company_name')
+      .groupBy('t.client_id', 'c.client_name')
       .orderBy('breached_count', 'desc')
       .limit(10);
 
@@ -359,7 +359,7 @@ export const getSlaTrend = withAuth(async (
       query.where('t.board_id', filters.boardId);
     }
     if (filters.clientId) {
-      query.where('t.company_id', filters.clientId);
+      query.where('t.client_id', filters.clientId);
     }
 
     const results = await query
@@ -406,8 +406,8 @@ export const getRecentBreaches = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     let query = trx('tickets as t')
-      .join('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .join('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
       .join('priorities as p', function() {
@@ -431,7 +431,7 @@ export const getRecentBreaches = withAuth(async (
         't.ticket_id',
         't.ticket_number',
         't.title as ticket_title',
-        'c.company_name',
+        'c.client_name',
         'p.priority_name',
         trx.raw(`COALESCE(u.first_name || ' ' || u.last_name, NULL) as assignee_name`),
         't.sla_response_met',
@@ -445,7 +445,7 @@ export const getRecentBreaches = withAuth(async (
       ticketId: row.ticket_id,
       ticketNumber: row.ticket_number,
       ticketTitle: row.ticket_title,
-      companyName: row.company_name,
+      companyName: row.client_name,
       priorityName: row.priority_name,
       assigneeName: row.assignee_name?.trim() || null,
       responseBreached: row.sla_response_met === false,
@@ -474,8 +474,8 @@ export const getTicketsAtRisk = withAuth(async (
 
     // Get open tickets with SLA tracking
     const tickets = await trx('tickets as t')
-      .join('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .join('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
       .join('priorities as p', function() {
@@ -508,7 +508,7 @@ export const getTicketsAtRisk = withAuth(async (
         't.ticket_id',
         't.ticket_number',
         't.title as ticket_title',
-        'c.company_name',
+        'c.client_name',
         'p.priority_name',
         trx.raw(`COALESCE(u.first_name || ' ' || u.last_name, NULL) as assignee_name`),
         't.sla_response_at',
@@ -542,7 +542,7 @@ export const getTicketsAtRisk = withAuth(async (
             ticketId: ticket.ticket_id,
             ticketNumber: ticket.ticket_number,
             ticketTitle: ticket.ticket_title,
-            companyName: ticket.company_name,
+            companyName: ticket.client_name,
             priorityName: ticket.priority_name,
             assigneeName: ticket.assignee_name?.trim() || null,
             minutesRemaining: Math.round(minutesRemaining),
@@ -568,7 +568,7 @@ export const getTicketsAtRisk = withAuth(async (
             ticketId: ticket.ticket_id,
             ticketNumber: ticket.ticket_number,
             ticketTitle: ticket.ticket_title,
-            companyName: ticket.company_name,
+            companyName: ticket.client_name,
             priorityName: ticket.priority_name,
             assigneeName: ticket.assignee_name?.trim() || null,
             minutesRemaining: Math.round(minutesRemaining),

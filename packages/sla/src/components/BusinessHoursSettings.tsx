@@ -15,6 +15,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
@@ -726,8 +727,9 @@ export function BusinessHoursSettings() {
         onClose={handleCloseScheduleDialog}
         title={editingScheduleId ? 'Edit Schedule' : 'Create Schedule'}
         id="schedule-dialog"
+        maxWidth="max-w-2xl"
       >
-        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
+        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-1 -mx-1">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -786,7 +788,7 @@ export function BusinessHoursSettings() {
             <div className="space-y-2">
               <Label>Daily Hours</Label>
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 grid grid-cols-4 gap-2 text-xs font-medium text-gray-600 border-b">
+                <div className="bg-gray-50 px-3 py-2 grid gap-3 text-xs font-medium text-gray-600 border-b" style={{ gridTemplateColumns: '90px 60px 1fr 1fr' }}>
                   <span>Day</span>
                   <span>Enabled</span>
                   <span>Start Time</span>
@@ -795,9 +797,10 @@ export function BusinessHoursSettings() {
                 {scheduleFormData.entries.map((entry) => (
                   <div
                     key={entry.day_of_week}
-                    className={`px-3 py-2 grid grid-cols-4 gap-2 items-center border-b last:border-b-0 ${
+                    className={`px-3 py-2 grid gap-3 items-center border-b last:border-b-0 ${
                       entry.is_enabled ? 'bg-white' : 'bg-gray-50'
                     }`}
+                    style={{ gridTemplateColumns: '90px 60px 1fr 1fr' }}
                   >
                     <span className="text-sm font-medium">{DAY_NAMES[entry.day_of_week]}</span>
                     <div className="[&>div]:mb-0">
@@ -874,11 +877,14 @@ export function BusinessHoursSettings() {
           {/* Holiday Date */}
           <div className="space-y-1">
             <Label htmlFor="holiday-date-field">Date *</Label>
-            <Input
+            <DatePicker
               id="holiday-date-field"
-              type="date"
-              value={holidayFormData.holiday_date}
-              onChange={(e) => setHolidayFormData(prev => ({ ...prev, holiday_date: e.target.value }))}
+              value={holidayFormData.holiday_date ? new Date(holidayFormData.holiday_date + 'T00:00:00') : undefined}
+              onChange={(date) => {
+                const dateStr = date.toISOString().split('T')[0];
+                setHolidayFormData(prev => ({ ...prev, holiday_date: dateStr }));
+              }}
+              placeholder="Select date"
               disabled={isSavingHoliday}
             />
           </div>

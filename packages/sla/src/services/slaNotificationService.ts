@@ -617,7 +617,7 @@ export async function checkAndSendThresholdNotifications(
       't.sla_policy_id',
       't.sla_response_due_at',
       't.sla_resolution_due_at',
-      'c.company_name as client_name',
+      'c.client_name as client_name',
       'p.priority_name'
     )
     .first();
