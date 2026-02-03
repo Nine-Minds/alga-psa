@@ -1666,7 +1666,7 @@
   {
     "id": "F209",
     "description": "[Mobile:Quality] Quality/Ops - SLOs defined for key endpoints (list/detail/mutate)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Observability"
     ]
