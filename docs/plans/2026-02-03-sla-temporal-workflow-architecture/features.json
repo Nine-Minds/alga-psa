@@ -1,0 +1,302 @@
+[
+  {
+    "id": "F001",
+    "description": "Define ISlaBackend interface with startSlaTracking, pauseSla, resumeSla, completeSla, cancelSla, and getSlaStatus methods",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F002",
+    "description": "Create SlaBackendFactory that returns TemporalSlaBackend for EE and PgBossSlaBackend for CE",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Implement PgBossSlaBackend that delegates to existing slaPauseService and slaService methods",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F004",
+    "description": "Create SlaTicketWorkflow in ee/temporal-workflows/src/workflows/ with response and resolution phase tracking",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F005",
+    "description": "SlaTicketWorkflow accepts input: ticketId, tenantId, policyTargets, businessHoursSchedule",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F006",
+    "description": "SlaTicketWorkflow maintains state: currentPhase, pauseState, notifiedThresholds, responseDeadline, resolutionDeadline",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F007",
+    "description": "SlaTicketWorkflow uses Temporal sleep() to wake at each threshold percentage",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F008",
+    "description": "SlaTicketWorkflow handles 'pause' signal by recording pauseStartedAt and canceling pending timer",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F009",
+    "description": "SlaTicketWorkflow handles 'resume' signal by recalculating remaining time and setting new timer",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F010",
+    "description": "SlaTicketWorkflow handles 'completeResponse' signal by marking response complete and transitioning to resolution phase",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F011",
+    "description": "SlaTicketWorkflow handles 'completeResolution' signal by marking resolution complete and terminating workflow",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F012",
+    "description": "SlaTicketWorkflow handles 'cancel' signal by terminating workflow without recording breach",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F013",
+    "description": "SlaTicketWorkflow supports 'getState' query returning currentStatus, remainingTime, pauseState",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F014",
+    "description": "Create calculateNextWakeTime activity that computes wall-clock time for next threshold using business hours calculator",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F015",
+    "description": "calculateNextWakeTime handles start time outside business hours by advancing to next business period",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F016",
+    "description": "calculateNextWakeTime accounts for accumulated pause minutes when computing remaining time",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F017",
+    "description": "Create sendSlaNotification activity that calls existing slaNotificationService.sendSlaNotification()",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F018",
+    "description": "Create checkAndEscalate activity that calls escalationService.checkEscalationNeeded() and escalateTicket()",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F019",
+    "description": "Create updateSlaStatus activity that updates ticket sla_* fields in database",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F020",
+    "description": "Create recordSlaAuditLog activity that inserts entries into sla_audit_log table",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F021",
+    "description": "Implement TemporalSlaBackend.startSlaTracking() that starts SlaTicketWorkflow",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F022",
+    "description": "TemporalSlaBackend uses workflow ID format sla-ticket-{tenantId}-{ticketId}",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F023",
+    "description": "TemporalSlaBackend.pauseSla() sends pause signal to running workflow",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F024",
+    "description": "TemporalSlaBackend.resumeSla() sends resume signal to running workflow",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F025",
+    "description": "TemporalSlaBackend.completeSla() sends completeResponse or completeResolution signal based on type",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F026",
+    "description": "TemporalSlaBackend.cancelSla() sends cancel signal to running workflow",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F027",
+    "description": "TemporalSlaBackend.getSlaStatus() queries workflow state via getState query",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F028",
+    "description": "Modify slaService.startSlaForTicket() to call backend.startSlaTracking() after setting up ticket",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F029",
+    "description": "Modify slaPauseService.pauseSla() to call backend.pauseSla() after updating ticket",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F030",
+    "description": "Modify slaPauseService.resumeSla() to call backend.resumeSla() after updating ticket",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F031",
+    "description": "Modify slaService.recordFirstResponse() to call backend.completeSla('response') after updating ticket",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F032",
+    "description": "Modify slaService.recordResolution() to call backend.completeSla('resolution') after updating ticket",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F033",
+    "description": "SlaBackendFactory falls back to PgBossSlaBackend when Temporal client unavailable",
+    "implemented": false,
+    "prdRefs": ["NFR-1"]
+  },
+  {
+    "id": "F034",
+    "description": "Log warning when falling back from Temporal to pgboss",
+    "implemented": false,
+    "prdRefs": ["NFR-1"]
+  },
+  {
+    "id": "F035",
+    "description": "TemporalSlaBackend.startSlaTracking() is idempotent (handles duplicate workflow ID gracefully)",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F036",
+    "description": "Handle ticket deletion by calling backend.cancelSla() to terminate any running workflow",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F037",
+    "description": "Handle SLA policy change by calling backend.cancelSla() then backend.startSlaTracking() with new policy",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F038",
+    "description": "SlaTicketWorkflow sends notification at 50% threshold via sendSlaNotification activity",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F039",
+    "description": "SlaTicketWorkflow sends notification at 75% threshold via sendSlaNotification activity",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F040",
+    "description": "SlaTicketWorkflow sends notification at 90% threshold via sendSlaNotification activity",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F041",
+    "description": "SlaTicketWorkflow marks breach at 100% threshold via updateSlaStatus activity",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F042",
+    "description": "SlaTicketWorkflow checks escalation at each threshold via checkAndEscalate activity",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F043",
+    "description": "Add sla-workflows task queue to Temporal worker configuration",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F044",
+    "description": "Register SlaTicketWorkflow in Temporal worker workflow list",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F045",
+    "description": "Register SLA activities in Temporal worker activities list",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F046",
+    "description": "Create CE stub for TemporalSlaBackend that throws 'only available in Enterprise Edition'",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F047",
+    "description": "PgBossSlaBackend.startSlaTracking() is a no-op (deadlines already stored)",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F048",
+    "description": "PgBossSlaBackend.cancelSla() is a no-op (polling naturally excludes deleted tickets)",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F049",
+    "description": "PgBossSlaBackend.getSlaStatus() delegates to existing slaService.getSlaStatus()",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F050",
+    "description": "SlaTicketWorkflow handles 24x7 business hours schedule (no business hours adjustment)",
+    "implemented": false,
+    "prdRefs": ["FR-3", "FR-4"]
+  }
+]
