@@ -416,7 +416,7 @@
   {
     "id": "T070",
     "description": "E2E: EE fallback to pgboss when Temporal unavailable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033", "F034"]
   },
   {
