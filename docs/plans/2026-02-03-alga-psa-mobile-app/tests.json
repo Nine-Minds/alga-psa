@@ -978,7 +978,7 @@
   {
     "id": "T123",
     "description": "Unit: Implement global HTTP 403 handler (show no-access UX)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
