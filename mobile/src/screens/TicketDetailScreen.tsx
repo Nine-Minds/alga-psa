@@ -5,7 +5,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { getTicketById, type TicketDetail } from "../api/tickets";
+import { getTicketById, getTicketComments, type TicketComment, type TicketDetail } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -46,6 +46,9 @@ function TicketDetailBody({
   });
   const [initialLoading, setInitialLoading] = useState(ticket === null);
   const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<TicketComment[]>([]);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
 
   const fetchTicket = useCallback(async () => {
     if (!client || !session) return;
@@ -59,7 +62,22 @@ function TicketDetailBody({
     setCachedTicketDetail(ticketId, result.data.data);
   }, [client, session, ticketId]);
 
-  const { refreshing, refresh } = usePullToRefresh(fetchTicket);
+  const fetchComments = useCallback(async () => {
+    if (!client || !session) return;
+    setCommentsError(null);
+    const result = await getTicketComments(client, { apiKey: session.accessToken, ticketId });
+    if (!result.ok) {
+      setCommentsError("Unable to load comments.");
+      return;
+    }
+    setComments(result.data.data);
+  }, [client, session, ticketId]);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchTicket(), fetchComments()]);
+  }, [fetchComments, fetchTicket]);
+
+  const { refreshing, refresh } = usePullToRefresh(refreshAll);
 
   useEffect(() => {
     let canceled = false;
@@ -67,6 +85,7 @@ function TicketDetailBody({
       if (!client || !session) return;
       if (ticket === null) setInitialLoading(true);
       await fetchTicket();
+      await fetchComments();
       if (!canceled) setInitialLoading(false);
     };
     void run();
@@ -132,6 +151,13 @@ function TicketDetailBody({
         <View style={{ height: spacing.sm }} />
         <DescriptionSection ticket={ticket} />
         <View style={{ height: spacing.sm }} />
+        <CommentsSection
+          comments={comments}
+          visibleCount={commentsVisibleCount}
+          onLoadMore={() => setCommentsVisibleCount((c) => c + 20)}
+          error={commentsError}
+        />
+        <View style={{ height: spacing.sm }} />
         <KeyValue label="Created" value={formatDateWithRelative(ticket.entered_at)} />
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
@@ -141,6 +167,69 @@ function TicketDetailBody({
         <KeyValue label="Ticket ID" value={ticket.ticket_id} />
       </View>
     </ScrollView>
+  );
+}
+
+function CommentsSection({
+  comments,
+  visibleCount,
+  onLoadMore,
+  error,
+}: {
+  comments: TicketComment[];
+  visibleCount: number;
+  onLoadMore: () => void;
+  error: string | null;
+}) {
+  return (
+    <View
+      style={{
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 10,
+      }}
+    >
+      <Text style={{ ...typography.caption, color: colors.mutedText }}>Comments</Text>
+
+      {error ? (
+        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.danger }}>{error}</Text>
+      ) : null}
+
+      {comments.length === 0 ? (
+        <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.mutedText }}>No comments.</Text>
+      ) : (
+        <View style={{ marginTop: spacing.sm }}>
+          {comments.slice(0, visibleCount).map((c, idx) => (
+            <View key={c.comment_id ?? String(idx)} style={{ marginTop: idx === 0 ? 0 : spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.mutedText }}>
+                {c.created_by_name ?? "Unknown"} • {formatDateWithRelative(c.created_at)}
+              </Text>
+              <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+                {c.comment_text}
+              </Text>
+            </View>
+          ))}
+
+          {visibleCount < comments.length ? (
+            <View style={{ marginTop: spacing.md }}>
+              <Pressable
+                onPress={onLoadMore}
+                accessibilityRole="button"
+                accessibilityLabel="Load more comments"
+                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                  Load more ({comments.length - visibleCount} remaining)
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      )}
+    </View>
   );
 }
 

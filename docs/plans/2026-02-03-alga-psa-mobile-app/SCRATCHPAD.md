@@ -61,3 +61,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F055 ticket detail now shows requester/contact and client/company summary (uses `contact_name` + `client_name` fields from API response).
 - 2026-02-03: F056 ticket detail timestamps now show created/updated/closed with relative + absolute time formatting.
 - 2026-02-03: F057 ticket detail now renders a best-effort description from ticket `attributes` and safely opens detected links via a confirmation prompt.
+- 2026-02-03: F058 ticket detail now renders a comments timeline from `GET /api/v1/tickets/:id/comments` with client-side pagination (“Load more”).

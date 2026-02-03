@@ -46,6 +46,14 @@ export type TicketStats = {
   unassigned_tickets: number;
 };
 
+export type TicketComment = {
+  comment_id?: string;
+  comment_text: string;
+  is_internal?: boolean;
+  created_by_name?: string | null;
+  created_at?: string | null;
+};
+
 export type ListTicketsParams = {
   apiKey: string;
   page: number;
@@ -104,6 +112,19 @@ export function getTicketStats(
   return client.request<SuccessResponse<TicketStats>>({
     method: "GET",
     path: "/api/v1/tickets/stats",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function getTicketComments(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string },
+): Promise<ApiResult<SuccessResponse<TicketComment[]>>> {
+  return client.request<SuccessResponse<TicketComment[]>>({
+    method: "GET",
+    path: `/api/v1/tickets/${params.ticketId}/comments`,
     headers: {
       "x-api-key": params.apiKey,
     },

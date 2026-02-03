@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "[Mobile:Tickets:Detail] Render comments/timeline with pagination",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
