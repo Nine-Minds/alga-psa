@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Unit: SlaTicketWorkflow initializes with correct input parameters",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005"]
   },
   {
