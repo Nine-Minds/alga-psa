@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "[Mobile:Tickets:List] Add quick filters: My tickets, Unassigned, High priority, Recently updated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

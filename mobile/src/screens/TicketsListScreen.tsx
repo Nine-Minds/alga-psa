@@ -224,11 +224,19 @@ export function TicketsListScreen({ navigation }: Props) {
               >
                 <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
               </Pressable>
-            </View>
-            <ActiveFiltersSummary filters={filters} />
           </View>
-        }
-        renderItem={({ item }) => (
+          <ActiveFiltersSummary filters={filters} />
+          <QuickFilters
+            onSelect={(kind) => {
+              if (kind === "mine") setFilters({ ...filters, assignee: "me" });
+              if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
+              if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
+              if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7 });
+            }}
+          />
+        </View>
+      }
+      renderItem={({ item }) => (
           <TicketRow
             item={item}
             onPress={() => navigation.navigate("TicketDetail", { ticketId: item.ticket_id })}
@@ -275,6 +283,45 @@ function ActiveFiltersSummary({
     <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
       Filters: {parts.join(" • ")}
     </Text>
+  );
+}
+
+function QuickFilters({
+  onSelect,
+}: {
+  onSelect: (kind: "mine" | "unassigned" | "highPriority" | "recent") => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+      <QuickChip label="My tickets" onPress={() => onSelect("mine")} />
+      <View style={{ width: spacing.sm }} />
+      <QuickChip label="Unassigned" onPress={() => onSelect("unassigned")} />
+      <View style={{ width: spacing.sm }} />
+      <QuickChip label="High priority" onPress={() => onSelect("highPriority")} />
+      <View style={{ width: spacing.sm }} />
+      <QuickChip label="Recently updated" onPress={() => onSelect("recent")} />
+    </View>
+  );
+}
+
+function QuickChip({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        paddingHorizontal: spacing.md,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.card,
+        opacity: pressed ? 0.95 : 1,
+      })}
+    >
+      <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>{label}</Text>
+    </Pressable>
   );
 }
 
