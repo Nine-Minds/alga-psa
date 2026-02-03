@@ -260,7 +260,7 @@
   {
     "id": "T044",
     "description": "Unit: TemporalSlaBackend.getSlaStatus() queries workflow state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
