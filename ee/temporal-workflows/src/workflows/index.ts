@@ -15,3 +15,4 @@ export * from './entra-all-tenants-sync-workflow.js';
 export * from './resend-welcome-email-workflow.js';
 export * from './tenant-deletion-workflow.js';
 export * from './tenant-export-workflow.js';
+export * from './sla-ticket-workflow.js';

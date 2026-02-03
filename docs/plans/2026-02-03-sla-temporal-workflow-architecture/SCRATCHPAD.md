@@ -16,6 +16,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Added `ISlaBackend` interface in `packages/sla/src/services/backends/ISlaBackend.ts` and exported via services index
 - (2026-02-03) Added `SlaBackendFactory` in `packages/sla/src/services/backends/SlaBackendFactory.ts` to select EE vs CE backend using `server/src/lib/features.ts`
 - (2026-02-03) Implemented `PgBossSlaBackend` to delegate pause/resume/complete/status operations via existing SLA services using tenant resolution helpers
+- (2026-02-03) Added `sla-ticket-workflow.ts` with response/resolution phase tracking and threshold orchestration (Temporal)
 
 ## Discoveries / Constraints
 
