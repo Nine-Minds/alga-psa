@@ -1338,7 +1338,7 @@
   {
     "id": "T168",
     "description": "E2E: Implement ticket detail - accessibility: timeline entries read in sensible order",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ]
