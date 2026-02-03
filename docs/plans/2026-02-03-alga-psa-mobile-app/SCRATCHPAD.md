@@ -122,3 +122,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F116 deferred Phase 2 push-to-ticket deep links per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F117 deferred Phase 2 notification preferences UI per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F118 deferred Phase 2 self-hosted base URL onboarding per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
+- 2026-02-03: F119 deferred Phase 2 self-hosted mobile auth requirements documentation per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).

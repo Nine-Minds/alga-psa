@@ -946,7 +946,7 @@
   {
     "id": "F119",
     "description": "[Phase2:Self-hosted] Document self-hosted requirements for mobile handoff URLs and SSO callback domains",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
