@@ -634,7 +634,7 @@
   {
     "id": "T080",
     "description": "E2E: Implement watchers/subscribers add/remove (if supported by API)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
