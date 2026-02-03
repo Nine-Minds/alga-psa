@@ -1546,7 +1546,7 @@
   {
     "id": "T194",
     "description": "Integration: Implement server mobile auth - rate limiting per IP and per user for exchange/refresh",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F194"
     ]
