@@ -46,7 +46,7 @@ function TicketDetailBody({
     return cached ? (cached as TicketDetail) : null;
   });
   const [initialLoading, setInitialLoading] = useState(ticket === null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; description: string } | null>(null);
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
@@ -56,7 +56,16 @@ function TicketDetailBody({
     setError(null);
     const result = await getTicketById(client, { apiKey: session.accessToken, ticketId });
     if (!result.ok) {
-      setError("Unable to load ticket.");
+      if (result.error.kind === "http" && result.status === 404) {
+        setTicket(null);
+        setError({ title: "Ticket not found", description: "This ticket may have been deleted." });
+        return;
+      }
+      if (result.error.kind === "http" && result.status === 403) {
+        setError({ title: "No access", description: "You don’t have permission to view this ticket." });
+        return;
+      }
+      setError({ title: "Unable to load ticket", description: "Please try again." });
       return;
     }
     setTicket(result.data.data);
@@ -107,7 +116,7 @@ function TicketDetailBody({
   }
 
   if (error && !ticket) {
-    return <ErrorState title="Unable to load ticket" description={error} />;
+    return <ErrorState title={error.title} description={error.description} />;
   }
 
   if (!ticket) {
@@ -120,6 +129,22 @@ function TicketDetailBody({
       contentContainerStyle={{ padding: spacing.lg }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
     >
+      {error ? (
+        <View
+          style={{
+            padding: spacing.md,
+            borderRadius: 12,
+            backgroundColor: "#FEF3C7",
+            borderWidth: 1,
+            borderColor: "#F59E0B",
+            marginBottom: spacing.md,
+          }}
+        >
+          <Text style={{ ...typography.caption, color: "#7C2D12", fontWeight: "700" }}>{error.title}</Text>
+          <Text style={{ ...typography.caption, color: "#7C2D12", marginTop: 2 }}>{error.description}</Text>
+        </View>
+      ) : null}
+
       <Text style={{ ...typography.caption, color: colors.mutedText }}>
         {ticket.ticket_number}
         {ticket.client_name ? ` • ${ticket.client_name}` : ""}

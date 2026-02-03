@@ -65,3 +65,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F059 ticket comments now visually distinguish internal vs public visibility with labeled badges.
 - 2026-02-03: F060 comment entries display commenter name and timestamp (relative + absolute).
 - 2026-02-03: F061 ticket detail supports copy actions (ticket # / id) and “Open in web” deep link to `/msp/tickets/:id` (uses `expo-clipboard`).
+- 2026-02-03: F062 ticket detail now shows friendly 403/404 UX (no-access vs not-found) and preserves cached detail when possible.
