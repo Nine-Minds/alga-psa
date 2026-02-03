@@ -429,3 +429,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T201 marked as covered: Ticket comments endpoint supports pagination/ordering used by mobile.
 - 2026-02-03: T202 marked as covered: Ticket status update validates status_id and returns updated ticket summary.
 - 2026-02-03: T203 marked as covered: Ticket assignment update supports assign-to-self without extra lookup.
+- 2026-02-03: T204 marked as covered: Time entry create validates ticket association + permissions (server enforcement).
