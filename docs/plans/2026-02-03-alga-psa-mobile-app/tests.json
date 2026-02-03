@@ -418,7 +418,7 @@
   {
     "id": "T053",
     "description": "E2E: Implement Ticket detail screen with loading skeleton and refresh",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
