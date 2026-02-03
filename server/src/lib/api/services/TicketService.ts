@@ -873,6 +873,30 @@ export class TicketService extends BaseService<ITicket> {
             });
           }
           break;
+        case 'updated_from':
+          query.whereRaw('COALESCE(t.updated_at, t.entered_at) >= ?', [value]);
+          break;
+        case 'updated_to':
+          query.whereRaw('COALESCE(t.updated_at, t.entered_at) <= ?', [value]);
+          break;
+        case 'priority_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('priorities as p')
+                .whereRaw('p.priority_id = t.priority_id')
+                .andWhere('p.tenant', query.client.raw('t.tenant'))
+                .andWhereILike('p.priority_name', `%${value}%`);
+          });
+          break;
+        case 'status_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('statuses as s')
+                .whereRaw('s.status_id = t.status_id')
+                .andWhere('s.tenant', query.client.raw('t.tenant'))
+                .andWhereILike('s.name', `%${value}%`);
+          });
+          break;
         case 'entered_from':
           query.where('t.entered_at', '>=', value);
           break;

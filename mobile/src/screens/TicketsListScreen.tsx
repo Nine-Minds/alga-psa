@@ -1,7 +1,7 @@
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
@@ -12,7 +12,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { listTickets, type TicketListItem } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 
@@ -45,11 +45,45 @@ export function TicketsListScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<{
+    status: "any" | "open" | "closed";
+    assignee: "any" | "me" | "unassigned";
+    priorityName: string;
+    updatedSinceDays: number | null;
+  }>({
+    status: "any",
+    assignee: "any",
+    priorityName: "",
+    updatedSinceDays: null,
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
     return () => clearTimeout(handle);
   }, [searchInput]);
+
+  const apiFilters = useMemo(() => {
+    if (!session) return undefined;
+    const out: Record<string, unknown> = {};
+    if (filters.status === "open") out.is_open = true;
+    if (filters.status === "closed") out.is_closed = true;
+
+    if (filters.assignee === "me") {
+      const me = session.user?.id;
+      if (me) out.assigned_to = me;
+    }
+    if (filters.assignee === "unassigned") out.has_assignment = false;
+
+    const priority = filters.priorityName.trim();
+    if (priority) out.priority_name = priority;
+
+    if (filters.updatedSinceDays) {
+      out.updated_from = new Date(Date.now() - filters.updatedSinceDays * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    return out;
+  }, [filters, session]);
 
   const loadPage = useCallback(
     async ({ pageToLoad, replace }: { pageToLoad: number; replace: boolean }) => {
@@ -60,6 +94,7 @@ export function TicketsListScreen({ navigation }: Props) {
         page: pageToLoad,
         limit: 25,
         search: search || undefined,
+        filters: apiFilters,
       });
       if (!result.ok) {
         logger.warn("Ticket list fetch failed", { error: result.error });
@@ -72,7 +107,7 @@ export function TicketsListScreen({ navigation }: Props) {
       setPage(result.data.pagination.page);
       setHasNext(result.data.pagination.hasNext);
     },
-    [client, search, session],
+    [apiFilters, client, search, session],
   );
 
   const { refreshing, refresh } = usePullToRefresh(async () => {
@@ -142,48 +177,252 @@ export function TicketsListScreen({ navigation }: Props) {
   }
 
   return (
-    <FlatList
-      data={items}
-      keyExtractor={(item) => item.ticket_id}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      contentContainerStyle={{ padding: spacing.lg, backgroundColor: colors.background }}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.4}
-      ListHeaderComponent={
-        <View style={{ marginBottom: spacing.md }}>
-          <TextInput
-            value={searchInput}
-            onChangeText={setSearchInput}
-            placeholder="Search tickets"
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Search tickets"
-            style={{
-              paddingVertical: spacing.sm,
-              paddingHorizontal: spacing.md,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-              color: colors.text,
-            }}
-          />
-        </View>
-      }
-      renderItem={({ item }) => (
-        <TicketRow
-          item={item}
-          onPress={() => navigation.navigate("TicketDetail", { ticketId: item.ticket_id })}
-        />
-      )}
-      ListFooterComponent={
-        loadingMore ? (
-          <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
-            <ActivityIndicator />
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.ticket_id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        contentContainerStyle={{ padding: spacing.lg, backgroundColor: colors.background }}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.4}
+        ListHeaderComponent={
+          <View style={{ marginBottom: spacing.md }}>
+            <View style={{ flexDirection: "row" }}>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={searchInput}
+                  onChangeText={setSearchInput}
+                  placeholder="Search tickets"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  accessibilityLabel="Search tickets"
+                  style={{
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    color: colors.text,
+                  }}
+                />
+              </View>
+              <View style={{ width: spacing.sm }} />
+              <Pressable
+                onPress={() => setFiltersOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Open filters"
+                style={({ pressed }) => ({
+                  paddingHorizontal: spacing.md,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                  justifyContent: "center",
+                  opacity: pressed ? 0.95 : 1,
+                })}
+              >
+                <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
+              </Pressable>
+            </View>
+            <ActiveFiltersSummary filters={filters} />
           </View>
-        ) : null
-      }
-    />
+        }
+        renderItem={({ item }) => (
+          <TicketRow
+            item={item}
+            onPress={() => navigation.navigate("TicketDetail", { ticketId: item.ticket_id })}
+          />
+        )}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
+              <ActivityIndicator />
+            </View>
+          ) : null
+        }
+      />
+
+      <FiltersModal
+        visible={filtersOpen}
+        filters={filters}
+        setFilters={setFilters}
+        canFilterMe={Boolean(session.user?.id)}
+        onClose={() => setFiltersOpen(false)}
+      />
+    </View>
+  );
+}
+
+function ActiveFiltersSummary({
+  filters,
+}: {
+  filters: {
+    status: "any" | "open" | "closed";
+    assignee: "any" | "me" | "unassigned";
+    priorityName: string;
+    updatedSinceDays: number | null;
+  };
+}) {
+  const parts: string[] = [];
+  if (filters.status !== "any") parts.push(filters.status);
+  if (filters.assignee !== "any") parts.push(filters.assignee);
+  if (filters.priorityName.trim()) parts.push(`priority:${filters.priorityName.trim()}`);
+  if (filters.updatedSinceDays) parts.push(`updated:${filters.updatedSinceDays}d`);
+
+  if (parts.length === 0) return null;
+  return (
+    <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+      Filters: {parts.join(" • ")}
+    </Text>
+  );
+}
+
+function FiltersModal({
+  visible,
+  filters,
+  setFilters,
+  canFilterMe,
+  onClose,
+}: {
+  visible: boolean;
+  filters: {
+    status: "any" | "open" | "closed";
+    assignee: "any" | "me" | "unassigned";
+    priorityName: string;
+    updatedSinceDays: number | null;
+  };
+  setFilters: Dispatch<
+    SetStateAction<{
+      status: "any" | "open" | "closed";
+      assignee: "any" | "me" | "unassigned";
+      priorityName: string;
+      updatedSinceDays: number | null;
+    }>
+  >;
+  canFilterMe: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
+        <Text style={{ ...typography.title, color: colors.text }}>Filters</Text>
+
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Status</Text>
+        <OptionRow
+          options={[
+            { label: "Any", value: "any" },
+            { label: "Open", value: "open" },
+            { label: "Closed", value: "closed" },
+          ]}
+          value={filters.status}
+          onChange={(status) => setFilters({ ...filters, status })}
+        />
+
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Assignee</Text>
+        <OptionRow
+          options={[
+            { label: "Any", value: "any" },
+            { label: "Me", value: "me", disabled: !canFilterMe },
+            { label: "Unassigned", value: "unassigned" },
+          ]}
+          value={filters.assignee}
+          onChange={(assignee) => setFilters({ ...filters, assignee })}
+        />
+        {!canFilterMe ? (
+          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+            “Me” filter requires user identity from sign-in.
+          </Text>
+        ) : null}
+
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Priority</Text>
+        <TextInput
+          value={filters.priorityName}
+          onChangeText={(priorityName) => setFilters({ ...filters, priorityName })}
+          placeholder="Priority name (e.g. High)"
+          accessibilityLabel="Priority filter"
+          style={{
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            color: colors.text,
+            marginTop: spacing.sm,
+          }}
+        />
+
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Updated since</Text>
+        <OptionRow
+          options={[
+            { label: "Any", value: null },
+            { label: "24h", value: 1 },
+            { label: "7d", value: 7 },
+            { label: "30d", value: 30 },
+          ]}
+          value={filters.updatedSinceDays}
+          onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays })}
+        />
+
+        <View style={{ flex: 1 }} />
+
+        <View style={{ flexDirection: "row" }}>
+          <PrimaryButton
+            onPress={() =>
+              setFilters({
+                status: "any",
+                assignee: "any",
+                priorityName: "",
+                updatedSinceDays: null,
+              })
+            }
+          >
+            Clear
+          </PrimaryButton>
+          <View style={{ width: spacing.sm }} />
+          <PrimaryButton onPress={onClose}>Done</PrimaryButton>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function OptionRow<T extends string | number | null>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { label: string; value: T; disabled?: boolean }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+      {options.map((opt) => (
+        <View key={String(opt.value)} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+          <Pressable
+            onPress={() => onChange(opt.value)}
+            disabled={opt.disabled}
+            accessibilityRole="button"
+            accessibilityLabel={opt.label}
+            style={({ pressed }) => ({
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: value === opt.value ? colors.primary : colors.border,
+              backgroundColor: value === opt.value ? colors.primary : colors.card,
+              opacity: pressed && !opt.disabled ? 0.95 : opt.disabled ? 0.5 : 1,
+            })}
+          >
+            <Text style={{ ...typography.caption, color: value === opt.value ? colors.primaryText : colors.text }}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        </View>
+      ))}
+    </View>
   );
 }
 

@@ -36,6 +36,14 @@ export type ListTicketsParams = {
   sort?: string;
   order?: "asc" | "desc";
   search?: string;
+  filters?: {
+    is_open?: boolean;
+    is_closed?: boolean;
+    assigned_to?: string;
+    has_assignment?: boolean;
+    priority_name?: string;
+    updated_from?: string;
+  };
 };
 
 export function listTickets(
@@ -51,6 +59,7 @@ export function listTickets(
       sort: params.sort ?? "updated_at",
       order: params.order ?? "desc",
       search: params.search,
+      ...(params.filters ?? {}),
     },
     headers: {
       "x-api-key": params.apiKey,

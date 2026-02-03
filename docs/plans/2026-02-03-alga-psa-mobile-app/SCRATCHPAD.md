@@ -47,3 +47,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F041 added accessible status/priority badges to ticket list rows (high-contrast pill badges).
 - 2026-02-03: F042 ticket list requests use server-side sorting with `sort=updated_at&order=desc` by default.
 - 2026-02-03: F043 added debounced server-side ticket search (search input -> `search=` query param on `/api/v1/tickets`).
+- 2026-02-03: F044 added filter UI (Status open/closed, Assignee me/unassigned, Priority name, Updated-since) and wired to server-side query params; server ticket list now supports `updated_from/updated_to`, `priority_name`, and `status_name` filters.
