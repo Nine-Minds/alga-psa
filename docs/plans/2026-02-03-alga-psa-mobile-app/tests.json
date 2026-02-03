@@ -650,7 +650,7 @@
   {
     "id": "T082",
     "description": "E2E: Surface validation errors clearly for partial updates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
