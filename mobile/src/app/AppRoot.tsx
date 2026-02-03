@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Platform, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
@@ -9,12 +9,27 @@ import { useNetworkStatus } from "../network/useNetworkStatus";
 import { OfflineBanner } from "../ui/components/OfflineBanner";
 import { AuthContext, type MobileSession } from "../auth/AuthContext";
 import { clearStoredSession, getStoredSession, storeSession } from "../auth/sessionStorage";
+import { useAppResume } from "../hooks/useAppResume";
+import { createApiClient } from "../api";
+import { refreshSession } from "../api/mobileAuth";
+import { logger } from "../logging/logger";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
   const [bootStatus, setBootStatus] = useState<"booting" | "ready">("booting");
   const [session, setSessionState] = useState<MobileSession | null>(null);
   const network = useNetworkStatus();
+  const refreshInFlight = useRef(false);
+
+  const baseUrl = config.ok ? config.baseUrl : null;
+
+  const setSession = useCallback(
+    (next: MobileSession | null) => {
+      setSessionState(next);
+      void (next ? storeSession(next) : clearStoredSession());
+    },
+    [clearStoredSession, setSessionState, storeSession],
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -43,6 +58,57 @@ export function AppRoot() {
     };
   }, [config]);
 
+  const refreshNow = useCallback(async (): Promise<boolean> => {
+    if (!baseUrl || !session) return false;
+    if (refreshInFlight.current) return false;
+
+    refreshInFlight.current = true;
+    try {
+      const client = createApiClient({
+        baseUrl,
+        getUserAgentTag: () => `mobile/${Platform.OS}`,
+      });
+
+      const result = await refreshSession(client, {
+        refreshToken: session.refreshToken,
+        device: { platform: Platform.OS },
+      });
+
+      if (!result.ok) return false;
+
+      setSession({
+        ...session,
+        accessToken: result.data.accessToken,
+        refreshToken: result.data.refreshToken,
+        expiresAtMs: Date.now() + result.data.expiresInSec * 1000,
+      });
+
+      return true;
+    } catch (e) {
+      logger.warn("Refresh attempt failed", { error: e });
+      return false;
+    } finally {
+      refreshInFlight.current = false;
+    }
+  }, [baseUrl, session, setSession]);
+
+  useEffect(() => {
+    if (!baseUrl || !session) return;
+
+    const skewMs = 60_000;
+    const msUntilRefresh = Math.max(0, session.expiresAtMs - Date.now() - skewMs);
+    const handle = setTimeout(() => void refreshNow(), msUntilRefresh);
+    return () => clearTimeout(handle);
+  }, [baseUrl, refreshNow, session?.expiresAtMs, session?.refreshToken]);
+
+  useAppResume(() => {
+    if (!session) return;
+    const skewMs = 120_000;
+    if (session.expiresAtMs - Date.now() <= skewMs) {
+      void refreshNow();
+    }
+  });
+
   if (!config.ok) {
     return (
       <ErrorState title="Configuration error" description={config.error} />
@@ -57,10 +123,7 @@ export function AppRoot() {
     <AuthContext.Provider
       value={{
         session,
-        setSession: (next) => {
-          setSessionState(next);
-          void (next ? storeSession(next) : clearStoredSession());
-        },
+        setSession,
       }}
     >
       <View style={{ flex: 1 }}>

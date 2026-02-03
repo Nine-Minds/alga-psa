@@ -28,3 +28,28 @@ export function exchangeOtt(
     body,
   });
 }
+
+export type RefreshSessionRequest = {
+  refreshToken: string;
+  device?: {
+    platform?: string;
+    appVersion?: string;
+  };
+};
+
+export type RefreshSessionResponse = {
+  accessToken: string;
+  refreshToken: string;
+  expiresInSec: number;
+};
+
+export function refreshSession(
+  client: ApiClient,
+  body: RefreshSessionRequest,
+): Promise<ApiResult<RefreshSessionResponse>> {
+  return client.request<RefreshSessionResponse>({
+    method: "POST",
+    path: "/api/v1/mobile/auth/refresh",
+    body,
+  });
+}

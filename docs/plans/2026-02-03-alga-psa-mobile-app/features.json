@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "[Mobile:Auth] Implement session refresh/rotation before expiry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
