@@ -1162,7 +1162,7 @@
   {
     "id": "F146",
     "description": "[Mobile:Tickets:List] Implement List:UX - last refreshed timestamp",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

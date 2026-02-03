@@ -17,7 +17,7 @@ import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
-import { formatDateShort } from "../ui/formatters/dateTime";
+import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -79,6 +79,7 @@ export function TicketsListScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [noAccess, setNoAccess] = useState(false);
   const [stats, setStats] = useState<TicketStats | null>(null);
+  const [lastRefreshedAtIso, setLastRefreshedAtIso] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<TicketListFilters>(DEFAULT_FILTERS);
@@ -200,6 +201,7 @@ export function TicketsListScreen({ navigation }: Props) {
       setHasNext(result.data.pagination.hasNext);
 
       if (replace && pageToLoad === 1) {
+        setLastRefreshedAtIso(new Date().toISOString());
         const toPrefetch = nextItems.slice(0, 5);
         void Promise.all(
           toPrefetch.map(async (t) => {
@@ -420,6 +422,11 @@ export function TicketsListScreen({ navigation }: Props) {
           onPress={() => setFiltersOpen(true)}
           onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
         />
+        {lastRefreshedAtIso ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+            Last refreshed: {formatDateTimeWithRelative(lastRefreshedAtIso)}
+          </Text>
+        ) : null}
         <QuickFilters
           onSelect={(kind) => {
             if (kind === "mine") setFilters({ ...filters, assignee: "me" });

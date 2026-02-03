@@ -149,3 +149,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F143 added a sort selector (field + order) to the ticket list Filters modal and wires it to the existing `sort`/`order` query params for `GET /api/v1/tickets`.
 - 2026-02-03: F144 replaced the plain “active filters” line with an interactive chip summary bar showing active filters; tapping a chip opens the Filters modal.
 - 2026-02-03: F145 added a “Clear all” CTA to the active filter chip bar to reset list filters without opening the modal.
+- 2026-02-03: F146 added a “Last refreshed” timestamp under the list header (updates on successful page-1 reload) using locale-aware relative+absolute formatting.
