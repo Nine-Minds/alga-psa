@@ -230,7 +230,7 @@
   {
     "id": "F039",
     "description": "SlaTicketWorkflow sends notification at 75% threshold via sendSlaNotification activity",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
