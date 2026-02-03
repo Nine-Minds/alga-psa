@@ -19,6 +19,7 @@ import { createTimeEntry } from "../api/timeEntries";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { buildTicketWebUrl } from "../urls/hostedUrls";
 import { copyToClipboard } from "../clipboard/clipboard";
+import { useNetworkStatus } from "../network/useNetworkStatus";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -92,6 +93,8 @@ function TicketDetailBody({
   const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const network = useNetworkStatus();
+  const isOffline = network.isConnected === false || network.isInternetReachable === false;
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -240,6 +243,10 @@ function TicketDetailBody({
     }
     if (text.length > MAX_COMMENT_LENGTH) {
       setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
+      return;
+    }
+    if (isOffline) {
+      setCommentSendError("You’re offline. Your draft is saved and will be ready to send when you’re back online.");
       return;
     }
 
@@ -816,6 +823,7 @@ function TicketDetailBody({
             onChangeIsInternal={setCommentIsInternal}
             onSend={() => void sendComment()}
             sending={commentSending}
+            offline={isOffline}
             error={commentSendError}
           />
           <View style={{ height: spacing.sm }} />
@@ -1279,6 +1287,7 @@ function CommentComposer({
   onChangeIsInternal,
   onSend,
   sending,
+  offline,
   error,
 }: {
   draft: string;
@@ -1287,6 +1296,7 @@ function CommentComposer({
   onChangeIsInternal: (value: boolean) => void;
   onSend: () => void;
   sending: boolean;
+  offline: boolean;
   error: string | null;
 }) {
   return (
@@ -1339,8 +1349,17 @@ function CommentComposer({
           {error}
         </Text>
       ) : null}
+      {offline ? (
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+          Offline — your draft is saved. Reconnect to send.
+        </Text>
+      ) : null}
       <View style={{ marginTop: spacing.sm }}>
-        <PrimaryButton onPress={onSend} disabled={sending} accessibilityLabel="Send comment">
+        <PrimaryButton
+          onPress={onSend}
+          disabled={sending || offline || draft.trim().length === 0}
+          accessibilityLabel="Send comment"
+        >
           {sending ? "Sending…" : "Send"}
         </PrimaryButton>
       </View>
