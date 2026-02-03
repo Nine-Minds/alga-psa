@@ -159,3 +159,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Added ticket deletion test ensuring SLA workflow cancellation in `packages/tickets/src/actions/__tests__/ticketActions.sla.test.ts` (T062).
 - (2026-02-03) Confirmed policy change cancels and restarts SLA backend in integration test (T063).
 - (2026-02-03) Verified CE ticket start avoids Temporal backend in integration test (T064).
+- (2026-02-03) Added slaTimerHandler integration test confirming polling path still processes tickets (T065).

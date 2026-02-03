@@ -386,7 +386,7 @@
   {
     "id": "T065",
     "description": "Integration: CE sla-timer job continues to process tickets normally",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
