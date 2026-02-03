@@ -130,7 +130,7 @@
   {
     "id": "T017",
     "description": "Unit: Add accessibility baseline (labels, focus order, touch target sizes)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
