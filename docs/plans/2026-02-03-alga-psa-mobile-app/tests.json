@@ -994,7 +994,7 @@
   {
     "id": "T125",
     "description": "Unit: Implement request deduplication for concurrent identical GETs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
