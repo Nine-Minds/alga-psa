@@ -197,6 +197,15 @@ function TicketDetailBody({
         auditHeaders,
       });
       if (!result.ok) {
+        if (result.error.kind === "http" && result.status === 403) {
+          setCommentSendError("You don’t have permission to add comments to this ticket.");
+          return;
+        }
+        if (result.error.kind === "http" && result.status === 400) {
+          const msg = getApiErrorMessage(result.error.body);
+          setCommentSendError(msg ?? "Comment was rejected by the server.");
+          return;
+        }
         setCommentSendError("Unable to send comment. Please try again.");
         return;
       }
@@ -239,6 +248,15 @@ function TicketDetailBody({
                 },
               ],
             );
+            return;
+          }
+          if (res.error.kind === "http" && res.status === 403) {
+            setStatusUpdateError("You don’t have permission to change this ticket’s status.");
+            return;
+          }
+          if (res.error.kind === "http" && res.status === 400) {
+            const msg = getApiErrorMessage(res.error.body);
+            setStatusUpdateError(msg ?? "Status change was rejected by the server.");
             return;
           }
           setStatusUpdateError("Unable to change status. Please try again.");
@@ -801,4 +819,14 @@ function extractLinks(text: string): string[] {
   const matches = text.match(/https?:\/\/[^\s)\]]+/g) ?? [];
   const unique = Array.from(new Set(matches));
   return unique;
+}
+
+function getApiErrorMessage(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const error = (body as any).error as unknown;
+  if (!error || typeof error !== "object") return null;
+  const message = (error as any).message as unknown;
+  if (typeof message !== "string") return null;
+  const trimmed = message.trim();
+  return trimmed ? trimmed : null;
 }

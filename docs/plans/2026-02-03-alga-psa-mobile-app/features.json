@@ -594,7 +594,7 @@
   {
     "id": "F075",
     "description": "[Mobile:Tickets:Updates] Ensure updates respect RBAC and server-side validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
