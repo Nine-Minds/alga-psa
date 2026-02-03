@@ -1442,7 +1442,7 @@
   {
     "id": "T181",
     "description": "E2E: Implement updates - prevent double-tap submits",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181"
     ]
