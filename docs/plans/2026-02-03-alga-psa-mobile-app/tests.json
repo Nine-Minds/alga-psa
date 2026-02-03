@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "Unit: Add request middleware for auth headers, tenant headers (if required), and user-agent tagging",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
