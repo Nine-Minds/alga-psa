@@ -690,7 +690,7 @@
   {
     "id": "T087",
     "description": "Unit: Add “about/legal” screens (privacy policy/terms)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
