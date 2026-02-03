@@ -189,3 +189,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F182 confirmed ticket mutations include device/app metadata audit headers (platform/app version/build/device id) via centralized `getClientMetadataHeaders()`.
 - 2026-02-03: F183 disabled “Assign to me” when the ticket is already assigned to the current user, avoiding redundant assignment calls.
 - 2026-02-03: F184 updated the priority picker to disable selecting the already-current priority (and any future server-flagged invalid options) to prevent no-op updates.
+- 2026-02-03: F185 confirmed due date editing supports clearing the due date via the Due Date modal (sends attribute removal).
