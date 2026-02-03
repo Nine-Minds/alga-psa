@@ -284,7 +284,7 @@
   {
     "id": "F048",
     "description": "PgBossSlaBackend.cancelSla() is a no-op (polling naturally excludes deleted tickets)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
