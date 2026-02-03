@@ -1426,7 +1426,7 @@
   {
     "id": "T179",
     "description": "E2E: Implement updates - field-level spinners for partial updates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F179"
     ]
