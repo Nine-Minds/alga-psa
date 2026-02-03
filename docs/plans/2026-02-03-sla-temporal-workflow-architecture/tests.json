@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Unit: PgBossSlaBackend.completeSla('response') calls slaService.recordFirstResponse()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
