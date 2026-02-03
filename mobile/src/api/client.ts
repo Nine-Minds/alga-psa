@@ -4,6 +4,9 @@ type CreateApiClientOptions = {
   baseUrl: string;
   fetchImpl?: typeof fetch;
   defaultTimeoutMs?: number;
+  getAccessToken?: () => string | undefined;
+  getTenantId?: () => string | undefined;
+  getUserAgentTag?: () => string | undefined;
 };
 
 function buildUrl(
@@ -60,6 +63,9 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
   const fetchImpl = options.fetchImpl ?? fetch;
   const defaultTimeoutMs = options.defaultTimeoutMs ?? 30_000;
   const baseUrl = options.baseUrl;
+  const getAccessToken = options.getAccessToken;
+  const getTenantId = options.getTenantId;
+  const getUserAgentTag = options.getUserAgentTag;
 
   return {
     async request<T>(req: ApiRequest): Promise<ApiResult<T>> {
@@ -79,11 +85,18 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
       }
 
       try {
+        const authToken = getAccessToken?.();
+        const tenantId = getTenantId?.();
+        const userAgentTag = getUserAgentTag?.();
+
         const response = await fetchImpl(url, {
           method: req.method,
           headers: mergeHeaders({
             accept: "application/json",
             ...(req.body === undefined ? {} : { "content-type": "application/json" }),
+            ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
+            ...(tenantId ? { "x-tenant-id": tenantId } : {}),
+            ...(userAgentTag ? { "x-alga-client": userAgentTag } : {}),
             ...req.headers,
           }),
           body: req.body === undefined ? undefined : JSON.stringify(req.body),
