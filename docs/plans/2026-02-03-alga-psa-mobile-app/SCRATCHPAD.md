@@ -258,3 +258,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T031 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T032 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T033 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
+- 2026-02-03: T034 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).

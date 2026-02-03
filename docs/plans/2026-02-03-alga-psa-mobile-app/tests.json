@@ -266,7 +266,7 @@
   {
     "id": "T034",
     "description": "E2E: Ensure tokens are never logged or sent to crash reports",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
