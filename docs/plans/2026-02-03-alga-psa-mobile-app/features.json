@@ -1290,7 +1290,7 @@
   {
     "id": "F162",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - cache invalidation after posting comment/status change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
