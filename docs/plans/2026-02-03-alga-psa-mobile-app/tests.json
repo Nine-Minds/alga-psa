@@ -106,7 +106,7 @@
   {
     "id": "T014",
     "description": "Unit: Add caching layer for ticket list/detail with TTL + invalidation on updates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

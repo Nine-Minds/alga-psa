@@ -225,3 +225,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T011 marked logger redaction coverage as tested via the existing unit test that verifies secret + ticket/comment redaction (`mobile/src/logging/logger.redaction.test.ts`).
 - 2026-02-03: T012 added analytics unit tests (disabled vs enabled) and verified `schema_version` is included on emitted events (`mobile/src/analytics/analytics.test.ts`).
 - 2026-02-03: T013 marked crash/error reporting redaction as covered by the existing unit test that omits request/response bodies (`mobile/src/errors/errorReporting.test.ts`).
+- 2026-02-03: T014 added unit tests for the shared TTL cache used by ticket list/detail caching (`mobile/src/cache/ttlCache.test.ts`).
