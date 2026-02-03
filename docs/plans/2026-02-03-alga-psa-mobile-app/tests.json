@@ -538,7 +538,7 @@
   {
     "id": "T068",
     "description": "E2E: Post comment and update timeline on success",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
