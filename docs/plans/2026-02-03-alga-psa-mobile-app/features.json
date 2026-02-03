@@ -802,7 +802,7 @@
   {
     "id": "F101",
     "description": "[Server:Mobile Auth] Integrate with existing Microsoft/Google SSO configurations used by web login",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
