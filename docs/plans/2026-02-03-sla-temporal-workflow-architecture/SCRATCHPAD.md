@@ -55,6 +55,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) SLA ticket workflow exported in Temporal workflows index for worker registration
 - (2026-02-03) SLA activities exported in Temporal activities index for worker registration
 - (2026-02-03) Added CE stub TemporalSlaBackend that throws Enterprise-only error
+- (2026-02-03) PgBossSlaBackend startSlaTracking remains a no-op for CE polling
 
 ## Discoveries / Constraints
 
