@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Unit: PgBossSlaBackend.completeSla('resolution') calls slaService.recordResolution()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
