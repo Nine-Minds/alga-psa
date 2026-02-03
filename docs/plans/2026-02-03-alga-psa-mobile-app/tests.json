@@ -706,7 +706,7 @@
   {
     "id": "T089",
     "description": "Unit: Optimize list rendering (virtualized list, avoid re-renders)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
