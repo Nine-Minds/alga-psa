@@ -1170,7 +1170,7 @@
   {
     "id": "T147",
     "description": "E2E: Implement List:UX - pull-to-refresh haptics (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
