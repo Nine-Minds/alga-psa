@@ -13,6 +13,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Don't migrate existing tickets - new tickets get workflows (EE) or polling (CE), existing continue with polling
 - (2026-02-03) Database remains source of truth for SLA status - workflow is for timer orchestration only
 - (2026-02-03) Workflow ID format `sla-ticket-{tenantId}-{ticketId}` allows easy lookup and ensures uniqueness
+- (2026-02-03) Added `ISlaBackend` interface in `packages/sla/src/services/backends/ISlaBackend.ts` and exported via services index
 
 ## Discoveries / Constraints
 
