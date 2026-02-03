@@ -970,7 +970,7 @@
   {
     "id": "T122",
     "description": "Unit: Implement global HTTP 401 handler (attempt refresh once then force sign-in)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
