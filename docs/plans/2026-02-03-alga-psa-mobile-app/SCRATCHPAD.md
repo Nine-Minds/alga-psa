@@ -168,3 +168,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F162 ensured ticket detail refreshes (and updates caches) after comment and status mutations so returning to the list reflects updated summaries.
 - 2026-02-03: F163 added optimistic comment posting: new comments appear immediately with a “Sending…” indicator and roll back cleanly (restoring the draft) if the API call fails.
 - 2026-02-03: F164 status changes now behave optimistically but safely: the UI previews the selected status while updating, and reverts to the original status on failure.
+- 2026-02-03: F165 confirmed status update 409 conflicts show an explicit resolution prompt with a refresh action.

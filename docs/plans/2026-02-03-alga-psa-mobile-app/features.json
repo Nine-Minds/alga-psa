@@ -1314,7 +1314,7 @@
   {
     "id": "F165",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - conflict resolution prompt on 409",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
