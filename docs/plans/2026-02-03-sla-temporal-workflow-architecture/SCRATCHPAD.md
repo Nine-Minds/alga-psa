@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: slaService.startSlaForTicket calls backend.startSlaTracking (T045)
 - (2026-02-03) Tests: slaPauseService.pauseSla calls backend.pauseSla (T046)
 - (2026-02-03) Tests: slaPauseService.resumeSla calls backend.resumeSla (T047)
+- (2026-02-03) Tests: slaService.recordFirstResponse calls backend.completeSla(response) (T048)
 
 ## Discoveries / Constraints
 
