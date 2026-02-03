@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "Unit: TemporalSlaBackend workflow ID follows format sla-ticket-{tenantId}-{ticketId}",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
