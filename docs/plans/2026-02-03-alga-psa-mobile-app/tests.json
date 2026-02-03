@@ -1362,7 +1362,7 @@
   {
     "id": "T171",
     "description": "E2E: Implement updates - draft persistence per ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
