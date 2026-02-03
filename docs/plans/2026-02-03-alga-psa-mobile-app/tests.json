@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "E2E: Implement filter UI for status, assignee, priority, updated-since",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
