@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Create sendSlaNotification activity that calls existing slaNotificationService.sendSlaNotification()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
