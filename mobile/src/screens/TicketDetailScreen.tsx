@@ -15,6 +15,7 @@ import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
+import { createTimeEntry } from "../api/timeEntries";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -79,6 +80,11 @@ function TicketDetailBody({
   const [dueDateError, setDueDateError] = useState<string | null>(null);
   const [watchUpdating, setWatchUpdating] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
+  const [timeEntryOpen, setTimeEntryOpen] = useState(false);
+  const [timeEntryDurationMin, setTimeEntryDurationMin] = useState("15");
+  const [timeEntryNotes, setTimeEntryNotes] = useState("");
+  const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
+  const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
@@ -485,6 +491,62 @@ function TicketDetailBody({
     }
   };
 
+  const openTimeEntryModal = () => {
+    setTimeEntryError(null);
+    setTimeEntryDurationMin("15");
+    setTimeEntryNotes("");
+    setTimeEntryOpen(true);
+  };
+
+  const submitTimeEntry = async () => {
+    if (!client || !session) return;
+    if (timeEntryUpdating) return;
+
+    const duration = Number(timeEntryDurationMin.trim());
+    if (!Number.isFinite(duration) || duration <= 0) {
+      setTimeEntryError("Enter a valid duration in minutes.");
+      return;
+    }
+
+    setTimeEntryError(null);
+    setTimeEntryUpdating(true);
+    try {
+      const end = new Date();
+      const start = new Date(end.getTime() - Math.round(duration) * 60_000);
+
+      const auditHeaders = await getClientMetadataHeaders();
+      const res = await createTimeEntry(client, {
+        apiKey: session.accessToken,
+        work_item_type: "ticket",
+        work_item_id: ticketId,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        notes: timeEntryNotes.trim() || undefined,
+        is_billable: true,
+        auditHeaders,
+      });
+
+      if (!res.ok) {
+        if (res.error.kind === "http" && res.status === 403) {
+          setTimeEntryError("You don’t have permission to create time entries.");
+          return;
+        }
+        if (res.error.kind === "http" && res.status === 400) {
+          const msg = getApiErrorMessage(res.error.body);
+          setTimeEntryError(msg ?? "Time entry was rejected by the server.");
+          return;
+        }
+        setTimeEntryError("Unable to create time entry. Please try again.");
+        return;
+      }
+
+      setTimeEntryOpen(false);
+      Alert.alert("Time entry created", `Added ${Math.round(duration)} minutes.`);
+    } finally {
+      setTimeEntryUpdating(false);
+    }
+  };
+
   return (
     <>
       <ScrollView
@@ -588,6 +650,13 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
+            label="Add time"
+            onPress={() => {
+              openTimeEntryModal();
+            }}
+          />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
             label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
             disabled={assignmentUpdating}
             onPress={() => {
@@ -683,6 +752,18 @@ function TicketDetailBody({
         onSave={() => void saveDueDateFromDraft()}
         onSetInDays={(days) => void setDueDateInDays(days)}
         onClose={() => setDueDateOpen(false)}
+      />
+
+      <TimeEntryModal
+        visible={timeEntryOpen}
+        durationMin={timeEntryDurationMin}
+        onChangeDurationMin={setTimeEntryDurationMin}
+        notes={timeEntryNotes}
+        onChangeNotes={setTimeEntryNotes}
+        updating={timeEntryUpdating}
+        error={timeEntryError}
+        onClose={() => setTimeEntryOpen(false)}
+        onSubmit={() => void submitTimeEntry()}
       />
 
       <PriorityPickerModal
@@ -835,6 +916,102 @@ function DueDateModal({
             </Text>
           </Pressable>
         </View>
+      </View>
+    </Modal>
+  );
+}
+
+function TimeEntryModal({
+  visible,
+  durationMin,
+  onChangeDurationMin,
+  notes,
+  onChangeNotes,
+  updating,
+  error,
+  onSubmit,
+  onClose,
+}: {
+  visible: boolean;
+  durationMin: string;
+  onChangeDurationMin: (value: string) => void;
+  notes: string;
+  onChangeNotes: (value: string) => void;
+  updating: boolean;
+  error: string | null;
+  onSubmit: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
+        <Text style={{ ...typography.title, color: colors.text }}>Add time entry</Text>
+        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+          Duration (minutes)
+        </Text>
+        <TextInput
+          value={durationMin}
+          onChangeText={onChangeDurationMin}
+          keyboardType="number-pad"
+          placeholder="15"
+          editable={!updating}
+          style={{
+            marginTop: spacing.sm,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            color: colors.text,
+          }}
+        />
+
+        <Text style={{ ...typography.caption, marginTop: spacing.lg, color: colors.mutedText }}>
+          Notes (optional)
+        </Text>
+        <TextInput
+          value={notes}
+          onChangeText={onChangeNotes}
+          multiline
+          placeholder="What did you do?"
+          editable={!updating}
+          style={{
+            marginTop: spacing.sm,
+            minHeight: 90,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            color: colors.text,
+          }}
+        />
+
+        {updating ? (
+          <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+            <ActivityIndicator />
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+              Saving…
+            </Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+            {error}
+          </Text>
+        ) : null}
+
+        <View style={{ flex: 1 }} />
+        <PrimaryButton onPress={onSubmit} disabled={updating}>
+          Save time entry
+        </PrimaryButton>
+        <View style={{ height: spacing.sm }} />
+        <PrimaryButton onPress={onClose} disabled={updating}>
+          Cancel
+        </PrimaryButton>
       </View>
     </Modal>
   );

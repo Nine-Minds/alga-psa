@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "[Mobile:Tickets:Critical Updates] Implement time entry creation from ticket (if supported by API)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

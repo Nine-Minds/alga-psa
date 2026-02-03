@@ -84,3 +84,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F078 added priority picker backed by a new `GET /api/v1/tickets/priorities` endpoint and priority update via `PUT /api/v1/tickets/:id` (priority_id only) with refetch + cache update.
 - 2026-02-03: F079 added due date editing using ticket `attributes.due_date` via `PUT /api/v1/tickets/:id` (attributes update), with quick-set options and a simple YYYY-MM-DD input.
 - 2026-02-03: F080 implemented a minimal “Watch/Unwatch” toggle for the current user by persisting `attributes.watcher_user_ids` via `PUT /api/v1/tickets/:id` (no directory/user lookup required).
+- 2026-02-03: F081 added time entry creation from a ticket using `POST /api/v1/time-entries` with a lightweight duration+notes modal (work_item_type=ticket, work_item_id=ticket_id).
