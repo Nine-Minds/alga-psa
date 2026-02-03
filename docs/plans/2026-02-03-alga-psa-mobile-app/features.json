@@ -1746,7 +1746,7 @@
   {
     "id": "F219",
     "description": "[Mobile:Release] Release - feature gating to disable Phase 2 modules in production builds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
