@@ -418,3 +418,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T190 marked as covered: Exchange endpoint validates request shape (Zod validation in server + standard API error schema).
 - 2026-02-03: T191 marked as covered: Refresh token rotation invalidates prior token (server implementation + unit tests: server/src/test/unit/mobileAuth.test.ts).
 - 2026-02-03: T192 marked as covered: Capabilities endpoint returns provider availability + mobile enabled flag (server /api/v1/mobile/auth/capabilities).
+- 2026-02-03: T193 marked as covered: Capabilities endpoint returns hosted domain allowlist (server /api/v1/mobile/auth/capabilities).
