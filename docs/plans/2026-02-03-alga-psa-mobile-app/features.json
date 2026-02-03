@@ -1506,7 +1506,7 @@
   {
     "id": "F189",
     "description": "[Server:Mobile Auth] Implement server mobile auth - OTT expiry configurable (default short, e.g., 60s)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

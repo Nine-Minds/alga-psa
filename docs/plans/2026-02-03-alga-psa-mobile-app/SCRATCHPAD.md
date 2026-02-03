@@ -193,3 +193,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F186 confirmed time entry creation validates required fields (duration) and rounds durations to whole minutes before sending to the server.
 - 2026-02-03: F187 server OTTs are bound to the web login `session_id` and exchange validates that session is still active, preventing replay across sessions.
 - 2026-02-03: F188 server OTTs are scoped to the provided `state` and are single-use via an atomic `used_at` update during exchange.
+- 2026-02-03: F189 server OTT TTL is configurable via `ALGA_MOBILE_OTT_TTL_SEC` (defaults to 60s) and enforced on consumption.
