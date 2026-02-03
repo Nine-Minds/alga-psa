@@ -722,7 +722,7 @@
   {
     "id": "T091",
     "description": "Unit: Handle timezone/locale formatting consistently",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
