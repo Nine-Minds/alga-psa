@@ -343,3 +343,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T104 marked as covered: server capabilities endpoint exists (/api/v1/mobile/auth/capabilities).
 - 2026-02-03: T105 marked as covered: undefined
 - 2026-02-03: T105 marked as covered: mobile auth endpoints rate limited (service + route guards).
+- 2026-02-03: T106 marked as covered: undefined
+- 2026-02-03: T106 marked as covered: audit logs recorded for mobile auth events (OTT issued/exchanged/refresh/revoke).

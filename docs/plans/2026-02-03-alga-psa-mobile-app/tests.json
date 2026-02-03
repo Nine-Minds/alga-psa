@@ -842,7 +842,7 @@
   {
     "id": "T106",
     "description": "Integration: Add audit logging for mobile session issue/refresh/revoke events",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
