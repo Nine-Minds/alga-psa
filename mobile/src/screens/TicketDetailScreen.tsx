@@ -205,7 +205,9 @@ function TicketDetailBody({
   const sendComment = async () => {
     if (!client || !session) return;
     if (commentSending) return;
-    const text = commentDraft.trim();
+    const originalDraft = commentDraft;
+    const originalIsInternal = commentIsInternal;
+    const text = originalDraft.trim();
     if (!text) {
       setCommentSendError("Comment cannot be empty.");
       return;
@@ -214,8 +216,21 @@ function TicketDetailBody({
       setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
       return;
     }
-      setCommentSending(true);
-      setCommentSendError(null);
+
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticComment: TicketComment = {
+      comment_id: optimisticId,
+      comment_text: text,
+      is_internal: originalIsInternal,
+      created_at: new Date().toISOString(),
+      created_by_name: session.user?.name ?? session.user?.email ?? "You",
+      optimistic: true,
+    };
+
+    setComments((prev) => [...prev, optimisticComment]);
+    setCommentDraft("");
+    setCommentSendError(null);
+    setCommentSending(true);
     try {
       const auditHeaders = await getClientMetadataHeaders();
       const result = await addTicketComment(client, {
@@ -227,18 +242,39 @@ function TicketDetailBody({
       });
       if (!result.ok) {
         if (result.error.kind === "permission") {
+          setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+          setCommentDraft(originalDraft);
+          setCommentIsInternal(originalIsInternal);
           setCommentSendError("You don’t have permission to add comments to this ticket.");
           return;
         }
         if (result.error.kind === "validation") {
           const msg = getApiErrorMessage(result.error.body);
+          setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+          setCommentDraft(originalDraft);
+          setCommentIsInternal(originalIsInternal);
           setCommentSendError(msg ?? "Comment was rejected by the server.");
           return;
         }
+        setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+        setCommentDraft(originalDraft);
+        setCommentIsInternal(originalIsInternal);
         setCommentSendError("Unable to send comment. Please try again.");
         return;
       }
-      setCommentDraft("");
+
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.comment_id !== optimisticId) return c;
+          return {
+            ...c,
+            ...result.data.data,
+            created_by_name: (result.data.data as any).created_by_name ?? c.created_by_name,
+            comment_text: result.data.data.comment_text ?? c.comment_text,
+            optimistic: false,
+          };
+        }),
+      );
       await secureStorage.deleteItem(draftKey);
       invalidateTicketsListCache();
       await Promise.all([fetchTicket(), fetchComments()]);
@@ -1371,6 +1407,9 @@ function CommentsSection({
   onLoadMore: () => void;
   error: string | null;
 }) {
+  const startIndex = Math.max(0, comments.length - visibleCount);
+  const visible = comments.slice(startIndex);
+
   return (
     <View
       style={{
@@ -1392,14 +1431,18 @@ function CommentsSection({
         <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.mutedText }}>No comments.</Text>
       ) : (
         <View style={{ marginTop: spacing.sm }}>
-          {comments.slice(0, visibleCount).map((c, idx) => {
+          {visible.map((c, idx) => {
             const kind = (c as any).kind as TicketComment["kind"] | undefined;
             const eventType = (c as any).event_type as TicketComment["event_type"] | undefined;
             const isSystemEvent = kind === "event" || typeof eventType === "string";
+            const isOptimistic = Boolean((c as any).optimistic);
             const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${c.comment_text}` : c.comment_text);
 
             return (
-              <View key={c.comment_id ?? String(idx)} style={{ marginTop: idx === 0 ? 0 : spacing.md }}>
+              <View
+                key={c.comment_id ?? String(idx)}
+                style={{ marginTop: idx === 0 ? 0 : spacing.md, opacity: isOptimistic ? 0.75 : 1 }}
+              >
                 <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
                   <Text style={{ ...typography.caption, color: colors.mutedText }}>
                     {c.created_by_name ?? "Unknown"} • {formatDateTimeWithRelative(c.created_at)}
@@ -1407,6 +1450,8 @@ function CommentsSection({
                   <View style={{ width: spacing.sm }} />
                   {isSystemEvent ? (
                     <Badge label="Event" tone="neutral" />
+                  ) : isOptimistic ? (
+                    <Badge label="Sending…" tone="neutral" />
                   ) : (
                     <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
                   )}
@@ -1418,7 +1463,7 @@ function CommentsSection({
             );
           })}
 
-          {visibleCount < comments.length ? (
+          {startIndex > 0 ? (
             <View style={{ marginTop: spacing.md }}>
               <Pressable
                 onPress={onLoadMore}
@@ -1427,7 +1472,7 @@ function CommentsSection({
                 style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
               >
                 <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
-                  Load more ({comments.length - visibleCount} remaining)
+                  Load more ({startIndex} remaining)
                 </Text>
               </Pressable>
             </View>

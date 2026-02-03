@@ -56,6 +56,7 @@ export type TicketComment = {
   kind?: "comment" | "event";
   event_type?: string | null;
   event_text?: string | null;
+  optimistic?: boolean;
 };
 
 export type TicketStatus = {
