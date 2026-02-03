@@ -962,7 +962,7 @@
   {
     "id": "T121",
     "description": "Unit: Implement standardized API error mapping: network vs validation vs auth vs permission vs server error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
