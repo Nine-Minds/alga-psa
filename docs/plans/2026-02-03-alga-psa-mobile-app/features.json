@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "[Mobile:Tickets:List] Persist last-used filters per user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

@@ -51,3 +51,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F045 added quick filter chips on the Tickets list header: My tickets, Unassigned, High priority, Recently updated.
 - 2026-02-03: F046 supports combining multiple ticket list filters simultaneously and shows an “Active filters” summary line under the search bar.
 - 2026-02-03: F047 added “Clear” control in Filters modal to reset all filter fields to defaults.
+- 2026-02-03: F048 persists ticket list filters per user in secure storage and restores them on next app launch.

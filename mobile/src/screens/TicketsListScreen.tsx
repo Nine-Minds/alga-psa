@@ -15,6 +15,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
+import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -23,6 +24,20 @@ type Props = CompositeScreenProps<
     NativeStackScreenProps<RootStackParamList>
   >
 >;
+
+type TicketListFilters = {
+  status: "any" | "open" | "closed";
+  assignee: "any" | "me" | "unassigned";
+  priorityName: string;
+  updatedSinceDays: number | null;
+};
+
+const DEFAULT_FILTERS: TicketListFilters = {
+  status: "any",
+  assignee: "any",
+  priorityName: "",
+  updatedSinceDays: null,
+};
 
 export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
@@ -45,18 +60,34 @@ export function TicketsListScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<{
-    status: "any" | "open" | "closed";
-    assignee: "any" | "me" | "unassigned";
-    priorityName: string;
-    updatedSinceDays: number | null;
-  }>({
-    status: "any",
-    assignee: "any",
-    priorityName: "",
-    updatedSinceDays: null,
-  });
+  const [filters, setFilters] = useState<TicketListFilters>(DEFAULT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      const userId = session?.user?.id;
+      if (!userId) {
+        setFiltersLoaded(true);
+        return;
+      }
+      const saved = await getSecureJson<TicketListFilters>(`alga.mobile.tickets.filters.${userId}`);
+      if (canceled) return;
+      if (saved) setFilters(saved);
+      setFiltersLoaded(true);
+    };
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!filtersLoaded || !userId) return;
+    void setSecureJson(`alga.mobile.tickets.filters.${userId}`, filters);
+  }, [filters, filtersLoaded, session?.user?.id]);
 
   useEffect(() => {
     const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
@@ -255,7 +286,7 @@ export function TicketsListScreen({ navigation }: Props) {
         visible={filtersOpen}
         filters={filters}
         setFilters={setFilters}
-        canFilterMe={Boolean(session.user?.id)}
+        canFilterMe={Boolean(session?.user?.id)}
         onClose={() => setFiltersOpen(false)}
       />
     </View>
