@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Create SlaBackendFactory that returns TemporalSlaBackend for EE and PgBossSlaBackend for CE",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1"]
   },
   {
