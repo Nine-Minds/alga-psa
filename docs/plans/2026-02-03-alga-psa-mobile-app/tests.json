@@ -802,7 +802,7 @@
   {
     "id": "T101",
     "description": "Integration: Integrate with existing Microsoft/Google SSO configurations used by web login",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
