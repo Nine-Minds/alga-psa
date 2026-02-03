@@ -33,6 +33,7 @@ export type TicketListItem = {
   contact_name?: string | null;
   updated_at?: string | null;
   entered_at?: string | null;
+  closed_at?: string | null;
 };
 
 export type TicketDetail = TicketListItem & Record<string, unknown>;

@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "[Mobile:Tickets:Detail] Render key timestamps (created/updated/closed) with relative time",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]

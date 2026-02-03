@@ -130,9 +130,11 @@ function TicketDetailBody({
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
         <View style={{ height: spacing.sm }} />
-        <KeyValue label="Entered" value={formatDate(ticket.entered_at)} />
+        <KeyValue label="Created" value={formatDateWithRelative(ticket.entered_at)} />
         <View style={{ height: spacing.sm }} />
-        <KeyValue label="Updated" value={formatDate(ticket.updated_at)} />
+        <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
+        <View style={{ height: spacing.sm }} />
+        <KeyValue label="Closed" value={formatDateWithRelative(ticket.closed_at)} />
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Ticket ID" value={ticket.ticket_id} />
       </View>
@@ -162,6 +164,31 @@ function formatDate(value: unknown): string {
   if (!value || typeof value !== "string") return "—";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+}
+
+function formatDateWithRelative(value: unknown): string {
+  const absolute = formatDate(value);
+  if (absolute === "—" || typeof value !== "string") return "—";
+  const d = new Date(value);
+  const relative = formatRelative(d);
+  return relative ? `${relative} • ${absolute}` : absolute;
+}
+
+function formatRelative(d: Date): string {
+  const ms = Date.now() - d.getTime();
+  if (!Number.isFinite(ms)) return "";
+  const abs = Math.abs(ms);
+
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  const suffix = ms >= 0 ? "ago" : "from now";
+
+  if (abs < minute) return `just now`;
+  if (abs < hour) return `${Math.round(abs / minute)}m ${suffix}`;
+  if (abs < day) return `${Math.round(abs / hour)}h ${suffix}`;
+  return `${Math.round(abs / day)}d ${suffix}`;
 }
 
 function stringOrDash(value: unknown): string {
