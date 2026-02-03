@@ -1226,7 +1226,7 @@
   {
     "id": "F154",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - sectioned layout (header/details/comments)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
