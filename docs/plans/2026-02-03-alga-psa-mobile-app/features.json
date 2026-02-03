@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "[Mobile:Tickets:List] Support clear-all filters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

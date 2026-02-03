@@ -50,3 +50,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F044 added filter UI (Status open/closed, Assignee me/unassigned, Priority name, Updated-since) and wired to server-side query params; server ticket list now supports `updated_from/updated_to`, `priority_name`, and `status_name` filters.
 - 2026-02-03: F045 added quick filter chips on the Tickets list header: My tickets, Unassigned, High priority, Recently updated.
 - 2026-02-03: F046 supports combining multiple ticket list filters simultaneously and shows an “Active filters” summary line under the search bar.
+- 2026-02-03: F047 added “Clear” control in Filters modal to reset all filter fields to defaults.
