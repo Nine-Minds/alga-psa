@@ -1402,7 +1402,7 @@
   {
     "id": "T176",
     "description": "E2E: Implement updates - status transitions validated server-side with friendly error messages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176"
     ]
