@@ -146,7 +146,7 @@
   {
     "id": "T019",
     "description": "Unit: Add Settings screen shell + diagnostics (version/build/environment)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

@@ -8,6 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
 import { tryBuildHostedPathUrl } from "../urls/hostedUrls";
 import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
+import { formatAppVersion } from "./settingsDiagnostics";
 
 export function SettingsScreen() {
   const config = getAppConfig();
@@ -123,7 +124,7 @@ export function SettingsScreen() {
         <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
           Diagnostics
         </Text>
-        <Row label="App version" value={`${version} (${build})`} />
+        <Row label="App version" value={formatAppVersion(version, build)} />
         <View style={{ height: spacing.sm }} />
         <Row label="Platform" value={`${Platform.OS}`} />
         <View style={{ height: spacing.sm }} />
