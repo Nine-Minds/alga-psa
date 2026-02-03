@@ -96,6 +96,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: updateSlaStatus updates response met field (T034)
 - (2026-02-03) Tests: updateSlaStatus updates resolution met field (T035)
 - (2026-02-03) Tests: recordSlaAuditLog inserts audit entry (T036)
+- (2026-02-03) Tests: TemporalSlaBackend starts SLA workflow with correct ID (T037)
 
 ## Discoveries / Constraints
 
