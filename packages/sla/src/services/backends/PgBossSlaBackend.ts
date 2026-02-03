@@ -22,13 +22,17 @@ export class PgBossSlaBackend implements ISlaBackend {
 
   async pauseSla(ticketId: string, reason: SlaPauseReason): Promise<void> {
     await this.withTicketTransaction(ticketId, async (trx, tenant) => {
-      await pauseSla(trx, tenant, ticketId, reason);
+      await pauseSla(trx, tenant, ticketId, reason, undefined, {
+        skipBackend: true,
+      });
     });
   }
 
   async resumeSla(ticketId: string): Promise<void> {
     await this.withTicketTransaction(ticketId, async (trx, tenant) => {
-      await resumeSla(trx, tenant, ticketId);
+      await resumeSla(trx, tenant, ticketId, undefined, {
+        skipBackend: true,
+      });
     });
   }
 
