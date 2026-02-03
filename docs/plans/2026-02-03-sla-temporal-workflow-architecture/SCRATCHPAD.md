@@ -49,6 +49,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Fallback path logs warning via core logger
 - (2026-02-03) TemporalSlaBackend start is idempotent by ignoring duplicate workflow start errors
 - (2026-02-03) Ticket deletion actions now cancel SLA backend workflows via SlaBackendFactory
+- (2026-02-03) SLA policy change handling restarts backend workflows via handlePolicyChange in slaService and slaSubscriber
 
 ## Discoveries / Constraints
 

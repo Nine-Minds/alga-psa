@@ -218,7 +218,7 @@
   {
     "id": "F037",
     "description": "Handle SLA policy change by calling backend.cancelSla() then backend.startSlaTracking() with new policy",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {

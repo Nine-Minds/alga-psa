@@ -23,7 +23,8 @@ import {
   startSlaForTicket,
   recordFirstResponse,
   recordResolution,
-  handlePriorityChange
+  handlePriorityChange,
+  handlePolicyChange
 } from '@alga-psa/sla';
 import {
   handleStatusChange,
@@ -189,6 +190,27 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
                 isNowPaused: result.is_now_paused
               });
             }
+          }
+        }
+
+        // Handle SLA policy change
+        if (changes.sla_policy_id) {
+          const policyChange = changes.sla_policy_id as { from?: string | null; to?: string | null };
+          if (policyChange.to !== undefined) {
+            logger.info('[SlaSubscriber] SLA policy changed, restarting SLA tracking', {
+              tenantId,
+              ticketId,
+              fromPolicyId: policyChange.from,
+              toPolicyId: policyChange.to
+            });
+
+            await handlePolicyChange(
+              trx,
+              tenantId,
+              ticketId,
+              policyChange.to ?? null,
+              userId
+            );
           }
         }
       });

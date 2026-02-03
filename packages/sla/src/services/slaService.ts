@@ -556,6 +556,108 @@ export async function handlePriorityChange(
   });
 }
 
+/**
+ * Update SLA tracking when the SLA policy changes for a ticket.
+ *
+ * Cancels the existing SLA backend workflow and starts a new one with the
+ * updated policy targets.
+ */
+export async function handlePolicyChange(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  newPolicyId: string | null,
+  changedBy?: string
+): Promise<void> {
+  const ticket = await trx('tickets')
+    .where({ tenant, ticket_id: ticketId })
+    .select(
+      'sla_started_at',
+      'priority_id',
+      'client_id',
+      'board_id'
+    )
+    .first();
+
+  if (!ticket) {
+    return;
+  }
+
+  if (!newPolicyId) {
+    await trx('tickets')
+      .where({ tenant, ticket_id: ticketId })
+      .update({
+        sla_policy_id: null,
+        sla_response_due_at: null,
+        sla_resolution_due_at: null
+      });
+
+    await logSlaEvent(trx, tenant, ticketId, 'sla_policy_cleared', {
+      changed_by: changedBy
+    });
+
+    try {
+      const backend = await SlaBackendFactory.getBackend();
+      await backend.cancelSla(ticketId);
+    } catch (error) {
+      console.warn('Failed to cancel SLA backend on policy clear:', error);
+    }
+
+    return;
+  }
+
+  const policy = await getSlaPolicyWithTargets(trx, tenant, newPolicyId);
+  if (!policy) {
+    return;
+  }
+
+  const target = policy.targets.find(t => t.priority_id === ticket.priority_id);
+  if (!target) {
+    await trx('tickets')
+      .where({ tenant, ticket_id: ticketId })
+      .update({
+        sla_policy_id: policy.sla_policy_id,
+        sla_response_due_at: null,
+        sla_resolution_due_at: null
+      });
+    return;
+  }
+
+  const schedule = await getBusinessHoursSchedule(trx, tenant, policy, target);
+  const startedAt = ticket.sla_started_at ? new Date(ticket.sla_started_at) : new Date();
+
+  const responseDueAt = target.response_time_minutes
+    ? calculateDeadline(schedule, startedAt, target.response_time_minutes)
+    : null;
+  const resolutionDueAt = target.resolution_time_minutes
+    ? calculateDeadline(schedule, startedAt, target.resolution_time_minutes)
+    : null;
+
+  await trx('tickets')
+    .where({ tenant, ticket_id: ticketId })
+    .update({
+      sla_policy_id: policy.sla_policy_id,
+      sla_started_at: startedAt,
+      sla_response_due_at: responseDueAt,
+      sla_resolution_due_at: resolutionDueAt
+    });
+
+  await logSlaEvent(trx, tenant, ticketId, 'sla_policy_changed', {
+    new_policy_id: policy.sla_policy_id,
+    response_due_at: responseDueAt?.toISOString(),
+    resolution_due_at: resolutionDueAt?.toISOString(),
+    changed_by: changedBy
+  });
+
+  try {
+    const backend = await SlaBackendFactory.getBackend();
+    await backend.cancelSla(ticketId);
+    await backend.startSlaTracking(ticketId, policy.sla_policy_id, [target], schedule);
+  } catch (error) {
+    console.warn('Failed to restart SLA backend on policy change:', error);
+  }
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================

@@ -23,6 +23,7 @@ export {
   recordResolution,
   getSlaStatus,
   handlePriorityChange,
+  handlePolicyChange,
   type StartSlaResult,
   type RecordSlaEventResult
 } from './slaService';
