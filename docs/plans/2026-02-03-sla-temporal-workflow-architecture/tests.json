@@ -398,7 +398,7 @@
   {
     "id": "T067",
     "description": "Integration: Temporal worker loads SLA activities on startup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F045"]
   },
   {
