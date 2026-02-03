@@ -356,7 +356,7 @@
   {
     "id": "T060",
     "description": "Integration: First response transitions workflow to resolution phase",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F031"]
   },
   {
