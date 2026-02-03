@@ -1594,7 +1594,7 @@
   {
     "id": "F200",
     "description": "[Server:Mobile Auth] Implement server mobile auth - ticket detail endpoint returns enough fields for header + detail sections",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
