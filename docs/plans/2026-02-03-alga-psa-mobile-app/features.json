@@ -898,7 +898,7 @@
   {
     "id": "F113",
     "description": "[Phase2:Notifications] Implement push notification registration (APNs/FCM) and device token management",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-goals"
     ]
