@@ -842,7 +842,7 @@
   {
     "id": "F106",
     "description": "[Server:Mobile Auth] Add audit logging for mobile session issue/refresh/revoke events",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

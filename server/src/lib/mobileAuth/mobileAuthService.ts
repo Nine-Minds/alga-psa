@@ -6,6 +6,7 @@ import { UserSession } from '@alga-psa/db/models/UserSession';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
+import { auditLog } from '../logging/auditLog';
 
 export const mobileDeviceSchema = z
   .object({
@@ -89,21 +90,38 @@ export async function issueMobileOtt(input: {
   const expiresAt = new Date(Date.now() + config.ottTtlSec * 1000);
 
   const knex = await getConnection(null);
-  await knex('mobile_auth_otts').insert({
-    tenant: input.tenantId,
-    user_id: input.userId,
-    session_id: input.sessionId ?? null,
-    ott_hash: ottHash,
-    state: input.state,
-    expires_at: expiresAt,
-    used_at: null,
-    metadata: input.metadata ?? null,
-  });
+  const [row] = await knex('mobile_auth_otts')
+    .insert({
+      tenant: input.tenantId,
+      user_id: input.userId,
+      session_id: input.sessionId ?? null,
+      ott_hash: ottHash,
+      state: input.state,
+      expires_at: expiresAt,
+      used_at: null,
+      metadata: input.metadata ?? null,
+    })
+    .returning(['mobile_auth_ott_id']);
+
+  const ottId = (row as any)?.mobile_auth_ott_id as string | undefined;
+  if (ottId) {
+    await safeAuditLog({
+      tenantId: input.tenantId,
+      userId: input.userId,
+      operation: 'MOBILE_AUTH_OTT_ISSUED',
+      recordId: ottId,
+      details: {
+        expiresAt: expiresAt.toISOString(),
+        sessionId: input.sessionId ?? null,
+      },
+    });
+  }
 
   return { ott, expiresAtMs: expiresAt.getTime() };
 }
 
 type ConsumedOtt = {
+  mobile_auth_ott_id: string;
   tenant: string;
   user_id: string;
   session_id: string | null;
@@ -126,7 +144,7 @@ async function consumeMobileOtt(input: {
         used_at: knex.fn.now(),
         device_id: input.deviceId ?? null,
       },
-      ['tenant', 'user_id', 'session_id'],
+      ['mobile_auth_ott_id', 'tenant', 'user_id', 'session_id'],
     );
 
   const row = (rows as any[])[0] as ConsumedOtt | undefined;
@@ -260,6 +278,19 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
       device: input.device ? { ...input.device } : undefined,
     });
 
+    await safeAuditLog({
+      tenantId,
+      userId,
+      operation: 'MOBILE_AUTH_EXCHANGE',
+      recordId: apiKeyRecord.api_key_id,
+      details: {
+        ottId: consumed.mobile_auth_ott_id,
+        accessExpiresAt: accessExpiresAt.toISOString(),
+        refreshExpiresAt: refreshExpiresAt.toISOString(),
+        deviceId: input.device?.deviceId ?? null,
+      },
+    });
+
     const user = await runWithTenant(tenantId, async () => findUserByIdForApi(userId, tenantId));
     const name =
       user && (user.first_name || user.last_name)
@@ -329,6 +360,20 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
     await ApiKeyService.deactivateApiKey(existing.api_key_id, existing.tenant).catch(() => {});
   }
 
+  await safeAuditLog({
+    tenantId: existing.tenant,
+    userId: existing.user_id,
+    operation: 'MOBILE_AUTH_REFRESH',
+    recordId: apiKeyRecord.api_key_id,
+    details: {
+      oldRefreshId: existing.mobile_refresh_token_id,
+      newRefreshId,
+      accessExpiresAt: accessExpiresAt.toISOString(),
+      refreshExpiresAt: refreshExpiresAt.toISOString(),
+      deviceId: input.device?.deviceId ?? null,
+    },
+  });
+
   return {
     accessToken: apiKeyRecord.api_key,
     refreshToken: newRefreshToken,
@@ -354,7 +399,42 @@ export async function revokeMobileSession(input: z.infer<typeof revokeSessionSch
     await ApiKeyService.deactivateApiKey(existing.api_key_id, existing.tenant).catch(() => {});
   }
 
+  await safeAuditLog({
+    tenantId: existing.tenant,
+    userId: existing.user_id,
+    operation: 'MOBILE_AUTH_REVOKE',
+    recordId: existing.mobile_refresh_token_id,
+    details: {
+      deviceId: null,
+      apiKeyId: existing.api_key_id ?? null,
+    },
+  });
+
   await setRefreshTokenLastUsed(existing.mobile_refresh_token_id).catch(() => {});
+}
+
+async function safeAuditLog(input: {
+  tenantId: string;
+  userId: string;
+  operation: string;
+  recordId: string;
+  details: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await runWithTenant(input.tenantId, async () => {
+      const knex = await getConnection(input.tenantId);
+      await auditLog(knex, {
+        userId: input.userId,
+        operation: input.operation,
+        tableName: 'mobile_auth',
+        recordId: input.recordId,
+        changedData: {},
+        details: input.details,
+      });
+    });
+  } catch (error) {
+    console.warn('[mobileAuth] audit log failed', error);
+  }
 }
 
 export type MobileAuthCapabilities = {
