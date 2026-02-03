@@ -866,7 +866,7 @@
   {
     "id": "T109",
     "description": "Integration: Ensure consistent error shape for validation/auth errors for mobile clients",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
