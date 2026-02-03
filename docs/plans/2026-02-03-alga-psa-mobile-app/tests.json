@@ -98,7 +98,7 @@
   {
     "id": "T013",
     "description": "Unit: Add crash/error reporting hook (provider TBD) with PII redaction",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
