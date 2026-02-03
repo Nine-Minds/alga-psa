@@ -266,7 +266,7 @@
   {
     "id": "T045",
     "description": "Unit: slaService.startSlaForTicket() calls backend.startSlaTracking()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
