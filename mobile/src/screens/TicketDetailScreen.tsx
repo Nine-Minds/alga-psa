@@ -162,6 +162,10 @@ function TicketDetailBody({
     scrollRef.current?.scrollToEnd({ animated: true });
   }, []);
 
+  const scrollToTop = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
+
   const { refreshing, refresh } = usePullToRefresh(refreshAll);
 
   useEffect(() => {
@@ -777,6 +781,7 @@ function TicketDetailBody({
             visibleCount={commentsVisibleCount}
             onLoadMore={() => setCommentsVisibleCount((c) => c + 20)}
             onJumpToLatest={scrollToLatest}
+            onJumpToTop={scrollToTop}
             error={commentsError}
           />
           <View style={{ height: spacing.sm }} />
@@ -1412,12 +1417,14 @@ function CommentsSection({
   visibleCount,
   onLoadMore,
   onJumpToLatest,
+  onJumpToTop,
   error,
 }: {
   comments: TicketComment[];
   visibleCount: number;
   onLoadMore: () => void;
   onJumpToLatest: () => void;
+  onJumpToTop: () => void;
   error: string | null;
 }) {
   const startIndex = Math.max(0, comments.length - visibleCount);
@@ -1439,14 +1446,29 @@ function CommentsSection({
           Comments
         </Text>
         {comments.length > 0 ? (
-          <Pressable
-            onPress={onJumpToLatest}
-            accessibilityRole="button"
-            accessibilityLabel="Jump to latest comment"
-            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-          >
-            <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>Latest</Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {comments.length >= 30 ? (
+              <>
+                <Pressable
+                  onPress={onJumpToTop}
+                  accessibilityRole="button"
+                  accessibilityLabel="Jump to top"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+                >
+                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>Top</Text>
+                </Pressable>
+                <View style={{ width: spacing.md }} />
+              </>
+            ) : null}
+            <Pressable
+              onPress={onJumpToLatest}
+              accessibilityRole="button"
+              accessibilityLabel="Jump to latest comment"
+              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+            >
+              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>Latest</Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
 

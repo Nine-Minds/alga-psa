@@ -173,3 +173,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F167 improved ticket detail accessibility by marking major section titles (ticket title, Description, Comments) as headings for screen readers.
 - 2026-02-03: F168 improved ticket comment timeline accessibility by providing per-entry `accessibilityLabel`s so screen readers read each timeline entry as a coherent unit in chronological order.
 - 2026-02-03: F169 added a “Latest” quick action in the ticket comments section that scrolls the ticket detail view to the newest comment/composer.
+- 2026-02-03: F170 added a “Top” quick action (shown on long comment timelines) to quickly return to the ticket header.

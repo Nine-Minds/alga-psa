@@ -1354,7 +1354,7 @@
   {
     "id": "F170",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - jump-to-top button on long timelines (optional)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
