@@ -570,7 +570,7 @@
   {
     "id": "T072",
     "description": "E2E: Submit status change and update ticket header/list badges",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
