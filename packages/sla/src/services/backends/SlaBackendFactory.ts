@@ -57,10 +57,10 @@ export class SlaBackendFactory {
         );
         return new TemporalSlaBackend();
       } catch (error) {
-        logger.error('[SlaBackendFactory] Failed to load Temporal SLA backend', {
+        logger.warn('[SlaBackendFactory] Falling back to PgBoss SLA backend', {
           error: error instanceof Error ? error.message : String(error),
         });
-        throw error;
+        return new PgBossSlaBackend();
       }
     }
 
