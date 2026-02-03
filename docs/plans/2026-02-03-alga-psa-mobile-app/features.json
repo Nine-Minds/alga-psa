@@ -874,7 +874,7 @@
   {
     "id": "F110",
     "description": "[Server:Mobile Auth] Add migrations for new tables/columns used by mobile auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
