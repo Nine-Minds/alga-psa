@@ -284,7 +284,7 @@
   {
     "id": "T048",
     "description": "Unit: slaService.recordFirstResponse() calls backend.completeSla('response')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
