@@ -1443,10 +1443,16 @@ function CommentsSection({
             const isSystemEvent = kind === "event" || typeof eventType === "string";
             const isOptimistic = Boolean((c as any).optimistic);
             const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${c.comment_text}` : c.comment_text);
+            const badgeLabel = isSystemEvent ? "Event" : isOptimistic ? "Sending" : c.is_internal ? "Internal" : "Public";
+            const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? "Unknown"}. ${formatDateTimeWithRelative(c.created_at)}. ${
+              isSystemEvent ? eventText : c.comment_text
+            }`;
 
             return (
               <View
                 key={c.comment_id ?? String(idx)}
+                accessible
+                accessibilityLabel={accessibilityLabel}
                 style={{ marginTop: idx === 0 ? 0 : spacing.md, opacity: isOptimistic ? 0.75 : 1 }}
               >
                 <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>

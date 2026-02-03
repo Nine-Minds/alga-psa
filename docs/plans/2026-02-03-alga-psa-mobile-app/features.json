@@ -1338,7 +1338,7 @@
   {
     "id": "F168",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - accessibility: timeline entries read in sensible order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
