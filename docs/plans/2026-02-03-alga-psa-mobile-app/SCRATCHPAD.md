@@ -231,3 +231,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F209 defined initial mobile SLO targets for ticketing/auth endpoints and measurement guidance (`docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md`).
 - 2026-02-03: F210 added a pre-release accessibility audit checklist and recorded an initial pass for MVP screens (`docs/plans/2026-02-03-alga-psa-mobile-app/A11Y_AUDIT.md`).
 - 2026-02-03: F211 added a pre-release security review checklist and recorded an initial pass for MVP auth/ticket flows (`docs/plans/2026-02-03-alga-psa-mobile-app/SECURITY_REVIEW.md`).
+- 2026-02-03: F212 enabled dependency vulnerability scanning for the mobile package in CI by generating and uploading an `npm audit` report artifact (`.github/workflows/mobile-checks.yml`).

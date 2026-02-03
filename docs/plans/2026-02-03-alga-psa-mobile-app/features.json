@@ -1690,7 +1690,7 @@
   {
     "id": "F212",
     "description": "[Mobile:Quality] Quality/Ops - dependency vulnerability scanning enabled for mobile package",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
