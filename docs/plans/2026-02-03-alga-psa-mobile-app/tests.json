@@ -1146,7 +1146,7 @@
   {
     "id": "T144",
     "description": "E2E: Implement List:UX - filter chip summary bar",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ]
