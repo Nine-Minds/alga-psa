@@ -1618,7 +1618,7 @@
   {
     "id": "F203",
     "description": "[Server:Mobile Auth] Implement server mobile auth - ticket assignment update endpoint supports assign-to-self without separate user lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
