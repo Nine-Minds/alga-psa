@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "SlaTicketWorkflow handles 'pause' signal by recording pauseStartedAt and canceling pending timer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
