@@ -1050,7 +1050,7 @@
   {
     "id": "T132",
     "description": "Unit: Implement startup performance budget and measurement",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F132"
     ]
