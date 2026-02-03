@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Application from "expo-application";
@@ -9,7 +9,7 @@ import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt, getPendingMobileAuth, storeReceivedOtt } from "../auth/mobileAuth";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { exchangeOtt } from "../api/mobileAuth";
+import { exchangeOttWithRetry } from "../api/mobileAuth";
 import { useAuth } from "../auth/AuthContext";
 import { getStableDeviceId } from "../device/clientMetadata";
 import { analytics } from "../analytics/analytics";
@@ -19,11 +19,15 @@ type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 export function AuthCallbackScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const { setSession } = useAuth();
+  const exchangeInFlight = useRef(false);
 
   useEffect(() => {
     let canceled = false;
+    const abortController = new AbortController();
 
     const run = async () => {
+      if (exchangeInFlight.current) return;
+      exchangeInFlight.current = true;
       try {
         const ott = route.params?.ott;
         const state = route.params?.state;
@@ -70,7 +74,12 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           deviceId,
         };
 
-        const exchanged = await exchangeOtt(client, { ott, state, device });
+        const exchanged = await exchangeOttWithRetry(
+          client,
+          { ott, state, device },
+          { maxAttempts: 3, baseDelayMs: 250, maxDelayMs: 2_000 },
+          abortController.signal,
+        );
         if (!exchanged.ok) {
           analytics.trackEvent("auth.exchange.failed", {
             errorKind: exchanged.error.kind,
@@ -99,12 +108,15 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
       } catch (e) {
         logger.error("Failed to handle auth callback", { error: e });
         if (!canceled) setError("Failed to complete sign-in. Please try again.");
+      } finally {
+        exchangeInFlight.current = false;
       }
     };
 
     void run();
     return () => {
       canceled = true;
+      abortController.abort();
     };
   }, [navigation, route.params?.error, route.params?.ott, route.params?.state]);
 

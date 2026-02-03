@@ -23,12 +23,76 @@ export type ExchangeOttResponse = {
 export function exchangeOtt(
   client: ApiClient,
   body: ExchangeOttRequest,
+  signal?: AbortSignal,
 ): Promise<ApiResult<ExchangeOttResponse>> {
   return client.request<ExchangeOttResponse>({
     method: "POST",
     path: "/api/v1/mobile/auth/exchange",
     body,
+    signal,
   });
+}
+
+export type ExchangeOttRetryOptions = {
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+};
+
+function isRetryableExchangeError(result: ApiResult<unknown>): boolean {
+  if (result.ok) return false;
+  if (result.error.kind === "network" || result.error.kind === "timeout") return true;
+  return (
+    result.error.kind === "server" &&
+    result.status !== undefined &&
+    (result.status === 502 || result.status === 503 || result.status === 504)
+  );
+}
+
+async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const handle = setTimeout(resolve, ms);
+    const onAbort = () => {
+      clearTimeout(handle);
+      reject(new Error("aborted"));
+    };
+    if (signal) {
+      if (signal.aborted) return onAbort();
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+  });
+}
+
+export async function exchangeOttWithRetry(
+  client: ApiClient,
+  body: ExchangeOttRequest,
+  options: ExchangeOttRetryOptions = {},
+  signal?: AbortSignal,
+): Promise<ApiResult<ExchangeOttResponse>> {
+  const maxAttempts = options.maxAttempts ?? 3;
+  const baseDelayMs = options.baseDelayMs ?? 250;
+  const maxDelayMs = options.maxDelayMs ?? 2_000;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (signal?.aborted) return { ok: false, error: { kind: "canceled", message: "Request canceled" } };
+
+    const result = await exchangeOtt(client, body, signal);
+    if (result.ok) return result;
+    if (result.error.kind === "canceled") return result;
+
+    const isLastAttempt = attempt === maxAttempts - 1;
+    if (!isRetryableExchangeError(result) || isLastAttempt) return result;
+
+    const delay = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
+    const jittered = Math.round(delay * (0.8 + Math.random() * 0.4));
+    try {
+      await sleep(jittered, signal);
+    } catch {
+      return { ok: false, error: { kind: "canceled", message: "Request canceled" } };
+    }
+  }
+
+  return { ok: false, error: { kind: "network", message: "Network request failed" } };
 }
 
 export type RefreshSessionRequest = {

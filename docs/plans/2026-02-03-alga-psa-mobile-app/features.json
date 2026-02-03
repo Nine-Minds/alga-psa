@@ -1058,7 +1058,7 @@
   {
     "id": "F133",
     "description": "[Mobile:Auth] Implement OTT exchange retry with exponential backoff and single-flight guard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

@@ -136,3 +136,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F130 enabled navigation state persistence/restoration (last tab + last opened ticket) per-user via secure storage, using `NavigationContainer` `initialState` + debounced `onStateChange`.
 - 2026-02-03: F131 documented a perf/memory profiling checklist and guardrails for large lists in `docs/plans/2026-02-03-alga-psa-mobile-app/PERF_MEMORY_CHECKLIST.md`.
 - 2026-02-03: F132 defined a startup performance budget in `docs/plans/2026-02-03-alga-psa-mobile-app/STARTUP_PERF_BUDGET.md` and added a basic `app.startup.ready` telemetry event to measure JS boot-to-ready time.
+- 2026-02-03: F133 added single-flight + exponential backoff retry for OTT exchange in `AuthCallbackScreen` (network/timeout/502/503/504 only), using `exchangeOttWithRetry` with AbortSignal cancellation on unmount.
