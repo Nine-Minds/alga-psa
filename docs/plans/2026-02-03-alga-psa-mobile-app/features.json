@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "[Mobile:Tickets:Critical Updates] Implement unassign action when permitted",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

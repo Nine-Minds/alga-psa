@@ -67,8 +67,9 @@ function TicketDetailBody({
   const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
-  const [assigningToMe, setAssigningToMe] = useState(false);
-  const [assignError, setAssignError] = useState<string | null>(null);
+  const [assignmentUpdating, setAssignmentUpdating] = useState(false);
+  const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
 
   const draftKey = useMemo(() => {
     const userId = session?.user?.id ?? "anonymous";
@@ -274,42 +275,53 @@ function TicketDetailBody({
     [client, fetchTicket, session, statusUpdating, ticketId],
   );
 
-  const assignToMe = useCallback(async () => {
+  const updateAssignment = useCallback(async (assignedTo: string | null, action: "assign" | "unassign") => {
     if (!client || !session) return;
-    if (assigningToMe) return;
-    const me = session.user?.id;
-    if (!me) {
-      setAssignError("Unable to determine current user. Please sign in again.");
-      return;
-    }
-    setAssignError(null);
-    setAssigningToMe(true);
+    if (assignmentUpdating) return;
+    setAssignmentError(null);
+    setAssignmentAction(action);
+    setAssignmentUpdating(true);
     try {
       const auditHeaders = await getClientMetadataHeaders();
       const res = await updateTicketAssignment(client, {
         apiKey: session.accessToken,
         ticketId,
-        assigned_to: me,
+        assigned_to: assignedTo,
         auditHeaders,
       });
       if (!res.ok) {
         if (res.error.kind === "http" && res.status === 403) {
-          setAssignError("You don’t have permission to assign this ticket.");
+          setAssignmentError("You don’t have permission to update this ticket’s assignment.");
           return;
         }
         if (res.error.kind === "http" && res.status === 400) {
           const msg = getApiErrorMessage(res.error.body);
-          setAssignError(msg ?? "Assignment was rejected by the server.");
+          setAssignmentError(msg ?? "Assignment was rejected by the server.");
           return;
         }
-        setAssignError("Unable to assign ticket. Please try again.");
+        setAssignmentError("Unable to update assignment. Please try again.");
         return;
       }
       await fetchTicket();
     } finally {
-      setAssigningToMe(false);
+      setAssignmentUpdating(false);
+      setAssignmentAction(null);
     }
-  }, [assigningToMe, client, fetchTicket, session, ticketId]);
+  }, [assignmentUpdating, client, fetchTicket, session, ticketId]);
+
+  const assignToMe = useCallback(async () => {
+    if (!session) return;
+    const me = session.user?.id;
+    if (!me) {
+      setAssignmentError("Unable to determine current user. Please sign in again.");
+      return;
+    }
+    await updateAssignment(me, "assign");
+  }, [session, updateAssignment]);
+
+  const unassign = useCallback(async () => {
+    await updateAssignment(null, "unassign");
+  }, [updateAssignment]);
 
   return (
     <>
@@ -374,17 +386,29 @@ function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label={assigningToMe ? "Assigning…" : "Assign to me"}
-            disabled={assigningToMe}
+            label={assignmentUpdating && assignmentAction === "assign" ? "Assigning…" : "Assign to me"}
+            disabled={assignmentUpdating}
             onPress={() => {
               void assignToMe();
             }}
           />
+          {ticket.assigned_to_name ? (
+            <>
+              <View style={{ width: spacing.sm }} />
+              <ActionChip
+                label={assignmentUpdating && assignmentAction === "unassign" ? "Unassigning…" : "Unassign"}
+                disabled={assignmentUpdating}
+                onPress={() => {
+                  void unassign();
+                }}
+              />
+            </>
+          ) : null}
         </View>
 
-        {assignError ? (
+        {assignmentError ? (
           <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
-            {assignError}
+            {assignmentError}
           </Text>
         ) : null}
 
