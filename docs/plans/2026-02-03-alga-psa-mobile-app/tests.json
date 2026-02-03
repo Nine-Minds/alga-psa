@@ -1226,7 +1226,7 @@
   {
     "id": "T154",
     "description": "E2E: Implement ticket detail - sectioned layout (header/details/comments)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F154"
     ]
