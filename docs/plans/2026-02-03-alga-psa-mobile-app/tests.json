@@ -1674,7 +1674,7 @@
   {
     "id": "T210",
     "description": "Unit: Quality/Ops - accessibility audit checklist executed pre-release",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210"
     ]
