@@ -272,7 +272,7 @@
   {
     "id": "F046",
     "description": "Create CE stub for TemporalSlaBackend that throws 'only available in Enterprise Edition'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1"]
   },
   {
