@@ -31,3 +31,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F025 wired OTT exchange call (`POST /api/v1/mobile/auth/exchange`) and creates an in-memory mobile session on success, routing users into the signed-in app.
 - 2026-02-03: F026 persists the issued mobile session to secure storage and restores it on cold start (clears it if expired).
 - 2026-02-03: F027 adds proactive session refresh scheduling (refresh ~60s before expiry) and a resume-triggered refresh when near expiry (`POST /api/v1/mobile/auth/refresh`).
+- 2026-02-03: F028 routes users back to Sign In when refresh indicates a revoked/expired session (401/403) or the access token reaches expiry.

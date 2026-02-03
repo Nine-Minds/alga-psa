@@ -74,7 +74,15 @@ export function AppRoot() {
         device: { platform: Platform.OS },
       });
 
-      if (!result.ok) return false;
+      if (!result.ok) {
+        if (
+          result.error.kind === "http" &&
+          (result.status === 401 || result.status === 403)
+        ) {
+          setSession(null);
+        }
+        return false;
+      }
 
       setSession({
         ...session,
@@ -100,6 +108,13 @@ export function AppRoot() {
     const handle = setTimeout(() => void refreshNow(), msUntilRefresh);
     return () => clearTimeout(handle);
   }, [baseUrl, refreshNow, session?.expiresAtMs, session?.refreshToken]);
+
+  useEffect(() => {
+    if (!session) return;
+    const msUntilExpiry = Math.max(0, session.expiresAtMs - Date.now());
+    const handle = setTimeout(() => setSession(null), msUntilExpiry + 500);
+    return () => clearTimeout(handle);
+  }, [session?.expiresAtMs, session?.refreshToken, setSession]);
 
   useAppResume(() => {
     if (!session) return;
@@ -129,7 +144,7 @@ export function AppRoot() {
       <View style={{ flex: 1 }}>
         {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
         <View style={{ flex: 1 }}>
-          <NavigationContainer linking={linking}>
+          <NavigationContainer key={session ? "signed-in" : "signed-out"} linking={linking}>
             <RootNavigator isSignedIn={session !== null} />
           </NavigationContainer>
         </View>
