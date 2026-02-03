@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Unit: Add typed REST API client wrapper with consistent error mapping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
