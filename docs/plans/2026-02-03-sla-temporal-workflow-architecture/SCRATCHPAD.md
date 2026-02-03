@@ -103,6 +103,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: TemporalSlaBackend.completeSla(response) signals workflow (T041)
 - (2026-02-03) Tests: TemporalSlaBackend.completeSla(resolution) signals workflow (T042)
 - (2026-02-03) Tests: TemporalSlaBackend.cancelSla sends cancel signal (T043)
+- (2026-02-03) Tests: TemporalSlaBackend.getSlaStatus queries workflow state (T044)
 
 ## Discoveries / Constraints
 
