@@ -514,7 +514,7 @@
   {
     "id": "T065",
     "description": "E2E: Implement add-comment composer (multiline) with send action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
