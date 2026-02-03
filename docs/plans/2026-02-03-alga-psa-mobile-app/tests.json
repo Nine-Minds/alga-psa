@@ -338,7 +338,7 @@
   {
     "id": "T043",
     "description": "E2E: Implement server-side search with debounced input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
