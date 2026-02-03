@@ -922,7 +922,7 @@
   {
     "id": "T116",
     "description": "Deferred: Deep link from push notification into ticket detail",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116"
     ]
