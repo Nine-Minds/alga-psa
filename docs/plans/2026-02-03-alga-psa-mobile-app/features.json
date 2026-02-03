@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "[Mobile:Tickets:Detail] Render description with safe link handling (optional markdown)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]

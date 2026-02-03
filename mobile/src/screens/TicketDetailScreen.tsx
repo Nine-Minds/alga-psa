@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
@@ -130,6 +130,8 @@ function TicketDetailBody({
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
         <View style={{ height: spacing.sm }} />
+        <DescriptionSection ticket={ticket} />
+        <View style={{ height: spacing.sm }} />
         <KeyValue label="Created" value={formatDateWithRelative(ticket.entered_at)} />
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Updated" value={formatDateWithRelative(ticket.updated_at)} />
@@ -139,6 +141,59 @@ function TicketDetailBody({
         <KeyValue label="Ticket ID" value={ticket.ticket_id} />
       </View>
     </ScrollView>
+  );
+}
+
+function DescriptionSection({ ticket }: { ticket: TicketDetail }) {
+  const description = extractDescription(ticket);
+  const links = extractLinks(description ?? "");
+
+  return (
+    <View
+      style={{
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 10,
+      }}
+    >
+      <Text style={{ ...typography.caption, color: colors.mutedText }}>Description</Text>
+      <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+        {description ?? "—"}
+      </Text>
+
+      {links.length > 0 ? (
+        <View style={{ marginTop: spacing.sm }}>
+          <Text style={{ ...typography.caption, color: colors.mutedText }}>Links</Text>
+          {links.slice(0, 5).map((url) => (
+            <Pressable
+              key={url}
+              accessibilityRole="button"
+              accessibilityLabel={`Open link ${url}`}
+              onPress={() => {
+                Alert.alert("Open link?", url, [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Open",
+                    onPress: () => {
+                      void Linking.openURL(url);
+                    },
+                  },
+                ]);
+              }}
+              style={({ pressed }) => ({
+                marginTop: spacing.sm,
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <Text style={{ ...typography.caption, color: colors.primary }}>{url}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -193,4 +248,21 @@ function formatRelative(d: Date): string {
 
 function stringOrDash(value: unknown): string {
   return typeof value === "string" && value.trim() ? value : "—";
+}
+
+function extractDescription(ticket: TicketDetail): string | null {
+  const attrs = (ticket as any).attributes as unknown;
+  if (!attrs || typeof attrs !== "object") return null;
+  const obj = attrs as Record<string, unknown>;
+  const candidates = [obj.description, obj.details, obj.summary];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  return null;
+}
+
+function extractLinks(text: string): string[] {
+  const matches = text.match(/https?:\/\/[^\s)\]]+/g) ?? [];
+  const unique = Array.from(new Set(matches));
+  return unique;
 }
