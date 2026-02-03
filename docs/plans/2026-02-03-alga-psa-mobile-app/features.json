@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "[Mobile:Tickets:List] Ensure list results respect RBAC and data visibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
