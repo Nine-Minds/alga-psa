@@ -115,3 +115,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F109 ensured mobile auth endpoints use the shared API error schema (`{ error: { code, message, details } }`) for validation/auth/limit errors.
 - 2026-02-03: F110 added DB migration `server/migrations/20260203210000_add_mobile_auth_tables.cjs` for `mobile_auth_otts` + `mobile_refresh_tokens`.
 - 2026-02-03: F111 added unit tests for mobile auth OTT single-use/expiry and refresh token rotation (`server/src/test/unit/mobileAuth.test.ts`).
+- 2026-02-03: F112 documented server-side mobile auth configuration (env vars + allowlist) in `docs/plans/2026-02-03-alga-psa-mobile-app/MOBILE_AUTH_CONFIG.md`.

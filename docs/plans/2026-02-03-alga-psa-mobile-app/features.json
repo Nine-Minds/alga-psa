@@ -890,7 +890,7 @@
   {
     "id": "F112",
     "description": "[Server:Mobile Auth] Add documentation for mobile auth configuration and hosted domain allowlist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
