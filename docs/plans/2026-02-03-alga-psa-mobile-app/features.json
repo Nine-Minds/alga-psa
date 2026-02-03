@@ -1154,7 +1154,7 @@
   {
     "id": "F145",
     "description": "[Mobile:Tickets:List] Implement List:UX - clear-all filters CTA",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

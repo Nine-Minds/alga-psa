@@ -415,7 +415,11 @@ export function TicketsListScreen({ navigation }: Props) {
             <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
           </Pressable>
         </View>
-        <FilterChipBar filters={filters} onPress={() => setFiltersOpen(true)} />
+        <FilterChipBar
+          filters={filters}
+          onPress={() => setFiltersOpen(true)}
+          onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
+        />
         <QuickFilters
           onSelect={(kind) => {
             if (kind === "mine") setFilters({ ...filters, assignee: "me" });
@@ -471,9 +475,11 @@ export function TicketsListScreen({ navigation }: Props) {
 function FilterChipBar({
   filters,
   onPress,
+  onClearAll,
 }: {
   filters: TicketListFilters;
   onPress: () => void;
+  onClearAll: () => void;
 }) {
   const chips: string[] = [];
   if (filters.statusIds.length > 0) chips.push(`Statuses (${filters.statusIds.length})`);
@@ -495,6 +501,9 @@ function FilterChipBar({
           <QuickChip label={label} onPress={onPress} />
         </View>
       ))}
+      <View style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+        <QuickChip label="Clear all" onPress={onClearAll} />
+      </View>
     </View>
   );
 }
