@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "[Mobile:Foundation] Add Settings screen shell + diagnostics (version/build/environment)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

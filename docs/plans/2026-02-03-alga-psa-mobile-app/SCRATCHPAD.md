@@ -22,3 +22,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F016 added offline detection using `@react-native-community/netinfo` with a global `OfflineBanner` in `mobile/src/app/AppRoot.tsx`.
 - 2026-02-03: F017 added baseline accessibility helpers (`mobile/src/ui/a11y.ts`) and ensured key pressables have roles/labels and minimum touch targets.
 - 2026-02-03: F018 added localization scaffolding using `expo-localization` (`mobile/src/i18n/i18n.ts`) and started using `t()` for navigation titles.
+- 2026-02-03: F019 implemented Settings diagnostics (app version/build, platform, env/base URL) in `mobile/src/screens/SettingsScreen.tsx` using `expo-application`.
