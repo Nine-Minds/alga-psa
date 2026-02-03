@@ -1274,7 +1274,7 @@
   {
     "id": "T160",
     "description": "E2E: Implement ticket detail - internal/public comment badges",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F160"
     ]
