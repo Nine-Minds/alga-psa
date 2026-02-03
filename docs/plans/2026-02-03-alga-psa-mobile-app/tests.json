@@ -1650,7 +1650,7 @@
   {
     "id": "T207",
     "description": "Unit: Quality/Ops - redaction rules cover ticket subjects and comment bodies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
