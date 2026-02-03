@@ -134,3 +134,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F128 centralized hosted web URL construction in `mobile/src/urls/hostedUrls.ts` (ticket + legal URLs) and added unit tests; replaced ad-hoc `new URL()` usage in ticket detail/settings.
 - 2026-02-03: F129 added a clipboard helper that redacts sensitive values by default (`Bearer` tokens/JWTs/labels like *token*), with opt-out for explicit sensitive copy; updated ticket detail copy actions to use it and added unit tests.
 - 2026-02-03: F130 enabled navigation state persistence/restoration (last tab + last opened ticket) per-user via secure storage, using `NavigationContainer` `initialState` + debounced `onStateChange`.
+- 2026-02-03: F131 documented a perf/memory profiling checklist and guardrails for large lists in `docs/plans/2026-02-03-alga-psa-mobile-app/PERF_MEMORY_CHECKLIST.md`.

@@ -1042,7 +1042,7 @@
   {
     "id": "F131",
     "description": "[Mobile:Foundation] Implement memory leak guardrails for large lists (profiling checklist)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
