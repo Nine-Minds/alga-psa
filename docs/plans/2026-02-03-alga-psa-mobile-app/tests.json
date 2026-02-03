@@ -1090,7 +1090,7 @@
   {
     "id": "T137",
     "description": "E2E: Implement sign-in error UX for user without required ticket permissions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137"
     ]
