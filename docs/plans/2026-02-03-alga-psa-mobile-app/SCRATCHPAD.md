@@ -190,3 +190,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F183 disabled “Assign to me” when the ticket is already assigned to the current user, avoiding redundant assignment calls.
 - 2026-02-03: F184 updated the priority picker to disable selecting the already-current priority (and any future server-flagged invalid options) to prevent no-op updates.
 - 2026-02-03: F185 confirmed due date editing supports clearing the due date via the Due Date modal (sends attribute removal).
+- 2026-02-03: F186 confirmed time entry creation validates required fields (duration) and rounds durations to whole minutes before sending to the server.

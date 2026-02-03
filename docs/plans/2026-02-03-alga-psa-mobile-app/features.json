@@ -1482,7 +1482,7 @@
   {
     "id": "F186",
     "description": "[Mobile:Tickets:Updates] Implement updates - time entry form validates required fields and rounds durations per policy",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
