@@ -399,6 +399,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
   const { knex } = await createTenantKnex();
   const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
+  await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   // Lookup extension version outside transaction (read-only)
   const ev = await knex('extension_version')
