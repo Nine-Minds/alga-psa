@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "E2E: Implement server-side sorting (default updated-at desc)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
