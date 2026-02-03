@@ -204,9 +204,13 @@ function CommentsSection({
         <View style={{ marginTop: spacing.sm }}>
           {comments.slice(0, visibleCount).map((c, idx) => (
             <View key={c.comment_id ?? String(idx)} style={{ marginTop: idx === 0 ? 0 : spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.mutedText }}>
-                {c.created_by_name ?? "Unknown"} • {formatDateWithRelative(c.created_at)}
-              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
+                <Text style={{ ...typography.caption, color: colors.mutedText }}>
+                  {c.created_by_name ?? "Unknown"} • {formatDateWithRelative(c.created_at)}
+                </Text>
+                <View style={{ width: spacing.sm }} />
+                <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
+              </View>
               <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
                 {c.comment_text}
               </Text>

@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "[Mobile:Tickets:Detail] Differentiate internal vs public comments visually",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
