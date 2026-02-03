@@ -163,3 +163,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F157 confirmed ticket detail provides copy actions for ticket number and ticket id via the redacting clipboard helper.
 - 2026-02-03: F158 confirmed ticket detail description link handling prompts for confirmation before opening external URLs.
 - 2026-02-03: F159 confirmed ticket detail comments timeline supports “Load more” pagination UI to incrementally reveal older entries.
+- 2026-02-03: F160 confirmed ticket detail comment entries visually label internal vs public visibility with badges.

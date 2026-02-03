@@ -1274,7 +1274,7 @@
   {
     "id": "F160",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - internal/public comment badges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
