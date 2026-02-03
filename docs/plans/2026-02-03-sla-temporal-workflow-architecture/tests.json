@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Unit: PgBossSlaBackend.getSlaStatus() delegates to slaService.getSlaStatus()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F049"]
   },
   {
