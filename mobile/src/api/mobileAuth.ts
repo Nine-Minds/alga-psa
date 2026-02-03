@@ -79,6 +79,7 @@ export type MobileAuthCapabilities = {
     microsoft: boolean;
     google: boolean;
   };
+  hostedDomainAllowlist?: string[];
 };
 
 export function getAuthCapabilities(

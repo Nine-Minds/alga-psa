@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "[Mobile:Auth] Support vanity/hosted domains for login handoff (configurable allowlist)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

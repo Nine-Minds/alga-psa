@@ -40,3 +40,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F034 expanded log/error redaction rules to treat `ott` and `state` values as secrets so tokens are not logged or forwarded to error reporting.
 - 2026-02-03: F035 added mobile auth capability discovery call (`GET /api/v1/mobile/auth/capabilities`) and gated the Sign In CTA when the server reports mobile auth is disabled.
 - 2026-02-03: F036 improved auth outage UX by adding retry for capability discovery failures with clearer user-facing messaging.
+- 2026-02-03: F037 added vanity domain allowlist handling via capabilities response (`hostedDomainAllowlist`); Sign In is disabled when configured base URL host is not allowlisted.

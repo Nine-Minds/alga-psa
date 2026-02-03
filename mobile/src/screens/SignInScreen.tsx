@@ -18,6 +18,21 @@ export function SignInScreen() {
   const [capabilitiesLoading, setCapabilitiesLoading] = useState(false);
 
   const baseUrl = config.ok ? config.baseUrl : null;
+  const baseHost = useMemo(() => {
+    if (!baseUrl) return null;
+    try {
+      return new URL(baseUrl).hostname.toLowerCase();
+    } catch {
+      return null;
+    }
+  }, [baseUrl]);
+
+  const hostAllowed = useMemo(() => {
+    const allowlist = capabilities?.hostedDomainAllowlist;
+    if (!allowlist || allowlist.length === 0) return true;
+    if (!baseHost) return false;
+    return allowlist.map((h) => h.toLowerCase()).includes(baseHost);
+  }, [baseHost, capabilities?.hostedDomainAllowlist]);
 
   const fetchCapabilities = useCallback(async () => {
     if (!baseUrl) return;
@@ -56,6 +71,10 @@ export function SignInScreen() {
     }
     if (capabilities && !capabilities.mobileEnabled) {
       setError("Mobile sign-in is not enabled for this server.");
+      return;
+    }
+    if (!hostAllowed) {
+      setError("This base URL is not allowed for mobile sign-in.");
       return;
     }
     setError(null);
@@ -98,7 +117,12 @@ export function SignInScreen() {
       <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
         <PrimaryButton
           onPress={() => void onSignIn()}
-          disabled={status === "opening" || !baseUrl || (capabilities !== null && !capabilities.mobileEnabled)}
+          disabled={
+            status === "opening" ||
+            !baseUrl ||
+            (capabilities !== null && !capabilities.mobileEnabled) ||
+            !hostAllowed
+          }
           accessibilityLabel={t("auth.signIn.cta")}
           accessibilityHint="Opens the browser to complete sign-in."
         >
@@ -150,6 +174,10 @@ export function SignInScreen() {
             Retry
           </PrimaryButton>
         </View>
+      ) : capabilities && !hostAllowed ? (
+        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.danger }}>
+          This server domain is not allowed for mobile sign-in.
+        </Text>
       ) : null}
     </View>
   );
