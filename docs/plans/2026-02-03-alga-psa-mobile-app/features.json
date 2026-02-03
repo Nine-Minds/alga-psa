@@ -1418,7 +1418,7 @@
   {
     "id": "F178",
     "description": "[Mobile:Tickets:Updates] Implement updates - toast feedback for success/failure",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

@@ -20,6 +20,7 @@ import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { buildTicketWebUrl } from "../urls/hostedUrls";
 import { copyToClipboard } from "../clipboard/clipboard";
 import { useNetworkStatus } from "../network/useNetworkStatus";
+import { useToast } from "../ui/toast/ToastProvider";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -53,6 +54,7 @@ function TicketDetailBody({
       onAuthError: refreshSession,
     });
   }, [config, refreshSession, session]);
+  const { showToast } = useToast();
 
   const [ticket, setTicket] = useState<TicketDetail | null>(() => {
     const cached = getCachedTicketDetail(ticketId);
@@ -247,6 +249,7 @@ function TicketDetailBody({
     }
     if (isOffline) {
       setCommentSendError("You’re offline. Your draft is saved and will be ready to send when you’re back online.");
+      showToast({ message: "Offline — draft saved", tone: "info" });
       return;
     }
 
@@ -279,6 +282,7 @@ function TicketDetailBody({
           setCommentDraft(originalDraft);
           setCommentIsInternal(originalIsInternal);
           setCommentSendError("You don’t have permission to add comments to this ticket.");
+          showToast({ message: "Comment not sent", tone: "error" });
           return;
         }
         if (result.error.kind === "validation") {
@@ -287,12 +291,14 @@ function TicketDetailBody({
           setCommentDraft(originalDraft);
           setCommentIsInternal(originalIsInternal);
           setCommentSendError(msg ?? "Comment was rejected by the server.");
+          showToast({ message: "Comment not sent", tone: "error" });
           return;
         }
         setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
         setCommentDraft(originalDraft);
         setCommentIsInternal(originalIsInternal);
         setCommentSendError("Unable to send comment. Please try again.");
+        showToast({ message: "Comment not sent", tone: "error" });
         return;
       }
 
@@ -311,6 +317,7 @@ function TicketDetailBody({
       await secureStorage.deleteItem(draftKey);
       invalidateTicketsListCache();
       await Promise.all([fetchTicket(), fetchComments()]);
+      showToast({ message: "Comment sent", tone: "success" });
     } finally {
       setCommentSending(false);
     }
@@ -334,6 +341,7 @@ function TicketDetailBody({
         if (res.error.kind === "http" && res.status === 409) {
           setPendingStatusId(null);
           setStatusUpdateError("Ticket changed elsewhere. Refresh and try again.");
+          showToast({ message: "Ticket updated elsewhere", tone: "info" });
           Alert.alert(
             "Ticket updated elsewhere",
             "This ticket changed on the server. Refresh and try your update again.",
@@ -352,22 +360,26 @@ function TicketDetailBody({
         if (res.error.kind === "permission") {
           setPendingStatusId(null);
           setStatusUpdateError("You don’t have permission to change this ticket’s status.");
+          showToast({ message: "Status not changed", tone: "error" });
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setPendingStatusId(null);
           setStatusUpdateError(msg ?? "Status change was rejected by the server.");
+          showToast({ message: "Status not changed", tone: "error" });
           return;
         }
         setPendingStatusId(null);
         setStatusUpdateError("Unable to change status. Please try again.");
+        showToast({ message: "Status not changed", tone: "error" });
         return;
       }
       invalidateTicketsListCache();
       await fetchTicket();
       setPendingStatusId(null);
       setStatusPickerOpen(false);
+      showToast({ message: "Status updated", tone: "success" });
     } finally {
       setStatusUpdating(false);
     }

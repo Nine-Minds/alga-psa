@@ -19,6 +19,7 @@ import { getBiometricGateEnabled } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { ToastProvider } from "../ui/toast/ToastProvider";
 
 function getActiveRouteName(state: any): string | null {
   let current: any = state;
@@ -272,40 +273,42 @@ export function AppRoot() {
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        setSession,
-        refreshSession,
-        logout,
-      }}
-    >
-      {session && isBiometricLocked ? (
-        <BiometricLockView onUnlocked={() => setIsBiometricLocked(false)} />
-      ) : (
-        <View style={{ flex: 1 }}>
-          {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+    <ToastProvider>
+      <AuthContext.Provider
+        value={{
+          session,
+          setSession,
+          refreshSession,
+          logout,
+        }}
+      >
+        {session && isBiometricLocked ? (
+          <BiometricLockView onUnlocked={() => setIsBiometricLocked(false)} />
+        ) : (
           <View style={{ flex: 1 }}>
-            <NavigationContainer
-              key={session ? "signed-in" : "signed-out"}
-              linking={linking}
-              initialState={session ? navInitialState : undefined}
-              onStateChange={(state) => {
-                const userId = session?.user?.id;
-                if (!userId || !state) return;
-                const active = getActiveRouteName(state);
-                if (active === "SignIn" || active === "AuthCallback") return;
-                if (navPersistHandle.current) clearTimeout(navPersistHandle.current);
-                navPersistHandle.current = setTimeout(() => {
-                  void setSecureJson(`alga.mobile.navState.${userId}`, state);
-                }, 500);
-              }}
-            >
-              <RootNavigator isSignedIn={session !== null} />
-            </NavigationContainer>
+            {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+            <View style={{ flex: 1 }}>
+              <NavigationContainer
+                key={session ? "signed-in" : "signed-out"}
+                linking={linking}
+                initialState={session ? navInitialState : undefined}
+                onStateChange={(state) => {
+                  const userId = session?.user?.id;
+                  if (!userId || !state) return;
+                  const active = getActiveRouteName(state);
+                  if (active === "SignIn" || active === "AuthCallback") return;
+                  if (navPersistHandle.current) clearTimeout(navPersistHandle.current);
+                  navPersistHandle.current = setTimeout(() => {
+                    void setSecureJson(`alga.mobile.navState.${userId}`, state);
+                  }, 500);
+                }}
+              >
+                <RootNavigator isSignedIn={session !== null} />
+              </NavigationContainer>
+            </View>
           </View>
-        </View>
-      )}
-    </AuthContext.Provider>
+        )}
+      </AuthContext.Provider>
+    </ToastProvider>
   );
 }

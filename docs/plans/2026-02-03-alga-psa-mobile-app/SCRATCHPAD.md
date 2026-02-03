@@ -182,3 +182,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F175 cached ticket status options with a TTL to reduce repeated `/tickets/statuses` calls across ticket detail interactions.
 - 2026-02-03: F176 added server-side validation for `status_id` updates (status must exist for the tenant) and ensured mobile surfaces returned validation messages clearly.
 - 2026-02-03: F177 disabled comment sending while offline (draft remains persisted); UI explains offline state and prevents queued/offline submission attempts.
+- 2026-02-03: F178 added lightweight in-app toast notifications and wired them to key ticket mutations (comment/status) for quick success/failure feedback.
