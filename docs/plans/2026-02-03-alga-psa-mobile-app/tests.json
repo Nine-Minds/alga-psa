@@ -426,7 +426,7 @@
   {
     "id": "T054",
     "description": "E2E: Render ticket header (number/title/status/priority/assignee)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
