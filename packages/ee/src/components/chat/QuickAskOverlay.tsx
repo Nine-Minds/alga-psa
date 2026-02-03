@@ -1,3 +1,5 @@
+'use client';
+
 // CE stub for QuickAskOverlay (EE feature)
 // In EE builds, @enterprise resolves directly to ee/server/src, bypassing this file.
 // In CE builds, this stub returns null since Quick Ask requires Enterprise Edition.
