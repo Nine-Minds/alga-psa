@@ -1642,7 +1642,7 @@
   {
     "id": "F206",
     "description": "[Mobile:Quality] Quality/Ops - crash reporting excludes request/response bodies by default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
