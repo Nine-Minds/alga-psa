@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "[Mobile:Foundation] Create React Native app (iOS + Android) in repo with reproducible dev/build workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
