@@ -810,7 +810,7 @@
   {
     "id": "F102",
     "description": "[Server:Mobile Auth] Add API endpoint to refresh/rotate mobile credentials and invalidate old tokens",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
