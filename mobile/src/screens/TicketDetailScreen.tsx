@@ -127,7 +127,7 @@ function TicketDetailBody({
         setError({ title: "Ticket not found", description: "This ticket may have been deleted." });
         return;
       }
-      if (result.error.kind === "http" && result.status === 403) {
+      if (result.error.kind === "permission") {
         setError({ title: "No access", description: "You don’t have permission to view this ticket." });
         return;
       }
@@ -222,11 +222,11 @@ function TicketDetailBody({
         auditHeaders,
       });
       if (!result.ok) {
-        if (result.error.kind === "http" && result.status === 403) {
+        if (result.error.kind === "permission") {
           setCommentSendError("You don’t have permission to add comments to this ticket.");
           return;
         }
-        if (result.error.kind === "http" && result.status === 400) {
+        if (result.error.kind === "validation") {
           const msg = getApiErrorMessage(result.error.body);
           setCommentSendError(msg ?? "Comment was rejected by the server.");
           return;
@@ -274,11 +274,11 @@ function TicketDetailBody({
           );
           return;
         }
-        if (res.error.kind === "http" && res.status === 403) {
+        if (res.error.kind === "permission") {
           setStatusUpdateError("You don’t have permission to change this ticket’s status.");
           return;
         }
-        if (res.error.kind === "http" && res.status === 400) {
+        if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setStatusUpdateError(msg ?? "Status change was rejected by the server.");
           return;
@@ -308,11 +308,11 @@ function TicketDetailBody({
         auditHeaders,
       });
       if (!res.ok) {
-        if (res.error.kind === "http" && res.status === 403) {
+        if (res.error.kind === "permission") {
           setPriorityUpdateError("You don’t have permission to change this ticket’s priority.");
           return;
         }
-        if (res.error.kind === "http" && res.status === 400) {
+        if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setPriorityUpdateError(msg ?? "Priority change was rejected by the server.");
           return;
@@ -342,11 +342,11 @@ function TicketDetailBody({
         auditHeaders,
       });
       if (!res.ok) {
-        if (res.error.kind === "http" && res.status === 403) {
+        if (res.error.kind === "permission") {
           setAssignmentError("You don’t have permission to update this ticket’s assignment.");
           return;
         }
-        if (res.error.kind === "http" && res.status === 400) {
+        if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setAssignmentError(msg ?? "Assignment was rejected by the server.");
           return;
@@ -399,11 +399,11 @@ function TicketDetailBody({
         auditHeaders,
       });
       if (!res.ok) {
-        if (res.error.kind === "http" && res.status === 403) {
+        if (res.error.kind === "permission") {
           setDueDateError("You don’t have permission to change this ticket’s due date.");
           return;
         }
-        if (res.error.kind === "http" && res.status === 400) {
+        if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setDueDateError(msg ?? "Due date change was rejected by the server.");
           return;
@@ -473,11 +473,11 @@ function TicketDetailBody({
       });
 
       if (!res.ok) {
-        if (res.error.kind === "http" && res.status === 403) {
+        if (res.error.kind === "permission") {
           setWatchError("You don’t have permission to update watchers on this ticket.");
           return;
         }
-        if (res.error.kind === "http" && res.status === 400) {
+        if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setWatchError(msg ?? "Watchers update was rejected by the server.");
           return;
@@ -528,11 +528,11 @@ function TicketDetailBody({
       });
 
       if (!res.ok) {
-        if (res.error.kind === "http" && res.status === 403) {
+        if (res.error.kind === "permission") {
           setTimeEntryError("You don’t have permission to create time entries.");
           return;
         }
-        if (res.error.kind === "http" && res.status === 400) {
+        if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setTimeEntryError(msg ?? "Time entry was rejected by the server.");
           return;

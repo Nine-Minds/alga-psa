@@ -37,6 +37,29 @@ function normalizePathForAnalytics(path: string): string {
   return path.replace(uuid, ":id");
 }
 
+type ServerErrorShape =
+  | {
+      error?: {
+        code?: string;
+        message?: string;
+        details?: unknown;
+      };
+    }
+  | undefined;
+
+function getServerErrorInfo(body: unknown): {
+  code?: string;
+  message?: string;
+  details?: unknown;
+} {
+  if (!body || typeof body !== "object") return {};
+  const maybe = body as ServerErrorShape;
+  const code = maybe?.error?.code;
+  const message = maybe?.error?.message;
+  const details = maybe?.error?.details;
+  return { code, message, details };
+}
+
 async function readBody(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
@@ -146,15 +169,53 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           });
 
           const body = await readBody(response);
+          const serverError = getServerErrorInfo(body);
 
           if (!response.ok) {
+            const message = serverError.message ?? `HTTP ${response.status}`;
+            const code = serverError.code;
+            const details = serverError.details;
+
+            if (response.status === 401) {
+              return {
+                ok: false,
+                status: response.status,
+                error: { kind: "auth", status: response.status, message, code, body },
+              };
+            }
+
+            if (response.status === 403) {
+              return {
+                ok: false,
+                status: response.status,
+                error: { kind: "permission", status: response.status, message, code, body },
+              };
+            }
+
+            if (response.status === 400 || response.status === 422) {
+              return {
+                ok: false,
+                status: response.status,
+                error: { kind: "validation", status: response.status, message, code, details, body },
+              };
+            }
+
+            if (response.status >= 500) {
+              return {
+                ok: false,
+                status: response.status,
+                error: { kind: "server", status: response.status, message, code, body },
+              };
+            }
+
             return {
               ok: false,
               status: response.status,
               error: {
                 kind: "http",
                 status: response.status,
-                message: `HTTP ${response.status}`,
+                message,
+                code,
                 body,
               },
             };
@@ -184,7 +245,6 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
         if (result.ok) return result;
 
         const retryableStatus =
-          result.error.kind === "http" &&
           result.status !== undefined &&
           (result.status === 502 || result.status === 503 || result.status === 504);
 

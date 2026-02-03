@@ -124,3 +124,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F118 deferred Phase 2 self-hosted base URL onboarding per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F119 deferred Phase 2 self-hosted mobile auth requirements documentation per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F120 deferred Phase 2 self-hosted connectivity/TLS diagnostics UX per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
+- 2026-02-03: F121 standardized mobile API error mapping: `401 -> auth`, `403 -> permission`, `400/422 -> validation`, `5xx -> server`, otherwise `http`; client now prefers server `{error:{message,code,details}}` when available for user-facing messages.

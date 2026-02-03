@@ -91,8 +91,8 @@ export function AppRoot() {
           status: result.status ?? null,
         });
         if (
-          result.error.kind === "http" &&
-          (result.status === 401 || result.status === 403)
+          result.error.kind === "auth" ||
+          result.error.kind === "permission"
         ) {
           analytics.trackEvent("auth.refresh.revoked", { status: result.status });
           setSession(null);

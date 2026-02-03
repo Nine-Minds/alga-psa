@@ -76,11 +76,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
             errorKind: exchanged.error.kind,
             status: exchanged.status ?? null,
           });
-          const message =
-            exchanged.error.kind === "http"
-              ? `Sign-in failed (HTTP ${exchanged.status ?? "error"}).`
-              : exchanged.error.message;
-          setError(message);
+          setError(exchanged.error.message);
           return;
         }
 

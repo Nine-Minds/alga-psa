@@ -962,7 +962,7 @@
   {
     "id": "F121",
     "description": "[Mobile:Foundation] Implement standardized API error mapping: network vs validation vs auth vs permission vs server error",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

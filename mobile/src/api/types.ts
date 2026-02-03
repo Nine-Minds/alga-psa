@@ -10,7 +10,11 @@ export type HttpMethod =
 export type ApiError =
   | { kind: "network"; message: string; cause?: unknown }
   | { kind: "timeout"; message: string; timeoutMs: number }
-  | { kind: "http"; message: string; status: number; body?: unknown }
+  | { kind: "auth"; message: string; status: number; code?: string; body?: unknown }
+  | { kind: "permission"; message: string; status: number; code?: string; body?: unknown }
+  | { kind: "validation"; message: string; status: number; code?: string; details?: unknown; body?: unknown }
+  | { kind: "server"; message: string; status: number; code?: string; body?: unknown }
+  | { kind: "http"; message: string; status: number; code?: string; body?: unknown }
   | { kind: "parse"; message: string; bodyText?: string };
 
 export type ApiResult<T> =
@@ -26,4 +30,3 @@ export type ApiRequest = {
   signal?: AbortSignal;
   timeoutMs?: number;
 };
-
