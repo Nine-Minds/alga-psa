@@ -9,6 +9,7 @@ export type HttpMethod =
 
 export type ApiError =
   | { kind: "network"; message: string; cause?: unknown }
+  | { kind: "canceled"; message: string }
   | { kind: "timeout"; message: string; timeoutMs: number }
   | { kind: "auth"; message: string; status: number; code?: string; body?: unknown }
   | { kind: "permission"; message: string; status: number; code?: string; body?: unknown }

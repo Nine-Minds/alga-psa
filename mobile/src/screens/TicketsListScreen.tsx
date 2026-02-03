@@ -12,7 +12,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { getTicketById, getTicketStats, listTickets, type TicketListItem, type TicketStats } from "../api/tickets";
 import { colors, spacing, typography } from "../ui/theme";
-import { memo, useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
@@ -44,6 +44,7 @@ const DEFAULT_FILTERS: TicketListFilters = {
 export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
+  const listAbortRef = useRef<AbortController | null>(null);
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -68,6 +69,12 @@ export function TicketsListScreen({ navigation }: Props) {
   const [filters, setFilters] = useState<TicketListFilters>(DEFAULT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      listAbortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     let canceled = false;
@@ -126,14 +133,27 @@ export function TicketsListScreen({ navigation }: Props) {
       if (!client || !session) return;
       setError(null);
       setNoAccess(false);
+
+      listAbortRef.current?.abort();
+      const abortController = new AbortController();
+      listAbortRef.current = abortController;
+
       const result = await listTickets(client, {
         apiKey: session.accessToken,
         page: pageToLoad,
         limit: 25,
         search: search || undefined,
+        signal: abortController.signal,
         filters: apiFilters,
       });
+
+      if (listAbortRef.current === abortController) {
+        listAbortRef.current = null;
+      }
+      if (abortController.signal.aborted) return;
+
       if (!result.ok) {
+        if (result.error.kind === "canceled") return;
         logger.warn("Ticket list fetch failed", { error: result.error });
         if (result.error.kind === "permission") {
           setItems([]);

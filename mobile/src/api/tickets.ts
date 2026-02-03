@@ -73,6 +73,7 @@ export type ListTicketsParams = {
   sort?: string;
   order?: "asc" | "desc";
   search?: string;
+  signal?: AbortSignal;
   filters?: {
     is_open?: boolean;
     is_closed?: boolean;
@@ -90,6 +91,7 @@ export function listTickets(
   return client.request<PaginatedResponse<TicketListItem>>({
     method: "GET",
     path: "/api/v1/tickets",
+    signal: params.signal,
     query: {
       page: params.page,
       limit: params.limit,

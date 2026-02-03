@@ -140,7 +140,11 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
 
       const attemptOnce = async (overrideAuthToken?: string): Promise<ApiResult<T>> => {
         const abortController = new AbortController();
-        const timeoutHandle = setTimeout(() => abortController.abort(), timeoutMs);
+        let timedOut = false;
+        const timeoutHandle = setTimeout(() => {
+          timedOut = true;
+          abortController.abort();
+        }, timeoutMs);
 
         const abortListener = () => abortController.abort();
         if (req.signal) {
@@ -230,10 +234,13 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           return { ok: true, status: response.status, data: body as T };
         } catch (error) {
           if (abortController.signal.aborted) {
-            return {
-              ok: false,
-              error: { kind: "timeout", message: "Request timed out", timeoutMs },
-            };
+            if (timedOut) {
+              return {
+                ok: false,
+                error: { kind: "timeout", message: "Request timed out", timeoutMs },
+              };
+            }
+            return { ok: false, error: { kind: "canceled", message: "Request canceled" } };
           }
 
           return {
@@ -250,6 +257,7 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const result = await attemptOnce();
         if (result.ok) return result;
+        if (result.error.kind === "canceled") return result;
 
         if (result.error.kind === "auth" && onAuthError && !didAuthRetry) {
           didAuthRetry = true;
