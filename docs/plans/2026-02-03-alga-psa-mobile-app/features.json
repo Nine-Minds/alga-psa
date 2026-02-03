@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "[Mobile:Auth] Implement logout that revokes server-side session and clears local storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

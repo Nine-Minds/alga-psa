@@ -11,8 +11,9 @@ import { AuthContext, type MobileSession } from "../auth/AuthContext";
 import { clearStoredSession, getStoredSession, storeSession } from "../auth/sessionStorage";
 import { useAppResume } from "../hooks/useAppResume";
 import { createApiClient } from "../api";
-import { refreshSession } from "../api/mobileAuth";
+import { refreshSession, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
+import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
@@ -124,6 +125,24 @@ export function AppRoot() {
     }
   });
 
+  const logout = useCallback(async () => {
+    const currentSession = session;
+    try {
+      if (baseUrl && currentSession) {
+        const client = createApiClient({
+          baseUrl,
+          getUserAgentTag: () => `mobile/${Platform.OS}`,
+        });
+        await revokeSession(client, { refreshToken: currentSession.refreshToken });
+      }
+    } catch (e) {
+      logger.warn("Logout revoke failed", { error: e });
+    } finally {
+      await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
+      setSession(null);
+    }
+  }, [baseUrl, session, setSession]);
+
   if (!config.ok) {
     return (
       <ErrorState title="Configuration error" description={config.error} />
@@ -139,6 +158,7 @@ export function AppRoot() {
       value={{
         session,
         setSession,
+        logout,
       }}
     >
       <View style={{ flex: 1 }}>

@@ -11,6 +11,7 @@ export type MobileSession = {
 export type AuthContextValue = {
   session: MobileSession | null;
   setSession: (session: MobileSession | null) => void;
+  logout: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -20,4 +21,3 @@ export function useAuth(): AuthContextValue {
   if (!value) throw new Error("useAuth must be used within an AuthContext provider");
   return value;
 }
-

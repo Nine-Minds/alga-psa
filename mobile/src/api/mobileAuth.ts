@@ -53,3 +53,18 @@ export function refreshSession(
     body,
   });
 }
+
+export type RevokeSessionRequest = {
+  refreshToken: string;
+};
+
+export function revokeSession(
+  client: ApiClient,
+  body: RevokeSessionRequest,
+): Promise<ApiResult<unknown>> {
+  return client.request<unknown>({
+    method: "POST",
+    path: "/api/v1/mobile/auth/revoke",
+    body,
+  });
+}
