@@ -175,3 +175,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F169 added a “Latest” quick action in the ticket comments section that scrolls the ticket detail view to the newest comment/composer.
 - 2026-02-03: F170 added a “Top” quick action (shown on long comment timelines) to quickly return to the ticket header.
 - 2026-02-03: F171 confirmed comment drafts are persisted per-ticket (and per-user) in secure storage so drafts survive navigation.
+- 2026-02-03: F172 confirmed comment drafts are cleared from secure storage after a successful send.
