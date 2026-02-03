@@ -1162,7 +1162,7 @@
   {
     "id": "T146",
     "description": "E2E: Implement List:UX - last refreshed timestamp",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146"
     ]
