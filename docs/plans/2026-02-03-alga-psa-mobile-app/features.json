@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "[Mobile:Tickets:Detail] Ensure detail respects RBAC and field-level visibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]

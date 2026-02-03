@@ -67,3 +67,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F061 ticket detail supports copy actions (ticket # / id) and “Open in web” deep link to `/msp/tickets/:id` (uses `expo-clipboard`).
 - 2026-02-03: F062 ticket detail now shows friendly 403/404 UX (no-access vs not-found) and preserves cached detail when possible.
 - 2026-02-03: F063 ticket detail reads from and writes to TTL cache (`ticketDetailCache`) for faster back-navigation and repeat opens.
+- 2026-02-03: F064 ticket detail fetch uses server-enforced RBAC (API v1 permission checks) and surfaces 403 as “No access”.
