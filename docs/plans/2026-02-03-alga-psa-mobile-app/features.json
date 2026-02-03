@@ -1250,7 +1250,7 @@
   {
     "id": "F157",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - copy actions for id/number",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
