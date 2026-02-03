@@ -674,7 +674,7 @@
   {
     "id": "T085",
     "description": "Unit: Add “clear cache” action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
