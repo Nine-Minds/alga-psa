@@ -1450,7 +1450,7 @@
   {
     "id": "F182",
     "description": "[Mobile:Tickets:Updates] Implement updates - include app version/device id headers on mutations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
