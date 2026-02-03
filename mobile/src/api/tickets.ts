@@ -30,6 +30,7 @@ export type TicketListItem = {
   priority_name?: string | null;
   assigned_to_name?: string | null;
   client_name?: string | null;
+  contact_name?: string | null;
   updated_at?: string | null;
   entered_at?: string | null;
 };

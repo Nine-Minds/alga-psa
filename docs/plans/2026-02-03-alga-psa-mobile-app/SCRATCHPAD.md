@@ -58,3 +58,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F052 ticket list uses server-side RBAC enforcement (API v1 controller permission checks) and does not apply any client-side bypasses.
 - 2026-02-03: F053 implemented Ticket detail screen with cached-first loading, pull-to-refresh, and basic fields fetched from `GET /api/v1/tickets/:id`.
 - 2026-02-03: F054 ticket detail header renders number/title/status/priority and assignee state.
+- 2026-02-03: F055 ticket detail now shows requester/contact and client/company summary (uses `contact_name` + `client_name` fields from API response).

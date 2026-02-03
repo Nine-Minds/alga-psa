@@ -103,6 +103,7 @@ function TicketDetailBody({
       <Text style={{ ...typography.caption, color: colors.mutedText }}>
         {ticket.ticket_number}
         {ticket.client_name ? ` • ${ticket.client_name}` : ""}
+        {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
       </Text>
       <Text style={{ ...typography.title, marginTop: 2, color: colors.text }}>
         {ticket.title}
@@ -125,6 +126,10 @@ function TicketDetailBody({
       )}
 
       <View style={{ marginTop: spacing.lg }}>
+        <KeyValue label="Requester" value={stringOrDash(ticket.contact_name)} />
+        <View style={{ height: spacing.sm }} />
+        <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
+        <View style={{ height: spacing.sm }} />
         <KeyValue label="Entered" value={formatDate(ticket.entered_at)} />
         <View style={{ height: spacing.sm }} />
         <KeyValue label="Updated" value={formatDate(ticket.updated_at)} />
@@ -157,4 +162,8 @@ function formatDate(value: unknown): string {
   if (!value || typeof value !== "string") return "—";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+}
+
+function stringOrDash(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value : "—";
 }

@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "[Mobile:Tickets:Detail] Render requester/contact and client/company summary",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
