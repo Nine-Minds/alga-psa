@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "[Mobile:Tickets:Detail] Support copy ticket id/number and \u201copen in web\u201d link-out",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]

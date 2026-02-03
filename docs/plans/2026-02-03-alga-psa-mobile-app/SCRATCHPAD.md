@@ -64,3 +64,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F058 ticket detail now renders a comments timeline from `GET /api/v1/tickets/:id/comments` with client-side pagination (“Load more”).
 - 2026-02-03: F059 ticket comments now visually distinguish internal vs public visibility with labeled badges.
 - 2026-02-03: F060 comment entries display commenter name and timestamp (relative + absolute).
+- 2026-02-03: F061 ticket detail supports copy actions (ticket # / id) and “Open in web” deep link to `/msp/tickets/:id` (uses `expo-clipboard`).

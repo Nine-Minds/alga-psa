@@ -1,5 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
@@ -134,6 +135,12 @@ function TicketDetailBody({
         {ticket.priority_name ? <Badge label={ticket.priority_name} tone="warning" /> : null}
       </View>
 
+      <TicketActions
+        baseUrl={config.ok ? config.baseUrl : null}
+        ticketId={ticket.ticket_id}
+        ticketNumber={ticket.ticket_number}
+      />
+
       {ticket.assigned_to_name ? (
         <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.text }}>
           Assigned to {ticket.assigned_to_name}
@@ -167,6 +174,77 @@ function TicketDetailBody({
         <KeyValue label="Ticket ID" value={ticket.ticket_id} />
       </View>
     </ScrollView>
+  );
+}
+
+function TicketActions({
+  baseUrl,
+  ticketId,
+  ticketNumber,
+}: {
+  baseUrl: string | null;
+  ticketId: string;
+  ticketNumber: string;
+}) {
+  const openInWebUrl = baseUrl ? new URL(`/msp/tickets/${ticketId}`, baseUrl).toString() : null;
+
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
+      <ActionChip
+        label="Copy #"
+        onPress={() => {
+          void (async () => {
+            await Clipboard.setStringAsync(ticketNumber);
+            Alert.alert("Copied", ticketNumber);
+          })();
+        }}
+      />
+      <View style={{ width: spacing.sm }} />
+      <ActionChip
+        label="Copy ID"
+        onPress={() => {
+          void (async () => {
+            await Clipboard.setStringAsync(ticketId);
+            Alert.alert("Copied", ticketId);
+          })();
+        }}
+      />
+      {openInWebUrl ? (
+        <>
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
+            label="Open in web"
+            onPress={() => {
+              Alert.alert("Open in web?", openInWebUrl, [
+                { text: "Cancel", style: "cancel" },
+                { text: "Open", onPress: () => void Linking.openURL(openInWebUrl) },
+              ]);
+            }}
+          />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+function ActionChip({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        paddingHorizontal: spacing.md,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.card,
+        opacity: pressed ? 0.9 : 1,
+      })}
+    >
+      <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>{label}</Text>
+    </Pressable>
   );
 }
 
