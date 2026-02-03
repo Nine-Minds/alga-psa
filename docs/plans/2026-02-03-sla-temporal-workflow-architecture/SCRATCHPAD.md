@@ -37,6 +37,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Temporal workflow IDs follow `sla-ticket-{tenantId}-{ticketId}` format in TemporalSlaBackend
 - (2026-02-03) TemporalSlaBackend pause/resume/complete/cancel methods signal workflows
 - (2026-02-03) TemporalSlaBackend resume signals resume to workflows
+- (2026-02-03) TemporalSlaBackend completes SLA phases via completeResponse/completeResolution signals
 
 ## Discoveries / Constraints
 

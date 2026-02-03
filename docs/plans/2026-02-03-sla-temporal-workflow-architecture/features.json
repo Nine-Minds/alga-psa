@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "TemporalSlaBackend.completeSla() sends completeResponse or completeResolution signal based on type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
