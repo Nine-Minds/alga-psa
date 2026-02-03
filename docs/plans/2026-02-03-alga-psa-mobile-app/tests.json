@@ -1114,7 +1114,7 @@
   {
     "id": "T140",
     "description": "E2E: Implement List:Filters - assignee (me/unassigned) selector",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F140"
     ]
