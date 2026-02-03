@@ -818,7 +818,7 @@
   {
     "id": "T103",
     "description": "Integration: Add API endpoint to revoke mobile sessions (logout)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]
