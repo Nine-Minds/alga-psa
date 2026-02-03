@@ -138,7 +138,7 @@
   {
     "id": "T018",
     "description": "Unit: Add localization scaffolding (en-US first)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
