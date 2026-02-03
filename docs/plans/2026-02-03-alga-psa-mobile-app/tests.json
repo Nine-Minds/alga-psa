@@ -826,7 +826,7 @@
   {
     "id": "T104",
     "description": "Integration: Add endpoint for mobile capability discovery (mobile enabled, providers available, TTLs)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]
