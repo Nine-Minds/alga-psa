@@ -302,7 +302,7 @@
   {
     "id": "T051",
     "description": "Unit: CE stub TemporalSlaBackend throws 'only available in Enterprise Edition'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F046"]
   },
   {
