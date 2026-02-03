@@ -626,7 +626,7 @@
   {
     "id": "T079",
     "description": "E2E: Implement due date update (if supported by API)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
