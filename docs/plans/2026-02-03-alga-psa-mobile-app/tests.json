@@ -1258,7 +1258,7 @@
   {
     "id": "T158",
     "description": "E2E: Implement ticket detail - link handling opens external browser with confirmation (optional)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
