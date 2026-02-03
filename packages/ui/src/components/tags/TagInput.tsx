@@ -11,15 +11,24 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from '@alga-psa/types';
 
+type TagSize = 'sm' | 'md' | 'lg';
+
 interface TagInputProps {
-  id?: string; // Made optional to maintain backward compatibility
+  id?: string;
   existingTags: ITag[];
   currentTags?: ITag[];
   onAddTag: (tagText: string) => Promise<void>;
   className?: string;
   placeholder?: string;
-  compact?: boolean;
+  size?: TagSize;
 }
+
+// Size configurations for tag input
+const inputSizeConfig = {
+  sm: { buttonClass: '!p-0.5 !min-w-0 !h-5 !w-5', iconSize: 12, inputClass: 'px-1.5 py-0.5 text-xs w-24 h-6', saveClass: 'px-2 py-0.5 text-xs h-6' },
+  md: { buttonClass: '', iconSize: 16, inputClass: 'px-2 py-1 text-sm w-32', saveClass: 'px-3 py-1 text-sm' },
+  lg: { buttonClass: '', iconSize: 18, inputClass: 'px-2.5 py-1.5 text-base w-36', saveClass: 'px-4 py-1.5 text-base' },
+};
 
 export const TagInput: React.FC<TagInputProps> = ({
   id = 'tag-input',
@@ -28,8 +37,9 @@ export const TagInput: React.FC<TagInputProps> = ({
   onAddTag,
   className = '',
   placeholder = 'New tag',
-  compact = false
+  size = 'md'
 }) => {
+  const sizeConfig = inputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<ITag[]>([]);
@@ -161,34 +171,34 @@ export const TagInput: React.FC<TagInputProps> = ({
           id="tag-add-button"
           type="button"
           onClick={() => setIsEditing(true)}
-          className={`text-gray-500 hover:text-gray-700 ${compact ? '!p-0.5 !min-w-0 !h-5 !w-5' : ''}`}
+          className={`text-gray-500 hover:text-gray-700 ${sizeConfig.buttonClass}`}
           variant="icon"
           size="icon"
           style={{ visibility: isEditing ? 'hidden' : 'visible' }}
         >
-          <Plus size={compact ? 12 : 16} />
+          <Plus size={sizeConfig.iconSize} />
         </Button>
       </div>
-      
+
       {/* Render input form using a portal when editing */}
       {isEditing && typeof document !== 'undefined' &&
         createPortal(
-          <div 
+          <div
             ref={containerRef}
             className="fixed z-[100001] flex items-center"
-            style={{ 
+            style={{
               top: `${buttonPosition.top}px`,
               left: `${buttonPosition.left}px`
             }}
           >
-            <div className={`flex shadow-md rounded-md bg-white border border-gray-200 ${compact ? 'shadow-sm' : ''}`}>
+            <div className={`flex shadow-md rounded-md bg-white border border-gray-200 ${size === 'sm' ? 'shadow-sm' : ''}`}>
               <Input
                 ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
-                className={`rounded-l-md focus:ring-offset-0 focus:z-10 border-0 ${compact ? 'px-1.5 py-0.5 text-xs w-24 h-6' : 'px-2 py-1 text-sm w-32'}`}
+                className={`rounded-l-md focus:ring-offset-0 focus:z-10 border-0 ${sizeConfig.inputClass}`}
                 placeholder={placeholder}
                 autoFocus
                 autoComplete="off"
@@ -199,9 +209,9 @@ export const TagInput: React.FC<TagInputProps> = ({
                 type="button"
                 onClick={() => handleSave()}
                 disabled={isSaving || !inputValue.trim()}
-                className={`rounded-r-md font-medium border-0 whitespace-nowrap ${compact ? 'px-2 py-0.5 text-xs h-6' : 'px-3 py-1 text-sm'}`}
+                className={`rounded-r-md font-medium border-0 whitespace-nowrap ${sizeConfig.saveClass}`}
                 variant={isSaving || !inputValue.trim() ? "outline" : "default"}
-                size={compact ? "xs" : "sm"}
+                size={size === 'sm' ? "xs" : "sm"}
               >
                 {isSaving ? '...' : 'Save'}
               </Button>

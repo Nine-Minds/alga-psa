@@ -8,8 +8,10 @@ import { toast } from 'react-hot-toast';
 import { useTags } from '../context/TagContext';
 import { handleError } from '@alga-psa/ui';
 
+type TagSize = 'sm' | 'md' | 'lg';
+
 interface TagManagerProps {
-  id?: string; // Made optional to maintain backward compatibility
+  id?: string;
   entityId: string;
   entityType: TaggedEntityType;
   initialTags: ITag[];
@@ -17,8 +19,8 @@ interface TagManagerProps {
   className?: string;
   allowColorEdit?: boolean;
   allowTextEdit?: boolean;
-  useInlineInput?: boolean; // Use inline input instead of portal-based input
-  compact?: boolean; // Use smaller sizing for compact views
+  useInlineInput?: boolean;
+  size?: TagSize;
   permissions?: {
     canAddExisting: boolean;
     canCreateNew: boolean;
@@ -39,7 +41,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   allowColorEdit = true,
   allowTextEdit = true,
   useInlineInput = false,
-  compact = false,
+  size = 'md',
   permissions: passedPermissions
 }) => {
   // Always call useTags to avoid conditional hooks
@@ -280,9 +282,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
     }
   };
 
+  const gapClass = size === 'sm' ? 'gap-0.5' : size === 'lg' ? 'gap-1.5' : 'gap-1';
+
   return (
-    <div className={`flex flex-wrap items-center ${compact ? 'gap-0.5' : 'gap-1'} overflow-visible ${className}`}>
-      <div className={`flex flex-wrap ${compact ? 'gap-0.5' : 'gap-1'}`}>
+    <div className={`flex flex-wrap items-center ${gapClass} overflow-visible ${className}`}>
+      <div className={`flex flex-wrap ${gapClass}`}>
         <TagList
           tags={tags}
           onRemoveTag={handleRemoveTag}
@@ -290,7 +294,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
           allowTextEdit={allowTextEdit && permissions.canEditText}
           allowDeleteAll={permissions.canDeleteAll}
           onTagUpdate={handleTagUpdate}
-          compact={compact}
+          size={size}
         />
       </div>
       {(permissions.canAddExisting || permissions.canCreateNew) && (
@@ -301,7 +305,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
               existingTags={allTags.filter(t => t.tagged_type === entityType)}
               currentTags={tags}
               onAddTag={handleAddTag}
-              compact={compact}
+              size={size}
             />
           ) : (
             <TagInput
@@ -309,7 +313,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
               existingTags={allTags.filter(t => t.tagged_type === entityType)}
               currentTags={tags}
               onAddTag={handleAddTag}
-              compact={compact}
+              size={size}
             />
           )}
         </div>

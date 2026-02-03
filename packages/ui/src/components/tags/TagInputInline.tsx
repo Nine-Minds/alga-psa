@@ -7,6 +7,15 @@ import { Plus } from 'lucide-react';
 import { ITag } from '@alga-psa/types';
 import { generateEntityColor } from '../../lib/colorUtils';
 
+type TagSize = 'sm' | 'md' | 'lg';
+
+// Size configurations for tag input
+const inputSizeConfig = {
+  sm: { buttonClass: '!p-0.5 !min-w-0 !h-5 !w-5', iconSize: 12, inputClass: 'px-1.5 py-0.5 text-xs w-24 h-6', saveClass: 'px-2 py-0.5 text-xs h-6' },
+  md: { buttonClass: '', iconSize: 16, inputClass: 'px-2 py-1 text-sm w-32', saveClass: 'px-3 py-1 text-sm' },
+  lg: { buttonClass: '', iconSize: 18, inputClass: 'px-2.5 py-1.5 text-base w-36', saveClass: 'px-4 py-1.5 text-base' },
+};
+
 interface TagInputInlineProps {
   id?: string;
   existingTags: ITag[];
@@ -14,7 +23,7 @@ interface TagInputInlineProps {
   onAddTag: (tagText: string) => Promise<void>;
   placeholder?: string;
   className?: string;
-  compact?: boolean;
+  size?: TagSize;
 }
 
 export const TagInputInline: React.FC<TagInputInlineProps> = ({
@@ -24,8 +33,9 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
   onAddTag,
   placeholder = 'Add tag...',
   className = '',
-  compact = false
+  size = 'md'
 }) => {
+  const sizeConfig = inputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -100,18 +110,18 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
         id={`${id}-button`}
         type="button"
         onClick={() => setIsEditing(true)}
-        className="text-gray-500 hover:text-gray-700"
+        className={`text-gray-500 hover:text-gray-700 ${sizeConfig.buttonClass}`}
         variant="icon"
         size="icon"
       >
-        <Plus size={16} />
+        <Plus size={sizeConfig.iconSize} />
       </Button>
     );
   }
 
   return (
     <div className={`inline-flex flex-col ${className}`}>
-      <div className="flex shadow-sm rounded-md bg-white border border-gray-200">
+      <div className={`flex shadow-sm rounded-md bg-white border border-gray-200 ${size === 'sm' ? 'shadow-sm' : ''}`}>
         <Input
           ref={inputRef}
           id={`${id}-input`}
@@ -120,7 +130,7 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyPress}
           onBlur={handleBlur}
-          className="rounded-l-md px-2 py-1 text-sm w-32 border-0"
+          className={`rounded-l-md border-0 ${sizeConfig.inputClass}`}
           placeholder={placeholder}
           autoComplete="off"
           containerClassName="m-0"
@@ -130,9 +140,9 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
           type="button"
           onClick={() => handleSave()}
           disabled={isSaving || !inputValue.trim()}
-          className="rounded-r-md px-3 py-1 text-sm font-medium border-0"
+          className={`rounded-r-md font-medium border-0 ${sizeConfig.saveClass}`}
           variant={isSaving || !inputValue.trim() ? "outline" : "default"}
-          size="sm"
+          size={size === 'sm' ? "xs" : "sm"}
         >
           {isSaving ? '...' : 'Save'}
         </Button>

@@ -174,7 +174,7 @@ export const calculateZoomScales = (zoomLevel: number): ZoomScales => {
     descSize = 'text-sm';
     metaSize = 'text-xs';
     cardPadding = 'p-2';
-    cardGap = 'gap-1';
+    cardGap = 'gap-0.5';
     showDescription = true;
   } else if (zoomLevel <= 70) {
     // Default / Normal range (wider range for consistent look)

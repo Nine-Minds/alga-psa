@@ -105,8 +105,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const [isTagsExpanded, setIsTagsExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
+  const { ref: titleRef, isTruncated: isTitleTruncated } = useTruncationDetection<HTMLDivElement>();
 
   // Calculate zoom scales for dynamic sizing
   const zoomScales = calculateZoomScales(zoomLevel);
@@ -114,6 +116,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const useCollapsibleTags = zoomLevel <= 10; // Collapsible tags for compact (0) and one size up (10) only
   const taskTagsList = providedTaskTags || task.tags || [];
   const hasAnyTags = taskTagsList.length > 0;
+
+  // Calculate tag size based on zoom level
+  const getTagSize = (): 'sm' | 'md' | 'lg' => {
+    if (zoomLevel <= 30) return 'sm';
+    if (zoomLevel <= 70) return 'md';
+    return 'lg';
+  };
+  const tagSize = getTagSize();
 
   // Auto-expand description when search matches in description
   useEffect(() => {
@@ -320,25 +330,41 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </DropdownMenu>
       </div>
 
-      <div className={`flex items-center gap-2 mb-1 w-full px-1 ${zoomLevel <= 15 ? 'mt-4' : 'mt-6'}`}>
-        <div className={`font-semibold ${zoomScales.titleSize} flex-1 ${zoomLevel <= 15 ? 'line-clamp-1' : ''}`}>
-          {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
-        </div>
-        {priority && (
-          <div className="flex items-center gap-1">
-            <div
-              className={`${zoomLevel <= 15 ? 'w-2 h-2' : 'w-3 h-3'} rounded-full`}
-              style={{ backgroundColor: priority.color || '#6B7280' }}
-              title={`Priority level: ${priority.priority_name}`}
-            />
-            {zoomLevel > 15 && (
-              <span className={`${zoomScales.metaSize} text-gray-600`}>{priority.priority_name}</span>
-            )}
+      <div className={`${isCompact ? '' : 'mb-1'} w-full px-1 ${zoomLevel <= 15 ? 'mt-3' : zoomLevel <= 30 ? 'mt-4' : 'mt-6'}`}>
+        <div className="flex items-center gap-2">
+          <div
+            ref={titleRef}
+            className={`font-semibold ${zoomScales.titleSize} flex-1 ${!isTitleExpanded ? 'line-clamp-2' : ''}`}
+          >
+            {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
           </div>
+          {priority && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <div
+                className={`${zoomLevel <= 15 ? 'w-2 h-2' : 'w-3 h-3'} rounded-full`}
+                style={{ backgroundColor: priority.color || '#6B7280' }}
+                title={`Priority level: ${priority.priority_name}`}
+              />
+              {zoomLevel > 15 && (
+                <span className={`${zoomScales.metaSize} text-gray-600`}>{priority.priority_name}</span>
+              )}
+            </div>
+          )}
+        </div>
+        {(isTitleTruncated || isTitleExpanded) && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsTitleExpanded(!isTitleExpanded);
+            }}
+            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium ${isCompact ? '' : 'mt-1'}`}
+          >
+            {isTitleExpanded ? 'See less' : 'See more'}
+          </button>
         )}
       </div>
       {task.description && zoomScales.showDescription && (
-        <div className="mb-2">
+        <div className={isCompact ? 'mb-0.5' : 'mb-2'}>
           <p
             ref={descriptionRef}
             className={`${zoomScales.descSize} text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
@@ -351,7 +377,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium mt-1`}
+              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium ${isCompact ? '' : 'mt-1'}`}
             >
               {isDescriptionExpanded ? 'See less' : 'See more'}
             </button>
@@ -512,7 +538,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
       
       {/* Tags at the very bottom */}
-      <div className={isCompact ? 'mt-1' : 'mt-2'} onClick={(e) => e.stopPropagation()}>
+      <div className={isCompact ? '' : 'mt-2'} onClick={(e) => e.stopPropagation()}>
         {useCollapsibleTags ? (
           // Compact/small mode: show toggle if there are tags
           hasAnyTags && (
@@ -551,14 +577,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       onTagsChange={(tags) => {
                         onTaskTagsChange(task.task_id, tags);
                       }}
-                      compact={isCompact}
+                      size={tagSize}
                     />
                   ) : (
                     <TagList
                       tags={taskTagsList}
                       maxDisplay={3}
                       allowColorEdit={false}
-                      compact={isCompact}
+                      size={tagSize}
                     />
                   )}
                 </div>
@@ -576,7 +602,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               onTagsChange={(tags) => {
                 onTaskTagsChange(task.task_id, tags);
               }}
-              compact={false}
+              size={tagSize}
             />
           ) : (
             hasAnyTags && (
@@ -584,7 +610,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 tags={taskTagsList}
                 maxDisplay={3}
                 allowColorEdit={false}
-                compact={false}
+                size={tagSize}
               />
             )
           )
