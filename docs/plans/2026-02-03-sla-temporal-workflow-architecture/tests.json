@@ -440,7 +440,7 @@
   {
     "id": "T074",
     "description": "Unit: SlaTicketWorkflow handles workflow replay correctly (deterministic)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
