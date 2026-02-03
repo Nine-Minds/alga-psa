@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Unit: SlaTicketWorkflow calculates correct sleep duration for 90% threshold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
