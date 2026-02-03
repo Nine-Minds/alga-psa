@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "Unit: SlaTicketWorkflow getState query returns current status and remaining time",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
