@@ -1418,7 +1418,7 @@
   {
     "id": "T178",
     "description": "E2E: Implement updates - toast feedback for success/failure",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F178"
     ]
