@@ -165,3 +165,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Added full EE SLA lifecycle workflow integration test with pause/resume and resolution notifications (T068).
 - (2026-02-03) Added CE lifecycle test covering create, poll notification, pause/resume, response, and resolution in `packages/sla/src/services/__tests__/slaCeLifecycle.test.ts` (T069).
 - (2026-02-03) Verified EE fallback to PgBoss backend when Temporal is unavailable in integration test (T070).
+- (2026-02-03) Marked America/New_York timezone calculation test for calculateNextWakeTime (T071).

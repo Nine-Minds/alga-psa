@@ -422,7 +422,7 @@
   {
     "id": "T071",
     "description": "Unit: calculateNextWakeTime handles timezone correctly for America/New_York",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
