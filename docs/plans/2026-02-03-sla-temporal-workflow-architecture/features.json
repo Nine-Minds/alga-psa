@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "SlaTicketWorkflow supports 'getState' query returning currentStatus, remainingTime, pauseState",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
