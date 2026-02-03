@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Unit: SlaTicketWorkflow initial state has currentPhase='response' and empty notifiedThresholds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
