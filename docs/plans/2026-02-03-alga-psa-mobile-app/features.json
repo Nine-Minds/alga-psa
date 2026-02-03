@@ -338,7 +338,7 @@
   {
     "id": "F043",
     "description": "[Mobile:Tickets:List] Implement server-side search with debounced input",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

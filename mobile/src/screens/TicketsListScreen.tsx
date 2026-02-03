@@ -1,7 +1,7 @@
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
@@ -43,12 +43,24 @@ export function TicketsListScreen({ navigation }: Props) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
 
   const loadPage = useCallback(
     async ({ pageToLoad, replace }: { pageToLoad: number; replace: boolean }) => {
       if (!client || !session) return;
       setError(null);
-      const result = await listTickets(client, { apiKey: session.accessToken, page: pageToLoad, limit: 25 });
+      const result = await listTickets(client, {
+        apiKey: session.accessToken,
+        page: pageToLoad,
+        limit: 25,
+        search: search || undefined,
+      });
       if (!result.ok) {
         logger.warn("Ticket list fetch failed", { error: result.error });
         setError("Unable to load tickets. Please try again.");
@@ -60,7 +72,7 @@ export function TicketsListScreen({ navigation }: Props) {
       setPage(result.data.pagination.page);
       setHasNext(result.data.pagination.hasNext);
     },
-    [client, session],
+    [client, search, session],
   );
 
   const { refreshing, refresh } = usePullToRefresh(async () => {
@@ -83,7 +95,7 @@ export function TicketsListScreen({ navigation }: Props) {
     return () => {
       canceled = true;
     };
-  }, [client, loadPage, session]);
+  }, [client, loadPage, session, search]);
 
   const onEndReached = async () => {
     if (!client || !session) return;
@@ -137,6 +149,27 @@ export function TicketsListScreen({ navigation }: Props) {
       contentContainerStyle={{ padding: spacing.lg, backgroundColor: colors.background }}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.4}
+      ListHeaderComponent={
+        <View style={{ marginBottom: spacing.md }}>
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="Search tickets"
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Search tickets"
+            style={{
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.background,
+              color: colors.text,
+            }}
+          />
+        </View>
+      }
       renderItem={({ item }) => (
         <TicketRow
           item={item}
