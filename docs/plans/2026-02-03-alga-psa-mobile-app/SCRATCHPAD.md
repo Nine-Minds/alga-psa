@@ -421,3 +421,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T193 marked as covered: Capabilities endpoint returns hosted domain allowlist (server /api/v1/mobile/auth/capabilities).
 - 2026-02-03: T194 marked as covered: Rate limiting enforced for OTT issue/exchange/refresh (server route/service guards).
 - 2026-02-03: T195 marked as covered: Audit logs include device/app metadata where provided (server auditLog usage for mobile auth events).
+- 2026-02-03: T196 marked as covered: Mobile auth routes use consistent error schema (handleApiError standardization).

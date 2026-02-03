@@ -1562,7 +1562,7 @@
   {
     "id": "T196",
     "description": "Integration: Implement server mobile auth - consistent error response schema for auth errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]
