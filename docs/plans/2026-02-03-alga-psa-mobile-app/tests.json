@@ -1394,7 +1394,7 @@
   {
     "id": "T175",
     "description": "E2E: Implement updates - status list fetched and cached with TTL",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]
