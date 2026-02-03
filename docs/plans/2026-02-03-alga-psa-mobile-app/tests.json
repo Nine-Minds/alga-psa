@@ -586,7 +586,7 @@
   {
     "id": "T074",
     "description": "E2E: Include mobile client metadata on update calls (audit)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
