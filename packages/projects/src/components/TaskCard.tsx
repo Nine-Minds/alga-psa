@@ -8,7 +8,6 @@ import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { findPriorityById } from '@alga-psa/reference-data/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -35,6 +34,7 @@ interface TaskCardProps {
   taskDependencies?: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] };
   taskTags?: ITag[];
   documentCount?: number;
+  priority?: IPriority | IStandardPriority;
   isAnimating?: boolean;
   searchQuery?: string;
   searchCaseSensitive?: boolean;
@@ -71,6 +71,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   taskDependencies,
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
+  priority,
   isAnimating = false,
   searchQuery = '',
   searchCaseSensitive = false,
@@ -99,7 +100,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     null
   );
   const [isDragging, setIsDragging] = useState(false);
-  const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
@@ -170,24 +170,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setTaskResources(resources || []); // Ensure empty array if API returns null/undefined
         }
 
-        // Fetch priority if task has priority_id
-        if (task.priority_id && !priority) {
-          const taskPriority = await findPriorityById(task.priority_id);
-          setPriority(taskPriority);
-        }
-
-        // Don't fetch document count - it should be provided from parent
-        // Documents should only be fetched when opening the task form
-
-        // Fetch tags only if not provided
-
       } catch (error) {
         console.error('Error fetching task data:', error);
       }
     };
 
     fetchData();
-  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id, priority, providedDocumentCount]);
+  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, providedDocumentCount]);
 
   // Computed values - ensure we handle the loading state
   const checklistItems = task.checklist_items || [];
