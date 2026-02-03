@@ -1490,7 +1490,7 @@
   {
     "id": "F187",
     "description": "[Server:Mobile Auth] Implement server mobile auth - OTT is bound to user session id to prevent replay across sessions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
