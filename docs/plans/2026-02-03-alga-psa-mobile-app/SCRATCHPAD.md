@@ -264,3 +264,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T037 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: Added a comprehensive manual QA checklist for MVP end-to-end validation (`docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md`).
 - 2026-02-03: T038 marked Tickets list pagination/infinite scroll as covered by the manual QA checklist (`docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md`).
+- 2026-02-03: T039 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).

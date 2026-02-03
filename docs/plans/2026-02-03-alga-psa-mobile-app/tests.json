@@ -306,7 +306,7 @@
   {
     "id": "T039",
     "description": "E2E: Implement pull-to-refresh to reload first page",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
