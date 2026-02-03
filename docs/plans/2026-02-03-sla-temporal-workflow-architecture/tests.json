@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "Unit: sendSlaNotification activity calls slaNotificationService.sendSlaNotification()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
