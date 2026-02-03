@@ -400,7 +400,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
   const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
 
-  // Upsert install row
+  // Lookup extension version outside transaction (read-only)
   const ev = await knex('extension_version')
     .where({ registry_id: params.registryId, version: params.version })
     .first(['id', 'capabilities']);
@@ -428,47 +428,70 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
     .filter((cap) => isKnownCapability(cap));
 
   const runnerDomain = computeDomain(tenant, params.registryId);
-  const payload = {
-    tenant_id: tenant,
-    registry_id: params.registryId,
-    version_id: ev.id,
-    status: 'enabled',
-    granted_caps: JSON.stringify(normalizedCaps),
-    config: JSON.stringify({}),
-    is_enabled: true,
-    runner_domain: runnerDomain,
-    runner_status: JSON.stringify({ state: 'provisioning', message: 'Enqueued domain provisioning' }),
-    updated_at: knex.fn.now(),
-  };
 
-  const upserted = await knex('tenant_extension_install')
-    .insert({ id: knex.raw('gen_random_uuid()'), ...payload, created_at: knex.fn.now() })
-    .onConflict(['tenant_id', 'registry_id'])
-    .merge(payload)
-    .returning(['id']);
+  // Wrap all writes in a transaction to ensure atomicity across pods
+  const installId = await knex.transaction(async (trx: Knex.Transaction) => {
+    const payload = {
+      tenant_id: tenant,
+      registry_id: params.registryId,
+      version_id: ev.id,
+      status: 'enabled',
+      granted_caps: JSON.stringify(normalizedCaps),
+      config: JSON.stringify({}),
+      is_enabled: true,
+      runner_domain: runnerDomain,
+      runner_status: JSON.stringify({ state: 'provisioning', message: 'Enqueued domain provisioning' }),
+      updated_at: trx.fn.now(),
+    };
 
-  const installId: string | undefined = Array.isArray(upserted) && upserted.length > 0 ? (upserted[0] as any).id : undefined;
+    const upserted = await trx('tenant_extension_install')
+      .insert({ id: trx.raw('gen_random_uuid()'), ...payload, created_at: trx.fn.now() })
+      .onConflict(['tenant_id', 'registry_id'])
+      .merge(payload)
+      .returning(['id']);
 
-  if (installId) {
-    try {
-      await upsertInstallConfigRecord({
-        installId,
-        tenantId: tenant,
-        config: {},
-        providers: normalizedCaps,
-        connection: knex,
-      });
-    } catch (error: any) {
-      console.error('[installExtensionForCurrentTenantV2] failed to upsert install config record', {
-        installId,
-        tenant,
-        error: error?.message,
-      });
+    const id: string | undefined = Array.isArray(upserted) && upserted.length > 0 ? (upserted[0] as any).id : undefined;
+
+    if (!id) {
+      throw new Error('Failed to upsert extension install record');
     }
-  }
 
-  // Best-effort Temporal provisioning kickoff
-  await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId }).catch(() => {});
+    // Upsert install config within the same transaction
+    await upsertInstallConfigRecord({
+      installId: id,
+      tenantId: tenant,
+      config: {},
+      providers: normalizedCaps,
+      connection: trx,
+    });
+
+    return id;
+  });
+
+  // Enqueue provisioning workflow AFTER transaction commits successfully
+  // This ensures the install record exists before the workflow tries to read it
+  // Workflow ID is deterministic (tenant:extensionId), so Temporal handles deduplication
+  const { enqueued, error: enqueueError } = await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId });
+
+  if (!enqueued) {
+    console.error('[installExtensionForCurrentTenantV2] failed to enqueue provisioning workflow', {
+      installId,
+      tenant,
+      registryId: params.registryId,
+      error: enqueueError,
+    });
+    // Mark install for reconciliation so a background process can retry
+    await knex('tenant_extension_install')
+      .where({ id: installId, tenant_id: tenant })
+      .update({
+        runner_status: JSON.stringify({
+          state: 'provisioning_enqueue_failed',
+          message: enqueueError ?? 'Failed to enqueue provisioning workflow; pending reconciliation',
+          failed_at: new Date().toISOString(),
+        }),
+        updated_at: knex.fn.now(),
+      });
+  }
 
   return { success: true, installId };
 })
