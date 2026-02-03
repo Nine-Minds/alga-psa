@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "[Mobile:Foundation] Add CI job to lint/typecheck mobile app package",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
