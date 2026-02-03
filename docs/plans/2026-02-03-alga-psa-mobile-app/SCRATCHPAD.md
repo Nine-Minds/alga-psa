@@ -154,3 +154,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F148 ticket list 401 handling now retries once via global `onAuthError` refresh flow, then routes to sign-in if refresh fails.
 - 2026-02-03: F149 ticket list now shows a dedicated “No access” state on 403/permission responses, instead of a generic error.
 - 2026-02-03: F150 expanded mobile API retry/backoff to cover all 5xx responses for GET/HEAD (not just 502/503/504), so ticket list loads recover automatically from transient server errors.
+- 2026-02-03: F151 improved ticket list offline handling: when offline, shows a dedicated offline error message, disables retry until online, and auto-retries when connectivity returns.

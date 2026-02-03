@@ -1202,7 +1202,7 @@
   {
     "id": "F151",
     "description": "[Mobile:Tickets:List] Implement List:Errors - network offline retry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

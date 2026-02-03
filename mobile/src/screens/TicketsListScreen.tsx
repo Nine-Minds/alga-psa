@@ -18,6 +18,7 @@ import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, setCachedTicketDetail } from "../cache/ticketsCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
+import { useNetworkStatus } from "../network/useNetworkStatus";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -60,6 +61,8 @@ export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
+  const network = useNetworkStatus();
+  const isOffline = network.isConnected === false || network.isInternetReachable === false;
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -77,6 +80,7 @@ export function TicketsListScreen({ navigation }: Props) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingOfflineRetry, setPendingOfflineRetry] = useState(false);
   const [noAccess, setNoAccess] = useState(false);
   const [stats, setStats] = useState<TicketStats | null>(null);
   const [lastRefreshedAtIso, setLastRefreshedAtIso] = useState<string | null>(null);
@@ -160,6 +164,7 @@ export function TicketsListScreen({ navigation }: Props) {
     async ({ pageToLoad, replace }: { pageToLoad: number; replace: boolean }) => {
       if (!client || !session) return;
       setError(null);
+      setPendingOfflineRetry(false);
       setNoAccess(false);
 
       listAbortRef.current?.abort();
@@ -191,6 +196,11 @@ export function TicketsListScreen({ navigation }: Props) {
           setNoAccess(true);
           return;
         }
+        if ((result.error.kind === "network" || result.error.kind === "timeout") && isOffline) {
+          setError("You’re offline. Connect to the internet to load tickets.");
+          setPendingOfflineRetry(true);
+          return;
+        }
         setError("Unable to load tickets. Please try again.");
         return;
       }
@@ -212,7 +222,7 @@ export function TicketsListScreen({ navigation }: Props) {
         );
       }
     },
-    [apiFilters, client, filters.sortField, filters.sortOrder, search, session],
+    [apiFilters, client, filters.sortField, filters.sortOrder, isOffline, search, session],
   );
 
   const fetchStats = useCallback(async () => {
@@ -228,6 +238,13 @@ export function TicketsListScreen({ navigation }: Props) {
   const { refreshing, refresh } = usePullToRefresh(async () => {
     await Promise.all([loadPage({ pageToLoad: 1, replace: true }), fetchStats()]);
   }, { haptics: true });
+
+  useEffect(() => {
+    if (!pendingOfflineRetry) return;
+    if (isOffline) return;
+    setPendingOfflineRetry(false);
+    void refresh();
+  }, [isOffline, pendingOfflineRetry, refresh]);
 
   useAppResume(() => {
     void refresh();
@@ -340,11 +357,16 @@ export function TicketsListScreen({ navigation }: Props) {
   }
 
   if (error && items.length === 0) {
+    const title = pendingOfflineRetry ? "You’re offline" : "Unable to load tickets";
     return (
       <ErrorState
-        title="Unable to load tickets"
+        title={title}
         description={error}
-        action={<PrimaryButton onPress={() => void refresh()}>Retry</PrimaryButton>}
+        action={
+          <PrimaryButton disabled={isOffline} onPress={() => void refresh()}>
+            Retry
+          </PrimaryButton>
+        }
       />
     );
   }
