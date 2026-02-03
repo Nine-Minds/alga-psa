@@ -45,3 +45,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F039 wired pull-to-refresh to reload the first tickets page and replace existing list results.
 - 2026-02-03: F040 ticket list rows now render ticket number, title, status, priority, assignee, client, and updated date.
 - 2026-02-03: F041 added accessible status/priority badges to ticket list rows (high-contrast pill badges).
+- 2026-02-03: F042 ticket list requests use server-side sorting with `sort=updated_at&order=desc` by default.
