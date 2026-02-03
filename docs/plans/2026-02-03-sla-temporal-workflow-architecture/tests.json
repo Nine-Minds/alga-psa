@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Unit: PgBossSlaBackend.pauseSla() calls slaPauseService.pauseSla()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

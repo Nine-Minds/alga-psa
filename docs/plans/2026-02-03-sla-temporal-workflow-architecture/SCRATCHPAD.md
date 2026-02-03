@@ -64,6 +64,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SlaBackendFactory returns Temporal backend in EE when available (T003)
 - (2026-02-03) Tests: SlaBackendFactory falls back to PgBoss when Temporal unavailable (T004)
 - (2026-02-03) Tests: PgBossSlaBackend startSlaTracking no-op (T005)
+- (2026-02-03) Tests: PgBossSlaBackend.pauseSla delegates to slaPauseService (T006)
 
 ## Discoveries / Constraints
 
