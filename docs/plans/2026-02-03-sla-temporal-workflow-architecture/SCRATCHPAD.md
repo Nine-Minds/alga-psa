@@ -156,3 +156,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Verified resume recalculates timers with pause minutes in workflow integration test (T059).
 - (2026-02-03) Confirmed completeResponse transitions workflow into resolution phase in integration lifecycle test (T060).
 - (2026-02-03) Verified completeResolution terminates the workflow in integration lifecycle test (T061).
+- (2026-02-03) Added ticket deletion test ensuring SLA workflow cancellation in `packages/tickets/src/actions/__tests__/ticketActions.sla.test.ts` (T062).
