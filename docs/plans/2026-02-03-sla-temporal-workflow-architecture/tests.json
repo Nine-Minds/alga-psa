@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "Unit: recordSlaAuditLog activity inserts entry with correct event type",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
