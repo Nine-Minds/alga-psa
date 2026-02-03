@@ -1186,7 +1186,7 @@
   {
     "id": "T149",
     "description": "E2E: Implement List:Errors - 403 handling (no access)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F149"
     ]
