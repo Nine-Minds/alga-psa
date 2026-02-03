@@ -191,3 +191,25 @@ export function updateTicketStatus(
     },
   });
 }
+
+export function updateTicketAssignment(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    assigned_to: string | null;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}/assignment`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      assigned_to: params.assigned_to,
+    },
+  });
+}

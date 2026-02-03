@@ -6,7 +6,7 @@ import { colors, spacing, typography } from "../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, getTicketStatuses, updateTicketStatus, type TicketComment, type TicketDetail, type TicketStatus } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketStatuses, updateTicketAssignment, updateTicketStatus, type TicketComment, type TicketDetail, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -67,6 +67,8 @@ function TicketDetailBody({
   const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
+  const [assigningToMe, setAssigningToMe] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const draftKey = useMemo(() => {
     const userId = session?.user?.id ?? "anonymous";
@@ -272,6 +274,43 @@ function TicketDetailBody({
     [client, fetchTicket, session, statusUpdating, ticketId],
   );
 
+  const assignToMe = useCallback(async () => {
+    if (!client || !session) return;
+    if (assigningToMe) return;
+    const me = session.user?.id;
+    if (!me) {
+      setAssignError("Unable to determine current user. Please sign in again.");
+      return;
+    }
+    setAssignError(null);
+    setAssigningToMe(true);
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      const res = await updateTicketAssignment(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        assigned_to: me,
+        auditHeaders,
+      });
+      if (!res.ok) {
+        if (res.error.kind === "http" && res.status === 403) {
+          setAssignError("You don’t have permission to assign this ticket.");
+          return;
+        }
+        if (res.error.kind === "http" && res.status === 400) {
+          const msg = getApiErrorMessage(res.error.body);
+          setAssignError(msg ?? "Assignment was rejected by the server.");
+          return;
+        }
+        setAssignError("Unable to assign ticket. Please try again.");
+        return;
+      }
+      await fetchTicket();
+    } finally {
+      setAssigningToMe(false);
+    }
+  }, [assigningToMe, client, fetchTicket, session, ticketId]);
+
   return (
     <>
       <ScrollView
@@ -333,7 +372,21 @@ function TicketDetailBody({
               })();
             }}
           />
+          <View style={{ width: spacing.sm }} />
+          <ActionChip
+            label={assigningToMe ? "Assigning…" : "Assign to me"}
+            disabled={assigningToMe}
+            onPress={() => {
+              void assignToMe();
+            }}
+          />
         </View>
+
+        {assignError ? (
+          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+            {assignError}
+          </Text>
+        ) : null}
 
         <TicketActions
           baseUrl={config.ok ? config.baseUrl : null}
@@ -610,10 +663,19 @@ function TicketActions({
   );
 }
 
-function ActionChip({ label, onPress }: { label: string; onPress: () => void }) {
+function ActionChip({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => ({
@@ -623,7 +685,7 @@ function ActionChip({ label, onPress }: { label: string; onPress: () => void }) 
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.card,
-        opacity: pressed ? 0.9 : 1,
+        opacity: disabled ? 0.6 : pressed ? 0.9 : 1,
       })}
     >
       <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>{label}</Text>

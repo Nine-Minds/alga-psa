@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "[Mobile:Tickets:Critical Updates] Implement assign-to-me action and reflect in UI",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
