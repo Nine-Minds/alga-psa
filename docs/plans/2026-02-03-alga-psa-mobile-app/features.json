@@ -1266,7 +1266,7 @@
   {
     "id": "F159",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - comment pagination (load more)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
