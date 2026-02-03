@@ -530,7 +530,7 @@
   {
     "id": "T067",
     "description": "E2E: Validate comment length and show inline errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
