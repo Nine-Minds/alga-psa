@@ -35,6 +35,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) recordSlaAuditLog activity writes entries to sla_audit_log
 - (2026-02-03) Implemented EE TemporalSlaBackend to start SLA ticket workflows via Temporal client
 - (2026-02-03) Temporal workflow IDs follow `sla-ticket-{tenantId}-{ticketId}` format in TemporalSlaBackend
+- (2026-02-03) TemporalSlaBackend pause/resume/complete/cancel methods signal workflows
 
 ## Discoveries / Constraints
 

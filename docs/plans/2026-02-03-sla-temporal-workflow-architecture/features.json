@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "TemporalSlaBackend.pauseSla() sends pause signal to running workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
