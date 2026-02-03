@@ -248,7 +248,7 @@
   {
     "id": "F042",
     "description": "SlaTicketWorkflow checks escalation at each threshold via checkAndEscalate activity",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
