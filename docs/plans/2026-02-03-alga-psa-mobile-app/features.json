@@ -826,7 +826,7 @@
   {
     "id": "F104",
     "description": "[Server:Mobile Auth] Add endpoint for mobile capability discovery (mobile enabled, providers available, TTLs)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
