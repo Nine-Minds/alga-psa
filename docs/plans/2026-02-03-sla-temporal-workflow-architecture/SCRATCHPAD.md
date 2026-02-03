@@ -30,6 +30,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) calculateNextWakeTime leverages calculateDeadline to advance into next business period when starting outside hours
 - (2026-02-03) calculateNextWakeTime adds accumulated pause minutes to computed deadline
 - (2026-02-03) sendSlaNotification activity delegates to slaNotificationService.sendSlaNotification
+- (2026-02-03) checkAndEscalate activity calls escalationService check + escalate paths
 
 ## Discoveries / Constraints
 
