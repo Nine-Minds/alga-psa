@@ -16,6 +16,13 @@ cd mobile
 npm ci
 ```
 
+Create a local env file:
+
+```bash
+cd mobile
+cp .env.example .env
+```
+
 ## Run
 
 ```bash
@@ -34,4 +41,3 @@ cd mobile
 npm run ios
 npm run android
 ```
-

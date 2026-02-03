@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "[Mobile:Foundation] Define environment config for hosted dev/stage/prod (no self-hosted in V1)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
