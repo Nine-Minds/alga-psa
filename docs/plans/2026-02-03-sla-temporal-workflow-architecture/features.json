@@ -266,7 +266,7 @@
   {
     "id": "F045",
     "description": "Register SLA activities in Temporal worker activities list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {

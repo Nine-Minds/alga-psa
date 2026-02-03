@@ -53,6 +53,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) SLA workflow sends threshold notifications at 50/75/90% and breaches at 100%, with escalation checks
 - (2026-02-03) Temporal worker now includes `sla-workflows` task queue by default
 - (2026-02-03) SLA ticket workflow exported in Temporal workflows index for worker registration
+- (2026-02-03) SLA activities exported in Temporal activities index for worker registration
 
 ## Discoveries / Constraints
 
