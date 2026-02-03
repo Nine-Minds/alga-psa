@@ -1674,7 +1674,7 @@
   {
     "id": "F210",
     "description": "[Mobile:Quality] Quality/Ops - accessibility audit checklist executed pre-release",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Non-functional Requirements:Accessibility"
     ]
