@@ -17,3 +17,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F011 added PII-safe logger with recursive redaction + log-level control in `mobile/src/logging/logger.ts` (configured via `EXPO_PUBLIC_LOG_LEVEL`).
 - 2026-02-03: F012 added analytics scaffolding (`mobile/src/analytics/analytics.ts`) with opt-out toggle (currently logs redacted events; provider TBD).
 - 2026-02-03: F013 added crash/error reporting hook scaffold with PII redaction (`mobile/src/errors/*`), including a global handler + React error boundary.
+- 2026-02-03: F014 added a basic TTL cache utility + ticket list/detail cache helpers (`mobile/src/cache/*`) with invalidation hooks for future mutations.

@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "[Mobile:Foundation] Add caching layer for ticket list/detail with TTL + invalidation on updates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
