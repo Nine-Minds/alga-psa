@@ -18,6 +18,7 @@ interface TagInputProps {
   onAddTag: (tagText: string) => Promise<void>;
   className?: string;
   placeholder?: string;
+  compact?: boolean;
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
@@ -26,7 +27,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   currentTags = [],
   onAddTag,
   className = '',
-  placeholder = 'New tag'
+  placeholder = 'New tag',
+  compact = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -159,12 +161,12 @@ export const TagInput: React.FC<TagInputProps> = ({
           id="tag-add-button"
           type="button"
           onClick={() => setIsEditing(true)}
-          className="text-gray-500 hover:text-gray-700"
+          className={`text-gray-500 hover:text-gray-700 ${compact ? '!p-0.5 !min-w-0 !h-5 !w-5' : ''}`}
           variant="icon"
           size="icon"
           style={{ visibility: isEditing ? 'hidden' : 'visible' }}
         >
-          <Plus size={16} />
+          <Plus size={compact ? 12 : 16} />
         </Button>
       </div>
       
@@ -179,14 +181,14 @@ export const TagInput: React.FC<TagInputProps> = ({
               left: `${buttonPosition.left}px`
             }}
           >
-            <div className="flex shadow-md rounded-md bg-white border border-gray-200">
+            <div className={`flex shadow-md rounded-md bg-white border border-gray-200 ${compact ? 'shadow-sm' : ''}`}>
               <Input
                 ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
-                className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10 border-0"
+                className={`rounded-l-md focus:ring-offset-0 focus:z-10 border-0 ${compact ? 'px-1.5 py-0.5 text-xs w-24 h-6' : 'px-2 py-1 text-sm w-32'}`}
                 placeholder={placeholder}
                 autoFocus
                 autoComplete="off"
@@ -197,9 +199,9 @@ export const TagInput: React.FC<TagInputProps> = ({
                 type="button"
                 onClick={() => handleSave()}
                 disabled={isSaving || !inputValue.trim()}
-                className="rounded-r-md px-3 py-1 text-sm font-medium border-0 whitespace-nowrap"
+                className={`rounded-r-md font-medium border-0 whitespace-nowrap ${compact ? 'px-2 py-0.5 text-xs h-6' : 'px-3 py-1 text-sm'}`}
                 variant={isSaving || !inputValue.trim() ? "outline" : "default"}
-                size="sm"
+                size={compact ? "xs" : "sm"}
               >
                 {isSaving ? '...' : 'Save'}
               </Button>

@@ -16,6 +16,7 @@ interface TagListProps {
   maxDisplay?: number;
   onTagUpdate?: (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => Promise<void>;
   onDeleteAll?: (tagText: string, taggedType: string) => Promise<void>;
+  compact?: boolean;
 }
 
 export const TagList: React.FC<TagListProps> = ({
@@ -26,7 +27,8 @@ export const TagList: React.FC<TagListProps> = ({
   allowDeleteAll = true,
   maxDisplay,
   onTagUpdate,
-  onDeleteAll: onDeleteAllProp
+  onDeleteAll: onDeleteAllProp,
+  compact = false
 }) => {
   const displayTags = maxDisplay && tags.length > maxDisplay
     ? tags.slice(0, maxDisplay)
@@ -51,7 +53,7 @@ export const TagList: React.FC<TagListProps> = ({
   };
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className={`flex flex-wrap ${compact ? 'gap-0.5' : 'gap-1'}`}>
       {displayTags.map((tag): React.JSX.Element => {
         const colors = generateEntityColor(tag.tag_text);
 
@@ -62,14 +64,14 @@ export const TagList: React.FC<TagListProps> = ({
             style={{
               backgroundColor: tag.background_color || colors.background,
               color: tag.text_color || colors.text,
-              padding: '2px 6px',
+              padding: compact ? '1px 4px' : '2px 6px',
               borderRadius: '9999px',
-              fontSize: '0.75rem',
+              fontSize: compact ? '0.625rem' : '0.75rem',
               fontWeight: '600',
               display: 'inline-flex',
               alignItems: 'center',
               position: 'relative',
-              maxWidth: '150px',
+              maxWidth: compact ? '90px' : '150px',
             }}
           >
             <TagEditForm
@@ -81,13 +83,13 @@ export const TagList: React.FC<TagListProps> = ({
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity flex-shrink-0"
+                  className={`inline-flex items-center justify-center h-full hover:opacity-70 transition-opacity flex-shrink-0 ${compact ? 'px-1 py-0.5' : 'px-2 py-1'}`}
                   style={{
                     borderRight: `1px dotted ${tag.text_color || colors.text}`,
-                    marginRight: '4px',
+                    marginRight: compact ? '2px' : '4px',
                   }}
                 >
-                  <ChevronDown size={10} />
+                  <ChevronDown size={compact ? 8 : 10} />
                 </button>
               }
             />
@@ -104,10 +106,10 @@ export const TagList: React.FC<TagListProps> = ({
               <button
                 type="button"
                 onClick={() => void onRemoveTag(tag.tag_id)}
-                className="ml-1 text-red-500 hover:text-red-700 flex-shrink-0"
+                className={`text-red-500 hover:text-red-700 flex-shrink-0 ${compact ? 'ml-0.5' : 'ml-1'}`}
                 title="Remove tag"
               >
-                <X size={12} />
+                <X size={compact ? 10 : 12} />
               </button>
             )}
           </span>
@@ -118,9 +120,9 @@ export const TagList: React.FC<TagListProps> = ({
           style={{
             backgroundColor: '#e5e7eb',
             color: '#6b7280',
-            padding: '2px 6px',
+            padding: compact ? '1px 4px' : '2px 6px',
             borderRadius: '9999px',
-            fontSize: '0.75rem',
+            fontSize: compact ? '0.625rem' : '0.75rem',
             fontWeight: '600',
             display: 'inline-flex',
             alignItems: 'center',

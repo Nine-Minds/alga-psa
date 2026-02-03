@@ -14,6 +14,7 @@ interface TagInputInlineProps {
   onAddTag: (tagText: string) => Promise<void>;
   placeholder?: string;
   className?: string;
+  compact?: boolean;
 }
 
 export const TagInputInline: React.FC<TagInputInlineProps> = ({
@@ -22,7 +23,8 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
   currentTags,
   onAddTag,
   placeholder = 'Add tag...',
-  className = ''
+  className = '',
+  compact = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');

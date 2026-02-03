@@ -7,7 +7,7 @@ import { ITag } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
-import { calculateColumnWidth } from './KanbanZoomControl';
+import { calculateColumnWidth, calculateCardGap } from './KanbanZoomControl';
 import styles from './ProjectDetail.module.css';
 import * as LucideIcons from 'lucide-react';
 import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';
@@ -124,8 +124,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onTaskTagsChange,
   taskTypes,
 }) => {
-  // Calculate column width based on zoom level
+  // Calculate column width and card gap based on zoom level
   const columnWidth = calculateColumnWidth(zoomLevel);
+  const cardGap = calculateCardGap(zoomLevel);
   // Ensure all tasks have ticket_links and resources initialized
   const enrichedTasks = tasks.map(task => {
     // Only create a new object if we need to add properties
@@ -197,6 +198,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             selectedPhase={selectedPhase}
             avatarUrls={avatarUrls}
             columnWidth={columnWidth}
+            cardGap={cardGap}
+            zoomLevel={zoomLevel}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}

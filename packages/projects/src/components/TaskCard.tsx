@@ -6,7 +6,7 @@ import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDep
 import { IUserWithRoles } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2 } from 'lucide-react';
+import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
@@ -23,6 +23,7 @@ import {
 } from "@alga-psa/ui/components/DropdownMenu";
 import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
+import { calculateZoomScales } from './KanbanZoomControl';
 
 interface TaskCardProps {
   task: IProjectTask;
@@ -39,6 +40,7 @@ interface TaskCardProps {
   searchQuery?: string;
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
+  zoomLevel?: number;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -76,6 +78,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   searchQuery = '',
   searchCaseSensitive = false,
   searchWholeWord = false,
+  zoomLevel = 50,
   onTaskSelected,
   onAssigneeChange,
   onDragStart,
@@ -102,7 +105,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isTagsExpanded, setIsTagsExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
+
+  // Calculate zoom scales for dynamic sizing
+  const zoomScales = calculateZoomScales(zoomLevel);
+  const isCompact = zoomLevel <= 30;
+  const useCollapsibleTags = zoomLevel <= 10; // Collapsible tags for compact (0) and one size up (10) only
+  const taskTagsList = providedTaskTags || task.tags || [];
+  const hasAnyTags = taskTagsList.length > 0;
 
   // Auto-expand description when search matches in description
   useEffect(() => {
@@ -264,27 +275,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`${styles.taskCard} relative bg-white p-3 mb-2 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col gap-1 ${
+      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col ${zoomScales.cardGap} ${
         isDragging ? styles.dragging : ''
       } ${isAnimating ? styles.entering : ''}`}
       aria-grabbed={isDragging}
       aria-label={`Task: ${task.task_name}. Drag to reorder or use menu for actions.`}
     >
       {/* Task type indicator */}
-      <div className="absolute top-2 left-2" title={taskType?.type_name || 'Task'}>
-        <Icon 
-          className="w-4 h-4" 
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || 'Task'}>
+        <Icon
+          className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}
         />
       </div>
       
 
       {/* Action Menu Button */}
-      <div className="absolute top-1 right-1 z-10">
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-0.5 right-0.5' : 'top-1 right-1'} z-10`}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button id={`task-actions-${task.task_id}`} variant="ghost" size="sm" className="h-6 w-6 p-0">
-              <MoreVertical className="h-4 w-4" />
+            <Button id={`task-actions-${task.task_id}`} variant="ghost" size="sm" className={zoomLevel <= 15 ? 'h-5 w-5 p-0' : 'h-6 w-6 p-0'}>
+              <MoreVertical className={zoomLevel <= 15 ? 'h-3 w-3' : 'h-4 w-4'} />
               <span className="sr-only">Task Actions</span>
             </Button>
           </DropdownMenuTrigger>
@@ -309,26 +320,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
-        <div className="font-semibold text-lg flex-1">
+      <div className={`flex items-center gap-2 mb-1 w-full px-1 ${zoomLevel <= 15 ? 'mt-4' : 'mt-6'}`}>
+        <div className={`font-semibold ${zoomScales.titleSize} flex-1 ${zoomLevel <= 15 ? 'line-clamp-1' : ''}`}>
           {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
         </div>
         {priority && (
           <div className="flex items-center gap-1">
-            <div 
-              className="w-3 h-3 rounded-full" 
+            <div
+              className={`${zoomLevel <= 15 ? 'w-2 h-2' : 'w-3 h-3'} rounded-full`}
               style={{ backgroundColor: priority.color || '#6B7280' }}
               title={`Priority level: ${priority.priority_name}`}
             />
-            <span className="text-xs text-gray-600">{priority.priority_name}</span>
+            {zoomLevel > 15 && (
+              <span className={`${zoomScales.metaSize} text-gray-600`}>{priority.priority_name}</span>
+            )}
           </div>
         )}
       </div>
-      {task.description && (
+      {task.description && zoomScales.showDescription && (
         <div className="mb-2">
           <p
             ref={descriptionRef}
-            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+            className={`${zoomScales.descSize} text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
             {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
           </p>
@@ -338,19 +351,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
-              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium mt-1`}
             >
               {isDescriptionExpanded ? 'See less' : 'See more'}
             </button>
           )}
         </div>
       )}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${zoomLevel <= 30 ? 'gap-1' : 'gap-2'}`}>
         <div onClick={(e) => e.stopPropagation()}>
           <UserPicker
             value={task.assigned_to || ''}
             onValueChange={(newAssigneeId: string) => onAssigneeChange(task.task_id, newAssigneeId)}
-            size="sm"
+            size={zoomLevel <= 30 ? 'xs' : 'sm'}
             users={users.filter(u =>
               !displayResources.some(r => r.additional_user_id === u.user_id)
             )}
@@ -384,7 +397,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             }
           >
             <span
-              className="text-xs font-medium cursor-help px-1.5 py-0.5 rounded"
+              className={`font-medium cursor-help rounded ${zoomLevel <= 30 ? 'text-[10px] px-1 py-0.5' : 'text-xs px-1.5 py-0.5'}`}
               style={{
                 color: 'rgb(var(--color-primary-500))',
                 backgroundColor: 'rgb(var(--color-primary-50))'
@@ -395,12 +408,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </Tooltip>
         )}
       </div>
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className={`flex items-center justify-between ${zoomScales.metaSize} text-gray-500`}>
         <div className="flex items-center gap-2">
           {task.due_date ? (
-            <>Due date: <span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
+            <>{zoomLevel > 30 && 'Due: '}<span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
           ) : (
-            <>No due date</>
+            zoomLevel > 30 && <>No due date</>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -499,24 +512,81 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
       
       {/* Tags at the very bottom */}
-      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-        {onTaskTagsChange && task.task_id ? (
-          <TagManager
-            id={`task-tags-${task.task_id}`}
-            entityId={task.task_id}
-            entityType="project_task"
-            initialTags={providedTaskTags || task.tags || []}
-            onTagsChange={(tags) => {
-              onTaskTagsChange(task.task_id, tags);
-            }}
-          />
+      <div className={isCompact ? 'mt-1' : 'mt-2'} onClick={(e) => e.stopPropagation()}>
+        {useCollapsibleTags ? (
+          // Compact/small mode: show toggle if there are tags
+          hasAnyTags && (
+            <div>
+              {!isTagsExpanded ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsTagsExpanded(true);
+                  }}
+                  className={`flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors ${isCompact ? 'text-[10px]' : 'text-xs'}`}
+                  title={`${taskTagsList.length} tag${taskTagsList.length !== 1 ? 's' : ''} - click to show`}
+                >
+                  <Tag className={isCompact ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+                  <span>{taskTagsList.length}</span>
+                </button>
+              ) : (
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTagsExpanded(false);
+                    }}
+                    className={`text-gray-400 hover:text-gray-600 transition-colors ${isCompact ? 'text-[10px]' : 'text-xs'}`}
+                  >
+                    Hide tags
+                  </button>
+                  {onTaskTagsChange && task.task_id ? (
+                    <TagManager
+                      id={`task-tags-${task.task_id}`}
+                      entityId={task.task_id}
+                      entityType="project_task"
+                      initialTags={taskTagsList}
+                      onTagsChange={(tags) => {
+                        onTaskTagsChange(task.task_id, tags);
+                      }}
+                      compact={isCompact}
+                    />
+                  ) : (
+                    <TagList
+                      tags={taskTagsList}
+                      maxDisplay={3}
+                      allowColorEdit={false}
+                      compact={isCompact}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )
         ) : (
-          (providedTaskTags || task.tags) && (providedTaskTags || task.tags)!.length > 0 && (
-            <TagList
-              tags={providedTaskTags || task.tags || []}
-              maxDisplay={3}
-              allowColorEdit={false}
+          // Normal mode: always show TagManager or TagList
+          onTaskTagsChange && task.task_id ? (
+            <TagManager
+              id={`task-tags-${task.task_id}`}
+              entityId={task.task_id}
+              entityType="project_task"
+              initialTags={taskTagsList}
+              onTagsChange={(tags) => {
+                onTaskTagsChange(task.task_id, tags);
+              }}
+              compact={false}
             />
+          ) : (
+            hasAnyTags && (
+              <TagList
+                tags={taskTagsList}
+                maxDisplay={3}
+                allowColorEdit={false}
+                compact={false}
+              />
+            )
           )
         )}
       </div>

@@ -35,10 +35,34 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
 
   const isMinZoom = zoomLevel <= minZoom;
   const isMaxZoom = zoomLevel >= maxZoom;
+  const isDefaultZoom = zoomLevel === 50;
+
+  const handleSnapToCompact = () => {
+    onZoomChange(minZoom);
+  };
+
+  const handleSnapToSpacious = () => {
+    onZoomChange(maxZoom);
+  };
+
+  const handleResetToDefault = () => {
+    onZoomChange(50);
+  };
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs text-gray-500 mr-0.5">Compact</span>
+      <button
+        onClick={handleSnapToCompact}
+        disabled={isMinZoom}
+        className={`text-xs mr-0.5 transition-colors ${
+          isMinZoom
+            ? 'text-gray-400 cursor-default'
+            : 'text-gray-500 hover:text-gray-700 cursor-pointer'
+        }`}
+        title="Snap to compact view"
+      >
+        Compact
+      </button>
       <Button
         id="kanban-zoom-out"
         variant="outline"
@@ -51,6 +75,17 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
         <Minus className="w-3.5 h-3.5" />
       </Button>
       <Button
+        id="kanban-zoom-reset"
+        variant={isDefaultZoom ? "outline" : "ghost"}
+        size="xs"
+        onClick={handleResetToDefault}
+        disabled={isDefaultZoom}
+        title="Reset to default"
+        className="!h-6 !px-1.5 !min-w-0 text-xs"
+      >
+        Reset
+      </Button>
+      <Button
         id="kanban-zoom-in"
         variant="outline"
         size="xs"
@@ -61,7 +96,18 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
       >
         <Plus className="w-3.5 h-3.5" />
       </Button>
-      <span className="text-xs text-gray-500 ml-0.5">Spacious</span>
+      <button
+        onClick={handleSnapToSpacious}
+        disabled={isMaxZoom}
+        className={`text-xs ml-0.5 transition-colors ${
+          isMaxZoom
+            ? 'text-gray-400 cursor-default'
+            : 'text-gray-500 hover:text-gray-700 cursor-pointer'
+        }`}
+        title="Snap to spacious view"
+      >
+        Spacious
+      </button>
     </div>
   );
 };
@@ -78,6 +124,100 @@ export const calculateColumnWidth = (zoomLevel: number): number => {
   const MIN_WIDTH = 220;
   const RANGE = 260; // 480 - 220
   return Math.round(MIN_WIDTH + (zoomLevel / 100) * RANGE);
+};
+
+/**
+ * Zoom scale configuration for various UI elements
+ * Returns multipliers relative to default (zoom 50 = 1.0)
+ */
+export interface ZoomScales {
+  padding: number;      // Card padding multiplier
+  gap: number;          // Gap between cards multiplier
+  fontSize: number;     // Font size multiplier
+  iconSize: number;     // Icon size multiplier
+  titleSize: string;    // Tailwind class for title
+  descSize: string;     // Tailwind class for description
+  metaSize: string;     // Tailwind class for metadata
+  cardPadding: string;  // Tailwind class for card padding
+  cardGap: string;      // Tailwind class for gap between elements
+  showDescription: boolean; // Whether to show description
+}
+
+/**
+ * Calculate zoom scales based on zoom level
+ * @param zoomLevel - Value from 0 (compact) to 100 (spacious)
+ * @returns ZoomScales object with various size multipliers
+ */
+export const calculateZoomScales = (zoomLevel: number): ZoomScales => {
+  // Scale factor: 0.7 at zoom 0, 1.0 at zoom 50, 1.3 at zoom 100
+  const scale = 0.7 + (zoomLevel / 100) * 0.6;
+
+  // Determine size classes based on zoom level
+  let titleSize: string;
+  let descSize: string;
+  let metaSize: string;
+  let cardPadding: string;
+  let cardGap: string;
+  let showDescription: boolean;
+
+  if (zoomLevel <= 15) {
+    // Very compact
+    titleSize = 'text-sm';
+    descSize = 'text-xs';
+    metaSize = 'text-[10px]';
+    cardPadding = 'p-1.5';
+    cardGap = 'gap-0.5';
+    showDescription = false;
+  } else if (zoomLevel <= 30) {
+    // Compact
+    titleSize = 'text-base';
+    descSize = 'text-sm';
+    metaSize = 'text-xs';
+    cardPadding = 'p-2';
+    cardGap = 'gap-1';
+    showDescription = true;
+  } else if (zoomLevel <= 70) {
+    // Default / Normal range (wider range for consistent look)
+    titleSize = 'text-lg';
+    descSize = 'text-sm';
+    metaSize = 'text-xs';
+    cardPadding = 'p-3';
+    cardGap = 'gap-1';
+    showDescription = true;
+  } else {
+    // Spacious
+    titleSize = 'text-xl';
+    descSize = 'text-base';
+    metaSize = 'text-sm';
+    cardPadding = 'p-4';
+    cardGap = 'gap-2';
+    showDescription = true;
+  }
+
+  return {
+    padding: scale,
+    gap: scale,
+    fontSize: scale,
+    iconSize: scale,
+    titleSize,
+    descSize,
+    metaSize,
+    cardPadding,
+    cardGap,
+    showDescription,
+  };
+};
+
+/**
+ * Calculate gap between cards based on zoom level
+ * @param zoomLevel - Value from 0 (compact) to 100 (spacious)
+ * @returns Gap in pixels
+ */
+export const calculateCardGap = (zoomLevel: number): number => {
+  // At zoom 0: 4px
+  // At zoom 50: 8px (default)
+  // At zoom 100: 12px
+  return Math.round(4 + (zoomLevel / 100) * 8);
 };
 
 export default KanbanZoomControl;
