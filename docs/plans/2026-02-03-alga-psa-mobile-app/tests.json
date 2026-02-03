@@ -1586,7 +1586,7 @@
   {
     "id": "T199",
     "description": "Integration: Implement server mobile auth - ticket list endpoint supports assignee=me and assignee=unassigned filters",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
