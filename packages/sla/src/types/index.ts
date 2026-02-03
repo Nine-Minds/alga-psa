@@ -545,7 +545,7 @@ export interface ISlaAverageTimeMetrics {
  * Breach rate grouped by a dimension (priority, technician, client).
  */
 export interface ISlaBreachRateByDimension {
-  /** Dimension ID (priority_id, user_id, company_id) */
+  /** Dimension ID (priority_id, user_id, client_id) */
   dimensionId: string;
   /** Dimension name for display */
   dimensionName: string;

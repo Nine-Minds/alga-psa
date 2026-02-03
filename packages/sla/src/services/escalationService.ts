@@ -417,8 +417,8 @@ async function sendEscalationEmailNotification(
 
     // Get additional ticket context for the email template
     const ticketDetails = await trx('tickets as t')
-      .leftJoin('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
       .leftJoin('priorities as p', function() {
@@ -432,7 +432,7 @@ async function sendEscalationEmailNotification(
       .where('t.tenant', tenant)
       .where('t.ticket_id', ticketId)
       .select(
-        'c.company_name as client_name',
+        'c.client_name as client_name',
         'p.priority_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as assignee_name")
       )

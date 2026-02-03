@@ -20,17 +20,20 @@ interface GenericDialogProps {
   initialPosition?: { x?: number; y?: number };
   /** Whether to constrain dragging within viewport */
   constrainToViewport?: boolean;
+  /** Maximum width of the dialog (Tailwind class like 'max-w-lg' or 'max-w-2xl') */
+  maxWidth?: 'max-w-sm' | 'max-w-md' | 'max-w-lg' | 'max-w-xl' | 'max-w-2xl' | 'max-w-3xl';
 }
 
-const GenericDialog = ({ 
-  isOpen, 
-  onClose, 
-  title, 
+const GenericDialog = ({
+  isOpen,
+  onClose,
+  title,
   children,
   id = 'dialog',
   draggable = true,
   initialPosition,
-  constrainToViewport = true
+  constrainToViewport = true,
+  maxWidth = 'max-w-md'
 }: GenericDialogProps & AutomationProps) => {
   // Register dialog with UI reflection system
   const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
@@ -146,7 +149,7 @@ const GenericDialog = ({
         <Dialog.Content 
           ref={dialogRef}
           {...dialogProps}
-          className="fixed top-1/2 left-1/2 bg-background dark:bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] w-full max-w-md focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 focus-within:ring-offset-[rgb(var(--color-card))]"
+          className={`fixed top-1/2 left-1/2 bg-background dark:bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] w-full ${maxWidth} focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 focus-within:ring-offset-[rgb(var(--color-card))]`}
           style={dialogStyle}
           onMouseDown={handleMouseDown}
         >
