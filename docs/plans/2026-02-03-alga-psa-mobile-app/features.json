@@ -978,7 +978,7 @@
   {
     "id": "F123",
     "description": "[Mobile:Foundation] Implement global HTTP 403 handler (show no-access UX)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

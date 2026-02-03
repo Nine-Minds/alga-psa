@@ -43,7 +43,7 @@ const DEFAULT_FILTERS: TicketListFilters = {
 
 export function TicketsListScreen({ navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
-  const { session, refreshSession } = useAuth();
+  const { session, refreshSession, logout } = useAuth();
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -61,6 +61,7 @@ export function TicketsListScreen({ navigation }: Props) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noAccess, setNoAccess] = useState(false);
   const [stats, setStats] = useState<TicketStats | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -124,6 +125,7 @@ export function TicketsListScreen({ navigation }: Props) {
     async ({ pageToLoad, replace }: { pageToLoad: number; replace: boolean }) => {
       if (!client || !session) return;
       setError(null);
+      setNoAccess(false);
       const result = await listTickets(client, {
         apiKey: session.accessToken,
         page: pageToLoad,
@@ -133,6 +135,12 @@ export function TicketsListScreen({ navigation }: Props) {
       });
       if (!result.ok) {
         logger.warn("Ticket list fetch failed", { error: result.error });
+        if (result.error.kind === "permission") {
+          setItems([]);
+          setHasNext(false);
+          setNoAccess(true);
+          return;
+        }
         setError("Unable to load tickets. Please try again.");
         return;
       }
@@ -159,7 +167,10 @@ export function TicketsListScreen({ navigation }: Props) {
   const fetchStats = useCallback(async () => {
     if (!client || !session) return;
     const result = await getTicketStats(client, { apiKey: session.accessToken });
-    if (!result.ok) return;
+    if (!result.ok) {
+      if (result.error.kind === "permission") setNoAccess(true);
+      return;
+    }
     setStats(result.data.data);
   }, [client, session]);
 
@@ -261,6 +272,16 @@ export function TicketsListScreen({ navigation }: Props) {
 
   if (!session) {
     return <ErrorState title="Signed out" description="Please sign in again." />;
+  }
+
+  if (noAccess) {
+    return (
+      <ErrorState
+        title="No access"
+        description="You don’t have permission to view tickets."
+        action={<PrimaryButton onPress={() => void logout()}>Sign out</PrimaryButton>}
+      />
+    );
   }
 
   if (initialLoading && items.length === 0) {

@@ -126,3 +126,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F120 deferred Phase 2 self-hosted connectivity/TLS diagnostics UX per PRD non-goals (see `docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md`).
 - 2026-02-03: F121 standardized mobile API error mapping: `401 -> auth`, `403 -> permission`, `400/422 -> validation`, `5xx -> server`, otherwise `http`; client now prefers server `{error:{message,code,details}}` when available for user-facing messages.
 - 2026-02-03: F122 added a global 401 handler in the mobile API client: on `auth` errors it calls `AuthContext.refreshSession()` once and retries the original request with the refreshed token, otherwise forces sign-in when refresh indicates revocation.
+- 2026-02-03: F123 added explicit “No access” UX for 403/permission errors on the Tickets list screen (and already on ticket detail), avoiding confusing generic error messaging when a user lacks ticket permissions.
