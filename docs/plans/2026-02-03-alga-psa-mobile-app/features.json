@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "[Mobile:Tickets:Updates] Post comment and update timeline on success",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
