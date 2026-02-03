@@ -16,6 +16,24 @@ import { analytics } from "../analytics/analytics";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 
+function mapAuthCallbackError(code: string): string {
+  const normalized = code.trim().toLowerCase();
+  switch (normalized) {
+    case "invalid_redirect":
+      return "Sign-in is misconfigured for this app. Please contact your administrator and try again.";
+    case "rate_limited":
+      return "Too many sign-in attempts. Please wait a moment and try again.";
+    case "client_not_allowed":
+      return "Client portal users can’t sign in to the mobile app. Please use an internal account.";
+    case "mobile_disabled":
+      return "Mobile sign-in is disabled for this server.";
+    case "host_not_allowlisted":
+      return "This server domain is not allowed for mobile sign-in.";
+    default:
+      return code;
+  }
+}
+
 export function AuthCallbackScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const { setSession } = useAuth();
@@ -34,8 +52,8 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         const callbackError = route.params?.error;
 
         if (callbackError) {
-          analytics.trackEvent("auth.callback.failed", { reason: "callback_error" });
-          setError(callbackError);
+          analytics.trackEvent("auth.callback.failed", { reason: callbackError });
+          setError(mapAuthCallbackError(callbackError));
           return;
         }
 

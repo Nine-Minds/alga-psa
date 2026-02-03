@@ -1082,7 +1082,7 @@
   {
     "id": "F136",
     "description": "[Mobile:Auth] Implement sign-in error UX for invalid tenant/provider configuration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]

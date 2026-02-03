@@ -35,6 +35,12 @@ export function SignInScreen() {
     return allowlist.map((h) => h.toLowerCase()).includes(baseHost);
   }, [baseHost, capabilities?.hostedDomainAllowlist]);
 
+  const hasConfiguredSsoProvider = useMemo(() => {
+    const providers = capabilities?.providers;
+    if (!providers) return true;
+    return Boolean(providers.microsoft || providers.google);
+  }, [capabilities?.providers]);
+
   const fetchCapabilities = useCallback(async () => {
     if (!baseUrl) return;
     setCapabilitiesLoading(true);
@@ -185,6 +191,10 @@ export function SignInScreen() {
       ) : capabilities && !hostAllowed ? (
         <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.danger }}>
           This server domain is not allowed for mobile sign-in.
+        </Text>
+      ) : capabilities && capabilities.mobileEnabled && !hasConfiguredSsoProvider ? (
+        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
+          Microsoft/Google SSO is not configured for this server. Sign-in may require a password login.
         </Text>
       ) : null}
     </View>
