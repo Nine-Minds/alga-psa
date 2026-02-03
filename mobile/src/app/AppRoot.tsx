@@ -168,12 +168,23 @@ export function AppRoot() {
       const nextRefreshToken = result.data.refreshToken;
       const expiresAtMs = Date.now() + result.data.expiresInSec * 1000;
 
-      setSession({
+      const nextSession: MobileSession = {
         ...currentSession,
         accessToken: nextAccessToken,
         refreshToken: nextRefreshToken,
         expiresAtMs,
-      });
+      };
+
+      try {
+        await storeSession(nextSession);
+      } catch (e) {
+        logger.error("Failed to persist refreshed session", { error: e });
+        setSession(null);
+        return null;
+      }
+
+      sessionRef.current = nextSession;
+      setSessionState(nextSession);
 
       return nextAccessToken;
     } catch (e) {

@@ -1066,7 +1066,7 @@
   {
     "id": "F134",
     "description": "[Mobile:Auth] Implement refresh token rotation handling with safe rollback on failures",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
