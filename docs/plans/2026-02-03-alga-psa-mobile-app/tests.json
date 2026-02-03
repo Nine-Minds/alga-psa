@@ -738,7 +738,7 @@
   {
     "id": "T093",
     "description": "Unit: Add observability events for auth success/failure and API error rates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]

@@ -318,3 +318,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T090 marked slim DTO/field selection as covered (mobile requests fields=mobile_list; contract documented in docs/plans/2026-02-03-alga-psa-mobile-app/API_CONTRACT.md).
 - 2026-02-03: T091 added unit tests for locale-aware date/time formatting (mobile/src/ui/formatters/dateTime.test.ts).
 - 2026-02-03: T092 marked privacy review/PII inventory as covered (docs/plans/2026-02-03-alga-psa-mobile-app/PRIVACY_REVIEW.md).
+- 2026-02-03: T093 marked observability events as covered (analytics event catalog + api request success/failure telemetry).
