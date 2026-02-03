@@ -1130,7 +1130,7 @@
   {
     "id": "T142",
     "description": "E2E: Implement List:Filters - updated-since date picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142"
     ]
