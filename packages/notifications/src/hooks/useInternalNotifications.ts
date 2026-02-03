@@ -253,11 +253,7 @@ export function useInternalNotifications(
   const markAsRead = useCallback(
     async (notificationId: string) => {
       try {
-        await markAsReadAction({
-          tenant,
-          user_id: userId,
-          notification_id: notificationId,
-        });
+        await markAsReadAction(tenant, userId, notificationId);
         await fetchNotifications();
         await fetchUnreadCount();
       } catch (err) {
@@ -269,10 +265,7 @@ export function useInternalNotifications(
 
   const markAllAsRead = useCallback(async () => {
     try {
-      await markAllAsReadAction({
-        tenant,
-        user_id: userId,
-      });
+      await markAllAsReadAction(tenant, userId);
       await fetchNotifications();
       await fetchUnreadCount();
     } catch (err) {
