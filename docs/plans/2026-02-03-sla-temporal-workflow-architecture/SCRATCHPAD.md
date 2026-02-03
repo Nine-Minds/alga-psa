@@ -74,6 +74,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA workflow initializes with input parameters (T012)
 - (2026-02-03) Tests: SLA workflow initial state phase and thresholds (T013)
 - (2026-02-03) Tests: SLA workflow threshold calculations include 50% (T014)
+- (2026-02-03) Tests: SLA workflow threshold calculations include 75% (T015)
 
 ## Discoveries / Constraints
 
