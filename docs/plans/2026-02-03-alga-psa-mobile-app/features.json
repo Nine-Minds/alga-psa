@@ -1654,5 +1654,101 @@
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]
+  },
+  {
+    "id": "F208",
+    "description": "[Mobile:Quality] Quality/Ops - API latency measurement per route",
+    "implemented": true,
+    "prdRefs": [
+      "PRD:Observability"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "[Mobile:Quality] Quality/Ops - SLOs defined for key endpoints (list/detail/mutate)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Observability"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "[Mobile:Quality] Quality/Ops - accessibility audit checklist executed pre-release",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-functional Requirements:Accessibility"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "[Mobile:Quality] Quality/Ops - security review checklist executed pre-release",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "[Mobile:Quality] Quality/Ops - dependency vulnerability scanning enabled for mobile package",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Security / Permissions"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "[Mobile:Quality] Quality/Ops - mobile build reproducibility checks in CI",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "[Mobile:Release] Release - store listing draft (Phase 1)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "[Mobile:Release] Release - screenshot capture plan for App Store / Play Store",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "[Mobile:Release] Release - internal beta distribution runbook",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "[Mobile:Release] Release - support escalation runbook for auth issues",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Observability"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "[Mobile:Release] Release - minimum OS support policy documented",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:UX / UI Notes:Platform"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "[Mobile:Release] Release - feature gating to disable Phase 2 modules in production builds",
+    "implemented": false,
+    "prdRefs": [
+      "PRD:Non-goals"
+    ]
   }
 ]

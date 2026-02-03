@@ -226,3 +226,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T012 added analytics unit tests (disabled vs enabled) and verified `schema_version` is included on emitted events (`mobile/src/analytics/analytics.test.ts`).
 - 2026-02-03: T013 marked crash/error reporting redaction as covered by the existing unit test that omits request/response bodies (`mobile/src/errors/errorReporting.test.ts`).
 - 2026-02-03: T014 added unit tests for the shared TTL cache used by ticket list/detail caching (`mobile/src/cache/ttlCache.test.ts`).
+- 2026-02-03: Added missing feature placeholders `F208`–`F219` because `tests.json` referenced them but they were absent from `features.json` (keeps plan artifacts consistent; will implement next).
+- 2026-02-03: F208 added a success telemetry event for API requests (`api.request.succeeded`) including normalized path + duration to support latency measurement; updated catalog docs and added a unit test (`mobile/src/api/client.ts`, `mobile/src/api/client.telemetry.test.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`).

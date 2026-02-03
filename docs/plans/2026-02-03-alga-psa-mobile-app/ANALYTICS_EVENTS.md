@@ -22,10 +22,10 @@ Notes:
 | `auth.refresh.revoked` | Session refresh indicates token revoked/expired and session was cleared | `status` |
 | `auth.refresh.succeeded` | Session refresh succeeded | `expiresInSec` |
 | `auth.logout` | Logout initiated | `hadSession` |
+| `api.request.succeeded` | Any API request succeeds | `method`, `path`, `status`, `durationMs`, `attempts` |
 | `api.request.failed` | Any API request ultimately fails (after retries/optional auth refresh) | `method`, `path`, `status`, `errorKind`, `durationMs`, `attempts` |
 
 ## Common properties
 
 All mobile events automatically include:
 - `schema_version`: current analytics schema version (`1.0.0`)
-

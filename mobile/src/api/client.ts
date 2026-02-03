@@ -122,6 +122,16 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
       const isRetryableMethod = req.method === "GET" || req.method === "HEAD";
       const maxAttempts = isRetryableMethod ? retry.maxRetries + 1 : 1;
 
+      const trackSucceeded = (status: number, attempts: number) => {
+        analytics.trackEvent(MobileAnalyticsEvents.apiRequestSucceeded, {
+          method: req.method,
+          path: normalizePathForAnalytics(req.path),
+          status,
+          durationMs: Date.now() - startedAt,
+          attempts,
+        });
+      };
+
       const sleep = (ms: number) =>
         new Promise<void>((resolve, reject) => {
           const onAbort = () => {
@@ -267,7 +277,10 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
         let didAuthRetry = false;
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           const result = await attemptOnce();
-          if (result.ok) return result;
+          if (result.ok) {
+            trackSucceeded(result.status, attempt + 1);
+            return result;
+          }
           if (result.error.kind === "canceled") return result;
 
           if (result.error.kind === "auth" && onAuthError && !didAuthRetry) {
@@ -276,14 +289,18 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
               const nextToken = await onAuthError();
               if (nextToken) {
                 const afterRefresh = await attemptOnce(nextToken);
-                if (afterRefresh.ok) return afterRefresh;
+                const attemptsUsed = attempt + 2;
+                if (afterRefresh.ok) {
+                  trackSucceeded(afterRefresh.status, attemptsUsed);
+                  return afterRefresh;
+                }
                 analytics.trackEvent(MobileAnalyticsEvents.apiRequestFailed, {
                   method: req.method,
                   path: normalizePathForAnalytics(req.path),
                   status: afterRefresh.status ?? null,
                   errorKind: afterRefresh.error.kind,
                   durationMs: Date.now() - startedAt,
-                  attempts: attempt + 1,
+                  attempts: attemptsUsed,
                 });
                 return afterRefresh;
               }
