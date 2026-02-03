@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "[Mobile:Tickets:Updates] Handle 409 conflicts (ticket changed elsewhere) with refresh + retry UX",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

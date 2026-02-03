@@ -219,6 +219,23 @@ function TicketDetailBody({
           status_id: statusId,
         });
         if (!res.ok) {
+          if (res.error.kind === "http" && res.status === 409) {
+            setStatusUpdateError("Ticket changed elsewhere. Refresh and try again.");
+            Alert.alert(
+              "Ticket updated elsewhere",
+              "This ticket changed on the server. Refresh and try your update again.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Refresh",
+                  onPress: () => {
+                    void fetchTicket();
+                  },
+                },
+              ],
+            );
+            return;
+          }
           setStatusUpdateError("Unable to change status. Please try again.");
           return;
         }
