@@ -88,3 +88,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F082 improved validation error messaging by extracting first Zod detail (`error.details`) and surfacing `field: message` when server rejects a partial update.
 - 2026-02-03: F083 added explicit field-level loading indicators for in-flight partial updates by supporting spinners inside action chips (watch/assignment).
 - 2026-02-03: F084 expanded Settings with an Account section showing signed-in status, current user identity, and tenant id from `AuthContext`.
+- 2026-02-03: F085 added a Settings action to clear in-memory ticket caches (`clearTicketsCache`) with confirm UX.

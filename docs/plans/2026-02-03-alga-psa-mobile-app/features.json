@@ -674,7 +674,7 @@
   {
     "id": "F085",
     "description": "[Mobile:Settings] Add \u201cclear cache\u201d action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:UX / UI Notes"
     ]

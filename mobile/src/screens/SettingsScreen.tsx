@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Alert, Platform, Pressable, Text, View } from "react-native";
 import * as Application from "expo-application";
 import { getAppConfig } from "../config/appConfig";
 import { colors, spacing, typography } from "../ui/theme";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
+import { clearTicketsCache } from "../cache/ticketsCache";
 
 export function SettingsScreen() {
   const config = getAppConfig();
@@ -109,6 +110,33 @@ export function SettingsScreen() {
             {biometricError}
           </Text>
         ) : null}
+      </View>
+
+      <View style={{ marginTop: spacing.xl }}>
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
+          Data
+        </Text>
+        <ToggleRow
+          label="Clear cache"
+          value="Clear"
+          onPress={() => {
+            Alert.alert(
+              "Clear cache?",
+              "This clears in-memory ticket caches on this device. You may need to refresh tickets after.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Clear",
+                  style: "destructive",
+                  onPress: () => {
+                    clearTicketsCache();
+                    Alert.alert("Cleared", "Cache cleared.");
+                  },
+                },
+              ],
+            );
+          }}
+        />
       </View>
     </View>
   );
