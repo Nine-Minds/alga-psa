@@ -72,3 +72,20 @@ export function revokeSession(
     body,
   });
 }
+
+export type MobileAuthCapabilities = {
+  mobileEnabled: boolean;
+  providers: {
+    microsoft: boolean;
+    google: boolean;
+  };
+};
+
+export function getAuthCapabilities(
+  client: ApiClient,
+): Promise<ApiResult<MobileAuthCapabilities>> {
+  return client.request<MobileAuthCapabilities>({
+    method: "GET",
+    path: "/api/v1/mobile/auth/capabilities",
+  });
+}

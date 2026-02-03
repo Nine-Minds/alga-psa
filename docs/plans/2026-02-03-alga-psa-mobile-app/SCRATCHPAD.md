@@ -38,3 +38,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F032 includes device/app metadata on OTT exchange (platform, app version, build version, device id where available) for server-side audit/analytics.
 - 2026-02-03: F033 added optional biometric re-open gate using `expo-local-authentication` (locks on resume; toggle stored in secure storage and exposed in Settings).
 - 2026-02-03: F034 expanded log/error redaction rules to treat `ott` and `state` values as secrets so tokens are not logged or forwarded to error reporting.
+- 2026-02-03: F035 added mobile auth capability discovery call (`GET /api/v1/mobile/auth/capabilities`) and gated the Sign In CTA when the server reports mobile auth is disabled.

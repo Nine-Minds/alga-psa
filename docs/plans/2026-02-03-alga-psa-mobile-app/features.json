@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "[Mobile:Auth] Implement auth capability discovery endpoint (mobile enabled, providers available)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
