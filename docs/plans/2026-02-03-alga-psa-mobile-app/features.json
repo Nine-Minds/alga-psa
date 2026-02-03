@@ -1242,7 +1242,7 @@
   {
     "id": "F156",
     "description": "[Mobile:Tickets:Detail] Implement ticket detail - open-in-web uses stable URL format",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
