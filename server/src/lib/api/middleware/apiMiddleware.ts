@@ -96,6 +96,18 @@ export class BadRequestError extends Error implements ApiError {
   }
 }
 
+export class TooManyRequestsError extends Error implements ApiError {
+  statusCode = 429;
+  code = 'RATE_LIMITED';
+  details: any;
+
+  constructor(message: string = 'Too many requests', details?: any) {
+    super(message);
+    this.name = 'TooManyRequestsError';
+    this.details = details;
+  }
+}
+
 /**
  * API key authentication with NM Store support.
  * - When `allowNmStore` is true and `x-api-key` equals `nm_store_api_key`,

@@ -834,7 +834,7 @@
   {
     "id": "F105",
     "description": "[Server:Mobile Auth] Add rate limiting for OTT issue/exchange/refresh endpoints",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

@@ -108,3 +108,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F102 refresh endpoint rotates refresh tokens and deactivates the prior short-lived API key to invalidate old credentials.
 - 2026-02-03: F103 implemented logout revocation endpoint that revokes the refresh token and deactivates the associated short-lived API key.
 - 2026-02-03: F104 added capabilities endpoint (`GET /api/v1/mobile/auth/capabilities`) returning enablement, TTLs, and hosted domain allowlist.
+- 2026-02-03: F105 added basic in-memory rate limiting for mobile OTT issue/exchange/refresh and returns 429s (or redirects with `error=rate_limited` for handoff).
