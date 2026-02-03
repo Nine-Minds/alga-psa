@@ -170,7 +170,7 @@
   {
     "id": "T022",
     "description": "Unit: Add documentation for mobile local dev and build/release process",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
