@@ -506,7 +506,7 @@
   {
     "id": "T064",
     "description": "E2E: Ensure detail respects RBAC and field-level visibility",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
