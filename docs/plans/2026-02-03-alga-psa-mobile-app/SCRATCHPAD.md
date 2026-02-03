@@ -234,3 +234,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F212 enabled dependency vulnerability scanning for the mobile package in CI by generating and uploading an `npm audit` report artifact (`.github/workflows/mobile-checks.yml`).
 - 2026-02-03: F213 added CI reproducibility checks (lockfile unchanged after `npm ci`, Expo config resolves) (`.github/workflows/mobile-checks.yml`).
 - 2026-02-03: F214 drafted initial store listing copy for Phase 1 (App Store / Play) (`docs/plans/2026-02-03-alga-psa-mobile-app/STORE_LISTING.md`).
+- 2026-02-03: F215 documented a screenshot capture plan for store listings (device sizes + screen sequence + PII guardrails) (`docs/plans/2026-02-03-alga-psa-mobile-app/SCREENSHOTS_PLAN.md`).

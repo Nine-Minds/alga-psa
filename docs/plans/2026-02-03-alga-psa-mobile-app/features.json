@@ -1714,7 +1714,7 @@
   {
     "id": "F215",
     "description": "[Mobile:Release] Release - screenshot capture plan for App Store / Play Store",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]
