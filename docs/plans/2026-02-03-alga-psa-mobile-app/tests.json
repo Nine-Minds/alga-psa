@@ -1522,7 +1522,7 @@
   {
     "id": "T191",
     "description": "Integration: Implement server mobile auth - refresh token rotation with immediate invalidation of prior refresh token",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
