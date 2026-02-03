@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "Unit: checkAndEscalate activity calls escalationService.escalateTicket() when threshold exceeded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
