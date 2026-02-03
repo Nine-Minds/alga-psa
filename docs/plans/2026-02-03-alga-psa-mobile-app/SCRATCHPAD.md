@@ -141,3 +141,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F135 added a throttled “revocation check” on app resume by calling `refreshSession()` at most once per 10 minutes (in addition to near-expiry refresh), ensuring revoked sessions are detected promptly.
 - 2026-02-03: F136 improved sign-in error UX by mapping known auth callback error codes (e.g. `invalid_redirect`, `rate_limited`, `client_not_allowed`) to friendly messages and showing a warning when no Microsoft/Google SSO providers are configured.
 - 2026-02-03: F137 added a post-exchange permission check during sign-in (`GET /api/v1/tickets/stats`); if the user lacks ticket permissions (403), the app shows a clear “no ticket access” message instead of landing on an empty app shell.
+- 2026-02-03: F138 updated Sign In copy to clearly state the mobile app is for internal users only.

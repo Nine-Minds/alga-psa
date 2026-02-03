@@ -125,7 +125,7 @@ export function SignInScreen() {
         {t("app.title")}
       </Text>
       <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
-        Sign in using your Alga hosted account. We’ll open the system browser to complete login.
+        Internal users only. Sign in using your Alga hosted account. We’ll open the system browser to complete login.
       </Text>
 
       <View style={{ marginTop: spacing.lg, alignItems: "center" }}>

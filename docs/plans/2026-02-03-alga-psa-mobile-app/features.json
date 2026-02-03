@@ -1098,7 +1098,7 @@
   {
     "id": "F138",
     "description": "[Mobile:Auth] Implement sign-in UX copy that clearly indicates \u201cinternal users only\u201d",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Data / API / Integrations"
     ]
