@@ -79,7 +79,7 @@ export const timeEntrySchema = tenantSchema.extend({
   work_item_type: workItemTypeSchema,
   start_time: iso8601Schema,
   end_time: iso8601Schema,
-  work_date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional(),
+  work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   work_timezone: z.string().optional(),
   created_at: iso8601Schema,
   updated_at: iso8601Schema,
