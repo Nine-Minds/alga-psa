@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Unit: Add global app state bootstrapping (auth gate) and splash/loading sequence",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]

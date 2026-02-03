@@ -30,30 +30,30 @@ describe("createApiClient error mapping", () => {
     });
 
     const r400 = await client.request({ method: "GET", path: "/api/v1/test" });
-    expect(r400.ok).toBe(false);
-    expect(r400.error.kind).toBe("validation");
+    if (r400.ok) throw new Error("expected 400 error");
+    if (r400.error.kind !== "validation") throw new Error(`expected validation, got ${r400.error.kind}`);
     expect(r400.error.message).toBe("Bad input");
-    expect((r400.error as any).code).toBe("VALIDATION");
-    expect((r400.error as any).details).toEqual({ field: "required" });
+    expect(r400.error.code).toBe("VALIDATION");
+    expect(r400.error.details).toEqual({ field: "required" });
 
     const r401 = await client.request({ method: "GET", path: "/api/v1/test" });
-    expect(r401.ok).toBe(false);
-    expect(r401.error.kind).toBe("auth");
-    expect((r401.error as any).status).toBe(401);
+    if (r401.ok) throw new Error("expected 401 error");
+    if (r401.error.kind !== "auth") throw new Error(`expected auth, got ${r401.error.kind}`);
+    expect(r401.error.status).toBe(401);
 
     const r403 = await client.request({ method: "GET", path: "/api/v1/test" });
-    expect(r403.ok).toBe(false);
-    expect(r403.error.kind).toBe("permission");
-    expect((r403.error as any).status).toBe(403);
+    if (r403.ok) throw new Error("expected 403 error");
+    if (r403.error.kind !== "permission") throw new Error(`expected permission, got ${r403.error.kind}`);
+    expect(r403.error.status).toBe(403);
 
     const r500 = await client.request({ method: "GET", path: "/api/v1/test" });
-    expect(r500.ok).toBe(false);
-    expect(r500.error.kind).toBe("server");
-    expect((r500.error as any).status).toBe(500);
+    if (r500.ok) throw new Error("expected 500 error");
+    if (r500.error.kind !== "server") throw new Error(`expected server, got ${r500.error.kind}`);
+    expect(r500.error.status).toBe(500);
 
     const r404 = await client.request({ method: "GET", path: "/api/v1/test" });
-    expect(r404.ok).toBe(false);
-    expect(r404.error.kind).toBe("http");
-    expect((r404.error as any).status).toBe(404);
+    if (r404.ok) throw new Error("expected 404 error");
+    if (r404.error.kind !== "http") throw new Error(`expected http, got ${r404.error.kind}`);
+    expect(r404.error.status).toBe(404);
   });
 });

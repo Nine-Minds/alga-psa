@@ -21,9 +21,8 @@ describe("createApiClient timeouts", () => {
     });
 
     const result = await client.request({ method: "GET", path: "/api/v1/tickets" });
-    expect(result.ok).toBe(false);
-    expect(result.error.kind).toBe("timeout");
-    expect((result.error as any).timeoutMs).toBe(5);
+    if (result.ok) throw new Error("expected timeout error");
+    if (result.error.kind !== "timeout") throw new Error(`expected timeout, got ${result.error.kind}`);
+    expect(result.error.timeoutMs).toBe(5);
   });
 });
-

@@ -21,6 +21,7 @@ import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
+import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
 
 function getActiveRouteName(state: any): string | null {
   let current: any = state;
@@ -69,9 +70,10 @@ export function AppRoot() {
         return;
       }
 
+      const nowMs = Date.now();
       const stored = await getStoredSession();
       if (stored) {
-        if (stored.expiresAtMs > Date.now()) {
+        if (isSessionUsable(stored, nowMs)) {
           sessionRef.current = stored;
           if (!canceled) setSessionState(stored);
         } else {
@@ -79,7 +81,7 @@ export function AppRoot() {
         }
       }
 
-      if (stored && stored.expiresAtMs > Date.now()) {
+      if (stored && isSessionUsable(stored, nowMs)) {
         const biometricEnabled = await getBiometricGateEnabled();
         if (biometricEnabled && !canceled) setIsBiometricLocked(true);
       }
@@ -202,32 +204,33 @@ export function AppRoot() {
   useEffect(() => {
     if (!baseUrl || !session) return;
 
-    const skewMs = 60_000;
-    const msUntilRefresh = Math.max(0, session.expiresAtMs - Date.now() - skewMs);
-    const handle = setTimeout(() => void refreshSession(), msUntilRefresh);
+    const handle = setTimeout(
+      () => void refreshSession(),
+      msUntilRefresh(session.expiresAtMs, Date.now()),
+    );
     return () => clearTimeout(handle);
   }, [baseUrl, refreshSession, session?.expiresAtMs, session?.refreshToken]);
 
   useEffect(() => {
     if (!session) return;
-    const msUntilExpiry = Math.max(0, session.expiresAtMs - Date.now());
-    const handle = setTimeout(() => setSession(null), msUntilExpiry + 500);
+    const handle = setTimeout(
+      () => setSession(null),
+      msUntilExpiry(session.expiresAtMs, Date.now()) + 500,
+    );
     return () => clearTimeout(handle);
   }, [session?.expiresAtMs, session?.refreshToken, setSession]);
 
   useAppResume(() => {
     if (!session) return;
-    const skewMs = 120_000;
-    if (session.expiresAtMs - Date.now() <= skewMs) {
+    if (shouldRefreshOnResume(session.expiresAtMs, Date.now())) {
       void refreshSession();
     }
   });
 
   useAppResume(() => {
     if (!session) return;
-    const throttleMs = 10 * 60_000;
     const now = Date.now();
-    if (now - lastRevocationCheckAtMs.current < throttleMs) return;
+    if (!shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) return;
     lastRevocationCheckAtMs.current = now;
     void refreshSession();
   });

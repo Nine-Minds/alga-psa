@@ -217,3 +217,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T003 added API client error-mapping unit tests to validate consistent `ApiError.kind` mapping from HTTP status + server error shape (`mobile/src/api/client.errors.test.ts`).
 - 2026-02-03: T004 added unit tests for request header middleware (Authorization/tenant/client tagging + correlation id) (`mobile/src/api/client.headers.test.ts`).
 - 2026-02-03: T005 added a unit test covering request timeout behavior (returns `timeout` kind) in addition to existing retry coverage (`mobile/src/api/client.timeout.test.ts`, `mobile/src/api/client.retry.test.ts`).
+- 2026-02-03: T006 extracted key bootstrapping timing/expiry logic into pure helpers and covered with unit tests (`mobile/src/app/bootstrapUtils.ts`, `mobile/src/app/bootstrapUtils.test.ts`).
