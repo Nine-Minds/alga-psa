@@ -2040,6 +2040,7 @@ export default function ProjectDetail({
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts}
             allTaskTags={allTaskTags}
+            priorities={priorities}
             projectTreeData={projectTreeData}
             animatingTasks={animatingTasks}
             avatarUrls={avatarUrls}

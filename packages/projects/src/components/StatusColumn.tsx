@@ -2,6 +2,7 @@
 
 import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
+import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
@@ -20,6 +21,7 @@ interface StatusColumnProps {
   taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Record<string, number>;
+  priorities?: (IPriority | IStandardPriority)[];
   allTaskTagTexts?: string[];
   statusIcon: React.ReactNode;
   backgroundColor: string;
@@ -59,6 +61,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
+  priorities = [],
   allTaskTagTexts = [],
   statusIcon,
   backgroundColor,
@@ -344,6 +347,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef} data-kanban-column-tasks="true">
         {sortedTasks.map((task): React.JSX.Element => {
           const taskType = taskTypes.find(t => t.type_key === task.task_type_key);
+          const taskPriority = task.priority_id ? priorities.find(p => p.priority_id === task.priority_id) : undefined;
           return (
           <div key={task.task_id} data-task-id={task.task_id} className="relative">
             {/* Animated drop placeholder before task */}
@@ -359,6 +363,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               taskDependencies={taskDependencies[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
               documentCount={taskDocumentCounts[task.task_id]}
+              priority={taskPriority}
               isAnimating={animatingTasks.has(task.task_id)}
               searchQuery={searchQuery}
               searchCaseSensitive={searchCaseSensitive}
