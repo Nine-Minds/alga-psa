@@ -290,7 +290,7 @@
   {
     "id": "T037",
     "description": "E2E: Support vanity/hosted domains for login handoff (configurable allowlist)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
