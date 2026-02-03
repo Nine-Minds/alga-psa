@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "TemporalSlaBackend uses workflow ID format sla-ticket-{tenantId}-{ticketId}",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
