@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "[Mobile:Release] Define signing, versioning, and release notes process",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Rollout / Migration"
     ]

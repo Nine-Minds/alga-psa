@@ -15,10 +15,12 @@
     },
     "ios": {
       "bundleIdentifier": "com.alga.psa.mobile",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
       "package": "com.alga.psa.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

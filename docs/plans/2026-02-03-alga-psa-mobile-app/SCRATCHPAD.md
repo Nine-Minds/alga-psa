@@ -98,3 +98,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F092 documented mobile privacy review checklist + PII inventory in `docs/plans/2026-02-03-alga-psa-mobile-app/PRIVACY_REVIEW.md`.
 - 2026-02-03: F093 added basic observability via `analytics.trackEvent` for auth funnel events (sign-in/OTT exchange/refresh/logout) and API request failures (method + normalized path + status + error kind).
 - 2026-02-03: F094 added EAS build/submit profiles (`mobile/eas.json`) and a GitHub Actions workflow for TestFlight/Play internal distribution (`.github/workflows/mobile-distribute.yml`); set bundle/package ids in `mobile/app.json`.
+- 2026-02-03: F095 documented signing/versioning/release notes process in `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md` and set initial iOS/Android build numbers in `mobile/app.json`.
