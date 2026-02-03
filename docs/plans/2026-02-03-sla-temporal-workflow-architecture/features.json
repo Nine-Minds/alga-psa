@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "TemporalSlaBackend.getSlaStatus() queries workflow state via getState query",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
