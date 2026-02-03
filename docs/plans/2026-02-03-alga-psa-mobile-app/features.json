@@ -1050,7 +1050,7 @@
   {
     "id": "F132",
     "description": "[Mobile:Foundation] Implement startup performance budget and measurement",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

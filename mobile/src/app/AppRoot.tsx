@@ -42,6 +42,8 @@ export function AppRoot() {
   const network = useNetworkStatus();
   const refreshInFlight = useRef(false);
   const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startupStartedAt = useRef(Date.now());
+  const startupReported = useRef(false);
 
   const baseUrl = config.ok ? config.baseUrl : null;
 
@@ -116,6 +118,17 @@ export function AppRoot() {
       canceled = true;
     };
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (startupReported.current) return;
+    if (bootStatus !== "ready") return;
+    if (!navStateLoaded) return;
+    startupReported.current = true;
+    analytics.trackEvent("app.startup.ready", {
+      durationMs: Date.now() - startupStartedAt.current,
+      signedIn: Boolean(session),
+    });
+  }, [bootStatus, navStateLoaded, session]);
 
   const refreshSession = useCallback(async (): Promise<string | null> => {
     const currentSession = sessionRef.current;
