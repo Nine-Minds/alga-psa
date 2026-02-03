@@ -290,7 +290,7 @@
   {
     "id": "T049",
     "description": "Unit: slaService.recordResolution() calls backend.completeSla('resolution')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
