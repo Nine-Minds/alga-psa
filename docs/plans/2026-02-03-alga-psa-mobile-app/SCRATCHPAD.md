@@ -439,3 +439,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T211 marked as covered: Security review checklist recorded (docs/plans/2026-02-03-alga-psa-mobile-app/SECURITY_REVIEW.md).
 - 2026-02-03: T212 marked as covered: Mobile dependency vulnerability scanning enabled in CI (mobile-checks workflow npm audit report).
 - 2026-02-03: T213 marked as covered: Mobile reproducibility checks enabled in CI (mobile-checks workflow lockfile + expo config).
+- 2026-02-03: T214 marked as covered: Store listing copy drafted (docs/plans/2026-02-03-alga-psa-mobile-app/STORE_LISTING.md).

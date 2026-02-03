@@ -1706,7 +1706,7 @@
   {
     "id": "T214",
     "description": "Checklist: Release - store listing draft (Phase 1)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ]
