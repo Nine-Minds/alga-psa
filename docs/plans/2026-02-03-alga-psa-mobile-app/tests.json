@@ -1138,7 +1138,7 @@
   {
     "id": "T143",
     "description": "E2E: Implement List:Filters - sort selector",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
