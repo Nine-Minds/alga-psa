@@ -34,6 +34,8 @@ type TicketListFilters = {
   priorityName: string;
   updatedSinceDays: number | null;
   updatedSinceDate: string;
+  sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
+  sortOrder: "asc" | "desc";
 };
 
 const DEFAULT_FILTERS: TicketListFilters = {
@@ -43,6 +45,8 @@ const DEFAULT_FILTERS: TicketListFilters = {
   priorityName: "",
   updatedSinceDays: null,
   updatedSinceDate: "",
+  sortField: "updated_at",
+  sortOrder: "desc",
 };
 
 function dateOnlyToIsoUtc(dateOnly: string): string | null {
@@ -166,6 +170,8 @@ export function TicketsListScreen({ navigation }: Props) {
         page: pageToLoad,
         limit: 25,
         search: search || undefined,
+        sort: filters.sortField,
+        order: filters.sortOrder,
         signal: abortController.signal,
         filters: apiFilters,
       });
@@ -204,7 +210,7 @@ export function TicketsListScreen({ navigation }: Props) {
         );
       }
     },
-    [apiFilters, client, search, session],
+    [apiFilters, client, filters.sortField, filters.sortOrder, search, session],
   );
 
   const fetchStats = useCallback(async () => {
@@ -472,6 +478,8 @@ function ActiveFiltersSummary({
     priorityName: string;
     updatedSinceDays: number | null;
     updatedSinceDate: string;
+    sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
+    sortOrder: "asc" | "desc";
   };
 }) {
   const parts: string[] = [];
@@ -482,6 +490,9 @@ function ActiveFiltersSummary({
   const dateOnly = filters.updatedSinceDate.trim();
   if (dateOnly) parts.push(`updated:${dateOnly}`);
   else if (filters.updatedSinceDays) parts.push(`updated:${filters.updatedSinceDays}d`);
+  if (filters.sortField !== "updated_at" || filters.sortOrder !== "desc") {
+    parts.push(`sort:${filters.sortField}:${filters.sortOrder}`);
+  }
 
   if (parts.length === 0) return null;
   return (
@@ -549,6 +560,8 @@ function FiltersModal({
     priorityName: string;
     updatedSinceDays: number | null;
     updatedSinceDate: string;
+    sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
+    sortOrder: "asc" | "desc";
   };
   setFilters: Dispatch<
     SetStateAction<{
@@ -558,6 +571,8 @@ function FiltersModal({
       priorityName: string;
       updatedSinceDays: number | null;
       updatedSinceDate: string;
+      sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
+      sortOrder: "asc" | "desc";
     }>
   >;
   canFilterMe: boolean;
@@ -789,6 +804,29 @@ function FiltersModal({
           Use a specific date (UTC) or pick a relative range above.
         </Text>
 
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Sort</Text>
+        <OptionRow
+          options={[
+            { label: "Updated", value: "updated_at" },
+            { label: "Created", value: "entered_at" },
+            { label: "Priority", value: "priority_name" },
+            { label: "Status", value: "status_name" },
+            { label: "Client", value: "client_name" },
+          ]}
+          value={filters.sortField}
+          onChange={(sortField) => setFilters({ ...filters, sortField })}
+        />
+
+        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Order</Text>
+        <OptionRow
+          options={[
+            { label: "Desc", value: "desc" },
+            { label: "Asc", value: "asc" },
+          ]}
+          value={filters.sortOrder}
+          onChange={(sortOrder) => setFilters({ ...filters, sortOrder })}
+        />
+
         <View style={{ flex: 1 }} />
 
         <View style={{ flexDirection: "row" }}>
@@ -801,6 +839,8 @@ function FiltersModal({
                 priorityName: "",
                 updatedSinceDays: null,
                 updatedSinceDate: "",
+                sortField: "updated_at",
+                sortOrder: "desc",
               })
             }
           >

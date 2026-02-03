@@ -1138,7 +1138,7 @@
   {
     "id": "F143",
     "description": "[Mobile:Tickets:List] Implement List:Filters - sort selector",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]

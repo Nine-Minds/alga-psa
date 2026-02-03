@@ -146,3 +146,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F140 confirmed assignee filter selector (any/me/unassigned) is implemented in the ticket list Filters modal and wired to `assigned_to` / `has_assignment=false` server-side filters.
 - 2026-02-03: F141 added a priority selector in the ticket list Filters modal by fetching priorities and rendering selectable chips (still supports manual priority name entry).
 - 2026-02-03: F142 added an updated-since date input (YYYY-MM-DD) alongside relative presets; the list now prefers `updatedSinceDate` when set and falls back to relative day presets.
+- 2026-02-03: F143 added a sort selector (field + order) to the ticket list Filters modal and wires it to the existing `sort`/`order` query params for `GET /api/v1/tickets`.
