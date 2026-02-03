@@ -1658,7 +1658,7 @@
   {
     "id": "T208",
     "description": "Unit: Quality/Ops - API latency measurement per route",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
