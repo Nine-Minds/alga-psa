@@ -33,6 +33,7 @@ import MoveTaskDialog from './MoveTaskDialog';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
+import KanbanZoomControl from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
@@ -45,6 +46,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
+const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
@@ -103,6 +105,19 @@ export default function ProjectDetail({
     {
       defaultValue: true,
       localStorageKey: PROJECT_PHASES_PANEL_VISIBLE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Kanban zoom level state with persistence (default: 50 = 350px columns)
+  const {
+    value: kanbanZoomLevel,
+    setValue: setKanbanZoomLevel,
+  } = useUserPreference<number>(
+    PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
+    {
+      defaultValue: 50,
+      localStorageKey: PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
       debounceMs: 300
     }
   );
@@ -1808,7 +1823,7 @@ export default function ProjectDetail({
     // Kanban view header
     return (
       <div className="mb-4 space-y-3 flex-shrink-0">
-        {/* Top row: Title + View Switcher */}
+        {/* Top row: Title + Zoom Control + View Switcher */}
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold">
@@ -1818,14 +1833,20 @@ export default function ProjectDetail({
               <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
             )}
           </div>
-          <ViewSwitcher
-            currentView={viewMode}
-            onChange={setViewMode}
-            options={[
-              { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-              { value: 'list', label: 'List', icon: List }
-            ]}
-          />
+          <div className="flex items-center gap-4">
+            <KanbanZoomControl
+              zoomLevel={kanbanZoomLevel}
+              onZoomChange={setKanbanZoomLevel}
+            />
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={setViewMode}
+              options={[
+                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                { value: 'list', label: 'List', icon: List }
+              ]}
+            />
+          </div>
         </div>
 
         {/* Bottom row: Search + Filters + Completion */}
@@ -2047,6 +2068,7 @@ export default function ProjectDetail({
             searchQuery={searchQuery}
             searchCaseSensitive={searchCaseSensitive}
             searchWholeWord={searchWholeWord}
+            zoomLevel={kanbanZoomLevel}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}

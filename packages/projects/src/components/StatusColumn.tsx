@@ -27,15 +27,16 @@ interface StatusColumnProps {
   backgroundColor: string;
   darkBackgroundColor: string;
   borderColor: string;
-  configuredColor?: string | null; // Hex color from status configuration
+  configuredColor?: string | null;
   isAddingTask: boolean;
   selectedPhase: boolean;
-  projectTreeData?: any[]; // Add projectTreeData prop
+  projectTreeData?: any[];
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
   searchQuery?: string;
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
+  columnWidth?: number;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -76,6 +77,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   searchQuery = '',
   searchCaseSensitive = false,
   searchWholeWord = false,
+  columnWidth = 350,
   onDrop,
   onDragOver,
   onAddCard,
@@ -295,15 +297,23 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
   };
 
+  // Build inline styles for dynamic column width and optional configured color
+  const columnStyle: React.CSSProperties = {
+    width: `${columnWidth}px`,
+    minWidth: `${columnWidth}px`,
+    maxWidth: `${columnWidth}px`,
+    ...(configuredColor ? {
+      backgroundColor: lightenColor(configuredColor, 0.85),
+      borderColor: isDraggedOver ? undefined : lightenColor(configuredColor, 0.70)
+    } : {})
+  };
+
   return (
     <div
       className={`${styles.kanbanColumn} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
         isDraggedOver ? 'border-purple-500 ' + styles.dragOver : (configuredColor ? '' : borderColor)
       }`}
-      style={configuredColor ? {
-        backgroundColor: lightenColor(configuredColor, 0.85),
-        borderColor: isDraggedOver ? undefined : lightenColor(configuredColor, 0.70)
-      } : undefined}
+      style={columnStyle}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
