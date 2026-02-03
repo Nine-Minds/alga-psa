@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Unit: ISlaBackend interface has all required method signatures",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
