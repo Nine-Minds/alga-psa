@@ -83,6 +83,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA workflow transitions to resolution on completeResponse (T021)
 - (2026-02-03) Tests: SLA workflow terminates on completeResolution (T022)
 - (2026-02-03) Tests: SLA workflow cancel signal terminates workflow (T023)
+- (2026-02-03) Tests: SLA workflow getState query returns status/remaining time (T024)
 
 ## Discoveries / Constraints
 
