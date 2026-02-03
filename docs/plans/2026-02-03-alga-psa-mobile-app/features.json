@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "[Mobile:Tickets:List] Implement pull-to-refresh to reload first page",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
