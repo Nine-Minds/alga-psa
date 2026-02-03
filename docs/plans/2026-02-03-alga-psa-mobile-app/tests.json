@@ -594,7 +594,7 @@
   {
     "id": "T075",
     "description": "E2E: Ensure updates respect RBAC and server-side validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
