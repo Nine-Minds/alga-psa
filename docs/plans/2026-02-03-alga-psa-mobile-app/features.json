@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "[Mobile:Tickets:Detail] Render ticket header (number/title/status/priority/assignee)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
