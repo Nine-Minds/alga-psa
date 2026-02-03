@@ -610,7 +610,7 @@
   {
     "id": "T077",
     "description": "E2E: Implement unassign action when permitted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
