@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "SlaTicketWorkflow handles 'resume' signal by recalculating remaining time and setting new timer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

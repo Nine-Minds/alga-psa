@@ -21,6 +21,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) SLA workflow state tracks phase, pause state, notified thresholds, and response/resolution deadlines
 - (2026-02-03) SLA workflow uses Temporal sleep + condition race to wake at threshold times
 - (2026-02-03) Pause signal sets pauseStartedAt and pauses timers via condition wake-up
+- (2026-02-03) Resume signal clears pauseStartedAt, increments totalPauseMinutes, and triggers recalculation on next loop
 
 ## Discoveries / Constraints
 
