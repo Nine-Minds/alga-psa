@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "SlaTicketWorkflow handles 'cancel' signal by terminating workflow without recording breach",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
