@@ -7,15 +7,12 @@ import { RootNavigator } from "../navigation/RootNavigator";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { OfflineBanner } from "../ui/components/OfflineBanner";
-
-type AuthState =
-  | { status: "booting" }
-  | { status: "signedOut" }
-  | { status: "signedIn" };
+import { AuthContext, type MobileSession } from "../auth/AuthContext";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
-  const [authState, setAuthState] = useState<AuthState>({ status: "booting" });
+  const [bootStatus, setBootStatus] = useState<"booting" | "ready">("booting");
+  const [session, setSession] = useState<MobileSession | null>(null);
   const network = useNetworkStatus();
 
   useEffect(() => {
@@ -23,12 +20,12 @@ export function AppRoot() {
 
     const run = async () => {
       if (!config.ok) {
-        if (!canceled) setAuthState({ status: "signedOut" });
+        if (!canceled) setBootStatus("ready");
         return;
       }
 
       await Promise.resolve();
-      if (!canceled) setAuthState({ status: "signedOut" });
+      if (!canceled) setBootStatus("ready");
     };
 
     void run();
@@ -43,18 +40,20 @@ export function AppRoot() {
     );
   }
 
-  if (authState.status === "booting") {
+  if (bootStatus === "booting") {
     return <LoadingState message="Loading…" />;
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+    <AuthContext.Provider value={{ session, setSession }}>
       <View style={{ flex: 1 }}>
-        <NavigationContainer linking={linking}>
-          <RootNavigator isSignedIn={authState.status === "signedIn"} />
-        </NavigationContainer>
+        {network.isConnected === false ? <OfflineBanner onRetry={() => {}} /> : null}
+        <View style={{ flex: 1 }}>
+          <NavigationContainer linking={linking}>
+            <RootNavigator isSignedIn={session !== null} />
+          </NavigationContainer>
+        </View>
       </View>
-    </View>
+    </AuthContext.Provider>
   );
 }
