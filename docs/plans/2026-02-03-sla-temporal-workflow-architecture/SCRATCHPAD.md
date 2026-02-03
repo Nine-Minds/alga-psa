@@ -58,6 +58,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) PgBossSlaBackend startSlaTracking remains a no-op for CE polling
 - (2026-02-03) PgBossSlaBackend cancelSla remains a no-op for CE polling
 - (2026-02-03) PgBossSlaBackend getSlaStatus delegates to slaService.getSlaStatus
+- (2026-02-03) SLA workflow respects 24x7 schedules via business hours calculator
 
 ## Discoveries / Constraints
 
