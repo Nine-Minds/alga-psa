@@ -64,3 +64,6 @@ export {
   checkEscalationNeeded,
   type EscalationResult
 } from './escalationService';
+
+// SLA backend interface
+export type { ISlaBackend } from './backends';
