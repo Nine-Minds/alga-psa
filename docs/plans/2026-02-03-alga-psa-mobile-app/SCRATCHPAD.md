@@ -112,3 +112,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F106 added audit logging for mobile auth events (OTT issued, exchange, refresh, revoke) via `auditLog` with device/app metadata (no tokens stored).
 - 2026-02-03: F107 documented the mobile ticket API contract (endpoints + params + headers) in `docs/plans/2026-02-03-alga-psa-mobile-app/API_CONTRACT.md`.
 - 2026-02-03: F108 confirmed ticket comment create supports `is_internal` for public vs internal visibility (`POST /api/v1/tickets/:id/comments`).
+- 2026-02-03: F109 ensured mobile auth endpoints use the shared API error schema (`{ error: { code, message, details } }`) for validation/auth/limit errors.
