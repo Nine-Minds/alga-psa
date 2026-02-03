@@ -110,6 +110,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: slaService.recordFirstResponse calls backend.completeSla(response) (T048)
 - (2026-02-03) Tests: slaService.recordResolution calls backend.completeSla(resolution) (T049)
 - (2026-02-03) Tests: TemporalSlaBackend handles duplicate workflow ID (T050)
+- (2026-02-03) Tests: CE TemporalSlaBackend stub throws Enterprise-only error (T051)
 
 ## Discoveries / Constraints
 
