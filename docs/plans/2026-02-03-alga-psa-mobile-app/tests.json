@@ -1578,7 +1578,7 @@
   {
     "id": "T198",
     "description": "Integration: Implement server mobile auth - ticket list endpoint supports updated-since filter used by mobile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
