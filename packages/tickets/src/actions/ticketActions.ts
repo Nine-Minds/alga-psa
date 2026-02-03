@@ -51,6 +51,7 @@ import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
 } from '../lib/workflowTicketSlaStageEvents';
+import { SlaBackendFactory } from '@alga-psa/sla/services';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -1226,6 +1227,13 @@ export const deleteTicket = withAuth(async (
     });
 
     if (result.deleted) {
+      try {
+        const backend = await SlaBackendFactory.getBackend();
+        await backend.cancelSla(ticketId);
+      } catch (error) {
+        console.warn('[deleteTicket] Failed to cancel SLA backend workflow:', error);
+      }
+
       revalidatePath('/msp/tickets');
     }
 
@@ -1268,6 +1276,12 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
       });
 
       if (result.deleted) {
+        try {
+          const backend = await SlaBackendFactory.getBackend();
+          await backend.cancelSla(ticketId);
+        } catch (error) {
+          console.warn('[deleteTickets] Failed to cancel SLA backend workflow:', error);
+        }
         deletedIds.push(ticketId);
       } else {
         failed.push({
