@@ -1178,7 +1178,7 @@
   {
     "id": "T148",
     "description": "E2E: Implement List:Errors - 401 handling (refresh then sign-in)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]
