@@ -50,7 +50,7 @@
   {
     "id": "T007",
     "description": "Unit: Add navigation skeleton (tabs + stack) and deep link routing for ticket detail",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
