@@ -1690,7 +1690,7 @@
   {
     "id": "T212",
     "description": "Unit: Quality/Ops - dependency vulnerability scanning enabled for mobile package",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212"
     ]
