@@ -226,7 +226,7 @@
   {
     "id": "T029",
     "description": "E2E: Implement logout that revokes server-side session and clears local storage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
