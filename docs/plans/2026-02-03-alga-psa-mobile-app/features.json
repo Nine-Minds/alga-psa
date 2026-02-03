@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "[Mobile:Tickets:Detail] Cache last-viewed ticket detail (TTL)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Users and Primary Flows"
     ]
