@@ -1250,7 +1250,7 @@
   {
     "id": "T157",
     "description": "E2E: Implement ticket detail - copy actions for id/number",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157"
     ]
