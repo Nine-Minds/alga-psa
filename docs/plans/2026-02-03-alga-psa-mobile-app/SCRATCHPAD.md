@@ -355,3 +355,5 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T110 marked as covered: DB migration added for mobile auth tables (20260203210000_add_mobile_auth_tables.cjs).
 - 2026-02-03: T111 marked as covered: undefined
 - 2026-02-03: T111 marked as covered: server unit tests cover OTT expiry/single-use and refresh rotation (server/src/test/unit/mobileAuth.test.ts).
+- 2026-02-03: T112 marked as covered: undefined
+- 2026-02-03: T112 marked as covered: mobile auth server config documented (MOBILE_AUTH_CONFIG.md).

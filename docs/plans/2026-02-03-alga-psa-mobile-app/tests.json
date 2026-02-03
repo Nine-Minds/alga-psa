@@ -890,7 +890,7 @@
   {
     "id": "T112",
     "description": "Integration: Add documentation for mobile auth configuration and hosted domain allowlist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
