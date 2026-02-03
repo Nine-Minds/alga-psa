@@ -200,3 +200,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F193 server capabilities endpoint includes the hosted domain allowlist used by mobile to enforce approved base URL hosts.
 - 2026-02-03: F194 enforced mobile auth rate limiting both per IP (routes) and per user (service-level guards for exchange/refresh).
 - 2026-02-03: F195 server mobile auth audit logs capture tenant/user/action and include device/app metadata where provided (device id/version/build).
+- 2026-02-03: F196 server mobile auth routes use the standard API error shape `{ error: { code, message, details } }` via shared `handleApiError`.

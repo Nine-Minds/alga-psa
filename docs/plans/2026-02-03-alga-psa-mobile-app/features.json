@@ -1562,7 +1562,7 @@
   {
     "id": "F196",
     "description": "[Server:Mobile Auth] Implement server mobile auth - consistent error response schema for auth errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]
