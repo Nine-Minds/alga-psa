@@ -314,7 +314,7 @@
   {
     "id": "T053",
     "description": "Integration: Workflow sends notification at 50% threshold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
