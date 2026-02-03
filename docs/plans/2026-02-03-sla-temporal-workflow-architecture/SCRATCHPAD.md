@@ -82,6 +82,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: SLA workflow recalculates wake time after resume with pause minutes (T020)
 - (2026-02-03) Tests: SLA workflow transitions to resolution on completeResponse (T021)
 - (2026-02-03) Tests: SLA workflow terminates on completeResolution (T022)
+- (2026-02-03) Tests: SLA workflow cancel signal terminates workflow (T023)
 
 ## Discoveries / Constraints
 

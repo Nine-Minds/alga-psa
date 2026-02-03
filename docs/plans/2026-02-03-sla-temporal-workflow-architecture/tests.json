@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Unit: SlaTicketWorkflow cancel signal terminates workflow without breach",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
