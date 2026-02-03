@@ -57,6 +57,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Added CE stub TemporalSlaBackend that throws Enterprise-only error
 - (2026-02-03) PgBossSlaBackend startSlaTracking remains a no-op for CE polling
 - (2026-02-03) PgBossSlaBackend cancelSla remains a no-op for CE polling
+- (2026-02-03) PgBossSlaBackend getSlaStatus delegates to slaService.getSlaStatus
 
 ## Discoveries / Constraints
 

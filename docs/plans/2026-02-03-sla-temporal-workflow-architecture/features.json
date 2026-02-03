@@ -290,7 +290,7 @@
   {
     "id": "F049",
     "description": "PgBossSlaBackend.getSlaStatus() delegates to existing slaService.getSlaStatus()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
