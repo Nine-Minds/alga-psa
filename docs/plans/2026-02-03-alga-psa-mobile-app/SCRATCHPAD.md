@@ -237,3 +237,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F215 documented a screenshot capture plan for store listings (device sizes + screen sequence + PII guardrails) (`docs/plans/2026-02-03-alga-psa-mobile-app/SCREENSHOTS_PLAN.md`).
 - 2026-02-03: F216 documented an internal beta distribution runbook (CI + local fallback + smoke checklist) (`docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md`).
 - 2026-02-03: F217 documented an auth support escalation runbook (common failure modes + data to collect) (`docs/plans/2026-02-03-alga-psa-mobile-app/AUTH_SUPPORT_RUNBOOK.md`).
+- 2026-02-03: F218 documented the minimum OS support policy (tied to Expo SDK version) (`docs/plans/2026-02-03-alga-psa-mobile-app/OS_SUPPORT_POLICY.md`).
