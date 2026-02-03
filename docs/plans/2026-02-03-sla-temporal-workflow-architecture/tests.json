@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "Unit: PgBossSlaBackend.resumeSla() calls slaPauseService.resumeSla()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
