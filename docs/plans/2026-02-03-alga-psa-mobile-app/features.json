@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "[Mobile:Tickets:List] Support combining filters and show active filter summary",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Functional Requirements"
     ]
