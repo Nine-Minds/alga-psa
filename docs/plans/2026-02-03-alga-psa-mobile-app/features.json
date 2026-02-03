@@ -1682,7 +1682,7 @@
   {
     "id": "F211",
     "description": "[Mobile:Quality] Quality/Ops - security review checklist executed pre-release",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Security / Permissions"
     ]

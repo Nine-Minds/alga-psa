@@ -230,3 +230,4 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F208 added a success telemetry event for API requests (`api.request.succeeded`) including normalized path + duration to support latency measurement; updated catalog docs and added a unit test (`mobile/src/api/client.ts`, `mobile/src/api/client.telemetry.test.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`).
 - 2026-02-03: F209 defined initial mobile SLO targets for ticketing/auth endpoints and measurement guidance (`docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md`).
 - 2026-02-03: F210 added a pre-release accessibility audit checklist and recorded an initial pass for MVP screens (`docs/plans/2026-02-03-alga-psa-mobile-app/A11Y_AUDIT.md`).
+- 2026-02-03: F211 added a pre-release security review checklist and recorded an initial pass for MVP auth/ticket flows (`docs/plans/2026-02-03-alga-psa-mobile-app/SECURITY_REVIEW.md`).
