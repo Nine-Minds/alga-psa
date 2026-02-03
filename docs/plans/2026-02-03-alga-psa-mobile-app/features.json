@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "[Mobile:Foundation] Add navigation skeleton (tabs + stack) and deep link routing for ticket detail",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD:Requirements:Non-functional Requirements"
     ]

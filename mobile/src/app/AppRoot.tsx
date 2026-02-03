@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
+import { linking } from "../navigation/linking";
+import { RootNavigator } from "../navigation/RootNavigator";
 
 type AuthState =
   | { status: "booting" }
@@ -49,21 +52,10 @@ export function AppRoot() {
     );
   }
 
-  if (authState.status === "signedOut") {
-    return (
-      <Centered>
-        <Text style={{ fontSize: 18, fontWeight: "600" }}>Sign in</Text>
-        <Text style={{ marginTop: 8, textAlign: "center" }}>
-          Mobile auth is not wired yet. Next: add browser-based SSO handoff.
-        </Text>
-      </Centered>
-    );
-  }
-
   return (
-    <Centered>
-      <Text style={{ fontSize: 18, fontWeight: "600" }}>Signed in</Text>
-    </Centered>
+    <NavigationContainer linking={linking}>
+      <RootNavigator isSignedIn={authState.status === "signedIn"} />
+    </NavigationContainer>
   );
 }
 
