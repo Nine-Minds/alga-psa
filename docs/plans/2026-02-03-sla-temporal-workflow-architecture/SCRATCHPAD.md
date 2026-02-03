@@ -70,6 +70,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-03) Tests: PgBossSlaBackend.completeSla(resolution) delegates to slaService.recordResolution (T009)
 - (2026-02-03) Tests: PgBossSlaBackend.cancelSla no-op (T010)
 - (2026-02-03) Tests: PgBossSlaBackend.getSlaStatus delegates to slaService (T011)
+- (2026-02-03) Tests: SLA ticket workflow initialization and input coverage (T012-T024)
+- (2026-02-03) Tests: SLA workflow initializes with input parameters (T012)
 
 ## Discoveries / Constraints
 
