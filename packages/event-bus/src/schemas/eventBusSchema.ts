@@ -227,9 +227,11 @@ export const ProjectClosedPayloadSchema = ProjectEventPayloadSchema.extend({
 export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   projectId: z.string().uuid(),
   taskId: z.string().uuid(),
-  userId: z.string().uuid(),
-  assignedTo: z.string().uuid(),
-  additionalUsers: z.array(z.string().uuid()).optional(),
+  assignedToId: z.string().uuid(),
+  assignedToType: z.enum(['user', 'team']),
+  assignedByUserId: z.string().uuid().optional(),
+  assignedByName: z.string().optional(),
+  assignedAt: z.string().datetime().optional(),
 });
 
 // Project task additional agent event payload schema
