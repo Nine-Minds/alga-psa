@@ -288,3 +288,5 @@ ls -la ui/dist/iframe/
 - F077: DropdownMenu demo includes disabled items.
 
 - F078: DropdownMenu demo includes danger items.
+
+- F079: DropdownMenu demo shows left/right alignment.

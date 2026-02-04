@@ -627,7 +627,7 @@
   {
     "id": "F079",
     "description": "DropdownMenu demo: Show left and right alignment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
