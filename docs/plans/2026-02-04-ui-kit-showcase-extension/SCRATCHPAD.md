@@ -433,3 +433,5 @@ ls -la ui/dist/iframe/
 - T071: Progress tests assert striped overlay style.
 
 - T072: Progress tests assert animated transition.
+
+- T073: Progress tests assert size height changes.
