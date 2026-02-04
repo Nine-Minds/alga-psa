@@ -2,6 +2,11 @@ import { z } from 'zod';
 import process from 'process';
 
 // Helper functions for type coercion
+const coerceString = (val: unknown): string | undefined => {
+  if (typeof val === 'string') return val.split(/[;#]/)[0].trim();
+  return undefined;
+};
+
 const coerceNumber = (val: unknown): number | undefined => {
   if (typeof val === 'number') return val;
   if (typeof val === 'string') {
@@ -23,6 +28,13 @@ const coerceBoolean = (val: unknown): boolean | undefined => {
   return undefined;
 };
 
+const normalizeDbType = (val: unknown): string | undefined => {
+  const cleaned = coerceString(val)?.toLowerCase();
+  if (!cleaned) return undefined;
+  if (cleaned === 'postgres' || cleaned === 'postgresql' || cleaned === 'pg') return 'postgres';
+  return cleaned;
+};
+
 // App Schema
 const appSchema = z.object({
   VERSION: z.string().default('0.0.0'),
@@ -42,15 +54,15 @@ const redisSchema = z.object({
 
 // Database Schema
 const dbSchema = z.object({
-  DB_TYPE: z.literal('postgres'),
+  DB_TYPE: z.preprocess(normalizeDbType, z.literal('postgres')).default('postgres'),
   DB_HOST: z.string(),
   DB_PORT: z.preprocess(coerceNumber, z.number().int().positive()),
   DB_NAME_HOCUSPOCUS: z.string().default('hocuspocus'),
   DB_USER_HOCUSPOCUS: z.string().default('hocuspocus_user'),
   DB_PASSWORD_HOCUSPOCUS: z.string().optional(), // Optional since using Docker secrets
-  DB_NAME_SERVER: z.string(),
-  DB_USER_SERVER: z.string(),
-  DB_USER_ADMIN: z.string(),
+  DB_NAME_SERVER: z.string().default('server'),
+  DB_USER_SERVER: z.string().default('app_user'),
+  DB_USER_ADMIN: z.string().default('postgres'),
   // Make password fields optional since they're managed via Docker secrets
   DB_PASSWORD_SERVER: z.string().optional(),
   DB_PASSWORD_ADMIN: z.string().optional(),
@@ -142,6 +154,25 @@ const envSchema = z.object({
   ...authSchema.shape,
   ...googleAuthSchema.shape,
   ...anthropicSchema.shape,
+}).superRefine((val, ctx) => {
+  if (val.APP_ENV !== 'production') return;
+
+  const productionRequired: Array<keyof typeof val> = [
+    'DB_TYPE',
+    'DB_NAME_SERVER',
+    'DB_USER_SERVER',
+    'DB_USER_ADMIN',
+  ];
+
+  for (const key of productionRequired) {
+    if (!process.env[key]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: 'Required in production',
+      });
+    }
+  }
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

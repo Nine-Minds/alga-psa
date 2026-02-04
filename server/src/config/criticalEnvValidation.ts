@@ -2,29 +2,57 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { EnvSecretProvider } from '@alga-psa/core/secrets';
 import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
-import { DB_HOST } from '@/lib/init/serverInit';
 
 /**
  * Critical configuration keys required for application startup
  */
-const REQUIRED_CONFIGS = {
-  // Authentication
-  NEXTAUTH_URL: 'Authentication URL (e.g., http://localhost:3000)',
-  NEXTAUTH_SECRET: 'Authentication secret (generate with: openssl rand -base64 32)',
+type RequiredConfigSpec = {
+  key: string;
+  description: string;
+  lookups: string[];
+  masked?: boolean;
+};
 
-  DB_USER_ADMIN: 'Admin database username (e.g., postgres)',
-  DB_PASSWORD_ADMIN: 'Admin database password (postgres password)',
-  DB_PASSWORD_SUPERUSER: 'Admin database superuser password (duplicate of DB_PASSWORD_ADMIN)',
+const REQUIRED_CONFIGS: RequiredConfigSpec[] = [
+  // Authentication
+  {
+    key: 'NEXTAUTH_URL',
+    description: 'Authentication URL (e.g., http://localhost:3000)',
+    lookups: ['NEXTAUTH_URL'],
+  },
+  {
+    key: 'NEXTAUTH_SECRET',
+    description: 'Authentication secret (generate with: openssl rand -base64 32)',
+    // In Docker secrets, the filename is typically lower_snake_case.
+    lookups: ['NEXTAUTH_SECRET', 'nextauth_secret'],
+    masked: true,
+  },
 
   // Database
-  DB_HOST: 'Database host (e.g., localhost or postgres)',
-  DB_PORT: 'Database port (e.g., 5432)',
-  DB_NAME_SERVER: 'Server database name',
-  DB_USER_SERVER: 'Server database username',
-  DB_PASSWORD_SERVER: 'Server database password',
-} as const;
-
-type RequiredConfigKey = keyof typeof REQUIRED_CONFIGS;
+  {
+    key: 'DB_HOST',
+    description: 'Database host (e.g., localhost or postgres)',
+    lookups: ['DB_HOST'],
+  },
+  {
+    key: 'DB_PORT',
+    description: 'Database port (e.g., 5432)',
+    lookups: ['DB_PORT'],
+  },
+  {
+    key: 'DB_PASSWORD_SERVER',
+    description: 'Server database password',
+    lookups: ['DB_PASSWORD_SERVER', 'db_password_server'],
+    masked: true,
+  },
+  {
+    key: 'DB_PASSWORD_ADMIN',
+    description: 'Admin database password (postgres password)',
+    // Knex/admin connections use the `postgres_password` secret file with a `DB_PASSWORD_ADMIN` env fallback.
+    lookups: ['DB_PASSWORD_ADMIN', 'postgres_password'],
+    masked: true,
+  },
+];
 
 /**
  * Validates that all required configuration values are present
@@ -37,26 +65,27 @@ export async function validateRequiredConfiguration(): Promise<void> {
   const missingConfigs: string[] = [];
   const validatedConfigs: Record<string, string> = {};
 
-  // Check each required configuration
-  for (const [key, description] of Object.entries(REQUIRED_CONFIGS)) {
-    try {
-      // Try uppercase first (environment variables)
-      let value = await secretProvider.getAppSecret(key);
-      
-      // If not found, try lowercase (Docker secrets convention)
-      if (!value || value.trim() === '') {
-        const lowercaseKey = key.toLowerCase();
-        value = await secretProvider.getAppSecret(lowercaseKey);
+  const resolveSpecValue = async (spec: RequiredConfigSpec): Promise<string | undefined> => {
+    for (const lookupKey of spec.lookups) {
+      const value = await secretProvider.getAppSecret(lookupKey);
+      if (value && value.trim() !== '') {
+        return value;
       }
-      
+    }
+    return undefined;
+  };
+
+  for (const spec of REQUIRED_CONFIGS) {
+    try {
+      const value = await resolveSpecValue(spec);
       if (!value || value.trim() === '') {
-        missingConfigs.push(`${key}: ${description}`);
+        missingConfigs.push(`${spec.key}: ${spec.description}`);
       } else {
-        validatedConfigs[key] = value;
+        validatedConfigs[spec.key] = value;
       }
     } catch (error) {
       // If secret provider throws, treat as missing
-      missingConfigs.push(`${key}: ${description}`);
+      missingConfigs.push(`${spec.key}: ${spec.description}`);
     }
   }
   
@@ -71,11 +100,11 @@ export async function validateRequiredConfiguration(): Promise<void> {
       '  2. Docker secrets (if using Docker)',
       '  3. Vault (if configured)',
       '  4. .env file (for local development)',
-      '\nFor more information, see docs/configuration_guide.md'
+      '\nFor more information, see docs/getting-started/configuration_guide.md'
     ].join('\n');
     
     logger.error(errorMessage);
-    // throw new Error('Required configuration validation failed');
+    throw new Error('Required configuration validation failed');
   }
   
   // Log successful validation (with sensitive values masked)
@@ -84,9 +113,8 @@ export async function validateRequiredConfiguration(): Promise<void> {
     NEXTAUTH_SECRET: '***',
     DB_HOST: validatedConfigs.DB_HOST,
     DB_PORT: validatedConfigs.DB_PORT,
-    DB_NAME_SERVER: validatedConfigs.DB_NAME_SERVER,
-    DB_USER_SERVER: validatedConfigs.DB_USER_SERVER,
-    DB_PASSWORD_SERVER: '***'
+    DB_PASSWORD_SERVER: '***',
+    DB_PASSWORD_ADMIN: '***',
   });
 }
 
@@ -94,26 +122,60 @@ export async function validateRequiredConfiguration(): Promise<void> {
  * Quick database connectivity check
  */
 export async function validateDatabaseConnectivity(): Promise<void> {
-  try {
-    logger.info('Testing database connectivity...');
-    
-    // Import dynamically to avoid circular dependencies
-    const { getConnection } = await import('server/src/lib/db/db');
-    const knex = await getConnection(null);
-    
-    // Simple connectivity test
-    await knex.raw('SELECT 1');
-    
-    logger.info('✅ Database connection successful');
-  } catch (error) {
-    logger.error('❌ Database connection failed:', error);
-    throw new Error(
-      'Database connection failed. Please check:\n' +
-      '  1. Database server is running\n' +
-      '  2. Connection parameters are correct\n' +
-      '  3. Network connectivity to database server'
-    );
+  logger.info('Testing database connectivity...');
+
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '5432';
+  const database = process.env.DB_NAME_SERVER || 'server';
+  const user = process.env.DB_USER_SERVER || 'app_user';
+
+  const maxAttempts = Number(process.env.DB_CONNECTIVITY_MAX_ATTEMPTS || 15);
+  const baseDelayMs = Number(process.env.DB_CONNECTIVITY_RETRY_DELAY_MS || 1000);
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { getConnection, resetTenantConnectionPool } = await import('server/src/lib/db/db');
+
+      // Ensure we don't keep a pool stuck in a bad state across retries.
+      await resetTenantConnectionPool();
+
+      const knex = await getConnection(null);
+      await knex.raw('SELECT 1');
+      logger.info('✅ Database connection successful');
+      return;
+    } catch (error) {
+      lastError = error;
+
+      const isLastAttempt = attempt === maxAttempts;
+      const delayMs = Math.min(baseDelayMs * attempt, 5000);
+
+      const errorMessage =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+
+      if (isLastAttempt) {
+        logger.error('❌ Database connection failed:', error);
+        throw new Error(
+          'Database connection failed. Please check:\n' +
+            `  1. Database server is running (host=${host} port=${port})\n` +
+            `  2. Connection parameters are correct (db=${database} user=${user})\n` +
+            '  3. Network connectivity to database server\n' +
+            `  4. Underlying error: ${errorMessage}`
+        );
+      }
+
+      logger.warn(
+        `Database not ready yet (attempt ${attempt}/${maxAttempts}) - retrying in ${delayMs}ms: ${errorMessage}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
   }
+
+  // Should be unreachable, but keep a safe fallback.
+  logger.error('❌ Database connection failed after retries:', lastError);
+  throw new Error('Database connection failed after retries.');
 }
 
 /**
@@ -132,9 +194,7 @@ export async function validateSecretUniqueness(): Promise<void> {
   
   // Check all critical configs and common secrets
   const secretsToCheck = [
-    ...Object.keys(REQUIRED_CONFIGS),
-    // Add lowercase variants
-    ...Object.keys(REQUIRED_CONFIGS).map(k => k.toLowerCase()),
+    ...REQUIRED_CONFIGS.flatMap(spec => spec.lookups),
     // Add other common secrets that might conflict
     'ALGA_AUTH_KEY',
     'alga_auth_key',
