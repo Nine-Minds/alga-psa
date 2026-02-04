@@ -1,15 +1,18 @@
 .pageContainer {
-  height: 100%;
+  min-height: 100vh;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .mainContent {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px);
+  flex: 1;
+  min-height: 0;
   padding: 1rem;
   position: relative;
-  overflow: hidden; /* Prevent scrolling on main content when using kanban */
+  overflow: visible;
 }
 
 .mainContent::-webkit-scrollbar {
@@ -33,7 +36,7 @@
 .contentWrapper {
   display: flex;
   flex: 1;
-  overflow: hidden; /* Remove auto scrolling at this level */
+  overflow: visible;
   gap: 1rem;
   margin-bottom: 8px;
   padding-bottom: 8px;
@@ -68,9 +71,10 @@
 }
 
 .phasesContainerExpanded {
-  min-width: 230px;
-  max-width: 400px;
-  flex: 1;
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  flex-shrink: 0;
 }
 
 .phasesContainerCollapsed {
@@ -159,10 +163,9 @@
 }
 
 .phasesList {
-  min-width: 230px;
-  width: auto;
-  max-width: 400px;
-  flex: 1;
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
   overflow: hidden; /* Let the inner phasesScrollArea handle scrolling */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -190,7 +193,22 @@
   display: flex;
   flex-direction: column;
   min-height: 0; /* Allow it to shrink */
-  overflow: hidden; /* Prevent overflow at this level */
+  overflow: visible;
+}
+
+.kanbanHeader {
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem 0.25rem;
+  margin-top: -0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.kanbanHeaderPinned {
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .kanbanContainer {
@@ -240,8 +258,8 @@
   min-width: 350px; /* Ensure minimum width */
   max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
-  height: calc(100vh - 260px); /* Full height minus header and padding */
-  max-height: calc(100vh - 260px);
+  height: 100%;
+  max-height: 100%;
   overflow: hidden; /* Prevent overflow on the column itself */
 }
 

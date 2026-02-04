@@ -1,25 +1,32 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export function useTruncationDetection<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
+  const [element, setElement] = useState<T | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
 
+  // Callback ref that tracks when the element mounts/unmounts
+  const ref = useCallback((node: T | null) => {
+    setElement(node);
+  }, []);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    if (!element) {
+      setIsTruncated(false);
+      return;
+    }
 
     const check = () => {
-      setIsTruncated(el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
+      setIsTruncated(element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight);
     };
 
     check();
 
     const resizeObserver = new ResizeObserver(() => check());
-    resizeObserver.observe(el);
+    resizeObserver.observe(element);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [element]);
 
   return { ref, isTruncated };
 }

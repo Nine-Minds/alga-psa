@@ -10,14 +10,16 @@ import { generateEntityColor } from '../../lib/colorUtils';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from '@alga-psa/types';
+import { tagInputSizeConfig, type TagSize } from './tagSizeConfig';
 
 interface TagInputProps {
-  id?: string; // Made optional to maintain backward compatibility
+  id?: string;
   existingTags: ITag[];
   currentTags?: ITag[];
   onAddTag: (tagText: string) => Promise<void>;
   className?: string;
   placeholder?: string;
+  size?: TagSize;
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
@@ -26,8 +28,10 @@ export const TagInput: React.FC<TagInputProps> = ({
   currentTags = [],
   onAddTag,
   className = '',
-  placeholder = 'New tag'
+  placeholder = 'New tag',
+  size = 'md'
 }) => {
+  const sizeConfig = tagInputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<ITag[]>([]);
@@ -159,34 +163,34 @@ export const TagInput: React.FC<TagInputProps> = ({
           id="tag-add-button"
           type="button"
           onClick={() => setIsEditing(true)}
-          className="text-gray-500 hover:text-gray-700"
+          className={`text-gray-500 hover:text-gray-700 ${sizeConfig.buttonClass}`}
           variant="icon"
           size="icon"
           style={{ visibility: isEditing ? 'hidden' : 'visible' }}
         >
-          <Plus size={16} />
+          <Plus size={sizeConfig.iconSize} />
         </Button>
       </div>
-      
+
       {/* Render input form using a portal when editing */}
       {isEditing && typeof document !== 'undefined' &&
         createPortal(
-          <div 
+          <div
             ref={containerRef}
             className="fixed z-[100001] flex items-center"
-            style={{ 
+            style={{
               top: `${buttonPosition.top}px`,
               left: `${buttonPosition.left}px`
             }}
           >
-            <div className="flex shadow-md rounded-md bg-white border border-gray-200">
+            <div className={`flex shadow-md rounded-md bg-white border border-gray-200 ${size === 'sm' ? 'shadow-sm' : ''}`}>
               <Input
                 ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
-                className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10 border-0"
+                className={`rounded-l-md focus:ring-offset-0 focus:z-10 border-0 ${sizeConfig.inputClass}`}
                 placeholder={placeholder}
                 autoFocus
                 autoComplete="off"
@@ -197,9 +201,9 @@ export const TagInput: React.FC<TagInputProps> = ({
                 type="button"
                 onClick={() => handleSave()}
                 disabled={isSaving || !inputValue.trim()}
-                className="rounded-r-md px-3 py-1 text-sm font-medium border-0 whitespace-nowrap"
+                className={`rounded-r-md font-medium border-0 whitespace-nowrap ${sizeConfig.saveClass}`}
                 variant={isSaving || !inputValue.trim() ? "outline" : "default"}
-                size="sm"
+                size={size === 'sm' ? "xs" : "sm"}
               >
                 {isSaving ? '...' : 'Save'}
               </Button>

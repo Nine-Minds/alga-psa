@@ -639,8 +639,9 @@ describe('internal notification event handling', () => {
         tenantId,
         projectId,
         taskId,
-        assignedTo: assignedUserId,
-        userId: uuidv4()
+        assignedToId: assignedUserId,
+        assignedToType: 'user' as const,
+        assignedByUserId: uuidv4()
       }
     };
 
@@ -689,16 +690,15 @@ describe('internal notification event handling', () => {
         tenantId,
         projectId,
         taskId,
-        assignedTo: additionalAgentId,
-        userId: assignedById,
-        isAdditionalAgent: true
+        assignedToId: additionalAgentId,
+        assignedToType: 'user' as const,
+        assignedByUserId: assignedById
       }
     };
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('task-additional-agent-assigned')?.user_id).toBe(additionalAgentId);
-    expect(getCallByTemplate('task-additional-agent-added')?.user_id).toBe(primaryAssigneeId);
+    expect(getCallByTemplate('task-assigned')?.user_id).toBe(additionalAgentId);
 
     await unregisterInternalNotificationSubscriber();
   });

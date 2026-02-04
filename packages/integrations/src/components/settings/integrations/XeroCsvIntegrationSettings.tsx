@@ -10,11 +10,17 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import {
   getXeroCsvSettings,
   updateXeroCsvSettings,
   XeroCsvSettings as XeroCsvSettingsType
 } from '@alga-psa/integrations/actions';
+
+const CURRENCY_SELECT_OPTIONS = [
+  { value: '', label: 'Use invoice currency' },
+  ...CURRENCY_OPTIONS
+];
 
 /**
  * Xero CSV Integration Settings Component
@@ -217,15 +223,14 @@ const XeroCsvIntegrationSettings: React.FC = () => {
               <p className="text-xs text-muted-foreground mb-2">
                 Leave blank to use invoice currency.
               </p>
-              <input
+              <CustomSelect
                 id="xero-default-currency"
-                type="text"
-                className="w-full rounded-md border px-3 py-2 text-sm"
-                placeholder="e.g., NZD, USD, AUD"
                 value={settings?.defaultCurrency ?? ''}
-                onChange={(e) => handleSave({ defaultCurrency: e.target.value.toUpperCase() })}
+                onValueChange={(value) => handleSave({ defaultCurrency: value })}
+                options={CURRENCY_SELECT_OPTIONS}
+                placeholder="Select currency"
+                showPlaceholderInDropdown={false}
                 disabled={isSaving}
-                maxLength={3}
               />
             </div>
           </div>

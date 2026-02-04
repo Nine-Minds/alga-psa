@@ -12,6 +12,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { searchUsersForMentions } from '@alga-psa/users/actions';
 
 interface CommentItemProps {
   id?: string;
@@ -135,6 +136,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}
           onContentChange={handleContentChange}
+          searchMentions={searchUsersForMentions}
         />
 
         <div className="flex justify-end space-x-2 mt-1">
