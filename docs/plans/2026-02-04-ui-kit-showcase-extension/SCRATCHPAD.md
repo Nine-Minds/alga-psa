@@ -234,3 +234,5 @@ ls -la ui/dist/iframe/
 - F050: Checkbox demo includes disabled checkbox.
 
 - F051: Switch demo includes on/off states.
+
+- F052: Switch demo includes sm/md/lg sizes.
