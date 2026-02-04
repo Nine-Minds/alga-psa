@@ -163,6 +163,20 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     const errors: string[] = []
     
     try {
+      const normalizedPrices = prices
+        .map((price, index) => {
+          const rawInput = (priceInputs[index] ?? '').trim()
+          if (rawInput === '') {
+            return null
+          }
+
+          const dollars = parseFloat(rawInput)
+          const cents = Math.round((Number.isFinite(dollars) ? dollars : 0) * 100)
+
+          return { ...price, rate: cents }
+        })
+        .filter((p): p is { currency_code: string; rate: number } => p !== null)
+
       // Validate required fields
       if (!serviceData.service_name.trim()) {
         errors.push('Service name is required')
@@ -170,7 +184,8 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
       if (!serviceData.custom_service_type_id || serviceData.custom_service_type_id.trim() === '') { // Check ID is not empty
         errors.push('Service type is required') // Updated label
       }
-      if (prices.length === 0 || prices[0].rate === 0) {
+      // Allow $0.00 services, but require the user to enter a price (including "0").
+      if ((priceInputs[0] ?? '').trim() === '') {
         errors.push('At least one price is required')
       }
       if (!serviceData.billing_method) {
@@ -213,7 +228,7 @@ if (!selectedServiceType) {
 
 // Create base data without the service type IDs
 // Use the first price as the default_rate
-const primaryPrice = prices[0];
+const primaryPrice = normalizedPrices[0] ?? prices[0];
 const baseData = {
   service_name: serviceData.service_name,
   billing_method: serviceData.billing_method as 'fixed' | 'hourly' | 'usage', // Cast to remove empty string type
@@ -240,8 +255,9 @@ console.log('[QuickAddService] Service created successfully:', createdService);
 
 // Set all prices for the service (multi-currency support)
 if (createdService?.service_id) {
-  await setServicePrices(createdService.service_id, prices);
-  console.log(`[QuickAddService] Set ${prices.length} price(s) for service ${createdService.service_id}`);
+  const pricesToSave = normalizedPrices.length > 0 ? normalizedPrices : prices;
+  await setServicePrices(createdService.service_id, pricesToSave);
+  console.log(`[QuickAddService] Set ${pricesToSave.length} price(s) for service ${createdService.service_id}`);
 }
 
       onServiceAdded()
@@ -464,11 +480,11 @@ if (createdService?.service_id) {
                           setPrices(newPrices);
                           // Format the display value
                           const newInputs = [...priceInputs];
-                          newInputs[index] = cents > 0 ? (cents / 100).toFixed(2) : '';
+                          newInputs[index] = inputValue.trim() !== '' ? (cents / 100).toFixed(2) : '';
                           setPriceInputs(newInputs);
                         }}
                         placeholder="0.00"
-                        className={`pl-10 ${hasAttemptedSubmit && index === 0 && prices[0].rate === 0 ? 'border-red-500' : ''}`}
+                        className={`pl-10 ${hasAttemptedSubmit && index === 0 && (priceInputs[0] ?? '').trim() === '' ? 'border-red-500' : ''}`}
                       />
                     </div>
                     {prices.length > 1 && (
@@ -605,7 +621,20 @@ if (createdService?.service_id) {
               <Button id='cancel-button' type="button" variant="outline" onClick={handleDialogClose}>
                 Cancel
               </Button>
-              <Button id='save-button' type="submit" className={!serviceData.service_name || !serviceData.custom_service_type_id || prices[0]?.rate === 0 || !serviceData.billing_method ? 'opacity-50' : ''}>Save Service</Button>
+              <Button
+                id='save-button'
+                type="submit"
+                className={
+                  !serviceData.service_name ||
+                  !serviceData.custom_service_type_id ||
+                  (priceInputs[0] ?? '').trim() === '' ||
+                  !serviceData.billing_method
+                    ? 'opacity-50'
+                    : ''
+                }
+              >
+                Save Service
+              </Button>
             </div>
           </form>
         </DialogContent>

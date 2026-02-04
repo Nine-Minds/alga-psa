@@ -101,15 +101,14 @@ export default function ProjectInfo({
 
   const handleMaterialsClick = () => {
     const clientId = currentProject.client_id;
-    if (!clientId) {
-      toast.error('Project has no client assigned');
-      return;
-    }
     openDrawer(
       <ProjectMaterialsDrawer
         projectId={currentProject.project_id}
         clientId={clientId}
-      />
+      />,
+      undefined,
+      undefined,
+      '560px'
     );
   };
 

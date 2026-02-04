@@ -49,7 +49,7 @@ interface TicketingDashboardProps {
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
-  initialTags?: string[];
+  initialTags?: ITag[];
   initialUsers?: IUser[];
   totalCount: number;
   currentPage: number;
@@ -186,9 +186,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(
-    initialTags.map(tagText => ({ tag_text: tagText } as ITag))
-  );
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
+  // Track previous initialFilterValues.tags to detect actual changes (for back/forward navigation)
+  const prevInitialTagsRef = useRef<string[] | undefined>(initialFilterValues.tags);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
@@ -200,11 +200,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   
   const handleTagsChange = (ticketId: string, tags: ITag[]) => {
     ticketTagsRef.current[ticketId] = tags;
-    
+
     // Update unique tags list if needed
     setAllUniqueTags(current => {
       const currentTagTexts = new Set(current.map(t => t.tag_text));
       const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      // Only return a new array if there are actually new tags to add
+      if (newTags.length === 0) {
+        return current;
+      }
       return [...current, ...newTags];
     });
   };
@@ -249,14 +253,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     fetchAvatarUrls();
   }, [tickets]);
 
+  // Sync selectedTags when initialFilterValues.tags changes (e.g., back/forward navigation)
+  // Uses a ref to compare previous values and avoid infinite loops
   useEffect(() => {
-    const nextTags = initialFilterValues.tags || [];
-    setSelectedTags(prev => {
-      if (prev.length === nextTags.length && prev.every((tag, index) => tag === nextTags[index])) {
-        return prev;
-      }
-      return [...nextTags];
-    });
+    const prevTags = prevInitialTagsRef.current;
+    const newTags = initialFilterValues.tags;
+
+    // Compare arrays - only update if actually different
+    const prevStr = JSON.stringify(prevTags?.slice().sort() || []);
+    const newStr = JSON.stringify(newTags?.slice().sort() || []);
+
+    if (prevStr !== newStr) {
+      prevInitialTagsRef.current = newTags;
+      setSelectedTags(newTags || []);
+    }
   }, [initialFilterValues.tags]);
 
   // Fetch ticket-specific tags when initial tickets change
@@ -348,9 +358,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedResponseState && selectedResponseState !== 'all') {
       params.set('responseState', selectedResponseState);
     }
+    if (selectedTags.length > 0) {
+      params.set('tags', selectedTags.join(','));
+    }
+    if (sortBy && sortBy !== 'entered_at') {
+      params.set('sortBy', sortBy);
+    }
+    if (sortDirection && sortDirection !== 'desc') {
+      params.set('sortDirection', sortDirection);
+    }
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('pageSize', String(pageSize));
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize]);
 
   const isFirstRender = useRef(true);
 

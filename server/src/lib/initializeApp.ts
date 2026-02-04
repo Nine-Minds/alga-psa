@@ -67,7 +67,9 @@ export async function initializeApp() {
     }
 
     let secretProvider: ISecretProvider = await getSecretProviderInstance();
-    let nextAuthSecret: string | undefined = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    let nextAuthSecret: string | undefined =
+      (await secretProvider.getAppSecret('NEXTAUTH_SECRET')) ??
+      (await secretProvider.getAppSecret('nextauth_secret'));
     process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;
 
     // Validate database connectivity (critical - must succeed)

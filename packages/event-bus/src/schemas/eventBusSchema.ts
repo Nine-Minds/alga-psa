@@ -227,9 +227,11 @@ export const ProjectClosedPayloadSchema = ProjectEventPayloadSchema.extend({
 export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   projectId: z.string().uuid(),
   taskId: z.string().uuid(),
-  userId: z.string().uuid(),
-  assignedTo: z.string().uuid(),
-  additionalUsers: z.array(z.string().uuid()).optional(),
+  assignedToId: z.string().uuid(),
+  assignedToType: z.enum(['user', 'team']),
+  assignedByUserId: z.string().uuid().optional(),
+  assignedByName: z.string().optional(),
+  assignedAt: z.string().datetime().optional(),
 });
 
 // Project task additional agent event payload schema
@@ -389,6 +391,10 @@ export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
   documentName: z.string(),
   userId: z.string().uuid(),
   content: z.string(),
+  // Fields for document updates (comparing old vs new content for mention detection)
+  oldContent: z.unknown().optional(),
+  newContent: z.string().optional(),
+  isUpdate: z.boolean().optional(),
   changes: z.record(z.unknown()).optional(),
 });
 
