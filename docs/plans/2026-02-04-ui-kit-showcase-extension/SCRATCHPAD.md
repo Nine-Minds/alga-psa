@@ -467,3 +467,5 @@ ls -la ui/dist/iframe/
 - T088: TextArea tests assert resize styles.
 
 - T089: TextArea tests assert disabled behavior.
+
+- T090: Label tests assert label text rendering.

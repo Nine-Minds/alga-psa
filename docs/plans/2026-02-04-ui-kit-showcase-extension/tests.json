@@ -721,7 +721,7 @@
   {
     "id": "T090",
     "description": "Label demo: Label text is rendered",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
