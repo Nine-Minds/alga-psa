@@ -210,3 +210,5 @@ ls -la ui/dist/iframe/
 - F038: Tooltip demo shows top/bottom/left/right positions.
 
 - F039: Progress demo shows 0/50/100 values.
+
+- F040: Progress demo includes default, striped overlay, and animated examples.
