@@ -35,6 +35,14 @@ const coerceBoolean = (val: unknown): boolean | undefined => {
   return undefined;
 };
 
+const normalizeDbType = (val: unknown): string | undefined => {
+  const cleaned = stripInlineComment(val);
+  if (!cleaned) return undefined;
+  const lower = cleaned.toLowerCase();
+  if (lower === 'postgres' || lower === 'postgresql' || lower === 'pg') return 'postgres';
+  return lower;
+};
+
 // App Schema
 const appSchema = z.object({
   VERSION: z.string().default('0.0.0'),
@@ -54,7 +62,7 @@ const redisSchema = z.object({
 
 // Database Schema
 const dbSchema = z.object({
-  DB_TYPE: z.preprocess(stripInlineComment, z.literal('postgres')).default('postgres'),
+  DB_TYPE: z.preprocess(normalizeDbType, z.literal('postgres')).default('postgres'),
   DB_HOST: z.preprocess(stripInlineComment, z.string()).default('localhost'),
   DB_PORT: z.preprocess(coerceNumber, z.number().int().positive()).default(5432),
   DB_NAME_HOCUSPOCUS: z.string().default('hocuspocus'),
@@ -225,3 +233,4 @@ export function validateEnv(): EnvConfig {
 
 // Export the validation function and types, but don't run validation at module load
 export default validateEnv;
+

@@ -155,26 +155,60 @@ export async function validateRequiredConfiguration(): Promise<void> {
  * Quick database connectivity check
  */
 export async function validateDatabaseConnectivity(): Promise<void> {
-  try {
-    logger.info('Testing database connectivity...');
+  logger.info('Testing database connectivity...');
 
-    // Import dynamically to avoid circular dependencies
-    const { getConnection } = await import('server/src/lib/db/db');
-    const knex = await getConnection(null);
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '5432';
+  const database = process.env.DB_NAME_SERVER || 'server';
+  const user = process.env.DB_USER_SERVER || 'app_user';
 
-    // Simple connectivity test
-    await knex.raw('SELECT 1');
+  const maxAttempts = Number(process.env.DB_CONNECTIVITY_MAX_ATTEMPTS || 15);
+  const baseDelayMs = Number(process.env.DB_CONNECTIVITY_RETRY_DELAY_MS || 1000);
 
-    logger.info('✅ Database connection successful');
-  } catch (error) {
-    logger.error('❌ Database connection failed:', error);
-    throw new Error(
-      'Database connection failed. Please check:\n' +
-        '  1. Database server is running\n' +
-        '  2. Connection parameters are correct\n' +
-        '  3. Network connectivity to database server',
-    );
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { getConnection, resetTenantConnectionPool } = await import('server/src/lib/db/db');
+
+      // Ensure we don't keep a pool stuck in a bad state across retries.
+      await resetTenantConnectionPool();
+
+      const knex = await getConnection(null);
+      await knex.raw('SELECT 1');
+
+      logger.info('✅ Database connection successful');
+      return;
+    } catch (error) {
+      lastError = error;
+
+      const isLastAttempt = attempt === maxAttempts;
+      const delayMs = Math.min(baseDelayMs * attempt, 5000);
+      const errorMessage =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+
+      if (isLastAttempt) {
+        logger.error('❌ Database connection failed:', error);
+        throw new Error(
+          'Database connection failed. Please check:\n' +
+            `  1. Database server is running (host=${host} port=${port})\n` +
+            `  2. Connection parameters are correct (db=${database} user=${user})\n` +
+            '  3. Network connectivity to database server\n' +
+            `  4. Underlying error: ${errorMessage}`
+        );
+      }
+
+      logger.warn(
+        `Database not ready yet (attempt ${attempt}/${maxAttempts}) - retrying in ${delayMs}ms: ${errorMessage}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
   }
+
+  // Should be unreachable, but keep a safe fallback.
+  logger.error('❌ Database connection failed after retries:', lastError);
+  throw new Error('Database connection failed after retries.');
 }
 
 /**

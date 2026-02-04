@@ -22,11 +22,6 @@ import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsAc
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
-import { CompositeSecretProvider } from '@alga-psa/core/secrets';
-import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import type { ISecretProvider } from '@alga-psa/core';
-import { EnvSecretProvider } from '@alga-psa/core/secrets';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
@@ -34,6 +29,7 @@ import { initializeNotificationAccumulator, shutdownNotificationAccumulator } fr
 import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 let isFunctionExecuted = false;
 
@@ -66,11 +62,13 @@ export async function initializeApp() {
       throw error; // Cannot continue without critical configuration
     }
 
-    let secretProvider: ISecretProvider = await getSecretProviderInstance();
-    let nextAuthSecret: string | undefined =
-      (await secretProvider.getAppSecret('NEXTAUTH_SECRET')) ??
-      (await secretProvider.getAppSecret('nextauth_secret'));
-    process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;
+    const secretProvider = await getSecretProviderInstance();
+    const nextAuthSecret =
+      (await secretProvider.getAppSecret('nextauth_secret')) ??
+      (await secretProvider.getAppSecret('NEXTAUTH_SECRET'));
+    if (nextAuthSecret && !nextAuthSecret.trim().startsWith('/run/secrets/')) {
+      process.env.NEXTAUTH_SECRET = nextAuthSecret;
+    }
 
     // Validate database connectivity (critical - must succeed)
     try {
