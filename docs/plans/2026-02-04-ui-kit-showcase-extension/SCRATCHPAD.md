@@ -423,3 +423,5 @@ ls -la ui/dist/iframe/
 - T066: Spinner tests assert size variants.
 
 - T067: LoadingIndicator tests assert text renders.
+
+- T068: Tooltip tests assert hover shows tooltip.
