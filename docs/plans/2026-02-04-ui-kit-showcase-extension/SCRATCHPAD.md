@@ -158,3 +158,5 @@ ls -la ui/dist/iframe/
 - F012: Content area renders category demo panels via Tabs content.
 
 - F013: DemoSection wrapper provides title, description, and demo container styling.
+
+- F014: Button demo shows primary/secondary/ghost/danger variants in .

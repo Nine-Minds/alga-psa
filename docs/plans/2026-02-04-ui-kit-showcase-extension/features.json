@@ -107,7 +107,7 @@
   {
     "id": "F014",
     "description": "Button demo: Show all variants (primary, secondary, ghost, danger)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
