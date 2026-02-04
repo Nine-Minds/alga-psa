@@ -477,3 +477,5 @@ ls -la ui/dist/iframe/
 - T093: SearchInput tests assert search icon.
 
 - T094: SearchInput tests assert clear button appears.
+
+- T095: SearchInput tests assert clear button clears value.
