@@ -385,3 +385,5 @@ ls -la ui/dist/iframe/
 - T047: Stack tests assert row direction.
 
 - T048: Stack tests assert column direction.
+
+- T049: Stack tests assert gap spacing.
