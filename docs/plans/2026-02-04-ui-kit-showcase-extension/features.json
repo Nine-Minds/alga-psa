@@ -435,7 +435,7 @@
   {
     "id": "F055",
     "description": "TextArea demo: Show different row counts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
