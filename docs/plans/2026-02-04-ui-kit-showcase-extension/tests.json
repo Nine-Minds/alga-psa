@@ -785,7 +785,7 @@
   {
     "id": "T098",
     "description": "SearchInput demo: Debounce delays onSearch callback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
