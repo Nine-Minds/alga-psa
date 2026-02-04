@@ -673,7 +673,7 @@
   {
     "id": "T084",
     "description": "Switch demo: Size variants render at different scales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]

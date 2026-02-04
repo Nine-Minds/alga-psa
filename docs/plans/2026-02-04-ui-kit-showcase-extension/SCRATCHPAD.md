@@ -455,3 +455,5 @@ ls -la ui/dist/iframe/
 - T082: Checkbox tests assert disabled checkbox doesn't toggle.
 
 - T083: Switch tests assert toggle behavior.
+
+- T084: Switch tests assert size variants.
