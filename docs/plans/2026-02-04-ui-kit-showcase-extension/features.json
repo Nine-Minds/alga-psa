@@ -587,7 +587,7 @@
   {
     "id": "F074",
     "description": "Drawer demo: Show with title and content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
