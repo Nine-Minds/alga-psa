@@ -569,7 +569,7 @@
   {
     "id": "T071",
     "description": "Progress demo: Striped variant shows stripe pattern",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
