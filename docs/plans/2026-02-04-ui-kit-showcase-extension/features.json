@@ -59,7 +59,7 @@
   {
     "id": "F008",
     "description": "Theme bridge: Support dark mode variable mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Theme Bridge Implementation"
     ]
