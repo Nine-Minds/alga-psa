@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Price/currency selector with auto-select first, single price read-only display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Secondary Flow: Add Material"]
   },
   {

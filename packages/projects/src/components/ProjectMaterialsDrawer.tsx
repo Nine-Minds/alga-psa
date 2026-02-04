@@ -5,12 +5,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Package, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { IProjectMaterial } from '@alga-psa/types';
+import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import {
   listProjectMaterials,
   searchServiceCatalogForPicker,
+  getServicePrices,
   type CatalogPickerItem,
 } from '@alga-psa/billing/actions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -27,6 +29,9 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   const [products, setProducts] = useState<CatalogPickerItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('');
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -69,6 +74,35 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
     }
   }, [showAddForm, products.length, loadProducts]);
 
+  useEffect(() => {
+    if (!selectedProductId) {
+      setProductPrices([]);
+      setSelectedCurrency('');
+      return;
+    }
+
+    const loadPrices = async () => {
+      setIsLoadingPrices(true);
+      try {
+        const prices = await getServicePrices(selectedProductId);
+        setProductPrices(prices);
+        if (prices.length > 0) {
+          setSelectedCurrency(prices[0].currency_code);
+        } else {
+          setSelectedCurrency('');
+        }
+      } catch (error) {
+        console.error('Error loading product prices:', error);
+        setProductPrices([]);
+        setSelectedCurrency('');
+      } finally {
+        setIsLoadingPrices(false);
+      }
+    };
+
+    loadPrices();
+  }, [selectedProductId]);
+
   const calculateTotal = (material: IProjectMaterial) => material.quantity * material.rate;
 
   const unbilledByCurrency = materials
@@ -79,6 +113,8 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
       acc[currency] += calculateTotal(material);
       return acc;
     }, {} as Record<string, number>);
+
+  const selectedPrice = productPrices.find((price) => price.currency_code === selectedCurrency);
 
   return (
     <div className="space-y-4">
@@ -108,7 +144,10 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
                 label: product.sku ? `${product.service_name} (${product.sku})` : product.service_name,
               }))}
               value={selectedProductId}
-              onChange={(value) => setSelectedProductId(value)}
+              onChange={(value) => {
+                setSelectedProductId(value);
+                setSelectedCurrency('');
+              }}
               placeholder="Select a product..."
               searchPlaceholder="Search products..."
               emptyMessage={isLoadingProducts ? 'Loading products...' : 'No products found'}
@@ -117,6 +156,41 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
               disabled={isLoadingProducts}
             />
           </div>
+
+          {selectedProductId && (
+            <div className="space-y-2">
+              <Label htmlFor="project-materials-currency-select">Price</Label>
+              {isLoadingPrices ? (
+                <div className="flex items-center text-sm text-gray-500">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Loading prices...
+                </div>
+              ) : productPrices.length === 0 ? (
+                <div className="text-sm text-amber-600">
+                  No prices configured for this product
+                </div>
+              ) : productPrices.length === 1 ? (
+                <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
+                  {formatCurrencyFromMinorUnits(
+                    productPrices[0].rate,
+                    'en-US',
+                    productPrices[0].currency_code
+                  )}
+                </div>
+              ) : (
+                <CustomSelect
+                  id="project-materials-currency-select"
+                  options={productPrices.map((price) => ({
+                    value: price.currency_code,
+                    label: `${price.currency_code} - ${formatCurrencyFromMinorUnits(price.rate, 'en-US', price.currency_code)}`,
+                  }))}
+                  value={selectedCurrency}
+                  onValueChange={setSelectedCurrency}
+                  placeholder="Select currency..."
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
 
