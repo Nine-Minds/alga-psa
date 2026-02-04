@@ -347,7 +347,7 @@
   {
     "id": "F044",
     "description": "Skeleton demo: Show SkeletonText for text placeholders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
