@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Status badges show Pending/Billed correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

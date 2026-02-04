@@ -139,4 +139,41 @@ describe('ProjectMaterialsDrawer', () => {
     expect(screen.getByText(formatCurrencyFromMinorUnits(5000, 'en-US', 'USD'))).toBeInTheDocument();
     expect(screen.getByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))).toBeInTheDocument();
   });
+
+  it('shows Pending and Billed badges based on billing state (T006)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: null,
+        quantity: 1,
+        rate: 2500,
+        currency_code: 'USD',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+      {
+        project_material_id: 'material-2',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-2',
+        service_name: 'Gadget',
+        sku: null,
+        quantity: 1,
+        rate: 3500,
+        currency_code: 'USD',
+        description: null,
+        is_billed: true,
+      } as IProjectMaterial,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    expect(await screen.findByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('Billed')).toBeInTheDocument();
+  });
 });
