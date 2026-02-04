@@ -241,7 +241,7 @@
   {
     "id": "T030",
     "description": "Button demo: Large size button is visually larger than medium",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
