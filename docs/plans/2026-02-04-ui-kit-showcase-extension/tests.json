@@ -867,7 +867,7 @@
   {
     "id": "T108",
     "description": "Drawer demo: Title is displayed in drawer header",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
