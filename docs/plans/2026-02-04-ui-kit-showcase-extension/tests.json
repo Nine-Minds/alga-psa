@@ -809,7 +809,7 @@
   {
     "id": "T101",
     "description": "Tabs demo: Underline variant shows underline indicator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]

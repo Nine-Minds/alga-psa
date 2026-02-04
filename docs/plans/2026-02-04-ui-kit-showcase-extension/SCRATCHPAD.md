@@ -489,3 +489,5 @@ ls -la ui/dist/iframe/
 - T099: Tabs tests assert default indicator.
 
 - T100: Tabs tests assert pills variant style.
+
+- T101: Tabs tests assert underline variant style.
