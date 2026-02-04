@@ -502,4 +502,14 @@ describe('ProjectMaterialsDrawer', () => {
       expect(actions.listProjectMaterials).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('shows no-client warning and hides add button (T017)', async () => {
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" />);
+
+    expect(
+      await screen.findByText('A client must be assigned to this project before materials can be added.')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+  });
 });

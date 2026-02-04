@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "Warning shown when project has no client, Add button hidden",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
