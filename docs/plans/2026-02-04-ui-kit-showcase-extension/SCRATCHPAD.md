@@ -313,3 +313,5 @@ ls -la ui/dist/iframe/
 - T011: Theme bridge tests assert alga primary mapping.
 
 - T012: Theme bridge tests assert alga border mapping.
+
+- T013: Theme bridge tests assert alga danger mapping.

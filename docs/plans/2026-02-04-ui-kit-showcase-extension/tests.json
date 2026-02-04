@@ -102,7 +102,7 @@
   {
     "id": "T013",
     "description": "Theme bridge: --alga-danger maps to host danger color",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
