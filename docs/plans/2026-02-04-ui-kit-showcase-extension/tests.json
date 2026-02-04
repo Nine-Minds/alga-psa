@@ -417,7 +417,7 @@
   {
     "id": "T052",
     "description": "Badge demo: Warning and danger tones render correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

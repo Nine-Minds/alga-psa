@@ -391,3 +391,5 @@ ls -la ui/dist/iframe/
 - T050: Badge tests assert default tone styling.
 
 - T051: Badge tests assert success tone styling.
+
+- T052: Badge tests assert warning/danger styling.
