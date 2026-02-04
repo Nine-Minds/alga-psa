@@ -449,3 +449,5 @@ ls -la ui/dist/iframe/
 - T079: Checkbox tests assert toggling state.
 
 - T080: Checkbox tests assert indeterminate property.
+
+- T081: Checkbox tests assert label click toggles.
