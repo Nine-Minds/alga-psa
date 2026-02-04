@@ -275,7 +275,7 @@
   {
     "id": "F035",
     "description": "ConfirmDialog demo: Show danger variant for destructive actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
