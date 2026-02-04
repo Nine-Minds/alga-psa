@@ -291,3 +291,5 @@ ls -la ui/dist/iframe/
 
 - F079: DropdownMenu demo shows left/right alignment.
 - T001: Added vitest setup and scaffolding tests covering manifest required fields.
+
+- T002: Scaffold tests assert iframe UI entry in manifest.
