@@ -491,7 +491,7 @@
   {
     "id": "F062",
     "description": "SearchInput demo: Show clear button functionality",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
