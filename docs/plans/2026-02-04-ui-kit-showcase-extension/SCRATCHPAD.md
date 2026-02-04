@@ -174,3 +174,5 @@ ls -la ui/dist/iframe/
 - F020: CustomSelect demo includes disabled state example.
 
 - F021: Card demo shows card container with content and actions.
+
+- F022: Alert demo shows info/success/warning/danger tones.
