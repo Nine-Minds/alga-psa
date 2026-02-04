@@ -95,3 +95,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T007 test to verify currency formatting from minor units.
 - 2026-02-04: Added T008 test to verify per-currency unbilled totals summary.
 - 2026-02-04: Added T009 test to ensure product picker loads catalog items.
+- 2026-02-04: Added T010 test to ensure price selector options appear after product selection.

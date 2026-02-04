@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import type { CatalogPickerItem } from '@alga-psa/billing/actions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -273,5 +273,29 @@ describe('ProjectMaterialsDrawer', () => {
       is_active: true,
       limit: 100,
     });
+  });
+
+  it('shows price selector options after product selection (T010)', async () => {
+    mockProducts = [
+      { service_id: 'service-1', service_name: 'Widget', sku: 'W-1' } as CatalogPickerItem,
+    ];
+    mockPrices = [
+      { service_id: 'service-1', currency_code: 'USD', rate: 1000 } as IServicePrice,
+      { service_id: 'service-1', currency_code: 'EUR', rate: 900 } as IServicePrice,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    const addButton = await screen.findByRole('button', { name: 'Add' });
+    addButton.click();
+
+    const productSelect = await screen.findByTestId('searchable-select');
+    fireEvent.change(productSelect, { target: { value: 'service-1' } });
+
+    const usdLabel = `USD - ${formatCurrencyFromMinorUnits(1000, 'en-US', 'USD')}`;
+    const eurLabel = `EUR - ${formatCurrencyFromMinorUnits(900, 'en-US', 'EUR')}`;
+    expect(await screen.findByText(usdLabel)).toBeInTheDocument();
+    expect(screen.getByText(eurLabel)).toBeInTheDocument();
   });
 });
