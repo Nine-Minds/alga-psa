@@ -289,7 +289,7 @@
   {
     "id": "T036",
     "description": "CustomSelect demo: Selected option is displayed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
