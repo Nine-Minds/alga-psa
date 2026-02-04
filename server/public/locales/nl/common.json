@@ -832,6 +832,25 @@
         "error_deleting": "Kan opmerking niet verwijderen. Probeer het opnieuw.",
         "confirm_delete": "Weet u zeker dat u deze opmerking wilt verwijderen?"
       }
+    },
+    "dependencies": {
+      "title": "Dependencies",
+      "types": {
+        "blocks": "Blocks",
+        "blocked_by": "Blocked by",
+        "related_to": "Related to"
+      },
+      "selectTask": "Select task...",
+      "noTasks": "No other tasks available for dependencies",
+      "actions": {
+        "remove": "Remove dependency",
+        "removeDependencyAria": "Remove {{dependencyType}} dependency on {{taskName}}"
+      },
+      "errors": {
+        "addFailed": "Failed to add dependency",
+        "removeFailed": "Failed to remove dependency",
+        "taskRequired": "TaskDependencies requires task when pendingMode = false"
+      }
     }
   }
 }

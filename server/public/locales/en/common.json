@@ -826,6 +826,25 @@
         "error_deleting": "Failed to delete comment. Please try again.",
         "confirm_delete": "Are you sure you want to delete this comment?"
       }
+    },
+    "dependencies": {
+      "title": "Dependencies",
+      "types": {
+        "blocks": "Blocks",
+        "blocked_by": "Blocked by",
+        "related_to": "Related to"
+      },
+      "selectTask": "Select task...",
+      "noTasks": "No other tasks available for dependencies",
+      "actions": {
+        "remove": "Remove dependency",
+        "removeDependencyAria": "Remove {{dependencyType}} dependency on {{taskName}}"
+      },
+      "errors": {
+        "addFailed": "Failed to add dependency",
+        "removeFailed": "Failed to remove dependency",
+        "taskRequired": "TaskDependencies requires task when pendingMode = false"
+      }
     }
   }
 }
