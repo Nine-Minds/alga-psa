@@ -163,7 +163,7 @@
   {
     "id": "F021",
     "description": "Card demo: Show card with content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
