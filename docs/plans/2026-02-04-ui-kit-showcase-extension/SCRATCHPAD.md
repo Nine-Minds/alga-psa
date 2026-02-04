@@ -381,3 +381,5 @@ ls -la ui/dist/iframe/
 - T045: Text tests assert weight changes.
 
 - T046: Text tests assert element rendering.
+
+- T047: Stack tests assert row direction.
