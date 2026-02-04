@@ -283,7 +283,7 @@
   {
     "id": "F036",
     "description": "Spinner demo: Show different sizes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
