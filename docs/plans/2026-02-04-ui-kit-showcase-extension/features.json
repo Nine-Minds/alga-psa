@@ -227,7 +227,7 @@
   {
     "id": "F029",
     "description": "DataTable demo: Show pagination controls",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
