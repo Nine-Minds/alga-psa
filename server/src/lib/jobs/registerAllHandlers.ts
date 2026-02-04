@@ -29,6 +29,10 @@ import {
   CleanupAiSessionKeysJobData,
 } from './handlers/cleanupAiSessionKeysHandler';
 import {
+  orphanedTagCleanupHandler,
+  OrphanedTagCleanupJobData,
+} from './handlers/orphanedTagCleanupHandler';
+import {
   renewMicrosoftCalendarWebhooks,
   verifyGoogleCalendarProvisioning,
   MicrosoftWebhookRenewalJobData,
@@ -222,6 +226,18 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // Cleanup orphaned tag definitions handler
+  JobHandlerRegistry.register<OrphanedTagCleanupJobData & BaseJobData>(
+    {
+      name: 'cleanup-orphaned-tags',
+      handler: async (_jobId, data) => {
+        await orphanedTagCleanupHandler(data);
+      },
+      retry: { maxAttempts: 2 },
+    },
+    registerOpts
+  );
+
   // ============================================================================
   // EXTENSION SCHEDULED TASKS (EE)
   // ============================================================================
@@ -326,6 +342,7 @@ export function getAvailableJobHandlers(): string[] {
     'reconcile-bucket-usage',
     // Cleanup
     'cleanup-temporary-workflow-forms',
+    'cleanup-orphaned-tags',
     // Calendar
     'renew-microsoft-calendar-webhooks',
     'verify-google-calendar-pubsub',

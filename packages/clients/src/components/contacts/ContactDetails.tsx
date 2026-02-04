@@ -212,7 +212,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     priorityOptions: SelectOption[];
     boardOptions: IBoard[];
     categories: ITicketCategory[];
-    tags?: string[];
+    tags?: ITag[];
     users?: IUser[];
   } | null>(null);
   const [countries, setCountries] = useState<ICountry[]>([]);

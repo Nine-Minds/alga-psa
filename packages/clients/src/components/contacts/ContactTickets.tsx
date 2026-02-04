@@ -39,7 +39,7 @@ interface ContactTicketsProps {
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
-  initialTags?: string[];
+  initialTags?: ITag[];
   initialUsers?: IUser[];
 }
 
@@ -270,16 +270,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const tagsInitializedRef = useRef(false);
   useEffect(() => {
     if (!tagsInitializedRef.current && initialTags.length > 0) {
-      const uniqueTags = initialTags.map((tagText, index) => ({
-        tag_id: `temp-${index}`,
-        tag_text: tagText,
-        tagged_type: 'ticket' as const,
-        tagged_id: '',
-        tenant: '',
-        created_at: new Date(),
-        updated_at: new Date()
-      }));
-      setAllUniqueTags(uniqueTags);
+      setAllUniqueTags(initialTags);
       tagsInitializedRef.current = true;
     }
   }, [initialTags]);

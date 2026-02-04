@@ -337,13 +337,19 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
       }
 
-      // Check if user created the tag (only creator can delete individual tags)
-      // If created_by is not set (legacy tags), allow deletion for backward compatibility
+      // Check tag:delete permission for tags created by others
+      // Permission model:
+      // - Users with tag:delete permission can delete any tag
+      // - Users without tag:delete permission can only delete tags they created
+      // - Legacy tags (no created_by) can be deleted by anyone with entity update permission
       if (existingTag.created_by && existingTag.created_by !== currentUser.user_id) {
-        await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
+        if (!await hasPermissionAsync(currentUser, 'tag', 'delete', trx)) {
+          await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
+        }
       }
 
       // id is actually mapping_id - just delete the mapping
+      // Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
       await TagMapping.delete(trx, tenant, id);
 
       const occurredAt = new Date().toISOString();
@@ -444,10 +450,24 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const definitions = await TagDefinition.getAllByType(trx, tenant, entityType);
+      // Get tag definitions that have at least one mapping (filter out orphans)
+      // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
+      const result = await trx.raw(`
+        SELECT DISTINCT ON (td.tag_text) td.*
+        FROM tag_definitions td
+        WHERE td.tenant = ?
+          AND td.tagged_type = ?
+          AND EXISTS (
+            SELECT 1 FROM tag_mappings tm
+            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
+          )
+        ORDER BY td.tag_text ASC, td.created_at ASC
+      `, [tenant, entityType]);
+
+      const definitions = result.rows || [];
 
       // Convert to ITag format (use definition ID as tag_id since these are unique)
-      return definitions.map(def => ({
+      return definitions.map((def: any) => ({
         tag_id: def.tag_id,
         tenant,
         board_id: def.board_id || undefined,

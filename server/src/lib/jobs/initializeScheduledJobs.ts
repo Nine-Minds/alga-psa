@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleOrphanedTagCleanupJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -161,6 +161,7 @@ export async function initializeScheduledJobs(): Promise<void> {
       } catch (error) {
         logger.error(`Failed to schedule email webhook maintenance job for tenant ${tenantId}`, error);
       }
+
    }
    
    
@@ -176,6 +177,20 @@ export async function initializeScheduledJobs(): Promise<void> {
      }
    } catch (error) {
      logger.error('Failed to schedule temporary forms cleanup job', error);
+   }
+
+   // Schedule orphaned tag cleanup job (system-wide, daily at 5:00 AM)
+   try {
+     const tagCleanupJobId = await scheduleOrphanedTagCleanupJob();
+     if (tagCleanupJobId) {
+       logger.info(`Scheduled orphaned tag cleanup job with ID ${tagCleanupJobId}`);
+     } else {
+       logger.info('Orphaned tag cleanup job already scheduled (singleton active)', {
+         returnedJobId: tagCleanupJobId
+       });
+     }
+   } catch (error) {
+     logger.error('Failed to schedule orphaned tag cleanup job', error);
    }
 
    if (process.env.EDITION === 'enterprise') {

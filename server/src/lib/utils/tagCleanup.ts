@@ -99,30 +99,3 @@ export async function transferEntityTags(
   return result;
 }
 
-/**
- * Clean up orphaned tag definitions
- * Call this periodically to remove unused tag definitions
- */
-export async function cleanupOrphanedTagDefinitions(
-  trx: Knex.Transaction
-): Promise<number> {
-  const tenant = await getCurrentTenantId();
-  if (!tenant) {
-    throw new Error('Tenant context is required for tag operations');
-  }
-
-  // Find and delete tag definitions with no mappings
-  const result = await trx.raw(`
-    DELETE FROM tag_definitions td
-    WHERE td.tenant = ?
-    AND NOT EXISTS (
-      SELECT 1 
-      FROM tag_mappings tm 
-      WHERE tm.tenant = td.tenant 
-      AND tm.tag_id = td.tag_id
-    )
-    RETURNING tag_id
-  `, [tenant]);
-
-  return result.rows.length;
-}
