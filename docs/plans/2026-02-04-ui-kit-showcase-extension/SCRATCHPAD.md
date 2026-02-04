@@ -405,3 +405,5 @@ ls -la ui/dist/iframe/
 - T057: DataTable tests assert responsive column hiding when narrow.
 
 - T058: DataTable tests assert badge render in custom cell.
+
+- T059: Dialog tests assert open on trigger.
