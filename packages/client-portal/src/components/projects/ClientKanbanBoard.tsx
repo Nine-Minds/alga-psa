@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Hook return type issues with useTruncationDetection
 'use client';
 
 import React from 'react';
@@ -108,7 +106,7 @@ function TaskCard({
 }) {
   const { t } = useTranslation('clientPortal');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
-  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+  const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
   const allowUploads = visibleFields.includes('document_uploads');
   const showDependencies = visibleFields.includes('dependencies');
