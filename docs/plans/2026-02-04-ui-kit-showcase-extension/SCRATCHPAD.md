@@ -178,3 +178,5 @@ ls -la ui/dist/iframe/
 - F022: Alert demo shows info/success/warning/danger tones.
 
 - F023: Text demo shows size and weight variants.
+
+- F024: Text demo renders as h1/h2/p/span elements.
