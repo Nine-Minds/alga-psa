@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Package, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
@@ -32,6 +33,8 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [description, setDescription] = useState<string>('');
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -191,6 +194,41 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
               )}
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-materials-quantity">Quantity</Label>
+              <Input
+                id="project-materials-quantity"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(event) => setQuantity(Math.max(1, parseInt(event.target.value) || 1))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Total</Label>
+              <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
+                {selectedPrice
+                  ? formatCurrencyFromMinorUnits(
+                      selectedPrice.rate * quantity,
+                      'en-US',
+                      selectedPrice.currency_code
+                    )
+                  : '-'}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="project-materials-description">Description (optional)</Label>
+            <Input
+              id="project-materials-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Additional notes..."
+            />
+          </div>
         </div>
       )}
 

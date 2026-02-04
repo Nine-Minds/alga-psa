@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Quantity input (min 1), optional description, calculated total display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Secondary Flow: Add Material"]
   },
   {
