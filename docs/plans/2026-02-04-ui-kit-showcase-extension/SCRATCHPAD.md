@@ -437,3 +437,5 @@ ls -la ui/dist/iframe/
 - T073: Progress tests assert size height changes.
 
 - T074: Progress tests assert indeterminate animation.
+
+- T075: Skeleton tests assert pulse animation.

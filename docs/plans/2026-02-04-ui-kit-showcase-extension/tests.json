@@ -601,7 +601,7 @@
   {
     "id": "T075",
     "description": "Skeleton demo: Basic skeleton renders with pulse animation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
