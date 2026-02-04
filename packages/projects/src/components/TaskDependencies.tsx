@@ -76,7 +76,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   const pendingDepsRef = useRef(pendingDeps);
   pendingDepsRef.current = pendingDeps;
 
-  // Guard: task is required when not in pendingMode (after hooks to satisfy Rules of Hooks)
+  // Guard: task is required when not in pendingMode
   if (!pendingMode && !task) {
     throw new Error(t('projects.dependencies.errors.taskRequired', 'TaskDependencies requires task when pendingMode = false'));
   }
@@ -87,7 +87,6 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   }, [initialPredecessors, initialSuccessors]);
 
   useEffect(() => {
-    // Notify parent when there are unsaved changes
     if (onUnsavedChanges) {
       onUnsavedChanges(!!selectedTaskId);
     }
@@ -103,15 +102,12 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       return;
     }
 
-    // Find the phase for this task
     let taskPhase = phases?.find(p => p.phase_id === taskData.phase_id);
 
-    // If phase not found or phases array is empty, create a minimal phase object
     if (!taskPhase && phases && phases.length > 0) {
       taskPhase = phases[0];
     }
 
-    // If still no phase or no project_id, we can't open the task editor safely
     if (!taskPhase || !taskPhase.project_id) {
       console.error('Cannot open task: missing phase or project information');
       return;
@@ -124,8 +120,8 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         phases={phases}
         users={users}
         inDrawer={true}
-        onClose={() => {}} // Drawer handles its own closing
-        onTaskUpdated={(updatedTask: IProjectTask | null) => {
+        onClose={() => {}}
+        onTaskUpdated={(_updatedTask: IProjectTask | null) => {
           if (refreshDependencies) {
             refreshDependencies();
           }
@@ -134,7 +130,6 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     );
   };
 
-  // Get dependency type display info with icons
   const getDependencyTypeInfo = useCallback((type: DependencyType) => {
     switch (type) {
       case 'blocks':
@@ -148,7 +143,6 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     }
   }, [t]);
 
-  // Function to get the display label and icon from the perspective of the viewing task
   const getDependencyDisplayInfo = useCallback((dependency: IProjectTaskDependency, isPredecessor: boolean) => {
     const { dependency_type } = dependency;
 
@@ -157,14 +151,12 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     }
 
     if (isPredecessor) {
-      // This task depends on the predecessor
       if (dependency_type === 'blocks') {
         return getDependencyTypeInfo('blocked_by');
       } else if (dependency_type === 'blocked_by') {
         return getDependencyTypeInfo('blocks');
       }
     } else {
-      // This task is the predecessor to the successor
       if (dependency_type === 'blocks') {
         return getDependencyTypeInfo('blocks');
       } else if (dependency_type === 'blocked_by') {
@@ -175,50 +167,10 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     return getDependencyTypeInfo(dependency_type);
   }, [getDependencyTypeInfo]);
 
-  const addDependency = useCallback(async (targetTaskId: string, dependencyType: DependencyType) => {
-    if (!task?.task_id) {
-      throw new Error(t('projects.dependencies.errors.taskRequired', 'TaskDependencies requires task when pendingMode = false'));
-    }
-
-    setError(null);
-    setIsLoading(true);
-    try {
-      // Always pass current task as predecessor and selected task as successor.
-      // addTaskDependency handles the swap for 'blocked_by' internally.
-      const predecessorId = task.task_id;
-      const successorId = targetTaskId;
-
-      await addTaskDependency(predecessorId, successorId, dependencyType, 0, undefined);
-      if (refreshDependencies) refreshDependencies();
-    } catch (err: any) {
-      setError(err.message || t('projects.dependencies.errors.addFailed', 'Failed to add dependency'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [refreshDependencies, task?.task_id, t]);
-
-  useImperativeHandle(ref, () => ({
-    savePendingDependency: async () => {
-      const currentTaskId = selectedTaskIdRef.current;
-      if (currentTaskId && !pendingModeRef.current) {
-        await addDependency(currentTaskId, selectedTypeRef.current);
-        setSelectedTaskId('');
-        setSelectedType('blocked_by');
-        return true;
-      }
-      return false;
-    },
-    hasPendingChanges: () => {
-      return !!selectedTaskIdRef.current || (pendingModeRef.current && pendingDepsRef.current.length > 0);
-    },
-    getPendingDependencies: () => pendingDepsRef.current,
-  }), [addDependency]);
-
   const handleAdd = async () => {
     if (!selectedTaskId) return;
 
     if (pendingMode) {
-      // In pending mode (create), store locally instead of calling API
       const targetTask = allTasksInProject.find(t => t.task_id === selectedTaskId);
       if (targetTask) {
         setPendingDeps(prev => [...prev, {
@@ -234,10 +186,53 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       return;
     }
 
-    await addDependency(selectedTaskId, selectedType);
-    setSelectedTaskId('');
-    setSelectedType('blocked_by');
+    if (!task?.task_id) return;
+
+    setError(null);
+    setIsLoading(true);
+    try {
+      // Always pass current task as predecessor and selected task as successor.
+      // addTaskDependency handles the swap for 'blocked_by' internally.
+      await addTaskDependency(task.task_id, selectedTaskId, selectedType, 0, undefined);
+      setSelectedTaskId('');
+      setSelectedType('blocked_by');
+      if (refreshDependencies) refreshDependencies();
+    } catch (err: any) {
+      setError(err.message || t('projects.dependencies.errors.addFailed', 'Failed to add dependency'));
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Stable imperative handle — callbacks read from refs so the handle
+  // never needs to be recreated when local state changes.
+  useImperativeHandle(ref, () => ({
+    savePendingDependency: async () => {
+      const currentTaskId = selectedTaskIdRef.current;
+      if (currentTaskId && !pendingModeRef.current && task?.task_id) {
+        setError(null);
+        setIsLoading(true);
+        try {
+          await addTaskDependency(task.task_id, currentTaskId, selectedTypeRef.current, 0, undefined);
+          setSelectedTaskId('');
+          selectedTaskIdRef.current = '';
+          setSelectedType('blocked_by');
+          if (refreshDependencies) refreshDependencies();
+          return true;
+        } catch (err: any) {
+          setError(err.message || t('projects.dependencies.errors.addFailed', 'Failed to add dependency'));
+          return false;
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      return false;
+    },
+    hasPendingChanges: () => {
+      return !!selectedTaskIdRef.current || (pendingModeRef.current && pendingDepsRef.current.length > 0);
+    },
+    getPendingDependencies: () => pendingDepsRef.current,
+  }), [task?.task_id, refreshDependencies, t]);
 
   const handleRemove = async (dependencyId: string) => {
     setError(null);
@@ -256,27 +251,22 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     if (task && t.task_id === task.task_id) return false;
 
     if (pendingMode) {
-      // In pending mode, filter out tasks already added with the same dependency type
       return !pendingDeps.find(d =>
         d.targetTaskId === t.task_id && d.dependencyType === selectedType
       );
     }
 
-    // Check based on what dependency will actually be created
     if (selectedType === 'blocks') {
-      // Current task blocks selected task: check if this dependency exists
       return !successors.find(d =>
         d.successor_task_id === t.task_id &&
         d.dependency_type === 'blocks'
       );
     } else if (selectedType === 'blocked_by') {
-      // Current task blocked by selected task: check if reverse exists
       return !predecessors.find(d =>
         d.predecessor_task_id === t.task_id &&
         d.dependency_type === 'blocks'
       );
     } else {
-      // Related to - check both directions
       return !predecessors.find(d =>
         d.predecessor_task_id === t.task_id &&
         d.dependency_type === 'related_to'
@@ -443,35 +433,42 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
 
       {/* Add new dependency - inline form */}
       {availableTasks.length > 0 && (
-        <div className="flex items-center gap-2">
-          <CustomSelect
-            value={selectedType}
-            onValueChange={handleTypeChange}
-            options={dependencyTypeOptions}
-            className="w-32"
-            disabled={isLoading}
-          />
-          <div className="flex-1">
-            <SearchableSelect
-              id="dependency-target-task-select"
-              value={selectedTaskId}
-              onChange={setSelectedTaskId}
-              options={availableTaskOptions}
-              placeholder={t('projects.dependencies.selectTask', 'Select task...')}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <CustomSelect
+              value={selectedType}
+              onValueChange={handleTypeChange}
+              options={dependencyTypeOptions}
+              className="w-32"
               disabled={isLoading}
-              dropdownMode="inline"
             />
+            <div className="flex-1">
+              <SearchableSelect
+                id="dependency-target-task-select"
+                value={selectedTaskId}
+                onChange={setSelectedTaskId}
+                options={availableTaskOptions}
+                placeholder={t('projects.dependencies.selectTask', 'Select task...')}
+                disabled={isLoading}
+                dropdownMode="inline"
+              />
+            </div>
+            <Button
+              id="add-dependency"
+              type="button"
+              variant="soft"
+              size="sm"
+              onClick={handleAdd}
+              disabled={!selectedTaskId || isLoading}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            id="add-dependency"
-            type="button"
-            variant="soft"
-            size="sm"
-            onClick={handleAdd}
-            disabled={!selectedTaskId || isLoading}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {selectedTaskId && (
+            <p className="text-xs text-amber-600">
+              {t('projects.dependencies.unsavedHint', 'Click the + button to add this dependency')}
+            </p>
+          )}
         </div>
       )}
 

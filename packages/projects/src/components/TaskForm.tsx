@@ -88,8 +88,6 @@ export default function TaskForm({
   projectTreeData = []
 }: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
-  const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || '');
   const [description, setDescription] = useState(task?.description || '');
@@ -127,6 +125,8 @@ export default function TaskForm({
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
+  const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedTaskType, setSelectedTaskType] = useState<string>(task?.task_type_key || 'task');
   const [initialTaskType] = useState<string>(task?.task_type_key || 'task');
@@ -434,7 +434,7 @@ export default function TaskForm({
 
     setValidationErrors([]);
 
-    // Check for unsaved dependencies
+    // Check for unsaved dependency selection
     if (dependenciesRef.current?.hasPendingChanges()) {
       setPendingSubmit(e);
       setShowDependencyConfirmation(true);
@@ -442,6 +442,19 @@ export default function TaskForm({
     }
 
     await performSubmit();
+  };
+
+  const handleDependencyConfirm = async () => {
+    // "Discard changes" — discard the pending dependency selection and save the task
+    setShowDependencyConfirmation(false);
+    setPendingSubmit(null);
+    await performSubmit();
+  };
+
+  const handleDependencyCancel = () => {
+    // "Continue editing" — go back so user can click the + button
+    setShowDependencyConfirmation(false);
+    setPendingSubmit(null);
   };
 
   const performSubmit = async () => {
@@ -573,21 +586,6 @@ export default function TaskForm({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDependencyConfirm = async () => {
-    if (dependenciesRef.current) {
-      await dependenciesRef.current.savePendingDependency();
-    }
-    setShowDependencyConfirmation(false);
-    await performSubmit();
-  };
-
-  const handleDependencyCancel = async () => {
-    setShowDependencyConfirmation(false);
-    setPendingSubmit(null);
-    // Proceed with submit without saving dependency
-    await performSubmit();
   };
 
   const handlePhaseChange = (phaseId: string) => {
@@ -1588,10 +1586,10 @@ export default function TaskForm({
         isOpen={showDependencyConfirmation}
         onClose={handleDependencyCancel}
         onConfirm={handleDependencyConfirm}
-        title="Unsaved Dependency Changes"
-        message="You have unsaved dependency changes. Would you like to save them before updating the task?"
-        confirmLabel="Save & Continue"
-        cancelLabel="Discard & Continue"
+        title="Unsaved Changes"
+        message="You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save."
+        confirmLabel="Discard changes"
+        cancelLabel="Continue editing"
       />
 
     </>
