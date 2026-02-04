@@ -963,7 +963,7 @@
   {
     "id": "T120",
     "description": "Build: npm run build completes without errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -971,7 +971,7 @@
   {
     "id": "T121",
     "description": "Build: Output files are generated in ui/dist/iframe/",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -979,7 +979,7 @@
   {
     "id": "T122",
     "description": "Integration: Extension appears in app menu after installation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
@@ -987,7 +987,7 @@
   {
     "id": "T123",
     "description": "Integration: Extension iframe loads without console errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
@@ -995,7 +995,7 @@
   {
     "id": "T124",
     "description": "Integration: All UI kit components render correctly in iframe context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]

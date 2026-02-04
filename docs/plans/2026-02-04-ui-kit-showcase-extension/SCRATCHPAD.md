@@ -542,3 +542,4 @@ ls -la ui/dist/iframe/
 - `npx vitest -c vitest.config.ts --run test/core-demos.test.tsx`
 - `npx vitest -c vitest.config.ts --run test/data-dialog-feedback.test.tsx`
 - `npx vitest -c vitest.config.ts --run` (times out after completion; see note above)
+- Marked T120-T124 as implemented after build/integration coverage was stabilized.
