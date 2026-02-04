@@ -168,3 +168,5 @@ ls -la ui/dist/iframe/
 - F017: Input demo renders basic input with placeholder.
 
 - F018: Input demo renders disabled input state.
+
+- F019: CustomSelect demo renders options with placeholder and selection state.
