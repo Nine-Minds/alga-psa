@@ -268,3 +268,5 @@ ls -la ui/dist/iframe/
 - F067: Tabs demo includes pills variant.
 
 - F068: Tabs demo includes underline variant.
+
+- F069: Tabs demo includes disabled tab example.

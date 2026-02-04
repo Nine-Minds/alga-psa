@@ -547,7 +547,7 @@
   {
     "id": "F069",
     "description": "Tabs demo: Show disabled tab",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
