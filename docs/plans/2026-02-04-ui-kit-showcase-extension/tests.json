@@ -769,7 +769,7 @@
   {
     "id": "T096",
     "description": "SearchInput demo: Loading state shows spinner instead of clear button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
