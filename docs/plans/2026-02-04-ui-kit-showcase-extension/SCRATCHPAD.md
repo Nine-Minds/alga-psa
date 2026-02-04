@@ -343,3 +343,5 @@ ls -la ui/dist/iframe/
 - T026: Button tests assert secondary background mapping.
 
 - T027: Button tests assert ghost button transparency.
+
+- T028: Button tests assert danger background mapping.
