@@ -209,7 +209,7 @@
   {
     "id": "T026",
     "description": "Button demo: Secondary variant renders with muted background",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
