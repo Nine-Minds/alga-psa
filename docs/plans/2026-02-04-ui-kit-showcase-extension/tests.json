@@ -777,7 +777,7 @@
   {
     "id": "T097",
     "description": "SearchInput demo: Size variants render at different scales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]

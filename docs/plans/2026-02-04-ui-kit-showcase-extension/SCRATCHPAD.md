@@ -481,3 +481,5 @@ ls -la ui/dist/iframe/
 - T095: SearchInput tests assert clear button clears value.
 
 - T096: SearchInput tests assert loading spinner state.
+
+- T097: SearchInput tests assert size variants.
