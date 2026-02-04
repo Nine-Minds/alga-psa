@@ -331,3 +331,5 @@ ls -la ui/dist/iframe/
 - T020: Layout tests assert tab switching updates content.
 
 - T021: Layout tests assert default tab is Core.
+
+- T022: DemoSection test asserts title render.

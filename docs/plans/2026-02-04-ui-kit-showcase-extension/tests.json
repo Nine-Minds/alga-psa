@@ -177,7 +177,7 @@
   {
     "id": "T022",
     "description": "DemoSection: Renders title text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
