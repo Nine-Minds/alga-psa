@@ -451,7 +451,7 @@
   {
     "id": "F057",
     "description": "TextArea demo: Show disabled state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

@@ -244,3 +244,5 @@ ls -la ui/dist/iframe/
 - F055: TextArea demo includes multiple row counts.
 
 - F056: TextArea demo includes resize options.
+
+- F057: TextArea demo includes disabled state.
