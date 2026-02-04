@@ -527,3 +527,4 @@ ls -la ui/dist/iframe/
 - T118: DropdownMenu tests assert menu closes on item click.
 
 - T119: DropdownMenu tests assert menu closes on outside click.
+- F080: Fixed ui-kit path aliases and dependency, then ran `npm run build` successfully for iframe bundle.
