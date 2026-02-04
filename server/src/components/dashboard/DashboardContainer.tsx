@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
+import { isEnterprise } from '@/lib/features';
 
 // App shell: dashboard landing container (server-owned, uses analytics).
 import {
@@ -53,7 +54,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: str
   );
 };
 
-function WelcomeBanner() {
+function EnterpriseWelcomeBanner() {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)]">
       <div className="flex items-start gap-4">
@@ -73,6 +74,26 @@ function WelcomeBanner() {
   );
 }
 
+function CommunityWelcomeBanner() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border-200))] bg-white px-6 py-5 shadow-sm">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))]">
+          <Sparkles className="h-5 w-5" style={{ color: 'rgb(var(--color-primary-500))' }} />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'rgb(var(--color-text-900))' }}>
+            Welcome back
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
+            Jump into tickets, scheduling, projects, and reporting from your dashboard.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
   const posthog = usePostHog();
 
@@ -80,8 +101,8 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
 
   useEffect(() => {
     posthog?.capture('dashboard_viewed', {
-      dashboard_type: 'welcome',
-      section_count: 3,
+      dashboard_type: isEnterprise ? 'welcome' : 'generic',
+      section_count: isEnterprise && onboardingSection ? 3 : 2,
     });
     posthog?.capture('feature_discovered', {
       feature_name: 'dashboard_overview',
@@ -94,9 +115,9 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col gap-8">
-              <WelcomeBanner />
+              {isEnterprise ? <EnterpriseWelcomeBanner /> : <CommunityWelcomeBanner />}
 
-              {onboardingSection}
+              {isEnterprise ? onboardingSection : null}
 
               <div>
                 <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>
