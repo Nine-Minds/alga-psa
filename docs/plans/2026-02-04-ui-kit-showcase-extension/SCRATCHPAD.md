@@ -427,3 +427,5 @@ ls -la ui/dist/iframe/
 - T068: Tooltip tests assert hover shows tooltip.
 
 - T069: Tooltip tests assert multiple positions render.
+
+- T070: Progress tests assert fill width for values.
