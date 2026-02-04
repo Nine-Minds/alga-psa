@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import type { CatalogPickerItem } from '@alga-psa/billing/actions';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 let mockMaterials: IProjectMaterial[] = [];
 let mockProducts: CatalogPickerItem[] = [];
@@ -104,5 +105,38 @@ describe('ProjectMaterialsDrawer', () => {
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText('No materials added to this project.')).toBeInTheDocument();
+  });
+
+  it('renders table columns and material data (T005)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: 'W-100',
+        quantity: 2,
+        rate: 5000,
+        currency_code: 'USD',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    expect(await screen.findByText('Product')).toBeInTheDocument();
+    expect(screen.getByText('Qty')).toBeInTheDocument();
+    expect(screen.getByText('Rate')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
+
+    expect(screen.getByText('Widget')).toBeInTheDocument();
+    expect(screen.getByText('(W-100)')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText(formatCurrencyFromMinorUnits(5000, 'en-US', 'USD'))).toBeInTheDocument();
+    expect(screen.getByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))).toBeInTheDocument();
   });
 });
