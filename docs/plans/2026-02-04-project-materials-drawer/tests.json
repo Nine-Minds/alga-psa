@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Loading spinner shown while fetching materials",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
