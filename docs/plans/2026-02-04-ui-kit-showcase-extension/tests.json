@@ -119,7 +119,7 @@
   {
     "id": "T015",
     "description": "Theme bridge: Theme toggle switches between light and dark",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
