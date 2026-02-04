@@ -539,7 +539,7 @@
   {
     "id": "F068",
     "description": "Tabs demo: Show underline variant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
