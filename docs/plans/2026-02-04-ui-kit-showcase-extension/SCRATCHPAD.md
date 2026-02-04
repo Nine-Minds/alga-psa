@@ -439,3 +439,5 @@ ls -la ui/dist/iframe/
 - T074: Progress tests assert indeterminate animation.
 
 - T075: Skeleton tests assert pulse animation.
+
+- T076: Skeleton tests assert multiple text lines.
