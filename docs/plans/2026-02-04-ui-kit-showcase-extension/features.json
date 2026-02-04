@@ -571,7 +571,7 @@
   {
     "id": "F072",
     "description": "Drawer demo: Show bottom position",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
