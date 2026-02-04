@@ -393,7 +393,7 @@
   {
     "id": "T049",
     "description": "Stack demo: Gap prop adds spacing between items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
