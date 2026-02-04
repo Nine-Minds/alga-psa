@@ -891,7 +891,7 @@
   {
     "id": "T111",
     "description": "Drawer demo: Overlay click closes drawer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]

@@ -509,3 +509,5 @@ ls -la ui/dist/iframe/
 - T109: Drawer tests assert close button closes drawer.
 
 - T110: Drawer tests assert escape closes drawer.
+
+- T111: Drawer tests assert overlay click closes drawer.
