@@ -222,3 +222,5 @@ ls -la ui/dist/iframe/
 - F044: Skeleton demo includes SkeletonText lines.
 
 - F045: Skeleton demo includes SkeletonCircle example.
+
+- F046: Skeleton demo includes SkeletonRectangle example.
