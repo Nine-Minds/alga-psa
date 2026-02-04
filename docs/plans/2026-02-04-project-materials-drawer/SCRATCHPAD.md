@@ -107,3 +107,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Adjusted add button to allow validation toasts without disabling, and aligned vitest aliases for @alga-psa/projects.
 - 2026-02-04: Added vitest alias for @alga-psa/tags and ensured RTL cleanup between drawer tests.
 - 2026-02-04: Added explicit data-automation-id wrappers for quantity/description fields and mocked TagManager in tests.
+- 2026-02-04: Test run: `npx vitest --run packages/projects/tests/packageDependencies.test.ts packages/projects/tests/projectInfoDrawer.test.tsx packages/projects/tests/projectMaterialsDrawer.test.tsx` (passes; warnings about act()).
