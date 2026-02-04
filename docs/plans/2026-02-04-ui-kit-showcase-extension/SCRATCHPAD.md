@@ -395,3 +395,5 @@ ls -la ui/dist/iframe/
 - T052: Badge tests assert warning/danger styling.
 
 - T053: DataTable tests assert headers render.
+
+- T054: DataTable tests assert sortable header changes order.
