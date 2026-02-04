@@ -443,7 +443,7 @@
   {
     "id": "F056",
     "description": "TextArea demo: Show resize options (none, vertical, horizontal, both)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
