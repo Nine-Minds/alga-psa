@@ -180,3 +180,5 @@ ls -la ui/dist/iframe/
 - F023: Text demo shows size and weight variants.
 
 - F024: Text demo renders as h1/h2/p/span elements.
+
+- F025: Stack demo shows row and column layouts.
