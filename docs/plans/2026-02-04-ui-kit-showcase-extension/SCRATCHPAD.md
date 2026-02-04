@@ -383,3 +383,5 @@ ls -la ui/dist/iframe/
 - T046: Text tests assert element rendering.
 
 - T047: Stack tests assert row direction.
+
+- T048: Stack tests assert column direction.
