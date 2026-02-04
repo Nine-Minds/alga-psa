@@ -329,3 +329,5 @@ ls -la ui/dist/iframe/
 - T019: Layout tests assert six category tabs.
 
 - T020: Layout tests assert tab switching updates content.
+
+- T021: Layout tests assert default tab is Core.

@@ -169,7 +169,7 @@
   {
     "id": "T021",
     "description": "Layout: Default tab is 'Core' when extension loads",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
