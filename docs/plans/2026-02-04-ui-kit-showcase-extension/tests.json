@@ -915,7 +915,7 @@
   {
     "id": "T114",
     "description": "DropdownMenu demo: Dividers separate menu sections",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
