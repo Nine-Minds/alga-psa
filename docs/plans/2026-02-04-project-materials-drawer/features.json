@@ -1,0 +1,74 @@
+[
+  {
+    "id": "F001",
+    "description": "Add @alga-psa/billing dependency to projects package.json",
+    "implemented": false,
+    "prdRefs": ["Architecture Compliance"]
+  },
+  {
+    "id": "F002",
+    "description": "Drawer container with 560px width, header with title and Add button",
+    "implemented": false,
+    "prdRefs": ["Drawer Layout", "Drawer Structure"]
+  },
+  {
+    "id": "F003",
+    "description": "Load and display materials list via listProjectMaterials with loading/empty states",
+    "implemented": false,
+    "prdRefs": ["Primary Flow"]
+  },
+  {
+    "id": "F004",
+    "description": "Materials table showing product name, SKU, quantity, rate, total, status badge",
+    "implemented": false,
+    "prdRefs": ["Drawer Structure"]
+  },
+  {
+    "id": "F005",
+    "description": "Multi-currency support: format amounts, group unbilled totals by currency",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F006",
+    "description": "Add form with searchable product dropdown (searchServiceCatalogForPicker)",
+    "implemented": false,
+    "prdRefs": ["Secondary Flow: Add Material"]
+  },
+  {
+    "id": "F007",
+    "description": "Price/currency selector with auto-select first, single price read-only display",
+    "implemented": false,
+    "prdRefs": ["Secondary Flow: Add Material"]
+  },
+  {
+    "id": "F008",
+    "description": "Quantity input (min 1), optional description, calculated total display",
+    "implemented": false,
+    "prdRefs": ["Secondary Flow: Add Material"]
+  },
+  {
+    "id": "F009",
+    "description": "Add material via addProjectMaterial with validation and success/error toasts",
+    "implemented": false,
+    "prdRefs": ["Secondary Flow: Add Material"]
+  },
+  {
+    "id": "F010",
+    "description": "Delete unbilled materials via deleteProjectMaterial with success/error toasts",
+    "implemented": false,
+    "prdRefs": ["Secondary Flow: Delete Material"]
+  },
+  {
+    "id": "F011",
+    "description": "No-client warning message when project has no client assigned",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria"]
+  },
+  {
+    "id": "F012",
+    "description": "Data automation IDs for E2E testing (ReflectionContainer, withDataAutomationId)",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria"]
+  }
+]

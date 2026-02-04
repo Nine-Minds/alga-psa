@@ -1,0 +1,71 @@
+# Project Materials Drawer - Scratchpad
+
+## Initial Discovery (2026-02-04)
+
+### Related Work
+- **Ticket Materials PR #1701** (merged 2026-01-29): `328eff8b0` - "feat: implement ticket materials with multi-currency"
+- **Tag Filter Fix**: `6057c5bd0` - "Fix tag filter to preserve colors and clean orphans"
+
+### Architecture Decision: Component Location
+
+**Pattern Discovered:** `TicketMaterialsCard` lives in `@alga-psa/tickets`, NOT in `@alga-psa/billing`.
+
+**Decision:** Keep `ProjectMaterialsDrawer` in `@alga-psa/projects` and add `@alga-psa/billing` as a dependency.
+
+**Rationale:**
+- Follows established pattern (TicketMaterialsCard in tickets, imports from billing)
+- Feature modules keep their UI components
+- Import actions from the domain owner (billing)
+
+### Required Package Change
+
+`packages/projects/package.json` needs:
+```json
+"dependencies": {
+  "@alga-psa/billing": "*",
+  // ... existing
+}
+```
+
+### Existing Infrastructure
+
+#### Server Actions (Already Exist!)
+Located in `packages/billing/src/actions/materialActions.ts`:
+- `listProjectMaterials(projectId)` - Returns `IProjectMaterial[]` with service_name and sku joined
+- `addProjectMaterial(input)` - Creates new material (rate in cents, quantity floored to min 1)
+- `deleteProjectMaterial(projectMaterialId)` - Deletes if not billed
+
+All actions are already exported from `@alga-psa/billing/actions`.
+
+#### Data Model
+`IProjectMaterial` interface (`packages/types/src/interfaces/material.interfaces.ts`):
+- `project_material_id: string` - Primary key
+- `project_id: string` - Foreign key to project
+- `client_id: string` - Foreign key to client (for billing)
+- `service_id: string` - Foreign key to service_catalog (product)
+- `service_name?: string` - Denormalized from service_catalog
+- `sku?: string | null` - Product SKU
+- `quantity: number`
+- `rate: number` - Price in cents
+- `currency_code: string` - ISO 4217 currency code
+- `description?: string | null`
+- `is_billed: boolean`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/projects/package.json` | Add billing dependency |
+| `packages/projects/src/components/ProjectMaterialsDrawer.tsx` | Implement drawer |
+| `packages/tickets/src/components/ticket/TicketMaterialsCard.tsx` | Reference impl |
+| `packages/billing/src/actions/materialActions.ts` | Actions (complete) |
+
+---
+
+## Decisions Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-02-04 | Keep component in projects package | Follows TicketMaterialsCard pattern |
+| 2026-02-04 | Add @alga-psa/billing dependency | Required for material actions |
+| 2026-02-04 | 12 features, 18 tests | Streamlined from initial 41/78 |
