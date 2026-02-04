@@ -58,7 +58,7 @@
   {
     "id": "T008",
     "description": "Extension scaffolding: index.html has root div and loads main.js",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]

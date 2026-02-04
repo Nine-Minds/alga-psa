@@ -303,3 +303,5 @@ ls -la ui/dist/iframe/
 - T006: Scaffold tests assert iframe bundle output path in vite config.
 
 - T007: Scaffold tests assert ui-kit alias in vite config.
+
+- T008: Scaffold tests assert index.html root div and bundle script.
