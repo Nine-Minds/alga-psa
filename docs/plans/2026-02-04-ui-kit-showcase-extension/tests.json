@@ -127,7 +127,7 @@
   {
     "id": "T016",
     "description": "Theme bridge: Components visually update when theme changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009"
