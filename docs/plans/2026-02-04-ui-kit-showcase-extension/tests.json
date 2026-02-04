@@ -745,7 +745,7 @@
   {
     "id": "T093",
     "description": "SearchInput demo: Search icon is visible",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
