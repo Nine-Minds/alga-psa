@@ -843,7 +843,7 @@
   {
     "id": "T105",
     "description": "Drawer demo: Left drawer slides in from left edge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
