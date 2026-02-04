@@ -147,3 +147,4 @@ ls -la ui/dist/iframe/
 - F004: Added `ee/extensions/samples/ui-kit-showcase/ui/index.html` with root div and iframe bundle script.
 - F005: Added `ee/extensions/samples/ui-kit-showcase/tsconfig.json` with React JSX and module settings for the iframe app.
 - F006: Added `ee/extensions/samples/ui-kit-showcase/src/components/ThemeBridge.tsx` to inject CSS variable bridge for --alga-* tokens.
+- F007: ThemeBridge defines light-mode --color-* defaults and maps them to --alga-* tokens.

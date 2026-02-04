@@ -51,7 +51,7 @@
   {
     "id": "F007",
     "description": "Theme bridge: Support light mode variable mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Theme Bridge Implementation"
     ]
