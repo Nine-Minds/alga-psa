@@ -13,6 +13,7 @@ import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import {
   listProjectMaterials,
   searchServiceCatalogForPicker,
+  addProjectMaterial,
   getServicePrices,
   type CatalogPickerItem,
 } from '@alga-psa/billing/actions';
@@ -35,6 +36,7 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
+  const [isAdding, setIsAdding] = useState(false);
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -118,6 +120,54 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
     }, {} as Record<string, number>);
 
   const selectedPrice = productPrices.find((price) => price.currency_code === selectedCurrency);
+
+  const resetAddForm = () => {
+    setShowAddForm(false);
+    setSelectedProductId('');
+    setProductPrices([]);
+    setSelectedCurrency('');
+    setQuantity(1);
+    setDescription('');
+  };
+
+  const handleAddMaterial = async () => {
+    if (!clientId || !selectedProductId) {
+      toast.error('Please select a product');
+      return;
+    }
+
+    if (!selectedPrice) {
+      toast.error('Please select a currency');
+      return;
+    }
+
+    if (quantity < 1) {
+      toast.error('Quantity must be at least 1');
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      await addProjectMaterial({
+        project_id: projectId,
+        client_id: clientId,
+        service_id: selectedProductId,
+        quantity,
+        rate: selectedPrice.rate,
+        currency_code: selectedPrice.currency_code,
+        description: description.trim() || null,
+      });
+
+      toast.success('Material added');
+      resetAddForm();
+      await loadMaterials();
+    } catch (error) {
+      console.error('Error adding material:', error);
+      toast.error('Failed to add material');
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -228,6 +278,30 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Additional notes..."
             />
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetAddForm}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleAddMaterial}
+              disabled={isAdding || !selectedProductId || !selectedPrice}
+            >
+              {isAdding ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                'Add Material'
+              )}
+            </Button>
           </div>
         </div>
       )}

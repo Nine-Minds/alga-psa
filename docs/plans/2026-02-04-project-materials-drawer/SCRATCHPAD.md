@@ -82,3 +82,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Implemented add-form product picker with searchable catalog lookup.
 - 2026-02-04: Added price/currency selector with auto-selected first price and multi-price dropdown.
 - 2026-02-04: Added quantity/description inputs and live total display to the add form.
+- 2026-02-04: Implemented add-material submission with validation, toast feedback, and list refresh.

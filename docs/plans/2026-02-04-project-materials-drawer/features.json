@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Add material via addProjectMaterial with validation and success/error toasts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Secondary Flow: Add Material"]
   },
   {
