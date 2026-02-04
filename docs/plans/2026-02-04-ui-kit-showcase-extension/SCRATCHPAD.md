@@ -387,3 +387,5 @@ ls -la ui/dist/iframe/
 - T048: Stack tests assert column direction.
 
 - T049: Stack tests assert gap spacing.
+
+- T050: Badge tests assert default tone styling.
