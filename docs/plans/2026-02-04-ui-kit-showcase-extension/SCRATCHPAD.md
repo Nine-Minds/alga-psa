@@ -453,3 +453,5 @@ ls -la ui/dist/iframe/
 - T081: Checkbox tests assert label click toggles.
 
 - T082: Checkbox tests assert disabled checkbox doesn't toggle.
+
+- T083: Switch tests assert toggle behavior.
