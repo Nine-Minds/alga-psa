@@ -293,3 +293,5 @@ ls -la ui/dist/iframe/
 - T001: Added vitest setup and scaffolding tests covering manifest required fields.
 
 - T002: Scaffold tests assert iframe UI entry in manifest.
+
+- T003: Scaffold tests assert appMenu hook presence.
