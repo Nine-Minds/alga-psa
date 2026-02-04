@@ -259,7 +259,7 @@
   {
     "id": "F033",
     "description": "Dialog demo: Show dialog with title and footer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

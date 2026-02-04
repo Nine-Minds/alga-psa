@@ -196,3 +196,5 @@ ls -la ui/dist/iframe/
 - F031: DataTable demo renders status cells with Badge.
 
 - F032: Dialog demo opens/closes with trigger button.
+
+- F033: Dialog demo includes title and footer actions.
