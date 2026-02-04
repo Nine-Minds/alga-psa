@@ -836,6 +836,13 @@
       },
       "selectTask": "Select task...",
       "noTasks": "No other tasks available for dependencies",
+      "unsavedHint": "Click the + button to add this dependency",
+      "dialog": {
+        "title": "Unsaved Changes",
+        "message": "You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save.",
+        "discard": "Discard changes",
+        "continueEditing": "Continue editing"
+      },
       "actions": {
         "remove": "Remove dependency",
         "removeDependencyAria": "Remove {{dependencyType}} dependency on {{taskName}}"

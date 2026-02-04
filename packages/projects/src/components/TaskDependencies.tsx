@@ -195,6 +195,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       // addTaskDependency handles the swap for 'blocked_by' internally.
       await addTaskDependency(task.task_id, selectedTaskId, selectedType, 0, undefined);
       setSelectedTaskId('');
+      selectedTaskIdRef.current = '';
       setSelectedType('blocked_by');
       if (refreshDependencies) refreshDependencies();
     } catch (err: any) {
@@ -204,8 +205,8 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     }
   };
 
-  // Stable imperative handle — callbacks read from refs so the handle
-  // never needs to be recreated when local state changes.
+  // Imperative handle — callbacks read from refs for local state so the handle
+  // only recreates when task identity, refresh callback, or translation function changes.
   useImperativeHandle(ref, () => ({
     savePendingDependency: async () => {
       const currentTaskId = selectedTaskIdRef.current;

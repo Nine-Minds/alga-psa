@@ -834,22 +834,29 @@
       }
     },
     "dependencies": {
-      "title": "Dependencies",
+      "title": "Dipendenze",
       "types": {
-        "blocks": "Blocks",
-        "blocked_by": "Blocked by",
-        "related_to": "Related to"
+        "blocks": "Blocca",
+        "blocked_by": "Bloccato da",
+        "related_to": "Correlato a"
       },
-      "selectTask": "Select task...",
-      "noTasks": "No other tasks available for dependencies",
+      "selectTask": "Seleziona attività...",
+      "noTasks": "Nessun'altra attività disponibile per le dipendenze",
+      "unsavedHint": "Fai clic sul pulsante + per aggiungere questa dipendenza",
+      "dialog": {
+        "title": "Modifiche non salvate",
+        "message": "Hai selezionato una dipendenza ma non l'hai ancora aggiunta. Fai clic sul pulsante viola + per aggiungerla, oppure elimina la selezione e salva.",
+        "discard": "Elimina modifiche",
+        "continueEditing": "Continua a modificare"
+      },
       "actions": {
-        "remove": "Remove dependency",
-        "removeDependencyAria": "Remove {{dependencyType}} dependency on {{taskName}}"
+        "remove": "Rimuovi dipendenza",
+        "removeDependencyAria": "Rimuovi dipendenza {{dependencyType}} su {{taskName}}"
       },
       "errors": {
-        "addFailed": "Failed to add dependency",
-        "removeFailed": "Failed to remove dependency",
-        "taskRequired": "TaskDependencies requires task when pendingMode = false"
+        "addFailed": "Impossibile aggiungere la dipendenza",
+        "removeFailed": "Impossibile rimuovere la dipendenza",
+        "taskRequired": "TaskDependencies richiede un'attività quando pendingMode = false"
       }
     }
   }
