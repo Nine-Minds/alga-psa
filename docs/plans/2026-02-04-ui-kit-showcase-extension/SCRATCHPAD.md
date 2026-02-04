@@ -200,3 +200,5 @@ ls -la ui/dist/iframe/
 - F033: Dialog demo includes title and footer actions.
 
 - F034: ConfirmDialog demo shows confirm/cancel actions.
+
+- F035: ConfirmDialog demo includes danger variant.
