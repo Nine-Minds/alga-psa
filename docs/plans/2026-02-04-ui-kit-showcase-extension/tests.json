@@ -713,7 +713,7 @@
   {
     "id": "T089",
     "description": "TextArea demo: Disabled textarea cannot be edited",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
