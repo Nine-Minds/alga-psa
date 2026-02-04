@@ -150,3 +150,5 @@ ls -la ui/dist/iframe/
 - F007: ThemeBridge defines light-mode --color-* defaults and maps them to --alga-* tokens.
 - F008: ThemeBridge includes dark-mode overrides via `data-alga-theme="dark"` selector.
 - F009: Implemented theme toggle button in `src/iframe/App.tsx` to switch light/dark modes.
+
+- F010: Header layout with title and theme toggle in App.
