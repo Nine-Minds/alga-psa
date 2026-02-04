@@ -337,7 +337,7 @@
   {
     "id": "T042",
     "description": "Alert demo: Warning tone has amber/orange styling",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
