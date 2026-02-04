@@ -469,3 +469,5 @@ ls -la ui/dist/iframe/
 - T089: TextArea tests assert disabled behavior.
 
 - T090: Label tests assert label text rendering.
+
+- T091: Label tests assert required indicator.
