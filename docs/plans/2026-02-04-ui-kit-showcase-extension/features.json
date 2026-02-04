@@ -499,7 +499,7 @@
   {
     "id": "F063",
     "description": "SearchInput demo: Show loading state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
