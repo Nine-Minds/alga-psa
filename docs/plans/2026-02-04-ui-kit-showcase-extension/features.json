@@ -75,7 +75,7 @@
   {
     "id": "F010",
     "description": "Main layout: Header with extension title and theme toggle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Layout Structure"
     ]
