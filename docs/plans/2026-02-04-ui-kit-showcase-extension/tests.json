@@ -385,7 +385,7 @@
   {
     "id": "T048",
     "description": "Stack demo: Vertical direction displays items in a column",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
