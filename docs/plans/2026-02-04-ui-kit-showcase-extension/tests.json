@@ -160,7 +160,7 @@
   {
     "id": "T020",
     "description": "Layout: Clicking a tab switches the displayed content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012"
