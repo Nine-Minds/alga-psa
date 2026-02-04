@@ -43,7 +43,7 @@ export default defineConfig({
     alias: {
       react: path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-      '@alga/ui-kit': path.resolve(__dirname, '..', '..', 'server', 'packages', 'ui-kit', 'src'),
+      '@alga/ui-kit': path.resolve(__dirname, '..', '..', '..', '..', 'packages', 'ui-kit', 'src'),
     },
     dedupe: ['react', 'react-dom'],
   },

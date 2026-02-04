@@ -28,7 +28,7 @@ describe('extension scaffolding', () => {
 
   test('package.json includes @alga/ui-kit dependency', () => {
     const pkg = readJson(path.join(root, 'package.json'));
-    expect(pkg.dependencies?.['@alga/ui-kit']).toContain('file:../../server/packages/ui-kit');
+    expect(pkg.dependencies?.['@alga/ui-kit']).toContain('file:../../../../packages/ui-kit');
   });
 
   test('package.json includes react and react-dom dependencies', () => {

@@ -8,7 +8,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@alga/ui-kit': path.resolve(__dirname, '..', '..', 'server', 'packages', 'ui-kit', 'src'),
+      '@alga/ui-kit': path.resolve(__dirname, '..', '..', '..', '..', 'packages', 'ui-kit', 'src'),
     },
   },
 });

@@ -12,7 +12,7 @@
   "dependencies": {
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "@alga/ui-kit": "file:../../server/packages/ui-kit"
+    "@alga/ui-kit": "file:../../../../packages/ui-kit"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
