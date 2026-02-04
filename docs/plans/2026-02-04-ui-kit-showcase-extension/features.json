@@ -515,7 +515,7 @@
   {
     "id": "F065",
     "description": "SearchInput demo: Demonstrate debounce functionality",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
