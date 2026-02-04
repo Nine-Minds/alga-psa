@@ -609,7 +609,7 @@
   {
     "id": "T076",
     "description": "Skeleton demo: SkeletonText renders multiple lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
