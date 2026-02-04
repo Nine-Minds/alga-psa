@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "Extension scaffolding: package.json includes @alga/ui-kit as file dependency",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]

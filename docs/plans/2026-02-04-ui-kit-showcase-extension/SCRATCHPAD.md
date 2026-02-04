@@ -295,3 +295,5 @@ ls -la ui/dist/iframe/
 - T002: Scaffold tests assert iframe UI entry in manifest.
 
 - T003: Scaffold tests assert appMenu hook presence.
+
+- T004: Scaffold tests assert ui-kit dependency in package.json.
