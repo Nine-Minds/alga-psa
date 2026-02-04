@@ -346,4 +346,48 @@ describe('ProjectMaterialsDrawer', () => {
     const eurTotal = formatCurrencyFromMinorUnits(4000, 'en-US', 'EUR');
     expect(await screen.findByText(eurTotal)).toBeInTheDocument();
   });
+
+  it('adds material and refreshes the list (T013)', async () => {
+    mockProducts = [
+      { service_id: 'service-1', service_name: 'Widget', sku: null } as CatalogPickerItem,
+    ];
+    mockPrices = [
+      { service_id: 'service-1', currency_code: 'USD', rate: 1500 } as IServicePrice,
+    ];
+
+    const actions = await import('@alga-psa/billing/actions');
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    const addButton = await screen.findByRole('button', { name: 'Add' });
+    addButton.click();
+
+    const productSelect = await screen.findByTestId('searchable-select');
+    fireEvent.change(productSelect, { target: { value: 'service-1' } });
+
+    const quantityInput = await screen.findByLabelText('Quantity');
+    fireEvent.change(quantityInput, { target: { value: '2' } });
+
+    const descriptionInput = await screen.findByLabelText('Description (optional)');
+    fireEvent.change(descriptionInput, { target: { value: 'Install notes' } });
+
+    const submitButton = await screen.findByRole('button', { name: 'Add Material' });
+    submitButton.click();
+
+    await waitFor(() => {
+      expect(actions.addProjectMaterial).toHaveBeenCalledWith({
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        quantity: 2,
+        rate: 1500,
+        currency_code: 'USD',
+        description: 'Install notes',
+      });
+    });
+
+    await waitFor(() => {
+      expect(actions.listProjectMaterials).toHaveBeenCalledTimes(2);
+    });
+  });
 });
