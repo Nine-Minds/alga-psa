@@ -465,7 +465,7 @@
   {
     "id": "T058",
     "description": "DataTable demo: Custom cell render function displays Badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
