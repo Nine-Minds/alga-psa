@@ -233,7 +233,7 @@
   {
     "id": "T029",
     "description": "Button demo: Small size button is visually smaller than medium",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
