@@ -449,7 +449,7 @@
   {
     "id": "T056",
     "description": "DataTable demo: Page size selector changes rows per page",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
