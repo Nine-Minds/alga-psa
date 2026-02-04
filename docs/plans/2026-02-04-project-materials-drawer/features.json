@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "No-client warning message when project has no client assigned",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria"]
   },
   {

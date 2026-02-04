@@ -192,17 +192,19 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
           <Package className="w-5 h-5" />
           Materials
         </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAddForm(true)}
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          Add
-        </Button>
+        {clientId && !showAddForm && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddForm(true)}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add
+          </Button>
+        )}
       </div>
 
-      {showAddForm && (
+      {showAddForm && clientId && (
         <div className="border rounded-md p-4 space-y-4 bg-gray-50">
           <div className="space-y-2">
             <Label htmlFor="project-materials-product-select">Product</Label>
@@ -409,6 +411,12 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {!clientId && (
+        <div className="text-center py-4 text-amber-600 text-sm">
+          A client must be assigned to this project before materials can be added.
         </div>
       )}
     </div>
