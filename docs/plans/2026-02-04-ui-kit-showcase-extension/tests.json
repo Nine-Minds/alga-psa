@@ -433,7 +433,7 @@
   {
     "id": "T054",
     "description": "DataTable demo: Clicking sortable column header sorts data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
