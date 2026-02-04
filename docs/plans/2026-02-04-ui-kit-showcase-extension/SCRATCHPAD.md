@@ -149,3 +149,4 @@ ls -la ui/dist/iframe/
 - F006: Added `ee/extensions/samples/ui-kit-showcase/src/components/ThemeBridge.tsx` to inject CSS variable bridge for --alga-* tokens.
 - F007: ThemeBridge defines light-mode --color-* defaults and maps them to --alga-* tokens.
 - F008: ThemeBridge includes dark-mode overrides via `data-alga-theme="dark"` selector.
+- F009: Implemented theme toggle button in `src/iframe/App.tsx` to switch light/dark modes.

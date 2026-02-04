@@ -67,7 +67,7 @@
   {
     "id": "F009",
     "description": "Theme bridge: Theme toggle button to switch between light/dark modes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow 3: Theme Preview"
     ]
