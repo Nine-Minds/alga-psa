@@ -317,3 +317,5 @@ ls -la ui/dist/iframe/
 - T013: Theme bridge tests assert alga danger mapping.
 
 - T014: Theme bridge tests assert dark mode token overrides.
+
+- T015: Theme toggle test asserts mode switch on click.
