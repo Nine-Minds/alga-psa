@@ -136,7 +136,7 @@
   {
     "id": "T017",
     "description": "Layout: Header displays 'UI Kit Showcase' title",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
