@@ -93,7 +93,7 @@
   {
     "id": "T012",
     "description": "Theme bridge: --alga-border maps to host --color-border-200",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
