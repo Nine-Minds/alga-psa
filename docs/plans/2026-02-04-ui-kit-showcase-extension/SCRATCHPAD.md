@@ -307,3 +307,5 @@ ls -la ui/dist/iframe/
 - T008: Scaffold tests assert index.html root div and bundle script.
 
 - T009: Theme bridge tests assert alga background mapping.
+
+- T010: Theme bridge tests assert alga foreground mapping.

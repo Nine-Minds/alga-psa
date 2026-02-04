@@ -75,7 +75,7 @@
   {
     "id": "T010",
     "description": "Theme bridge: --alga-fg maps to host --color-text-900",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
