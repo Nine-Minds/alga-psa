@@ -217,7 +217,7 @@
   {
     "id": "T027",
     "description": "Button demo: Ghost variant renders with transparent background",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
