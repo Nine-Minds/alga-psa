@@ -403,7 +403,7 @@
   {
     "id": "F051",
     "description": "Switch demo: Show on and off states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
