@@ -331,7 +331,7 @@
   {
     "id": "F042",
     "description": "Progress demo: Show indeterminate mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
