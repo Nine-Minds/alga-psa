@@ -235,7 +235,7 @@
   {
     "id": "F030",
     "description": "DataTable demo: Show responsive column hiding feature",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
