@@ -162,3 +162,5 @@ ls -la ui/dist/iframe/
 - F014: Button demo shows primary/secondary/ghost/danger variants in .
 
 - F015: Button demo includes sm/md/lg size examples.
+
+- F016: Button demo includes disabled state example.

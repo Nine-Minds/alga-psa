@@ -123,7 +123,7 @@
   {
     "id": "F016",
     "description": "Button demo: Show disabled state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
