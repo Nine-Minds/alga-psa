@@ -19,14 +19,14 @@ describe('layout', () => {
   test('category tabs are displayed', () => {
     render(<App />);
     ['Core', 'Data', 'Dialogs', 'Feedback', 'Form', 'Navigation'].forEach((label) => {
-      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
     });
   });
 
   test('clicking a tab switches content', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Data' }));
+    await user.click(screen.getByRole('tab', { name: 'Data' }));
     expect(screen.getByText('DataTable')).toBeInTheDocument();
   });
 

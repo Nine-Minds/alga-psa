@@ -529,3 +529,16 @@ ls -la ui/dist/iframe/
 - T119: DropdownMenu tests assert menu closes on outside click.
 - F080: Fixed ui-kit path aliases and dependency, then ran `npm run build` successfully for iframe bundle.
 - F081: Added iframe integration checks and ensured App renders all component demos without runtime errors.
+
+## Test Stabilization Updates (2026-02-04)
+- Fixed React hook errors in Vitest by aliasing `react`/`react-dom` to extension-local `node_modules`, enabling `preserveSymlinks`, and installing `@radix-ui/react-select` locally.
+- Added JSDOM polyfills for Radix Select (`hasPointerCapture`, `setPointerCapture`, `releasePointerCapture`, `scrollIntoView`).
+- Updated CustomSelect tests to use role-based queries (`combobox`, `option`) and avoid duplicate text matches.
+- Adjusted layout/integration tests to target `tab` roles and navigate categories before asserting component titles.
+- Tightened DataTable, Progress, Spinner, and Skeleton test queries to reflect actual DOM structure and inline styles.
+- Full `vitest --run` completes with passing assertions but the process can linger (open handles); per-file runs exit cleanly.
+
+## Commands
+- `npx vitest -c vitest.config.ts --run test/core-demos.test.tsx`
+- `npx vitest -c vitest.config.ts --run test/data-dialog-feedback.test.tsx`
+- `npx vitest -c vitest.config.ts --run` (times out after completion; see note above)
