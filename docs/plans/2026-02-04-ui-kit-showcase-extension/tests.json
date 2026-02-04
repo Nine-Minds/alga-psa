@@ -361,7 +361,7 @@
   {
     "id": "T045",
     "description": "Text demo: Weight prop changes font weight",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
