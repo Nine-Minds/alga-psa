@@ -761,7 +761,7 @@
   {
     "id": "T095",
     "description": "SearchInput demo: Clear button clears input value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
