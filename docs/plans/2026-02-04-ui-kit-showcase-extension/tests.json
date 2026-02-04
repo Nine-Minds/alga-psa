@@ -377,7 +377,7 @@
   {
     "id": "T047",
     "description": "Stack demo: Horizontal direction displays items in a row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
