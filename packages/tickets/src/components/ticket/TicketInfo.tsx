@@ -118,6 +118,40 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     title: ticket.title,
   }));
 
+  // Keep "original" values in sync when the upstream ticket changes (e.g. response_state updates after save).
+  // Only sync fields the user isn't actively editing in this form.
+  useEffect(() => {
+    if (!ticket || !isFormInitialized) return;
+
+    const syncFields: (keyof ITicket)[] = [
+      'status_id',
+      'assigned_to',
+      'board_id',
+      'category_id',
+      'subcategory_id',
+      'priority_id',
+      'due_date',
+      'response_state',
+      'title',
+    ];
+
+    setOriginalTicketValues((prev) => {
+      let changed = false;
+      const next: Partial<ITicket> = { ...prev };
+
+      for (const field of syncFields) {
+        if (field in pendingChanges) continue;
+        const incoming = (ticket as any)[field];
+        if ((prev as any)[field] !== incoming) {
+          (next as any)[field] = incoming;
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [ticket, pendingChanges, isFormInitialized]);
+
   // Local state for board config based on selected (pending) board
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
