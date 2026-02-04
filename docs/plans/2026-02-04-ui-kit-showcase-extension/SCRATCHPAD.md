@@ -353,3 +353,5 @@ ls -la ui/dist/iframe/
 - T031: Button tests assert disabled opacity and disabled attribute.
 
 - T032: Input tests assert text entry.
+
+- T033: Input tests assert placeholder visibility.
