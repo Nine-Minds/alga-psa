@@ -248,3 +248,5 @@ ls -la ui/dist/iframe/
 - F057: TextArea demo includes disabled state.
 
 - F058: Label demo includes basic label.
+
+- F059: Label demo includes required indicator.
