@@ -90,12 +90,6 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   onUnsavedChanges,
   pendingMode = false
 }, ref) => {
-  // Guard: task is required when not in pendingMode
-  if (!pendingMode && !task) {
-    console.error('TaskDependencies: task prop is required when pendingMode is false');
-    return null;
-  }
-
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +112,13 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       return !!selectedTaskId || (pendingMode && pendingDeps.length > 0);
     },
     getPendingDependencies: () => pendingDeps,
-  }));
+  }), [selectedTaskId, pendingMode, pendingDeps]);
+
+  // Guard: task is required when not in pendingMode (after hooks to satisfy Rules of Hooks)
+  if (!pendingMode && !task) {
+    console.error('TaskDependencies: task prop is required when pendingMode is false');
+    return null;
+  }
 
   useEffect(() => {
     setPredecessors(initialPredecessors);
@@ -427,7 +427,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
               }))}
               placeholder="Select task..."
               disabled={isLoading}
-              dropdownMode="overlay"
+              dropdownMode="inline"
             />
           </div>
           <Button
