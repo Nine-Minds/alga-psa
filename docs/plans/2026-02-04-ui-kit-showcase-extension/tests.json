@@ -513,7 +513,7 @@
   {
     "id": "T064",
     "description": "ConfirmDialog demo: Danger variant shows red confirm button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
