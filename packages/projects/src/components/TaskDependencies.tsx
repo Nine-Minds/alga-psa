@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useImperativeHandle, useMemo } from 'react';
 import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -90,6 +90,12 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   onUnsavedChanges,
   pendingMode = false
 }, ref) => {
+  // Guard: task is required when not in pendingMode
+  if (!pendingMode && !task) {
+    console.error('TaskDependencies: task prop is required when pendingMode is false');
+    return null;
+  }
+
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +181,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       const targetTask = allTasksInProject.find(t => t.task_id === selectedTaskId);
       if (targetTask) {
         setPendingDeps(prev => [...prev, {
-          tempId: `pending-${Date.now()}`,
+          tempId: crypto?.randomUUID?.() ?? `pending-${Date.now()}`,
           targetTaskId: selectedTaskId,
           targetTaskName: targetTask.task_name,
           targetTaskTypeKey: targetTask.task_type_key || 'task',
@@ -225,7 +231,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     }
   };
 
-  const availableTasks = allTasksInProject.filter(t => {
+  const availableTasks = useMemo(() => allTasksInProject.filter(t => {
     if (task && t.task_id === task.task_id) return false;
 
     if (pendingMode) {
@@ -258,7 +264,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         d.dependency_type === 'related_to'
       );
     }
-  });
+  }), [allTasksInProject, task?.task_id, pendingMode, pendingDeps, selectedType, predecessors, successors]);
 
   const renderTaskName = (taskInfo: any) => {
     const typeInfo = getTaskTypeInfo(taskInfo.task_type_key);
@@ -358,7 +364,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       {/* Pending dependencies list (create mode) */}
       {pendingMode && hasPendingDeps && (
         <div className="space-y-2">
-          {pendingDeps.map(dep => {
+          {pendingDeps.map((dep, index) => {
             const typeInfo = getDependencyTypeInfo(dep.dependencyType);
             const taskTypeInfo = getTaskTypeInfo(dep.targetTaskTypeKey);
             return (
@@ -381,10 +387,12 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                   </div>
                 </div>
                 <button
+                  id={`remove-pending-dependency-${index}`}
                   type="button"
                   onClick={() => handleRemovePending(dep.tempId)}
                   className="text-red-500 hover:text-red-700 p-1"
                   title="Remove dependency"
+                  aria-label={`Remove ${dep.dependencyType} dependency on ${dep.targetTaskName}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -410,6 +418,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
           />
           <div className="flex-1">
             <SearchableSelect
+              id="dependency-target-task-select"
               value={selectedTaskId}
               onChange={setSelectedTaskId}
               options={availableTasks.map(t => ({
