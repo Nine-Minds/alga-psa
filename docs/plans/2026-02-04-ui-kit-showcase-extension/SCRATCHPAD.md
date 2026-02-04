@@ -459,3 +459,5 @@ ls -la ui/dist/iframe/
 - T084: Switch tests assert size variants.
 
 - T085: Switch tests assert disabled switch doesn't toggle.
+
+- T086: TextArea tests assert multi-line input.

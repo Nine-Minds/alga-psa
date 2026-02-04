@@ -689,7 +689,7 @@
   {
     "id": "T086",
     "description": "TextArea demo: TextArea accepts multi-line input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
