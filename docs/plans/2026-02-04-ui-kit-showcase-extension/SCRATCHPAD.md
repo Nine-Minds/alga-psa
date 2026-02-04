@@ -495,3 +495,5 @@ ls -la ui/dist/iframe/
 - T102: Tabs tests assert disabled tab state.
 
 - T103: Tabs tests assert content changes on selection.
+
+- T104: Drawer tests assert right position.
