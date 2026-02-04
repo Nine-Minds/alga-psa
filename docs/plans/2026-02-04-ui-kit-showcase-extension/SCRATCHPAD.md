@@ -252,3 +252,5 @@ ls -la ui/dist/iframe/
 - F059: Label demo includes required indicator.
 
 - F060: Label demo includes size variants.
+
+- F061: SearchInput demo includes basic search input.
