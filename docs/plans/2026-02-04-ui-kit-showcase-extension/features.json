@@ -43,7 +43,7 @@
   {
     "id": "F006",
     "description": "Theme bridge: Create ThemeBridge component that maps --color-* to --alga-* CSS variables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Theme Bridge Implementation"
     ]
