@@ -427,7 +427,7 @@
   {
     "id": "F054",
     "description": "TextArea demo: Show basic text area",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

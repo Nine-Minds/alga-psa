@@ -238,3 +238,5 @@ ls -la ui/dist/iframe/
 - F052: Switch demo includes sm/md/lg sizes.
 
 - F053: Switch demo includes disabled state.
+
+- F054: TextArea demo includes basic textarea.
