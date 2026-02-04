@@ -309,3 +309,5 @@ ls -la ui/dist/iframe/
 - T009: Theme bridge tests assert alga background mapping.
 
 - T010: Theme bridge tests assert alga foreground mapping.
+
+- T011: Theme bridge tests assert alga primary mapping.

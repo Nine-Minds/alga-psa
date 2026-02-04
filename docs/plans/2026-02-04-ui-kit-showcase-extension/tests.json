@@ -84,7 +84,7 @@
   {
     "id": "T011",
     "description": "Theme bridge: --alga-primary maps to host --color-primary-500",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
