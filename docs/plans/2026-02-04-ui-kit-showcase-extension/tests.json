@@ -939,7 +939,7 @@
   {
     "id": "T117",
     "description": "DropdownMenu demo: Right-aligned menu aligns to right edge of trigger",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
