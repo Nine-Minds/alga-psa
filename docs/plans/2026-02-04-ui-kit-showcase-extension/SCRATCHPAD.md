@@ -421,3 +421,5 @@ ls -la ui/dist/iframe/
 - T065: Spinner tests assert animation present.
 
 - T066: Spinner tests assert size variants.
+
+- T067: LoadingIndicator tests assert text renders.

@@ -537,7 +537,7 @@
   {
     "id": "T067",
     "description": "LoadingIndicator demo: Text is displayed alongside spinner",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
