@@ -307,7 +307,7 @@
   {
     "id": "F039",
     "description": "Progress demo: Show different values (0%, 50%, 100%)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
