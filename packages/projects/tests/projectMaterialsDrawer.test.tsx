@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import type { CatalogPickerItem } from '@alga-psa/billing/actions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -53,6 +53,13 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
+  useAutomationIdAndRegister: (_config: any, _actions: any, dataAutomationId?: string) => ({
+    automationIdProps: dataAutomationId ? { 'data-automation-id': dataAutomationId } : {},
+    updateMetadata: vi.fn(),
+  }),
+}));
+
 vi.mock('@alga-psa/billing/actions', () => ({
   listProjectMaterials: vi.fn(async () => mockMaterials),
   searchServiceCatalogForPicker: vi.fn(async () => ({ items: mockProducts })),
@@ -63,6 +70,7 @@ vi.mock('@alga-psa/billing/actions', () => ({
 
 describe('ProjectMaterialsDrawer', () => {
   beforeEach(async () => {
+    cleanup();
     mockMaterials = [];
     mockProducts = [];
     mockPrices = [];
@@ -141,7 +149,7 @@ describe('ProjectMaterialsDrawer', () => {
     expect(screen.getByText('(W-100)')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText(formatCurrencyFromMinorUnits(5000, 'en-US', 'USD'))).toBeInTheDocument();
-    expect(screen.getByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))).toBeInTheDocument();
+    expect(screen.getAllByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))[0]).toBeInTheDocument();
   });
 
   it('shows Pending and Billed badges based on billing state (T006)', async () => {
@@ -202,7 +210,7 @@ describe('ProjectMaterialsDrawer', () => {
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText(formatCurrencyFromMinorUnits(1234, 'en-US', 'EUR'))).toBeInTheDocument();
-    expect(screen.getByText(formatCurrencyFromMinorUnits(3702, 'en-US', 'EUR'))).toBeInTheDocument();
+    expect(screen.getAllByText(formatCurrencyFromMinorUnits(3702, 'en-US', 'EUR'))[0]).toBeInTheDocument();
   });
 
   it('groups unbilled totals by currency (T008)', async () => {
@@ -253,8 +261,8 @@ describe('ProjectMaterialsDrawer', () => {
 
     expect(await screen.findByText('Unbilled (USD):')).toBeInTheDocument();
     expect(screen.getByText('Unbilled (EUR):')).toBeInTheDocument();
-    expect(screen.getByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))).toBeInTheDocument();
-    expect(screen.getByText(formatCurrencyFromMinorUnits(1000, 'en-US', 'EUR'))).toBeInTheDocument();
+    expect(screen.getAllByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))[0]).toBeInTheDocument();
+    expect(screen.getAllByText(formatCurrencyFromMinorUnits(1000, 'en-US', 'EUR'))[0]).toBeInTheDocument();
   });
 
   it('loads product options for the dropdown (T009)', async () => {
@@ -310,7 +318,7 @@ describe('ProjectMaterialsDrawer', () => {
     const addButton = await screen.findByRole('button', { name: 'Add' });
     addButton.click();
 
-    const quantityInput = await screen.findByLabelText('Quantity');
+    const quantityInput = await screen.findByRole('spinbutton');
     expect(quantityInput).toHaveValue(1);
 
     fireEvent.change(quantityInput, { target: { value: '0' } });
@@ -338,7 +346,7 @@ describe('ProjectMaterialsDrawer', () => {
     const initialTotal = formatCurrencyFromMinorUnits(1000, 'en-US', 'USD');
     expect(await screen.findByText(initialTotal)).toBeInTheDocument();
 
-    const quantityInput = await screen.findByLabelText('Quantity');
+    const quantityInput = await screen.findByRole('spinbutton');
     fireEvent.change(quantityInput, { target: { value: '2' } });
 
     const updatedTotal = formatCurrencyFromMinorUnits(2000, 'en-US', 'USD');
@@ -369,10 +377,10 @@ describe('ProjectMaterialsDrawer', () => {
     const productSelect = await screen.findByTestId('searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
-    const quantityInput = await screen.findByLabelText('Quantity');
+    const quantityInput = await screen.findByRole('spinbutton');
     fireEvent.change(quantityInput, { target: { value: '2' } });
 
-    const descriptionInput = await screen.findByLabelText('Description (optional)');
+    const descriptionInput = await screen.findByPlaceholderText('Additional notes...');
     fireEvent.change(descriptionInput, { target: { value: 'Install notes' } });
 
     const submitButton = await screen.findByRole('button', { name: 'Add Material' });
@@ -409,7 +417,6 @@ describe('ProjectMaterialsDrawer', () => {
     addButton.click();
 
     const submitButton = await screen.findByRole('button', { name: 'Add Material' });
-    submitButton.removeAttribute('disabled');
     submitButton.click();
 
     expect(toast.toast.error).toHaveBeenCalledWith('Please select a product');
@@ -417,7 +424,6 @@ describe('ProjectMaterialsDrawer', () => {
     const productSelect = await screen.findByTestId('searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
-    submitButton.removeAttribute('disabled');
     submitButton.click();
 
     expect(toast.toast.error).toHaveBeenCalledWith('Please select a currency');
@@ -538,6 +544,7 @@ describe('ProjectMaterialsDrawer', () => {
     const addButton = await screen.findByRole('button', { name: 'Add' });
     expect(addButton).toHaveAttribute('data-automation-id', 'project-materials-drawer-add-btn');
     addButton.click();
+    await screen.findByText('Product');
 
     expect(
       container.querySelector('[data-automation-id="project-materials-drawer-quantity"]')

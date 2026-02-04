@@ -104,3 +104,6 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T016 test to verify delete action triggers list refresh.
 - 2026-02-04: Added T017 test to verify no-client warning and Add button suppression.
 - 2026-02-04: Added T018 test to verify automation IDs on key elements.
+- 2026-02-04: Adjusted add button to allow validation toasts without disabling, and aligned vitest aliases for @alga-psa/projects.
+- 2026-02-04: Added vitest alias for @alga-psa/tags and ensured RTL cleanup between drawer tests.
+- 2026-02-04: Added explicit data-automation-id wrappers for quantity/description fields and mocked TagManager in tests.

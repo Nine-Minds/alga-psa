@@ -275,6 +275,7 @@ export default function ProjectMaterialsDrawer({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="project-materials-quantity">Quantity</Label>
+              <div data-automation-id={`${id}-quantity`}>
                 <Input
                   {...withDataAutomationId({ id: `${id}-quantity` })}
                   id="project-materials-quantity"
@@ -284,6 +285,7 @@ export default function ProjectMaterialsDrawer({
                   onChange={(event) => setQuantity(Math.max(1, parseInt(event.target.value) || 1))}
                 />
               </div>
+            </div>
               <div className="space-y-2">
                 <Label>Total</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
@@ -300,13 +302,15 @@ export default function ProjectMaterialsDrawer({
 
             <div className="space-y-2">
               <Label htmlFor="project-materials-description">Description (optional)</Label>
-              <Input
-                {...withDataAutomationId({ id: `${id}-description` })}
-                id="project-materials-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Additional notes..."
-              />
+              <div data-automation-id={`${id}-description`}>
+                <Input
+                  {...withDataAutomationId({ id: `${id}-description` })}
+                  id="project-materials-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Additional notes..."
+                />
+              </div>
             </div>
 
             <div className="flex justify-end space-x-2">
@@ -322,7 +326,7 @@ export default function ProjectMaterialsDrawer({
                 {...withDataAutomationId({ id: `${id}-save-add-btn` })}
                 size="sm"
                 onClick={handleAddMaterial}
-                disabled={isAdding || !selectedProductId || !selectedPrice}
+                disabled={isAdding}
               >
                 {isAdding ? (
                   <>

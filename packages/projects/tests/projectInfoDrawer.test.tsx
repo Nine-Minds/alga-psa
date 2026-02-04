@@ -27,6 +27,36 @@ vi.mock('@alga-psa/projects/lib/projectUtils', () => ({
   })),
 }));
 
+vi.mock('@alga-psa/tags/components', () => ({
+  TagManager: () => null,
+}));
+
+vi.mock('../src/components/ProjectDetailsEdit', () => ({
+  default: () => null,
+}));
+
+vi.mock('../src/components/project-templates/CreateTemplateDialog', () => ({
+  default: () => null,
+}));
+
+vi.mock('@alga-psa/ui/components/BackNav', () => ({
+  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/Button', () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>{children}</button>
+  ),
+}));
+
+vi.mock('../src/components/ProjectMaterialsDrawer', () => ({
+  default: () => null,
+}));
+
+vi.mock('../src/components/HoursProgressBar', () => ({
+  default: () => null,
+}));
+
 describe('ProjectInfo materials drawer', () => {
   beforeEach(() => {
     openDrawer.mockClear();
