@@ -507,3 +507,5 @@ ls -la ui/dist/iframe/
 - T108: Drawer tests assert title renders.
 
 - T109: Drawer tests assert close button closes drawer.
+
+- T110: Drawer tests assert escape closes drawer.

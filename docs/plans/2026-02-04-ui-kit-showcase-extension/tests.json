@@ -883,7 +883,7 @@
   {
     "id": "T110",
     "description": "Drawer demo: Escape key closes drawer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
