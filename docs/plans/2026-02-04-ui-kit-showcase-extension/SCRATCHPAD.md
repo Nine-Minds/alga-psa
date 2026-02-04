@@ -399,3 +399,5 @@ ls -la ui/dist/iframe/
 - T054: DataTable tests assert sortable header changes order.
 
 - T055: DataTable tests assert pagination controls visible.
+
+- T056: DataTable tests assert page size selector updates row count.
