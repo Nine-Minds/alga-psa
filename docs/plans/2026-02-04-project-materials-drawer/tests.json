@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Delete button only visible on unbilled materials",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

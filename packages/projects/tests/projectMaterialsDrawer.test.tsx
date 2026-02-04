@@ -422,4 +422,47 @@ describe('ProjectMaterialsDrawer', () => {
 
     expect(toast.toast.error).toHaveBeenCalledWith('Please select a currency');
   });
+
+  it('only shows delete button for unbilled materials (T015)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: null,
+        quantity: 1,
+        rate: 1000,
+        currency_code: 'USD',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+      {
+        project_material_id: 'material-2',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-2',
+        service_name: 'Gadget',
+        sku: null,
+        quantity: 1,
+        rate: 2000,
+        currency_code: 'USD',
+        description: null,
+        is_billed: true,
+      } as IProjectMaterial,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    await screen.findByText('Widget');
+
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-delete-material-1"]')
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-delete-material-2"]')
+    ).toBeNull();
+  });
 });
