@@ -1,0 +1,214 @@
+import React from 'react';
+import { describe, expect, test } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ButtonDemo } from '../src/demos/ButtonDemo';
+import { InputDemo } from '../src/demos/InputDemo';
+import { SelectDemo } from '../src/demos/SelectDemo';
+import { CardDemo } from '../src/demos/CardDemo';
+import { AlertDemo } from '../src/demos/AlertDemo';
+import { TextDemo } from '../src/demos/TextDemo';
+import { StackDemo } from '../src/demos/StackDemo';
+import { BadgeDemo } from '../src/demos/BadgeDemo';
+
+const findButton = (label: string) => screen.getByRole('button', { name: label });
+
+describe('Button demo', () => {
+  test('primary variant uses alga primary background', () => {
+    render(<ButtonDemo />);
+    expect(findButton('Primary').style.background).toContain('var(--alga-primary)');
+  });
+
+  test('secondary variant uses alga muted background', () => {
+    render(<ButtonDemo />);
+    expect(findButton('Secondary').style.background).toContain('var(--alga-muted)');
+  });
+
+  test('ghost variant uses transparent background', () => {
+    render(<ButtonDemo />);
+    expect(findButton('Ghost').style.background).toBe('transparent');
+  });
+
+  test('danger variant uses alga danger background', () => {
+    render(<ButtonDemo />);
+    expect(findButton('Danger').style.background).toContain('var(--alga-danger)');
+  });
+
+  test('small size button is smaller than medium', () => {
+    render(<ButtonDemo />);
+    const sm = findButton('Small');
+    const md = findButton('Medium');
+    expect(Number(sm.style.fontSize.replace('px', ''))).toBeLessThan(Number(md.style.fontSize.replace('px', '')));
+  });
+
+  test('large size button is larger than medium', () => {
+    render(<ButtonDemo />);
+    const lg = findButton('Large');
+    const md = findButton('Medium');
+    expect(Number(lg.style.fontSize.replace('px', ''))).toBeGreaterThan(Number(md.style.fontSize.replace('px', '')));
+  });
+
+  test('disabled button has reduced opacity and is non-interactive', () => {
+    render(<ButtonDemo />);
+    const disabled = findButton('Disabled') as HTMLButtonElement;
+    expect(disabled.disabled).toBe(true);
+    expect(disabled.style.opacity).toBe('0.5');
+  });
+});
+
+describe('Input demo', () => {
+  test('input accepts text input', async () => {
+    const user = userEvent.setup();
+    render(<InputDemo />);
+    const input = screen.getByPlaceholderText('Enter a value') as HTMLInputElement;
+    await user.type(input, 'Hello');
+    expect(input.value).toBe('Hello');
+  });
+
+  test('placeholder text is visible when empty', () => {
+    render(<InputDemo />);
+    const input = screen.getByPlaceholderText('Enter a value') as HTMLInputElement;
+    expect(input.placeholder).toBe('Enter a value');
+  });
+
+  test('disabled input cannot receive focus', async () => {
+    const user = userEvent.setup();
+    render(<InputDemo />);
+    const input = screen.getByPlaceholderText('Disabled') as HTMLInputElement;
+    await user.click(input);
+    expect(input).not.toHaveFocus();
+  });
+});
+
+describe('CustomSelect demo', () => {
+  test('dropdown opens on click', async () => {
+    const user = userEvent.setup();
+    render(<SelectDemo />);
+    const trigger = screen.getByText('Active');
+    await user.click(trigger);
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+  });
+
+  test('selected option is displayed', async () => {
+    const user = userEvent.setup();
+    render(<SelectDemo />);
+    const trigger = screen.getByText('Active');
+    await user.click(trigger);
+    await user.click(screen.getByText('Paused'));
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+  });
+
+  test('disabled select does not open', async () => {
+    const user = userEvent.setup();
+    render(<SelectDemo />);
+    const disabledTrigger = screen.getByText('Disabled');
+    await user.click(disabledTrigger);
+    expect(screen.queryByText('Archived')).not.toBeInTheDocument();
+  });
+});
+
+describe('Card demo', () => {
+  test('card renders with border and padding', () => {
+    render(<CardDemo />);
+    const card = screen.getByText('Starter Plan').closest('div')?.parentElement as HTMLElement | null;
+    expect(card?.style.border).toContain('var(--alga-border)');
+    expect(card?.style.padding).toBe('16px');
+  });
+
+  test('card content is displayed inside', () => {
+    render(<CardDemo />);
+    expect(screen.getByText('Starter Plan')).toBeInTheDocument();
+    expect(screen.getByText('$24 / month')).toBeInTheDocument();
+  });
+});
+
+describe('Alert demo', () => {
+  test('info tone has correct styling', () => {
+    render(<AlertDemo />);
+    const info = screen.getByText('Info').closest('[role="alert"]') as HTMLElement;
+    expect(info.style.background).toContain('var(--alga-muted)');
+  });
+
+  test('success tone has green styling', () => {
+    render(<AlertDemo />);
+    const success = screen.getByText('Success').closest('[role="alert"]') as HTMLElement;
+    expect(success.style.background).toContain('var(--alga-success)');
+  });
+
+  test('warning tone has amber/orange styling', () => {
+    render(<AlertDemo />);
+    const warning = screen.getByText('Warning').closest('[role="alert"]') as HTMLElement;
+    expect(warning.style.background).toContain('var(--alga-warning)');
+  });
+
+  test('danger tone has red styling', () => {
+    render(<AlertDemo />);
+    const danger = screen.getByText('Danger').closest('[role="alert"]') as HTMLElement;
+    expect(danger.style.background).toContain('var(--alga-danger)');
+  });
+});
+
+describe('Text demo', () => {
+  test('size props change font size', () => {
+    render(<TextDemo />);
+    const xs = screen.getByText('Extra small text');
+    const lg = screen.getByText('Large text');
+    expect(Number(xs.style.fontSize.replace('px', ''))).toBeLessThan(Number(lg.style.fontSize.replace('px', '')));
+  });
+
+  test('weight prop changes font weight', () => {
+    render(<TextDemo />);
+    const bold = screen.getByText('Bold 700');
+    expect(bold.style.fontWeight).toBe('700');
+  });
+
+  test('as prop renders correct HTML element', () => {
+    render(<TextDemo />);
+    expect(screen.getByText('Heading 1').tagName).toBe('H1');
+    expect(screen.getByText('Heading 2').tagName).toBe('H2');
+    expect(screen.getByText('Paragraph text rendered via Text').tagName).toBe('P');
+    expect(screen.getByText('Span inline text').tagName).toBe('SPAN');
+  });
+});
+
+describe('Stack demo', () => {
+  test('horizontal direction displays items in a row', () => {
+    render(<StackDemo />);
+    const row = screen.getByText('A').parentElement?.parentElement as HTMLElement;
+    expect(row.style.flexDirection).toBe('row');
+  });
+
+  test('vertical direction displays items in a column', () => {
+    render(<StackDemo />);
+    const column = screen.getByText('1').parentElement?.parentElement as HTMLElement;
+    expect(column.style.flexDirection).toBe('column');
+  });
+
+  test('gap prop adds spacing between items', () => {
+    render(<StackDemo />);
+    const row = screen.getByText('A').parentElement?.parentElement as HTMLElement;
+    expect(row.style.gap).toBe('8px');
+  });
+});
+
+describe('Badge demo', () => {
+  test('default tone renders neutral styling', () => {
+    render(<BadgeDemo />);
+    const badge = screen.getByText('Default');
+    expect(badge.style.background).toContain('var(--alga-muted');
+  });
+
+  test('success tone renders green styling', () => {
+    render(<BadgeDemo />);
+    const badge = screen.getByText('Success');
+    expect(badge.style.background).toMatch(/dcfce7|rgb\\(220, 252, 231\\)/);
+  });
+
+  test('warning and danger tones render correctly', () => {
+    render(<BadgeDemo />);
+    const warning = screen.getByText('Warning');
+    const danger = screen.getByText('Danger');
+    expect(warning.style.background).toMatch(/fef3c7|rgb\\(254, 243, 199\\)/);
+    expect(danger.style.background).toMatch(/fff7ed|rgb\\(255, 247, 237\\)/);
+  });
+});
