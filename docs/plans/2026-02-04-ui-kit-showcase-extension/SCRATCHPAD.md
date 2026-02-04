@@ -359,3 +359,5 @@ ls -la ui/dist/iframe/
 - T034: Input tests assert disabled input cannot focus.
 
 - T035: CustomSelect tests assert dropdown opens.
+
+- T036: CustomSelect tests assert selected option shows.
