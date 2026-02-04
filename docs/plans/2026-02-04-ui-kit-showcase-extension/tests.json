@@ -457,7 +457,7 @@
   {
     "id": "T057",
     "description": "DataTable demo: Responsive mode hides columns when container is narrow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

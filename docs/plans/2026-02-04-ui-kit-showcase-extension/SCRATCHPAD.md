@@ -401,3 +401,5 @@ ls -la ui/dist/iframe/
 - T055: DataTable tests assert pagination controls visible.
 
 - T056: DataTable tests assert page size selector updates row count.
+
+- T057: DataTable tests assert responsive column hiding when narrow.
