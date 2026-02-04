@@ -697,7 +697,7 @@
   {
     "id": "T087",
     "description": "TextArea demo: Rows prop changes visible rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]

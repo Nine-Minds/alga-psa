@@ -461,3 +461,5 @@ ls -la ui/dist/iframe/
 - T085: Switch tests assert disabled switch doesn't toggle.
 
 - T086: TextArea tests assert multi-line input.
+
+- T087: TextArea tests assert rows prop.
