@@ -51,18 +51,17 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
 
   return (
     <div className="flex items-center gap-1.5">
-      <button
+      <Button
+        id="kanban-snap-compact"
+        variant="ghost"
+        size="xs"
         onClick={handleSnapToCompact}
         disabled={isMinZoom}
-        className={`text-xs mr-0.5 transition-colors ${
-          isMinZoom
-            ? 'text-gray-400 cursor-default'
-            : 'text-gray-500 hover:text-gray-700 cursor-pointer'
-        }`}
         title="Snap to compact view"
+        className="!h-6 !px-1 !min-w-0 text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-400"
       >
         Compact
-      </button>
+      </Button>
       <Button
         id="kanban-zoom-out"
         variant="outline"
@@ -96,18 +95,17 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
       >
         <Plus className="w-3.5 h-3.5" />
       </Button>
-      <button
+      <Button
+        id="kanban-snap-spacious"
+        variant="ghost"
+        size="xs"
         onClick={handleSnapToSpacious}
         disabled={isMaxZoom}
-        className={`text-xs ml-0.5 transition-colors ${
-          isMaxZoom
-            ? 'text-gray-400 cursor-default'
-            : 'text-gray-500 hover:text-gray-700 cursor-pointer'
-        }`}
         title="Snap to spacious view"
+        className="!h-6 !px-1 !min-w-0 text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-400"
       >
         Spacious
-      </button>
+      </Button>
     </div>
   );
 };
