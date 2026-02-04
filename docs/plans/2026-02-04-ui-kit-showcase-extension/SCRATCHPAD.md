@@ -347,3 +347,5 @@ ls -la ui/dist/iframe/
 - T028: Button tests assert danger background mapping.
 
 - T029: Button tests compare small vs medium sizes.
+
+- T030: Button tests compare large vs medium sizes.
