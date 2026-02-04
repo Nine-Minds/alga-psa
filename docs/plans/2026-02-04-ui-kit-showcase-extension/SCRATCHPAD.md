@@ -457,3 +457,5 @@ ls -la ui/dist/iframe/
 - T083: Switch tests assert toggle behavior.
 
 - T084: Switch tests assert size variants.
+
+- T085: Switch tests assert disabled switch doesn't toggle.
