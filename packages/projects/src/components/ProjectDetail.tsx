@@ -1723,17 +1723,32 @@ export default function ProjectDetail({
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
-          {/* Top row: Title + View Switcher */}
+          {/* Top row: Title + Pin + View Switcher */}
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Task List</h2>
-            <ViewSwitcher
-              currentView={viewMode}
-              onChange={setViewMode}
-              options={[
-                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                { value: 'list', label: 'List', icon: List }
-              ]}
-            />
+            <div className="flex items-center gap-4">
+              <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+                <button
+                  onClick={() => setIsHeaderPinned(!isHeaderPinned)}
+                  className={`p-1.5 rounded-md transition-colors ${
+                    isHeaderPinned
+                      ? 'bg-primary-100 text-primary-600'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                  }`}
+                  aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+                >
+                  <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
+                </button>
+              </Tooltip>
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={setViewMode}
+                options={[
+                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                  { value: 'list', label: 'List', icon: List }
+                ]}
+              />
+            </div>
           </div>
 
           {/* Bottom row: Search + Filters */}
