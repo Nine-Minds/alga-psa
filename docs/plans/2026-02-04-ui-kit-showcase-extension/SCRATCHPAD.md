@@ -349,3 +349,5 @@ ls -la ui/dist/iframe/
 - T029: Button tests compare small vs medium sizes.
 
 - T030: Button tests compare large vs medium sizes.
+
+- T031: Button tests assert disabled opacity and disabled attribute.
