@@ -29,7 +29,7 @@ export function ButtonDemo() {
         <div>
           <Text weight={600}>States</Text>
           <Stack direction="row" gap={8} style={{ flexWrap: 'wrap', marginTop: 8 }}>
-            <Button disabled>Disabled</Button>
+            <Button disabled style={{ opacity: 0.5 }}>Disabled</Button>
           </Stack>
         </div>
       </Stack>
