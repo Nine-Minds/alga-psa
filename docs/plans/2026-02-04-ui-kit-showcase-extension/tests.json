@@ -345,7 +345,7 @@
   {
     "id": "T043",
     "description": "Alert demo: Danger tone has red styling",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
