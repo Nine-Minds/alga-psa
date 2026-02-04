@@ -323,7 +323,7 @@
   {
     "id": "F041",
     "description": "Progress demo: Show all sizes (sm, md, lg)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
