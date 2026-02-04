@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Total updates when quantity or currency changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

@@ -312,4 +312,38 @@ describe('ProjectMaterialsDrawer', () => {
     fireEvent.change(quantityInput, { target: { value: '0' } });
     expect(quantityInput).toHaveValue(1);
   });
+
+  it('updates total when quantity or currency changes (T012)', async () => {
+    mockProducts = [
+      { service_id: 'service-1', service_name: 'Widget', sku: null } as CatalogPickerItem,
+    ];
+    mockPrices = [
+      { service_id: 'service-1', currency_code: 'USD', rate: 1000 } as IServicePrice,
+      { service_id: 'service-1', currency_code: 'EUR', rate: 2000 } as IServicePrice,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    const addButton = await screen.findByRole('button', { name: 'Add' });
+    addButton.click();
+
+    const productSelect = await screen.findByTestId('searchable-select');
+    fireEvent.change(productSelect, { target: { value: 'service-1' } });
+
+    const initialTotal = formatCurrencyFromMinorUnits(1000, 'en-US', 'USD');
+    expect(await screen.findByText(initialTotal)).toBeInTheDocument();
+
+    const quantityInput = await screen.findByLabelText('Quantity');
+    fireEvent.change(quantityInput, { target: { value: '2' } });
+
+    const updatedTotal = formatCurrencyFromMinorUnits(2000, 'en-US', 'USD');
+    expect(await screen.findByText(updatedTotal)).toBeInTheDocument();
+
+    const currencySelect = await screen.findByTestId('project-materials-currency-select');
+    fireEvent.change(currencySelect, { target: { value: 'EUR' } });
+
+    const eurTotal = formatCurrencyFromMinorUnits(4000, 'en-US', 'EUR');
+    expect(await screen.findByText(eurTotal)).toBeInTheDocument();
+  });
 });

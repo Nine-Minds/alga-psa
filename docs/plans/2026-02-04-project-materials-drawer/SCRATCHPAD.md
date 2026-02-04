@@ -97,3 +97,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T009 test to ensure product picker loads catalog items.
 - 2026-02-04: Added T010 test to ensure price selector options appear after product selection.
 - 2026-02-04: Added T011 test for quantity default/min validation.
+- 2026-02-04: Added T012 test for total recalculation on quantity/currency changes.
