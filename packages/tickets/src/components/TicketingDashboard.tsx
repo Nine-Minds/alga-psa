@@ -358,9 +358,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedResponseState && selectedResponseState !== 'all') {
       params.set('responseState', selectedResponseState);
     }
+    if (selectedTags.length > 0) {
+      params.set('tags', selectedTags.join(','));
+    }
+    if (sortBy && sortBy !== 'entered_at') {
+      params.set('sortBy', sortBy);
+    }
+    if (sortDirection && sortDirection !== 'desc') {
+      params.set('sortDirection', sortDirection);
+    }
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('pageSize', String(pageSize));
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize]);
 
   const isFirstRender = useRef(true);
 
