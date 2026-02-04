@@ -369,7 +369,7 @@
   {
     "id": "T046",
     "description": "Text demo: 'as' prop renders correct HTML element",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

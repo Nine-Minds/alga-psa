@@ -379,3 +379,5 @@ ls -la ui/dist/iframe/
 - T044: Text tests assert size changes.
 
 - T045: Text tests assert weight changes.
+
+- T046: Text tests assert element rendering.
