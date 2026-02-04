@@ -441,7 +441,7 @@
   {
     "id": "T055",
     "description": "DataTable demo: Pagination controls are visible",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
