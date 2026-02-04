@@ -473,7 +473,7 @@
   {
     "id": "T059",
     "description": "Dialog demo: Dialog opens when trigger is clicked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
