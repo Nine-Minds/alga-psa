@@ -337,14 +337,30 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
       }
 
-      // Check if user created the tag (only creator can delete individual tags)
-      // If created_by is not set (legacy tags), allow deletion for backward compatibility
+      // Check if user can delete this specific tag
+      // Users can only delete tags they created, unless:
+      // 1. The tag has no created_by (legacy tags)
+      // 2. The user has tag:delete permission (can delete any tag)
       if (existingTag.created_by && existingTag.created_by !== currentUser.user_id) {
-        await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
+        // Check if user has tag:delete permission to override creator restriction
+        if (!await hasPermissionAsync(currentUser, 'tag', 'delete', trx)) {
+          await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
+        }
       }
 
       // id is actually mapping_id - just delete the mapping
       await TagMapping.delete(trx, tenant, id);
+
+      // Check if this was the last mapping for this definition and clean up if orphaned
+      const remainingMappings = await trx('tag_mappings')
+        .where({ tenant, tag_id: existingTag.definition_tag_id })
+        .count('* as count')
+        .first();
+
+      if (remainingMappings && Number(remainingMappings.count) === 0) {
+        // Delete the orphaned tag definition
+        await TagDefinition.delete(trx, tenant, existingTag.definition_tag_id);
+      }
 
       const occurredAt = new Date().toISOString();
       await publishWorkflowEvent({
@@ -444,7 +460,27 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const definitions = await TagDefinition.getAllByType(trx, tenant, entityType);
+      // Get tag definitions that have at least one mapping (filter out orphans)
+      // Use subquery with GROUP BY for portable distinct-on-tag_text behavior
+      const uniqueTagIds = trx('tag_definitions as inner_td')
+        .select('inner_td.tag_text', 'inner_td.tenant')
+        .min('inner_td.tag_id as tag_id')
+        .where({ 'inner_td.tenant': tenant, 'inner_td.tagged_type': entityType })
+        .whereExists(function() {
+          this.select(1)
+            .from('tag_mappings as tm')
+            .whereRaw('tm.tenant = inner_td.tenant AND tm.tag_id = inner_td.tag_id');
+        })
+        .groupBy('inner_td.tag_text', 'inner_td.tenant');
+
+      const definitions = await trx('tag_definitions as td')
+        .select('td.*')
+        .innerJoin(uniqueTagIds.as('unique_tags'), function() {
+          this.on('td.tag_id', '=', 'unique_tags.tag_id')
+              .andOn('td.tenant', '=', 'unique_tags.tenant');
+        })
+        .where('td.tenant', tenant)
+        .orderBy('td.tag_text', 'asc');
 
       // Convert to ITag format (use definition ID as tag_id since these are unique)
       return definitions.map(def => ({

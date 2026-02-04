@@ -1146,12 +1146,31 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       trx('users')
         .where({ tenant })
         .orderBy('first_name', 'asc'),
-      
-      // Fetch all unique tags for tickets
-      trx('tag_definitions')
-        .distinct('tag_text')
-        .where({ tenant, tagged_type: 'ticket' })
-        .orderBy('tag_text', 'asc')
+
+      // Fetch all unique tags for tickets (with colors, filtering orphans)
+      // Use subquery with GROUP BY for portable distinct-on-tag_text behavior
+      // Include tenant in GROUP BY and JOIN for CitusDB compatibility
+      trx('tag_definitions as td')
+        .select('td.tag_id', 'td.tag_text', 'td.background_color', 'td.text_color')
+        .innerJoin(
+          trx('tag_definitions as inner_td')
+            .select('inner_td.tag_text', 'inner_td.tenant')
+            .min('inner_td.tag_id as min_tag_id')
+            .where({ 'inner_td.tenant': tenant, 'inner_td.tagged_type': 'ticket' })
+            .whereExists(function() {
+              this.select(1)
+                .from('tag_mappings as tm')
+                .whereRaw('tm.tenant = inner_td.tenant AND tm.tag_id = inner_td.tag_id');
+            })
+            .groupBy('inner_td.tag_text', 'inner_td.tenant')
+            .as('unique_tags'),
+          function() {
+            this.on('td.tag_id', '=', 'unique_tags.min_tag_id')
+                .andOn('td.tenant', '=', 'unique_tags.tenant');
+          }
+        )
+        .where('td.tenant', tenant)
+        .orderBy('td.tag_text', 'asc')
     ]);
 
     // Format options for dropdowns
@@ -1208,7 +1227,15 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       categories,
       clients: clientsWithLogos, // Return clients with logos
       users,
-      tags: Array.isArray(tags) ? tags.map((tag: any) => tag.tag_text) : [] // Return unique tag texts
+      tags: Array.isArray(tags) ? tags.map((tag: any) => ({
+        tag_id: tag.tag_id,
+        tag_text: tag.tag_text,
+        tagged_id: '',
+        tagged_type: 'ticket' as const,
+        tenant: tenant,
+        background_color: tag.background_color,
+        text_color: tag.text_color
+      })) : []
     };
     } catch (error) {
       console.error('Failed to fetch ticket form options:', error);
