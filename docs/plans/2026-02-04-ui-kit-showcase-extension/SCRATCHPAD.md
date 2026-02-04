@@ -335,3 +335,5 @@ ls -la ui/dist/iframe/
 - T022: DemoSection test asserts title render.
 
 - T023: DemoSection test asserts description render.
+
+- T024: DemoSection test asserts children render.
