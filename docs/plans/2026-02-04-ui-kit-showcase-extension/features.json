@@ -251,7 +251,7 @@
   {
     "id": "F032",
     "description": "Dialog demo: Show basic dialog with open/close",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
