@@ -705,7 +705,7 @@
   {
     "id": "T088",
     "description": "TextArea demo: Resize option controls resize behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]

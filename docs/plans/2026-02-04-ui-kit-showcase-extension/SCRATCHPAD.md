@@ -463,3 +463,5 @@ ls -la ui/dist/iframe/
 - T086: TextArea tests assert multi-line input.
 
 - T087: TextArea tests assert rows prop.
+
+- T088: TextArea tests assert resize styles.
