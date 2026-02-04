@@ -467,7 +467,7 @@
   {
     "id": "F059",
     "description": "Label demo: Show required indicator",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
