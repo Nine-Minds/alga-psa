@@ -69,3 +69,9 @@ All actions are already exported from `@alga-psa/billing/actions`.
 | 2026-02-04 | Keep component in projects package | Follows TicketMaterialsCard pattern |
 | 2026-02-04 | Add @alga-psa/billing dependency | Required for material actions |
 | 2026-02-04 | 12 features, 18 tests | Streamlined from initial 41/78 |
+
+---
+
+## Updates
+
+- 2026-02-04: Added `@alga-psa/billing` dependency to `packages/projects/package.json` for project materials drawer actions.

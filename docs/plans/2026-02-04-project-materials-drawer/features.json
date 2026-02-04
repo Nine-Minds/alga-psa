@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Add @alga-psa/billing dependency to projects package.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture Compliance"]
   },
   {
