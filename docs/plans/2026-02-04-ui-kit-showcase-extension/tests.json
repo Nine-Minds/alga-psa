@@ -545,7 +545,7 @@
   {
     "id": "T068",
     "description": "Tooltip demo: Tooltip appears on hover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
