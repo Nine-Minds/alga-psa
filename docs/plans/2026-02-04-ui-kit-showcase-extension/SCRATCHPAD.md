@@ -240,3 +240,5 @@ ls -la ui/dist/iframe/
 - F053: Switch demo includes disabled state.
 
 - F054: TextArea demo includes basic textarea.
+
+- F055: TextArea demo includes multiple row counts.
