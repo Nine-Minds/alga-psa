@@ -471,3 +471,5 @@ ls -la ui/dist/iframe/
 - T090: Label tests assert label text rendering.
 
 - T091: Label tests assert required indicator.
+
+- T092: Label tests assert size variants.
