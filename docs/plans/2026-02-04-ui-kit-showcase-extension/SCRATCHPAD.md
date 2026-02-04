@@ -190,3 +190,5 @@ ls -la ui/dist/iframe/
 - F028: DataTable demo enables sortable columns.
 
 - F029: DataTable demo enables pagination and page size selection.
+
+- F030: DataTable demo enables responsive column hiding.
