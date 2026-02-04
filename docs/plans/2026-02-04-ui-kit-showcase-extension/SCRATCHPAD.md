@@ -286,3 +286,5 @@ ls -la ui/dist/iframe/
 - F076: DropdownMenu demo includes divider items.
 
 - F077: DropdownMenu demo includes disabled items.
+
+- F078: DropdownMenu demo includes danger items.
