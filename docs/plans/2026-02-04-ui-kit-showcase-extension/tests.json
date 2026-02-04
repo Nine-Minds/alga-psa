@@ -305,7 +305,7 @@
   {
     "id": "T038",
     "description": "Card demo: Card renders with border and padding",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
