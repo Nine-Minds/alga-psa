@@ -315,7 +315,7 @@
   {
     "id": "F040",
     "description": "Progress demo: Show all variants (default, striped, animated)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
