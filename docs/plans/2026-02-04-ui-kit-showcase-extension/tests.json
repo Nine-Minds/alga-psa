@@ -641,7 +641,7 @@
   {
     "id": "T080",
     "description": "Checkbox demo: Indeterminate state shows dash/minus icon",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
