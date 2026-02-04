@@ -179,7 +179,7 @@
   {
     "id": "F023",
     "description": "Text demo: Show different sizes and weights",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
