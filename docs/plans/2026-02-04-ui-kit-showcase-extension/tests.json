@@ -521,7 +521,7 @@
   {
     "id": "T065",
     "description": "Spinner demo: Spinner animates (spins)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
