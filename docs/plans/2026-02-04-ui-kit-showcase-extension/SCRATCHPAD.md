@@ -182,3 +182,5 @@ ls -la ui/dist/iframe/
 - F024: Text demo renders as h1/h2/p/span elements.
 
 - F025: Stack demo shows row and column layouts.
+
+- F026: Stack demo shows gap and alignment options.
