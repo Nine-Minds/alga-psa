@@ -625,7 +625,7 @@
   {
     "id": "T078",
     "description": "Skeleton demo: SkeletonRectangle renders with specified dimensions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
