@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Load and display materials list via listProjectMaterials with loading/empty states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Primary Flow"]
   },
   {
