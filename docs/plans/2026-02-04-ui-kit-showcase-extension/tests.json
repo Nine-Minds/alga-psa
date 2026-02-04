@@ -425,7 +425,7 @@
   {
     "id": "T053",
     "description": "DataTable demo: Table renders with column headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
