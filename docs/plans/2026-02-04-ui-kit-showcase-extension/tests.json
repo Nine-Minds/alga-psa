@@ -313,7 +313,7 @@
   {
     "id": "T039",
     "description": "Card demo: Card content is displayed inside",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
