@@ -345,3 +345,5 @@ ls -la ui/dist/iframe/
 - T027: Button tests assert ghost button transparency.
 
 - T028: Button tests assert danger background mapping.
+
+- T029: Button tests compare small vs medium sizes.
