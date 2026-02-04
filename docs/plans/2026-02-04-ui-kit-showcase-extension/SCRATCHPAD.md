@@ -499,3 +499,5 @@ ls -la ui/dist/iframe/
 - T104: Drawer tests assert right position.
 
 - T105: Drawer tests assert left position.
+
+- T106: Drawer tests assert bottom position.

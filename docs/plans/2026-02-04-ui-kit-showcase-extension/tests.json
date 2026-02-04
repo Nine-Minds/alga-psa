@@ -851,7 +851,7 @@
   {
     "id": "T106",
     "description": "Drawer demo: Bottom drawer slides up from bottom",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
