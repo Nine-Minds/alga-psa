@@ -339,7 +339,7 @@
   {
     "id": "F043",
     "description": "Skeleton demo: Show basic Skeleton component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

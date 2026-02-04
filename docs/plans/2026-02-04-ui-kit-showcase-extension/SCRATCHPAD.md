@@ -216,3 +216,5 @@ ls -la ui/dist/iframe/
 - F041: Progress demo includes sm/md/lg size examples.
 
 - F042: Progress demo includes indeterminate mode example.
+
+- F043: Skeleton demo includes base skeleton block.
