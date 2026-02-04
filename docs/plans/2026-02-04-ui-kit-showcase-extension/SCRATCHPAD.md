@@ -250,3 +250,5 @@ ls -la ui/dist/iframe/
 - F058: Label demo includes basic label.
 
 - F059: Label demo includes required indicator.
+
+- F060: Label demo includes size variants.
