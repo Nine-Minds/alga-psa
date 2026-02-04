@@ -595,7 +595,7 @@
   {
     "id": "F075",
     "description": "DropdownMenu demo: Show basic menu with items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
