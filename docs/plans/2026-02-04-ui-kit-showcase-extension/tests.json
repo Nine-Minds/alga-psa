@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Extension scaffolding: package.json includes react and react-dom dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]

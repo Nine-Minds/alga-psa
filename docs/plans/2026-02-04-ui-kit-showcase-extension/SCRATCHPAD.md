@@ -297,3 +297,5 @@ ls -la ui/dist/iframe/
 - T003: Scaffold tests assert appMenu hook presence.
 
 - T004: Scaffold tests assert ui-kit dependency in package.json.
+
+- T005: Scaffold tests assert react and react-dom dependencies.
