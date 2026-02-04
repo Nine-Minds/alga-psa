@@ -232,3 +232,5 @@ ls -la ui/dist/iframe/
 - F049: Checkbox demo includes labeled checkbox.
 
 - F050: Checkbox demo includes disabled checkbox.
+
+- F051: Switch demo includes on/off states.
