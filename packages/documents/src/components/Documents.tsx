@@ -24,6 +24,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { searchUsersForMentions } from '@alga-psa/users/actions';
 import {
@@ -115,7 +117,7 @@ const Documents = ({
   const [drawerError, setDrawerError] = useState<string | null>(null);
   const [editedDocumentId, setEditedDocumentId] = useState<string | null>(null);
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
-
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
 
   // Determine if we're in folder mode (no entity specified) early
   // This affects whether we need user preferences
@@ -442,6 +444,7 @@ const Documents = ({
       setSelectedDocument(null);
       setIsLoadingContent(false);
       setIsEditModeInDrawer(true);
+      setHasContentChanged(false);
       setIsDrawerOpen(true);
     } else {
       // Entity mode or root folder: show folder selector
@@ -459,6 +462,7 @@ const Documents = ({
     setSelectedDocument(null);
     setIsLoadingContent(false);
     setIsEditModeInDrawer(true);
+    setHasContentChanged(false);
     setIsDrawerOpen(true);
   };
 
@@ -466,6 +470,41 @@ const Documents = ({
     setCurrentContent(blocks);
     setHasContentChanged(true);
   };
+
+  // Track unsaved document changes for navigation protection
+  const hasUnsavedDocumentChanges = useMemo(() => {
+    if (!isDrawerOpen) return false;
+    if (isCreatingNew) {
+      return hasContentChanged || newDocumentName.trim() !== '';
+    }
+    if (isEditModeInDrawer && selectedDocument) {
+      return hasContentChanged || documentName !== selectedDocument.document_name;
+    }
+    return false;
+  }, [isDrawerOpen, isCreatingNew, hasContentChanged, newDocumentName, isEditModeInDrawer, selectedDocument, documentName]);
+
+  // Register with UnsavedChangesContext for browser navigation protection
+  useRegisterUnsavedChanges(`document-editor-${id}`, hasUnsavedDocumentChanges);
+
+  // Execute the actual drawer close (after confirmation or when no unsaved changes)
+  const executeDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    setDrawerError(null);
+    setHasContentChanged(false);
+    setShowUnsavedChangesDialog(false);
+    if (!isCreatingNew) {
+      setIsEditModeInDrawer(false);
+    }
+  }, [isCreatingNew]);
+
+  // Handle drawer close with unsaved changes check
+  const handleDrawerClose = useCallback(() => {
+    if (hasUnsavedDocumentChanges) {
+      setShowUnsavedChangesDialog(true);
+    } else {
+      executeDrawerClose();
+    }
+  }, [hasUnsavedDocumentChanges, executeDrawerClose]);
 
   const handleDelete = useCallback(async (document: IDocument) => {
     // Note: Confirmation dialog is handled by DocumentStorageCard component
@@ -678,6 +717,7 @@ const Documents = ({
       setSelectedDocument(document);
       setDocumentName(document.document_name);
       setIsCreatingNew(false);
+      setHasContentChanged(false);
       const isEditableContentDoc = (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name);
       setIsEditModeInDrawer(isEditableContentDoc);
       setIsDrawerOpen(true);
@@ -1092,10 +1132,7 @@ const Documents = ({
           <Drawer
             id={`${id}-document-drawer`}
             isOpen={isDrawerOpen}
-            onClose={() => {
-              setIsDrawerOpen(false);
-              setDrawerError(null);
-            }}
+            onClose={handleDrawerClose}
             isInDrawer={isInDrawer}
             hideCloseButton={true}
             drawerVariant="document"
@@ -1145,13 +1182,7 @@ const Documents = ({
                 {!isInDrawer && (
                   <Button
                     id={`${id}-close-drawer-btn`}
-                    onClick={() => {
-                      setIsDrawerOpen(false);
-                      setDrawerError(null);
-                      if (!isCreatingNew) {
-                        setIsEditModeInDrawer(false);
-                      }
-                    }}
+                    onClick={handleDrawerClose}
                     variant="ghost"
                   >
                     ×
@@ -1218,13 +1249,7 @@ const Documents = ({
               <div className="flex justify-end space-x-2">
                 <Button
                   id={`${id}-cancel-btn`}
-                  onClick={() => {
-                    setIsDrawerOpen(false);
-                    setDrawerError(null);
-                    if (!isCreatingNew) {
-                      setIsEditModeInDrawer(false);
-                    }
-                  }}
+                  onClick={handleDrawerClose}
                   variant="outline"
                 >
                   Cancel
@@ -1245,6 +1270,18 @@ const Documents = ({
           </div>
           </Drawer>
         </div>
+
+        {/* Unsaved Changes Confirmation Dialog */}
+        <ConfirmationDialog
+          id={`${id}-unsaved-changes-dialog`}
+          isOpen={showUnsavedChangesDialog}
+          onClose={() => setShowUnsavedChangesDialog(false)}
+          onConfirm={executeDrawerClose}
+          title="Unsaved Changes"
+          message="Are you sure you want to cancel? Any unsaved changes will be lost."
+          confirmLabel="Discard changes"
+          cancelLabel="Continue editing"
+        />
         </div>
       </ReflectionContainer>
     );
@@ -1428,10 +1465,7 @@ const Documents = ({
           <Drawer
             id={`${id}-document-drawer`}
             isOpen={isDrawerOpen}
-            onClose={() => {
-              setIsDrawerOpen(false);
-              setDrawerError(null);
-            }}
+            onClose={handleDrawerClose}
             isInDrawer={isInDrawer}
             hideCloseButton={true}
             drawerVariant="document"
@@ -1481,13 +1515,7 @@ const Documents = ({
                 {!isInDrawer && (
                   <Button
                     id={`${id}-close-drawer-btn`}
-                    onClick={() => {
-                      setIsDrawerOpen(false);
-                      setDrawerError(null);
-                      if (!isCreatingNew) {
-                        setIsEditModeInDrawer(false);
-                      }
-                    }}
+                    onClick={handleDrawerClose}
                     variant="ghost"
                   >
                     ×
@@ -1554,13 +1582,7 @@ const Documents = ({
               <div className="flex justify-end space-x-2">
                 <Button
                   id={`${id}-cancel-btn`}
-                  onClick={() => {
-                    setIsDrawerOpen(false);
-                    setDrawerError(null);
-                    if (!isCreatingNew) {
-                      setIsEditModeInDrawer(false);
-                    }
-                  }}
+                  onClick={handleDrawerClose}
                   variant="outline"
                 >
                   Cancel
@@ -1581,6 +1603,18 @@ const Documents = ({
           </div>
           </Drawer>
         </div>
+
+        {/* Unsaved Changes Confirmation Dialog */}
+        <ConfirmationDialog
+          id={`${id}-unsaved-changes-dialog`}
+          isOpen={showUnsavedChangesDialog}
+          onClose={() => setShowUnsavedChangesDialog(false)}
+          onConfirm={executeDrawerClose}
+          title="Unsaved Changes"
+          message="Are you sure you want to cancel? Any unsaved changes will be lost."
+          confirmLabel="Discard changes"
+          cancelLabel="Continue editing"
+        />
       </div>
     </ReflectionContainer>
   );
