@@ -176,3 +176,5 @@ ls -la ui/dist/iframe/
 - F021: Card demo shows card container with content and actions.
 
 - F022: Alert demo shows info/success/warning/danger tones.
+
+- F023: Text demo shows size and weight variants.
