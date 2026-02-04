@@ -489,7 +489,7 @@
   {
     "id": "T061",
     "description": "Dialog demo: Dialog displays title in header",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]

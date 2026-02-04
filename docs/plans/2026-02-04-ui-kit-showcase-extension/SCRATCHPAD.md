@@ -409,3 +409,5 @@ ls -la ui/dist/iframe/
 - T059: Dialog tests assert open on trigger.
 
 - T060: Dialog tests assert close on cancel.
+
+- T061: Dialog tests assert title render.
