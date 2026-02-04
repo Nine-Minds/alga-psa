@@ -899,7 +899,7 @@
   {
     "id": "T112",
     "description": "DropdownMenu demo: Menu opens on trigger click",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
