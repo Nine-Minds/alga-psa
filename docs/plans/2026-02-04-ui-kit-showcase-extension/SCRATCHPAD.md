@@ -333,3 +333,5 @@ ls -la ui/dist/iframe/
 - T021: Layout tests assert default tab is Core.
 
 - T022: DemoSection test asserts title render.
+
+- T023: DemoSection test asserts description render.

@@ -185,7 +185,7 @@
   {
     "id": "T023",
     "description": "DemoSection: Renders description text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
