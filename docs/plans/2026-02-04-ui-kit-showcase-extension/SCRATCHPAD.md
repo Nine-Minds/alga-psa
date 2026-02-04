@@ -192,3 +192,5 @@ ls -la ui/dist/iframe/
 - F029: DataTable demo enables pagination and page size selection.
 
 - F030: DataTable demo enables responsive column hiding.
+
+- F031: DataTable demo renders status cells with Badge.
