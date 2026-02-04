@@ -212,3 +212,5 @@ ls -la ui/dist/iframe/
 - F039: Progress demo shows 0/50/100 values.
 
 - F040: Progress demo includes default, striped overlay, and animated examples.
+
+- F041: Progress demo includes sm/md/lg size examples.
