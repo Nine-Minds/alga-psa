@@ -923,7 +923,7 @@
   {
     "id": "T115",
     "description": "DropdownMenu demo: Disabled items are not clickable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
