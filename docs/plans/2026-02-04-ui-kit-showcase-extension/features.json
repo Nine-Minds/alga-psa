@@ -27,7 +27,7 @@
   {
     "id": "F004",
     "description": "Extension scaffolding: ui/index.html entry point",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Technical Approach"
     ]

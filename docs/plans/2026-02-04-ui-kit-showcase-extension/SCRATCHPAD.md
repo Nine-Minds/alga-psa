@@ -144,3 +144,4 @@ ls -la ui/dist/iframe/
 - F001: Added extension manifest at `ee/extensions/samples/ui-kit-showcase/manifest.json` with iframe UI entry and app menu hook for UI Kit Showcase.
 - F002: Added `ee/extensions/samples/ui-kit-showcase/package.json` with React + @alga/ui-kit dependencies and build script.
 - F003: Added `ee/extensions/samples/ui-kit-showcase/vite.iframe.config.ts` to bundle iframe UI into `ui/dist/iframe/main.js` with @alga/ui-kit aliasing.
+- F004: Added `ee/extensions/samples/ui-kit-showcase/ui/index.html` with root div and iframe bundle script.
