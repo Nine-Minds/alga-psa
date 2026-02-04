@@ -131,7 +131,7 @@
   {
     "id": "F017",
     "description": "Input demo: Show basic input with placeholder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

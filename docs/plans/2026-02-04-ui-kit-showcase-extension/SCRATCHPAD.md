@@ -164,3 +164,5 @@ ls -la ui/dist/iframe/
 - F015: Button demo includes sm/md/lg size examples.
 
 - F016: Button demo includes disabled state example.
+
+- F017: Input demo renders basic input with placeholder.
