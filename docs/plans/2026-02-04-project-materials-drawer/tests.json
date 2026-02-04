@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "@alga-psa/billing is listed in projects package.json dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
