@@ -907,7 +907,7 @@
   {
     "id": "T113",
     "description": "DropdownMenu demo: Menu items are clickable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]

@@ -513,3 +513,5 @@ ls -la ui/dist/iframe/
 - T111: Drawer tests assert overlay click closes drawer.
 
 - T112: DropdownMenu tests assert menu opens.
+
+- T113: DropdownMenu tests assert item clicks update state.
