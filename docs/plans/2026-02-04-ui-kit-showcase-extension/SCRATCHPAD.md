@@ -166,3 +166,5 @@ ls -la ui/dist/iframe/
 - F016: Button demo includes disabled state example.
 
 - F017: Input demo renders basic input with placeholder.
+
+- F018: Input demo renders disabled input state.
