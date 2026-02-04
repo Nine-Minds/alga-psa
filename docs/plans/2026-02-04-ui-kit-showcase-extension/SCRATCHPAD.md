@@ -188,3 +188,5 @@ ls -la ui/dist/iframe/
 - F027: Badge demo shows default/info/success/warning/danger tones.
 
 - F028: DataTable demo enables sortable columns.
+
+- F029: DataTable demo enables pagination and page size selection.
