@@ -11,6 +11,7 @@ import TagMapping from '../models/tagMapping';
 
 /**
  * Delete all tags associated with an entity
+ * Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
  */
 export async function deleteEntityTags(
   trx: Knex.Transaction,
@@ -25,6 +26,7 @@ export async function deleteEntityTags(
 /**
  * Delete tags for multiple entities
  * Useful for bulk deletions
+ * Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
  */
 export async function deleteEntitiesTags(
   trx: Knex.Transaction,
@@ -44,7 +46,7 @@ export async function deleteEntitiesTags(
     })
     .whereIn('tagged_id', entityIds)
     .delete();
-  
+
   return result;
 }
 
@@ -95,27 +97,3 @@ export async function transferEntityTags(
   return result;
 }
 
-/**
- * Clean up orphaned tag definitions
- * Call this periodically to remove unused tag definitions
- */
-export async function cleanupOrphanedTagDefinitions(
-  trx: Knex.Transaction
-): Promise<number> {
-  const tenant = await requireTenantId(trx);
-
-  // Find and delete tag definitions with no mappings
-  const result = await trx.raw(`
-    DELETE FROM tag_definitions td
-    WHERE td.tenant = ?
-    AND NOT EXISTS (
-      SELECT 1 
-      FROM tag_mappings tm 
-      WHERE tm.tenant = td.tenant 
-      AND tm.tag_id = td.tag_id
-    )
-    RETURNING tag_id
-  `, [tenant]);
-
-  return result.rows.length;
-}

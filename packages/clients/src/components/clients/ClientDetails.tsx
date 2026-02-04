@@ -227,7 +227,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     priorityOptions: SelectOption[];
     boardOptions: IBoard[];
     categories: ITicketCategory[];
-    tags?: string[];
+    tags?: ITag[];
     users?: IUser[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);

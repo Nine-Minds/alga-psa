@@ -14,6 +14,7 @@ import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from '
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
+import { orphanedTagCleanupHandler, OrphanedTagCleanupJobData } from './handlers/orphanedTagCleanupHandler';
 import {
   renewMicrosoftCalendarWebhooks,
   verifyGoogleCalendarProvisioning,
@@ -136,6 +137,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       });
     }
 
+    // Register orphaned tag cleanup handler
+    jobScheduler.registerJobHandler<OrphanedTagCleanupJobData>('cleanup-orphaned-tags', async (job: Job<OrphanedTagCleanupJobData>) => {
+      await orphanedTagCleanupHandler(job.data);
+    });
+
     jobScheduler.registerJobHandler<MicrosoftWebhookRenewalJobData>(
       'renew-microsoft-calendar-webhooks',
       async (job: Job<MicrosoftWebhookRenewalJobData>) => {
@@ -168,10 +174,11 @@ export type {
   ReconcileBucketUsageJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
-  GooglePubSubVerificationJobData, 
+  GooglePubSubVerificationJobData,
   GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
-  EmailWebhookMaintenanceJobData
+  EmailWebhookMaintenanceJobData,
+  OrphanedTagCleanupJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -365,5 +372,24 @@ export const scheduleEmailWebhookMaintenanceJob = async (
     'email-webhook-maintenance',
     cronExpression,
     { tenantId }
+  );
+};
+
+/**
+ * Schedule a recurring system-wide job to clean up orphaned tag definitions.
+ * Orphaned tags are tag definitions that have no associated mappings.
+ * This job runs once and cleans up across all tenants.
+ *
+ * @param cronExpression Cron expression for job scheduling (default: '0 5 * * *' for daily at 5:00 AM)
+ * @returns Job ID if successful, null otherwise
+ */
+export const scheduleOrphanedTagCleanupJob = async (
+  cronExpression: string = '0 5 * * *' // Default: daily at 5:00 AM
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<OrphanedTagCleanupJobData>(
+    'cleanup-orphaned-tags',
+    cronExpression,
+    { trigger: 'cron' }
   );
 };
