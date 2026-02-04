@@ -523,3 +523,5 @@ ls -la ui/dist/iframe/
 - T116: DropdownMenu tests assert danger item styling.
 
 - T117: DropdownMenu tests assert right alignment.
+
+- T118: DropdownMenu tests assert menu closes on item click.
