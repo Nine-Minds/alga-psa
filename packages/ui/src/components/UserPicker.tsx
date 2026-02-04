@@ -23,7 +23,7 @@ interface UserPickerProps {
   label?: string;
   value: string;
   onValueChange: (value: string) => void;
-  size?: 'sm' | 'lg';
+  size?: 'xs' | 'sm' | 'lg';
   users: IUser[];
   getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
   disabled?: boolean;
@@ -410,7 +410,7 @@ const UserPicker = ({
                     userId={user.user_id}
                     userName={userName}
                     avatarUrl={avatarUrls[user.user_id] || null}
-                    size={size === 'sm' ? 'sm' : 'md'}
+                    size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
                   />
                   <span>{userName}</span>
                 </div>
@@ -449,22 +449,28 @@ const UserPicker = ({
         disabled={disabled}
         variant="outline"
         data-automation-type={dataAutomationType}
-        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium ${
-          buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
+        className={`inline-flex items-center justify-between rounded-lg font-medium ${
+          size === 'xs'
+            ? 'p-1 h-7 text-xs min-w-0 gap-1'
+            : 'p-2 h-10 text-sm'
+        } ${
+          buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[150px]'
         }`}
       >
-        <div className="flex items-center gap-2 flex-1">
+        <div className={`flex items-center flex-1 ${size === 'xs' ? 'gap-1' : 'gap-2'}`}>
           {currentUser && (
             <UserAvatar
               userId={currentUser.user_id}
               userName={`${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()}
               avatarUrl={avatarUrls[currentUser.user_id] || null}
-              size={size === 'sm' ? 'sm' : 'md'}
+              size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
             />
           )}
-          <span className={!currentUser ? 'text-gray-400' : ''}>{selectedUserName}</span>
+          {size !== 'xs' && (
+            <span className={!currentUser ? 'text-gray-400' : ''}>{selectedUserName}</span>
+          )}
         </div>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
+        <ChevronDown className={size === 'xs' ? 'w-3 h-3 text-gray-500' : 'w-4 h-4 text-gray-500'} />
       </Button>
 
       {/* Dropdown - Using portal to escape overflow:hidden containers */}

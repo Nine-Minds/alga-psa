@@ -1,5 +1,7 @@
 // Pure UI primitives (no server action imports)
 export { TagList } from './TagList';
+export type { TagSize } from './tagSizeConfig';
+export { tagInputSizeConfig, type TagInputSizeConfig } from './tagSizeConfig';
 export { TagInput } from './TagInput';
 export { TagInputInline } from './TagInputInline';
 export { TagGrid } from './TagGrid';
