@@ -10,18 +10,21 @@ import { DB_HOST } from '@/lib/init/serverInit';
 const REQUIRED_CONFIGS = {
   // Authentication
   NEXTAUTH_URL: 'Authentication URL (e.g., http://localhost:3000)',
-  NEXTAUTH_SECRET: 'Authentication secret (generate with: openssl rand -base64 32)',
+  // NOTE: We validate the filesystem/Docker secret file name (`nextauth_secret`) rather than the env var
+  // to avoid false positives when an env var contains a file path like `/run/secrets/nextauth_secret`.
+  nextauth_secret: 'NextAuth secret (filesystem/Docker secret file: secrets/nextauth_secret)',
 
+  // Database (required by EnvConfig validation)
+  DB_TYPE: 'Database type (must be "postgres")',
+  DB_NAME_SERVER: 'Server database name',
+  DB_USER_SERVER: 'Server database username',
   DB_USER_ADMIN: 'Admin database username (e.g., postgres)',
-  DB_PASSWORD_ADMIN: 'Admin database password (postgres password)',
-  DB_PASSWORD_SUPERUSER: 'Admin database superuser password (duplicate of DB_PASSWORD_ADMIN)',
 
   // Database
   DB_HOST: 'Database host (e.g., localhost or postgres)',
   DB_PORT: 'Database port (e.g., 5432)',
-  DB_NAME_SERVER: 'Server database name',
-  DB_USER_SERVER: 'Server database username',
-  DB_PASSWORD_SERVER: 'Server database password',
+  db_password_server: 'Server database password (filesystem/Docker secret file: secrets/db_password_server)',
+  postgres_password: 'Admin database password (filesystem/Docker secret file: secrets/postgres_password)',
 } as const;
 
 type RequiredConfigKey = keyof typeof REQUIRED_CONFIGS;
@@ -71,22 +74,25 @@ export async function validateRequiredConfiguration(): Promise<void> {
       '  2. Docker secrets (if using Docker)',
       '  3. Vault (if configured)',
       '  4. .env file (for local development)',
-      '\nFor more information, see docs/configuration_guide.md'
+      '\nFor more information, see docs/getting-started/configuration_guide.md'
     ].join('\n');
     
     logger.error(errorMessage);
-    // throw new Error('Required configuration validation failed');
+    throw new Error('Required configuration validation failed');
   }
   
   // Log successful validation (with sensitive values masked)
   logger.info('✅ All required configuration values are present', {
     NEXTAUTH_URL: validatedConfigs.NEXTAUTH_URL,
-    NEXTAUTH_SECRET: '***',
+    nextauth_secret: '***',
+    DB_TYPE: validatedConfigs.DB_TYPE,
     DB_HOST: validatedConfigs.DB_HOST,
     DB_PORT: validatedConfigs.DB_PORT,
     DB_NAME_SERVER: validatedConfigs.DB_NAME_SERVER,
     DB_USER_SERVER: validatedConfigs.DB_USER_SERVER,
-    DB_PASSWORD_SERVER: '***'
+    DB_USER_ADMIN: validatedConfigs.DB_USER_ADMIN,
+    db_password_server: '***',
+    postgres_password: '***',
   });
 }
 
