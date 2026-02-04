@@ -160,3 +160,5 @@ ls -la ui/dist/iframe/
 - F013: DemoSection wrapper provides title, description, and demo container styling.
 
 - F014: Button demo shows primary/secondary/ghost/danger variants in .
+
+- F015: Button demo includes sm/md/lg size examples.
