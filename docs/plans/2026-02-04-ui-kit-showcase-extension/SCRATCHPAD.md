@@ -361,3 +361,5 @@ ls -la ui/dist/iframe/
 - T035: CustomSelect tests assert dropdown opens.
 
 - T036: CustomSelect tests assert selected option shows.
+
+- T037: CustomSelect tests assert disabled select doesn't open.

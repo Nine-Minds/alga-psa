@@ -297,7 +297,7 @@
   {
     "id": "T037",
     "description": "CustomSelect demo: Disabled select does not open",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
