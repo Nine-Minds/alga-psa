@@ -389,3 +389,5 @@ ls -la ui/dist/iframe/
 - T049: Stack tests assert gap spacing.
 
 - T050: Badge tests assert default tone styling.
+
+- T051: Badge tests assert success tone styling.
