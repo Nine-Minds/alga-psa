@@ -6,8 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
 import { TagEditForm } from './TagEditForm';
-
-export type TagSize = 'sm' | 'md' | 'lg';
+import type { TagSize } from './tagSizeConfig';
 
 interface TagListProps {
   tags: ITag[];

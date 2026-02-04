@@ -1,6 +1,4 @@
-import type { TagSize } from './TagList';
-
-export type { TagSize };
+export type TagSize = 'sm' | 'md' | 'lg';
 
 export interface TagInputSizeConfig {
   buttonClass: string;
