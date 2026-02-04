@@ -497,7 +497,7 @@
   {
     "id": "T062",
     "description": "ConfirmDialog demo: Confirm button triggers onConfirm callback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
