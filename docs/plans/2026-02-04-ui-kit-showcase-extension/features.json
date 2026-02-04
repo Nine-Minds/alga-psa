@@ -555,7 +555,7 @@
   {
     "id": "F070",
     "description": "Drawer demo: Show right position (default)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
