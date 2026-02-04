@@ -211,7 +211,7 @@
   {
     "id": "F027",
     "description": "Badge demo: Show all tones (default, success, warning, danger, info)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
