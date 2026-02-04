@@ -19,7 +19,7 @@
   {
     "id": "F003",
     "description": "Extension scaffolding: vite.iframe.config.ts for building the iframe bundle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Technical Approach"
     ]
