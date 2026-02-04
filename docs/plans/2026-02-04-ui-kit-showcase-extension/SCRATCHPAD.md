@@ -154,3 +154,5 @@ ls -la ui/dist/iframe/
 - F010: Header layout with title and theme toggle in App.
 
 - F011: Tabbed navigation for categories uses UI kit Tabs in App.
+
+- F012: Content area renders category demo panels via Tabs content.
