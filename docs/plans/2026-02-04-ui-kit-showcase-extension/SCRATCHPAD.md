@@ -299,3 +299,5 @@ ls -la ui/dist/iframe/
 - T004: Scaffold tests assert ui-kit dependency in package.json.
 
 - T005: Scaffold tests assert react and react-dom dependencies.
+
+- T006: Scaffold tests assert iframe bundle output path in vite config.

@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Extension scaffolding: vite config builds to ui/dist/iframe/main.js",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
