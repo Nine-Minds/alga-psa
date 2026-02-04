@@ -321,7 +321,7 @@
   {
     "id": "T040",
     "description": "Alert demo: Info tone has correct styling",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

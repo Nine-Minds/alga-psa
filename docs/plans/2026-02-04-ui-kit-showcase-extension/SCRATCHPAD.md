@@ -367,3 +367,5 @@ ls -la ui/dist/iframe/
 - T038: Card tests assert border and padding.
 
 - T039: Card tests assert content rendering.
+
+- T040: Alert tests assert info styling.
