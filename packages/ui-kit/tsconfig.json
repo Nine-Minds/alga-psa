@@ -4,17 +4,14 @@
     "module": "ES2020",
     "moduleResolution": "bundler",
     "outDir": "dist",
+    "declaration": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "lib": [
       "ES2020",
       "DOM"
-    ],
-    "types": [
-      "react",
-      "react-dom"
     ]
   },
   "include": [
