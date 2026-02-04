@@ -355,3 +355,5 @@ ls -la ui/dist/iframe/
 - T032: Input tests assert text entry.
 
 - T033: Input tests assert placeholder visibility.
+
+- T034: Input tests assert disabled input cannot focus.
