@@ -93,3 +93,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T005 test to verify table columns and material row content.
 - 2026-02-04: Added T006 test to verify Pending/Billed badge rendering.
 - 2026-02-04: Added T007 test to verify currency formatting from minor units.
+- 2026-02-04: Added T008 test to verify per-currency unbilled totals summary.

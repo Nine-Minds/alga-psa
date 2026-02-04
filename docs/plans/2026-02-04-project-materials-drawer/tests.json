@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Unbilled totals grouped by currency code",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

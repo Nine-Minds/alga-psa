@@ -200,4 +200,56 @@ describe('ProjectMaterialsDrawer', () => {
     expect(await screen.findByText(formatCurrencyFromMinorUnits(1234, 'en-US', 'EUR'))).toBeInTheDocument();
     expect(screen.getByText(formatCurrencyFromMinorUnits(3702, 'en-US', 'EUR'))).toBeInTheDocument();
   });
+
+  it('groups unbilled totals by currency (T008)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: null,
+        quantity: 2,
+        rate: 5000,
+        currency_code: 'USD',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+      {
+        project_material_id: 'material-2',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-2',
+        service_name: 'Gadget',
+        sku: null,
+        quantity: 1,
+        rate: 1000,
+        currency_code: 'EUR',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+      {
+        project_material_id: 'material-3',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-3',
+        service_name: 'Billed Item',
+        sku: null,
+        quantity: 1,
+        rate: 999,
+        currency_code: 'USD',
+        description: null,
+        is_billed: true,
+      } as IProjectMaterial,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    expect(await screen.findByText('Unbilled (USD):')).toBeInTheDocument();
+    expect(screen.getByText('Unbilled (EUR):')).toBeInTheDocument();
+    expect(screen.getByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))).toBeInTheDocument();
+    expect(screen.getByText(formatCurrencyFromMinorUnits(1000, 'en-US', 'EUR'))).toBeInTheDocument();
+  });
 });
