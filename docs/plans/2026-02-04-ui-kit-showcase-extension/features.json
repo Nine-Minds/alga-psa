@@ -299,7 +299,7 @@
   {
     "id": "F038",
     "description": "Tooltip demo: Show all positions (top, bottom, left, right)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

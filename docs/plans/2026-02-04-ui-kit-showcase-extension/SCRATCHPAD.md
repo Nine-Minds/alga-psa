@@ -206,3 +206,5 @@ ls -la ui/dist/iframe/
 - F036: Spinner demo renders multiple sizes.
 
 - F037: LoadingIndicator demo shows spinner with text.
+
+- F038: Tooltip demo shows top/bottom/left/right positions.
