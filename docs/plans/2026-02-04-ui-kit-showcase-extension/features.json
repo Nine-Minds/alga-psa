@@ -219,7 +219,7 @@
   {
     "id": "F028",
     "description": "DataTable demo: Show table with sortable columns",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

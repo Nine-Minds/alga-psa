@@ -186,3 +186,5 @@ ls -la ui/dist/iframe/
 - F026: Stack demo shows gap and alignment options.
 
 - F027: Badge demo shows default/info/success/warning/danger tones.
+
+- F028: DataTable demo enables sortable columns.
