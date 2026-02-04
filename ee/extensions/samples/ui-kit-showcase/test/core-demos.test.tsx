@@ -84,24 +84,25 @@ describe('CustomSelect demo', () => {
   test('dropdown opens on click', async () => {
     const user = userEvent.setup();
     render(<SelectDemo />);
-    const trigger = screen.getByText('Active');
+    const trigger = screen.getAllByRole('combobox')[0];
     await user.click(trigger);
-    expect(screen.getByText('Paused')).toBeInTheDocument();
+    expect(await screen.findByText('Paused')).toBeInTheDocument();
   });
 
   test('selected option is displayed', async () => {
     const user = userEvent.setup();
     render(<SelectDemo />);
-    const trigger = screen.getByText('Active');
+    const trigger = screen.getAllByRole('combobox')[0];
     await user.click(trigger);
-    await user.click(screen.getByText('Paused'));
-    expect(screen.getByText('Paused')).toBeInTheDocument();
+    const paused = await screen.findByRole('option', { name: 'Paused' });
+    await user.click(paused);
+    expect(trigger).toHaveTextContent('Paused');
   });
 
   test('disabled select does not open', async () => {
     const user = userEvent.setup();
     render(<SelectDemo />);
-    const disabledTrigger = screen.getByText('Disabled');
+    const disabledTrigger = screen.getAllByRole('combobox')[1];
     await user.click(disabledTrigger);
     expect(screen.queryByText('Archived')).not.toBeInTheDocument();
   });
@@ -174,19 +175,19 @@ describe('Text demo', () => {
 describe('Stack demo', () => {
   test('horizontal direction displays items in a row', () => {
     render(<StackDemo />);
-    const row = screen.getByText('A').parentElement?.parentElement as HTMLElement;
+    const row = screen.getByText('A').parentElement as HTMLElement;
     expect(row.style.flexDirection).toBe('row');
   });
 
   test('vertical direction displays items in a column', () => {
     render(<StackDemo />);
-    const column = screen.getByText('1').parentElement?.parentElement as HTMLElement;
+    const column = screen.getByText('1').parentElement as HTMLElement;
     expect(column.style.flexDirection).toBe('column');
   });
 
   test('gap prop adds spacing between items', () => {
     render(<StackDemo />);
-    const row = screen.getByText('A').parentElement?.parentElement as HTMLElement;
+    const row = screen.getByText('A').parentElement as HTMLElement;
     expect(row.style.gap).toBe('8px');
   });
 });
@@ -201,14 +202,14 @@ describe('Badge demo', () => {
   test('success tone renders green styling', () => {
     render(<BadgeDemo />);
     const badge = screen.getByText('Success');
-    expect(badge.style.background).toMatch(/dcfce7|rgb\\(220, 252, 231\\)/);
+    expect(badge.style.background).toContain('rgb(220, 252, 231)');
   });
 
   test('warning and danger tones render correctly', () => {
     render(<BadgeDemo />);
     const warning = screen.getByText('Warning');
     const danger = screen.getByText('Danger');
-    expect(warning.style.background).toMatch(/fef3c7|rgb\\(254, 243, 199\\)/);
-    expect(danger.style.background).toMatch(/fff7ed|rgb\\(255, 247, 237\\)/);
+    expect(warning.style.background).toContain('rgb(254, 243, 199)');
+    expect(danger.style.background).toContain('rgb(255, 247, 237)');
   });
 });

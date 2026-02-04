@@ -24,7 +24,7 @@ describe('DataTable demo', () => {
     render(<DataTableDemo />);
     const rows = screen.getAllByRole('row');
     const firstCell = rows[1].querySelectorAll('td')[0].textContent;
-    await user.click(screen.getByRole('button', { name: 'Company' }));
+    await user.click(screen.getByRole('button', { name: /Company/ }));
     const updatedRows = screen.getAllByRole('row');
     const updatedFirstCell = updatedRows[1].querySelectorAll('td')[0].textContent;
     expect(updatedFirstCell).not.toBe(firstCell);
@@ -39,9 +39,9 @@ describe('DataTable demo', () => {
     const user = userEvent.setup();
     render(<DataTableDemo />);
     const initialRows = screen.getAllByRole('row').length;
-    const selector = screen.getByText('5 per page');
+    const selector = screen.getByRole('combobox');
     await user.click(selector);
-    await user.click(screen.getByText('10 per page'));
+    await user.click(await screen.findByRole('option', { name: '10 per page' }));
     const updatedRows = screen.getAllByRole('row').length;
     expect(updatedRows).toBeGreaterThan(initialRows);
   });
@@ -117,8 +117,7 @@ describe('Spinner demo', () => {
   test('spinner animates', () => {
     render(<SpinnerDemo />);
     const spinner = screen.getAllByRole('status')[0] as HTMLElement;
-    const inner = spinner.firstElementChild as HTMLElement | null;
-    expect(inner?.style.animation).toContain('alga-spinner-spin');
+    expect(spinner.style.animation).toContain('alga-spinner-spin');
   });
 
   test('different sizes render correctly', () => {
@@ -159,7 +158,8 @@ describe('Progress demo', () => {
     render(<ProgressDemo />);
     const progress = screen.getAllByRole('progressbar').find((el) => el.getAttribute('aria-valuenow') === '50');
     expect(progress).toBeTruthy();
-    const bar = progress?.querySelector('div > div') as HTMLElement | null;
+    const track = progress?.querySelector('div') as HTMLElement | null;
+    const bar = track?.querySelector('div') as HTMLElement | null;
     expect(bar?.style.width).toBe('50%');
   });
 
@@ -172,7 +172,8 @@ describe('Progress demo', () => {
   test('animated variant has moving animation', () => {
     render(<ProgressDemo />);
     const progress = screen.getAllByRole('progressbar').find((el) => el.getAttribute('aria-valuenow') === '70');
-    const bar = progress?.querySelector('div > div') as HTMLElement | null;
+    const track = progress?.querySelector('div') as HTMLElement | null;
+    const bar = track?.querySelector('div') as HTMLElement | null;
     expect(bar?.style.transition).toContain('width');
   });
 
@@ -187,7 +188,8 @@ describe('Progress demo', () => {
   test('indeterminate mode shows continuous animation', () => {
     render(<ProgressDemo />);
     const indeterminate = screen.getAllByRole('progressbar').find((el) => el.getAttribute('aria-valuenow') === '25');
-    const bar = indeterminate?.querySelector('div > div') as HTMLElement | null;
+    const track = indeterminate?.querySelector('div') as HTMLElement | null;
+    const bar = track?.querySelector('div') as HTMLElement | null;
     expect(bar?.style.animation).toContain('progress-indeterminate');
   });
 });
@@ -195,7 +197,8 @@ describe('Progress demo', () => {
 describe('Skeleton demo', () => {
   test('basic skeleton renders with pulse animation', () => {
     render(<SkeletonDemo />);
-    const skeleton = screen.getByText('Basic').parentElement?.querySelector('span') as HTMLElement;
+    const label = screen.getByText('Basic');
+    const skeleton = label.nextElementSibling?.querySelector('span') as HTMLElement;
     expect(skeleton?.style.animation).toContain('skeleton-pulse');
   });
 
@@ -208,13 +211,15 @@ describe('Skeleton demo', () => {
 
   test('SkeletonCircle renders as circle shape', () => {
     render(<SkeletonDemo />);
-    const circle = screen.getByText('Circle').parentElement?.querySelector('span') as HTMLElement;
+    const label = screen.getByText('Circle');
+    const circle = label.nextElementSibling?.querySelector('span') as HTMLElement;
     expect(circle?.style.borderRadius).toBe('50%');
   });
 
   test('SkeletonRectangle renders with specified dimensions', () => {
     render(<SkeletonDemo />);
-    const rect = screen.getByText('Rectangle').parentElement?.querySelector('span') as HTMLElement;
+    const label = screen.getByText('Rectangle');
+    const rect = label.nextElementSibling?.querySelector('span') as HTMLElement;
     expect(rect?.style.height).toBe('120px');
   });
 });
