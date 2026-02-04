@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Quantity defaults to 1 and cannot go below 1",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

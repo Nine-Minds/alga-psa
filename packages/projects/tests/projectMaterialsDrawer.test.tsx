@@ -298,4 +298,18 @@ describe('ProjectMaterialsDrawer', () => {
     expect(await screen.findByText(usdLabel)).toBeInTheDocument();
     expect(screen.getByText(eurLabel)).toBeInTheDocument();
   });
+
+  it('defaults quantity to 1 and prevents values below 1 (T011)', async () => {
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    const addButton = await screen.findByRole('button', { name: 'Add' });
+    addButton.click();
+
+    const quantityInput = await screen.findByLabelText('Quantity');
+    expect(quantityInput).toHaveValue(1);
+
+    fireEvent.change(quantityInput, { target: { value: '0' } });
+    expect(quantityInput).toHaveValue(1);
+  });
 });
