@@ -252,4 +252,26 @@ describe('ProjectMaterialsDrawer', () => {
     expect(screen.getByText(formatCurrencyFromMinorUnits(10000, 'en-US', 'USD'))).toBeInTheDocument();
     expect(screen.getByText(formatCurrencyFromMinorUnits(1000, 'en-US', 'EUR'))).toBeInTheDocument();
   });
+
+  it('loads product options for the dropdown (T009)', async () => {
+    mockProducts = [
+      { service_id: 'service-1', service_name: 'Widget', sku: 'W-1' } as CatalogPickerItem,
+      { service_id: 'service-2', service_name: 'Gadget', sku: null } as CatalogPickerItem,
+    ];
+
+    const actions = await import('@alga-psa/billing/actions');
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    await screen.findByText('Materials');
+    await screen.findByRole('button', { name: 'Add' }).then((button) => button.click());
+
+    expect(await screen.findByText('Widget (W-1)')).toBeInTheDocument();
+    expect(screen.getByText('Gadget')).toBeInTheDocument();
+    expect(actions.searchServiceCatalogForPicker).toHaveBeenCalledWith({
+      item_kinds: ['product'],
+      is_active: true,
+      limit: 100,
+    });
+  });
 });

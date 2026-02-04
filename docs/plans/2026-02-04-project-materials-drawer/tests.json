@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Product dropdown loads and filters products",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
