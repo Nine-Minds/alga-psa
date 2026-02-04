@@ -214,3 +214,5 @@ ls -la ui/dist/iframe/
 - F040: Progress demo includes default, striped overlay, and animated examples.
 
 - F041: Progress demo includes sm/md/lg size examples.
+
+- F042: Progress demo includes indeterminate mode example.
