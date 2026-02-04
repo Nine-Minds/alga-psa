@@ -649,7 +649,7 @@
   {
     "id": "T081",
     "description": "Checkbox demo: Label is clickable and toggles checkbox",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
