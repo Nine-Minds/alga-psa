@@ -379,7 +379,7 @@
   {
     "id": "F048",
     "description": "Checkbox demo: Show indeterminate state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
