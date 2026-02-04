@@ -38,8 +38,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
-import { getUserContactId } from '@alga-psa/users/actions';
+import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/users/actions';
 import { createTenantKnex } from '@alga-psa/db';
 
 interface TicketConversationProps {
@@ -413,6 +412,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     roomName={`ticket-${ticket.ticket_id}`}
                     initialContent={DEFAULT_BLOCK}
                     onContentChange={onNewCommentContentChange}
+                    searchMentions={searchUsersForMentions}
                   />
                 </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">

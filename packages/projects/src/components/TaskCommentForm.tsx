@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { searchUsersForMentions } from '@alga-psa/users/actions';
 
 interface TaskCommentFormProps {
   taskId: string;
@@ -76,6 +77,7 @@ export function TaskCommentForm({
         id="task-comment-editor"
         editorRef={editorRef}
         initialContent={DEFAULT_BLOCK}
+        searchMentions={searchUsersForMentions}
       />
       <div className="flex justify-end gap-2">
         <Button
