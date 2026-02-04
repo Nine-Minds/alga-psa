@@ -337,12 +337,12 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
       }
 
-      // Check if user can delete this specific tag
-      // Users can only delete tags they created, unless:
-      // 1. The tag has no created_by (legacy tags)
-      // 2. The user has tag:delete permission (can delete any tag)
+      // Check tag:delete permission for tags created by others
+      // Permission model:
+      // - Users with tag:delete permission can delete any tag
+      // - Users without tag:delete permission can only delete tags they created
+      // - Legacy tags (no created_by) can be deleted by anyone with entity update permission
       if (existingTag.created_by && existingTag.created_by !== currentUser.user_id) {
-        // Check if user has tag:delete permission to override creator restriction
         if (!await hasPermissionAsync(currentUser, 'tag', 'delete', trx)) {
           await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
         }
