@@ -281,7 +281,7 @@
   {
     "id": "T035",
     "description": "CustomSelect demo: Dropdown opens on click",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
