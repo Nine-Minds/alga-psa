@@ -363,7 +363,7 @@
   {
     "id": "F046",
     "description": "Skeleton demo: Show SkeletonRectangle for image placeholders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
