@@ -523,7 +523,7 @@
   {
     "id": "F066",
     "description": "Tabs demo: Show default variant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
