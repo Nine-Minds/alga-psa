@@ -603,7 +603,7 @@
   {
     "id": "F076",
     "description": "DropdownMenu demo: Show menu with dividers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
