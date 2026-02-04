@@ -387,7 +387,7 @@
   {
     "id": "F049",
     "description": "Checkbox demo: Show with label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
