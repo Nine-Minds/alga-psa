@@ -349,18 +349,8 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       }
 
       // id is actually mapping_id - just delete the mapping
+      // Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
       await TagMapping.delete(trx, tenant, id);
-
-      // Check if this was the last mapping for this definition and clean up if orphaned
-      const remainingMappings = await trx('tag_mappings')
-        .where({ tenant, tag_id: existingTag.definition_tag_id })
-        .count('* as count')
-        .first();
-
-      if (remainingMappings && Number(remainingMappings.count) === 0) {
-        // Delete the orphaned tag definition
-        await TagDefinition.delete(trx, tenant, existingTag.definition_tag_id);
-      }
 
       const occurredAt = new Date().toISOString();
       await publishWorkflowEvent({
@@ -461,29 +451,23 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get tag definitions that have at least one mapping (filter out orphans)
-      // Use subquery with GROUP BY for portable distinct-on-tag_text behavior
-      const uniqueTagIds = trx('tag_definitions as inner_td')
-        .select('inner_td.tag_text', 'inner_td.tenant')
-        .min('inner_td.tag_id as tag_id')
-        .where({ 'inner_td.tenant': tenant, 'inner_td.tagged_type': entityType })
-        .whereExists(function() {
-          this.select(1)
-            .from('tag_mappings as tm')
-            .whereRaw('tm.tenant = inner_td.tenant AND tm.tag_id = inner_td.tag_id');
-        })
-        .groupBy('inner_td.tag_text', 'inner_td.tenant');
+      // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
+      const result = await trx.raw(`
+        SELECT DISTINCT ON (td.tag_text) td.*
+        FROM tag_definitions td
+        WHERE td.tenant = ?
+          AND td.tagged_type = ?
+          AND EXISTS (
+            SELECT 1 FROM tag_mappings tm
+            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
+          )
+        ORDER BY td.tag_text ASC, td.created_at ASC
+      `, [tenant, entityType]);
 
-      const definitions = await trx('tag_definitions as td')
-        .select('td.*')
-        .innerJoin(uniqueTagIds.as('unique_tags'), function() {
-          this.on('td.tag_id', '=', 'unique_tags.tag_id')
-              .andOn('td.tenant', '=', 'unique_tags.tenant');
-        })
-        .where('td.tenant', tenant)
-        .orderBy('td.tag_text', 'asc');
+      const definitions = result.rows || [];
 
       // Convert to ITag format (use definition ID as tag_id since these are unique)
-      return definitions.map(def => ({
+      return definitions.map((def: any) => ({
         tag_id: def.tag_id,
         tenant,
         board_id: def.board_id || undefined,

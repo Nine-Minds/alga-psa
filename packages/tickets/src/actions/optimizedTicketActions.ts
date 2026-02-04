@@ -1148,29 +1148,18 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
-      // Use subquery with GROUP BY for portable distinct-on-tag_text behavior
-      // Include tenant in GROUP BY and JOIN for CitusDB compatibility
-      trx('tag_definitions as td')
-        .select('td.tag_id', 'td.tag_text', 'td.background_color', 'td.text_color')
-        .innerJoin(
-          trx('tag_definitions as inner_td')
-            .select('inner_td.tag_text', 'inner_td.tenant')
-            .min('inner_td.tag_id as min_tag_id')
-            .where({ 'inner_td.tenant': tenant, 'inner_td.tagged_type': 'ticket' })
-            .whereExists(function() {
-              this.select(1)
-                .from('tag_mappings as tm')
-                .whereRaw('tm.tenant = inner_td.tenant AND tm.tag_id = inner_td.tag_id');
-            })
-            .groupBy('inner_td.tag_text', 'inner_td.tenant')
-            .as('unique_tags'),
-          function() {
-            this.on('td.tag_id', '=', 'unique_tags.min_tag_id')
-                .andOn('td.tenant', '=', 'unique_tags.tenant');
-          }
-        )
-        .where('td.tenant', tenant)
-        .orderBy('td.tag_text', 'asc')
+      // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
+      trx.raw(`
+        SELECT DISTINCT ON (td.tag_text) td.tag_id, td.tag_text, td.background_color, td.text_color
+        FROM tag_definitions td
+        WHERE td.tenant = ?
+          AND td.tagged_type = 'ticket'
+          AND EXISTS (
+            SELECT 1 FROM tag_mappings tm
+            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
+          )
+        ORDER BY td.tag_text ASC, td.created_at ASC
+      `, [tenant])
     ]);
 
     // Format options for dropdowns
@@ -1227,7 +1216,8 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       categories,
       clients: clientsWithLogos, // Return clients with logos
       users,
-      tags: Array.isArray(tags) ? tags.map((tag: any) => ({
+      // Handle raw query result format (tags comes from trx.raw which returns { rows: [...] })
+      tags: (tags?.rows || []).map((tag: any) => ({
         tag_id: tag.tag_id,
         tag_text: tag.tag_text,
         tagged_id: '',
@@ -1235,7 +1225,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         tenant: tenant,
         background_color: tag.background_color,
         text_color: tag.text_color
-      })) : []
+      }))
     };
     } catch (error) {
       console.error('Failed to fetch ticket form options:', error);

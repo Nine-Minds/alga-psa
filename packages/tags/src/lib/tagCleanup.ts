@@ -11,7 +11,7 @@ import TagMapping from '../models/tagMapping';
 
 /**
  * Delete all tags associated with an entity
- * Also cleans up any orphaned tag definitions that have no remaining mappings
+ * Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
  */
 export async function deleteEntityTags(
   trx: Knex.Transaction,
@@ -20,36 +20,13 @@ export async function deleteEntityTags(
 ): Promise<number> {
   const tenant = await requireTenantId(trx);
 
-  // Get tag_ids before deletion to check for orphans later
-  const mappings = await trx('tag_mappings')
-    .where({ tenant, tagged_id: entityId, tagged_type: entityType })
-    .select('tag_id');
-
-  const tagIds = mappings.map(m => m.tag_id);
-
-  // Delete mappings
-  const deleted = await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
-
-  // Clean up orphaned definitions (those with no remaining mappings)
-  if (tagIds.length > 0) {
-    await trx('tag_definitions')
-      .where('tenant', tenant)
-      .whereIn('tag_id', tagIds)
-      .whereNotExists(function() {
-        this.select(1)
-          .from('tag_mappings as tm')
-          .whereRaw('tm.tenant = tag_definitions.tenant AND tm.tag_id = tag_definitions.tag_id');
-      })
-      .delete();
-  }
-
-  return deleted;
+  return await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
 }
 
 /**
  * Delete tags for multiple entities
- * Also cleans up any orphaned tag definitions that have no remaining mappings
  * Useful for bulk deletions
+ * Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
  */
 export async function deleteEntitiesTags(
   trx: Knex.Transaction,
@@ -62,18 +39,6 @@ export async function deleteEntitiesTags(
     return 0;
   }
 
-  // Get tag_ids before deletion to check for orphans later
-  const mappings = await trx('tag_mappings')
-    .where({
-      tenant,
-      tagged_type: entityType
-    })
-    .whereIn('tagged_id', entityIds)
-    .select('tag_id');
-
-  const tagIds = mappings.map(m => m.tag_id);
-
-  // Delete mappings
   const result = await trx('tag_mappings')
     .where({
       tenant,
@@ -81,19 +46,6 @@ export async function deleteEntitiesTags(
     })
     .whereIn('tagged_id', entityIds)
     .delete();
-
-  // Clean up orphaned definitions (those with no remaining mappings)
-  if (tagIds.length > 0) {
-    await trx('tag_definitions')
-      .where('tenant', tenant)
-      .whereIn('tag_id', tagIds)
-      .whereNotExists(function() {
-        this.select(1)
-          .from('tag_mappings as tm')
-          .whereRaw('tm.tenant = tag_definitions.tenant AND tm.tag_id = tag_definitions.tag_id');
-      })
-      .delete();
-  }
 
   return result;
 }
@@ -145,27 +97,3 @@ export async function transferEntityTags(
   return result;
 }
 
-/**
- * Clean up orphaned tag definitions
- * Call this periodically to remove unused tag definitions
- */
-export async function cleanupOrphanedTagDefinitions(
-  trx: Knex.Transaction
-): Promise<number> {
-  const tenant = await requireTenantId(trx);
-
-  // Find and delete tag definitions with no mappings
-  const result = await trx.raw(`
-    DELETE FROM tag_definitions td
-    WHERE td.tenant = ?
-    AND NOT EXISTS (
-      SELECT 1 
-      FROM tag_mappings tm 
-      WHERE tm.tenant = td.tenant 
-      AND tm.tag_id = td.tag_id
-    )
-    RETURNING tag_id
-  `, [tenant]);
-
-  return result.rows.length;
-}
