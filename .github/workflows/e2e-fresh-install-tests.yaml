@@ -25,37 +25,39 @@ jobs:
 
       #--------------------------------------------------------------
       # Detect whether the proposed changes require running the
-      # (slow) E2E installation tests.  If the pull-request only
-      # touches the Helm chart (which lives in the `helm/` folder)
-      # we can safely skip the remainder of the workflow because the
-      # chart does not influence the application code executed inside
-      # these containers.
+      # (slow) E2E installation tests.  Skip if only non-application
+      # files changed (e.g., Helm charts, docs, scripts).
       #--------------------------------------------------------------
       - name: Check for relevant file changes
         id: changed_files_check
         uses: tj-actions/changed-files@v42 # Using a specific version
         with:
           # List of paths that, when modified, SHOULD trigger the heavy
-          # E2E job.  **Notice that the `helm/**` path is intentionally
-          # omitted** so that commits exclusively touching Helm logic
-          # will set `any_changed` to `false`.
+          # E2E job. Paths NOT listed here (helm/, docs/, scripts/, sdk/)
+          # will not trigger the tests.
           files: |
             .github/workflows/e2e-fresh-install-tests.yaml
             docker-compose.base.yaml
             docker-compose.ce.yaml
+            docker-compose.prod.yaml
+            Dockerfile
+            Dockerfile.build
             server/**
             setup/**
             shared/**
+            packages/**
+            services/**
+            ee/**
             e2e-tests/**
+            package.json
+            package-lock.json
+            tsconfig.base.json
 
-      # Short-circuit the job if no relevant files changed (i.e. only
-      # Helm-chart related modifications).  GitHub marks a job as
-      # successful when all executed steps succeed, so emitting an
-      # informative log and exiting early is sufficient.
-      - name: Skip job -- only Helm chart files changed
+      # Short-circuit the job if no relevant files changed
+      - name: Skip job -- no application files changed
         if: steps.changed_files_check.outputs.any_changed == 'false'
         run: |
-          echo "Only Helm chart-related files were modified – skipping E2E Fresh Install Tests."
+          echo "No application files were modified – skipping E2E Fresh Install Tests."
           echo "No further steps will be executed."
           # Nothing else to do, the job will report success because the
           # previous steps (including this one) have succeeded.
