@@ -875,7 +875,7 @@
   {
     "id": "T109",
     "description": "Drawer demo: Close button closes drawer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
