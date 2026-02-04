@@ -355,7 +355,7 @@
   {
     "id": "F045",
     "description": "Skeleton demo: Show SkeletonCircle for avatar placeholders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
