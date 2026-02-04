@@ -835,7 +835,7 @@
   {
     "id": "T104",
     "description": "Drawer demo: Right drawer slides in from right edge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
