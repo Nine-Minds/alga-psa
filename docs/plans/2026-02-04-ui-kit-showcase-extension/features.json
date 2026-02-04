@@ -83,7 +83,7 @@
   {
     "id": "F011",
     "description": "Main layout: Tabbed navigation for component categories (Core, Data, Dialogs, Feedback, Form, Navigation)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow 1: Browse Component Categories"
     ]
