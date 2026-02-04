@@ -497,6 +497,7 @@ const Documents = ({
     if (isCreatingNew) {
       setNewDocumentName('');
       setCurrentContent(DEFAULT_BLOCKS);
+      setIsCreatingNew(false);
     } else if (selectedDocument) {
       setDocumentName(selectedDocument.document_name);
       setIsEditModeInDrawer(false);
