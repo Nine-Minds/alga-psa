@@ -793,7 +793,7 @@
   {
     "id": "T099",
     "description": "Tabs demo: Default variant shows border-bottom indicator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
