@@ -391,6 +391,10 @@ export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
   documentName: z.string(),
   userId: z.string().uuid(),
   content: z.string(),
+  // Fields for document updates (comparing old vs new content for mention detection)
+  oldContent: z.unknown().optional(),
+  newContent: z.string().optional(),
+  isUpdate: z.boolean().optional(),
   changes: z.record(z.unknown()).optional(),
 });
 
