@@ -561,7 +561,7 @@
   {
     "id": "T070",
     "description": "Progress demo: Progress bar fills to specified value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
