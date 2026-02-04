@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "Currency amounts formatted correctly from minor units",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

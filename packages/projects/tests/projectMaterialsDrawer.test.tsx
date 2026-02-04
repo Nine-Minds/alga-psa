@@ -176,4 +176,28 @@ describe('ProjectMaterialsDrawer', () => {
     expect(await screen.findByText('Pending')).toBeInTheDocument();
     expect(screen.getByText('Billed')).toBeInTheDocument();
   });
+
+  it('formats currency values from minor units (T007)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: null,
+        quantity: 3,
+        rate: 1234,
+        currency_code: 'EUR',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    expect(await screen.findByText(formatCurrencyFromMinorUnits(1234, 'en-US', 'EUR'))).toBeInTheDocument();
+    expect(screen.getByText(formatCurrencyFromMinorUnits(3702, 'en-US', 'EUR'))).toBeInTheDocument();
+  });
 });
