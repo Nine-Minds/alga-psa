@@ -419,3 +419,5 @@ ls -la ui/dist/iframe/
 - T064: ConfirmDialog tests assert danger button styling.
 
 - T065: Spinner tests assert animation present.
+
+- T066: Spinner tests assert size variants.
