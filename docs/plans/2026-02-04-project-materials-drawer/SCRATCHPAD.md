@@ -103,3 +103,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T015 test to ensure delete controls only show for unbilled items.
 - 2026-02-04: Added T016 test to verify delete action triggers list refresh.
 - 2026-02-04: Added T017 test to verify no-client warning and Add button suppression.
+- 2026-02-04: Added T018 test to verify automation IDs on key elements.

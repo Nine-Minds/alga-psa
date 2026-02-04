@@ -512,4 +512,47 @@ describe('ProjectMaterialsDrawer', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
   });
+
+  it('includes data automation ids on interactive elements (T018)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: null,
+        quantity: 1,
+        rate: 1000,
+        currency_code: 'USD',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+    ];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    expect(container.querySelector('[data-automation-id="project-materials-drawer"]')).toBeInTheDocument();
+
+    const addButton = await screen.findByRole('button', { name: 'Add' });
+    expect(addButton).toHaveAttribute('data-automation-id', 'project-materials-drawer-add-btn');
+    addButton.click();
+
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-quantity"]')
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-description"]')
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-cancel-add-btn"]')
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-save-add-btn"]')
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-automation-id="project-materials-drawer-delete-material-1"]')
+    ).toBeInTheDocument();
+  });
 });

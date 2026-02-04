@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "Data automation IDs present on key interactive elements",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   }
 ]
