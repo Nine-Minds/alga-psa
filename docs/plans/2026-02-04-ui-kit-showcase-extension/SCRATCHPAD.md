@@ -246,3 +246,5 @@ ls -la ui/dist/iframe/
 - F056: TextArea demo includes resize options.
 
 - F057: TextArea demo includes disabled state.
+
+- F058: Label demo includes basic label.
