@@ -203,7 +203,7 @@
   {
     "id": "F026",
     "description": "Stack demo: Show different gap and alignment options",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
