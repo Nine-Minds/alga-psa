@@ -257,7 +257,7 @@
   {
     "id": "T032",
     "description": "Input demo: Input accepts text input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
