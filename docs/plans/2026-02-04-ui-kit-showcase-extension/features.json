@@ -459,7 +459,7 @@
   {
     "id": "F058",
     "description": "Label demo: Show basic label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
