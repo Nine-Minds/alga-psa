@@ -152,7 +152,7 @@
   {
     "id": "T019",
     "description": "Layout: Six category tabs are displayed (Core, Data, Dialogs, Feedback, Form, Navigation)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
