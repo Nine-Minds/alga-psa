@@ -611,7 +611,7 @@
   {
     "id": "F077",
     "description": "DropdownMenu demo: Show disabled items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
