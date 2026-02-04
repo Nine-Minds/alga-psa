@@ -801,7 +801,7 @@
   {
     "id": "T100",
     "description": "Tabs demo: Pills variant shows pill-shaped active state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]

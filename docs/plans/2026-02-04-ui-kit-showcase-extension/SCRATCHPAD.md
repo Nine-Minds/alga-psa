@@ -487,3 +487,5 @@ ls -la ui/dist/iframe/
 - T098: SearchInput tests assert debounce behavior.
 
 - T099: Tabs tests assert default indicator.
+
+- T100: Tabs tests assert pills variant style.
