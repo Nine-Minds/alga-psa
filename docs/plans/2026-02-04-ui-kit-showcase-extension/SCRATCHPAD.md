@@ -445,3 +445,5 @@ ls -la ui/dist/iframe/
 - T077: Skeleton tests assert circular shape.
 
 - T078: Skeleton tests assert rectangle dimensions.
+
+- T079: Checkbox tests assert toggling state.

@@ -633,7 +633,7 @@
   {
     "id": "T079",
     "description": "Checkbox demo: Checkbox toggles between checked and unchecked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
