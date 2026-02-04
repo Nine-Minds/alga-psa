@@ -230,7 +230,8 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       return false;
     },
     hasPendingChanges: () => {
-      return !!selectedTaskIdRef.current || (pendingModeRef.current && pendingDepsRef.current.length > 0);
+      // Only a selected task that hasn't been added should trigger the save warning.
+      return !!selectedTaskIdRef.current;
     },
     getPendingDependencies: () => pendingDepsRef.current,
   }), [task?.task_id, refreshDependencies, t]);
