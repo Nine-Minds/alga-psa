@@ -483,3 +483,5 @@ ls -la ui/dist/iframe/
 - T096: SearchInput tests assert loading spinner state.
 
 - T097: SearchInput tests assert size variants.
+
+- T098: SearchInput tests assert debounce behavior.
