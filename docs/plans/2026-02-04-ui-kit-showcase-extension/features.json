@@ -563,7 +563,7 @@
   {
     "id": "F071",
     "description": "Drawer demo: Show left position",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

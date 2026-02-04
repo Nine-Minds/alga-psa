@@ -272,3 +272,5 @@ ls -la ui/dist/iframe/
 - F069: Tabs demo includes disabled tab example.
 
 - F070: Drawer demo supports right position.
+
+- F071: Drawer demo supports left position.
