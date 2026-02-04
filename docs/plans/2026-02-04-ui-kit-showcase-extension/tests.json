@@ -265,7 +265,7 @@
   {
     "id": "T033",
     "description": "Input demo: Placeholder text is visible when empty",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
