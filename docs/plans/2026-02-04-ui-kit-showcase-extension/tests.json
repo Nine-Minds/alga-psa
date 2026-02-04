@@ -529,7 +529,7 @@
   {
     "id": "T066",
     "description": "Spinner demo: Different sizes render correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
