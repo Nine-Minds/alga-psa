@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Extension scaffolding: manifest.json has appMenu hook configured",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
