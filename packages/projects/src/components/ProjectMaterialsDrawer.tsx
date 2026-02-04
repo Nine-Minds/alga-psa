@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
-import { Package, Plus, Loader2 } from 'lucide-react';
+import { Package, Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import {
@@ -15,6 +15,7 @@ import {
   searchServiceCatalogForPicker,
   addProjectMaterial,
   getServicePrices,
+  deleteProjectMaterial,
   type CatalogPickerItem,
 } from '@alga-psa/billing/actions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -37,6 +38,7 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -166,6 +168,20 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
       toast.error('Failed to add material');
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const handleDeleteMaterial = async (materialId: string) => {
+    setDeletingId(materialId);
+    try {
+      await deleteProjectMaterial(materialId);
+      toast.success('Material removed');
+      await loadMaterials();
+    } catch (error) {
+      console.error('Error deleting material:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to remove material');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -326,6 +342,7 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
                   <th className="pb-2 font-medium text-right">Rate</th>
                   <th className="pb-2 font-medium text-right">Total</th>
                   <th className="pb-2 font-medium text-center">Status</th>
+                  <th className="pb-2 w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -354,6 +371,23 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
                         <Badge variant="default">Billed</Badge>
                       ) : (
                         <Badge variant="outline">Pending</Badge>
+                      )}
+                    </td>
+                    <td className="py-2 text-right">
+                      {!material.is_billed && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMaterial(material.project_material_id)}
+                          disabled={deletingId === material.project_material_id}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                        >
+                          {deletingId === material.project_material_id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
                       )}
                     </td>
                   </tr>

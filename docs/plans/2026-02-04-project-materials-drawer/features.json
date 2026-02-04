@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Delete unbilled materials via deleteProjectMaterial with success/error toasts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Secondary Flow: Delete Material"]
   },
   {
