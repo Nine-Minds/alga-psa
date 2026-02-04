@@ -276,3 +276,5 @@ ls -la ui/dist/iframe/
 - F071: Drawer demo supports left position.
 
 - F072: Drawer demo supports bottom position.
+
+- F073: Drawer demo supports sm/md/lg/full sizes.

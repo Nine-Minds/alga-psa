@@ -579,7 +579,7 @@
   {
     "id": "F073",
     "description": "Drawer demo: Show all sizes (sm, md, lg, full)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
