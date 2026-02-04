@@ -225,7 +225,7 @@
   {
     "id": "T028",
     "description": "Button demo: Danger variant renders with red background",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
