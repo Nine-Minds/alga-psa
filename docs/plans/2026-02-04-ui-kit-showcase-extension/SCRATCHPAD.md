@@ -242,3 +242,5 @@ ls -la ui/dist/iframe/
 - F054: TextArea demo includes basic textarea.
 
 - F055: TextArea demo includes multiple row counts.
+
+- F056: TextArea demo includes resize options.
