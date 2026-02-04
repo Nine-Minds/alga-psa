@@ -258,3 +258,5 @@ ls -la ui/dist/iframe/
 - F062: SearchInput demo includes clear button behavior.
 
 - F063: SearchInput demo includes loading state example.
+
+- F064: SearchInput demo includes size variants.
