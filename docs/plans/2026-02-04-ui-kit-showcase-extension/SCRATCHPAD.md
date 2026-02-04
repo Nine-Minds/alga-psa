@@ -156,3 +156,5 @@ ls -la ui/dist/iframe/
 - F011: Tabbed navigation for categories uses UI kit Tabs in App.
 
 - F012: Content area renders category demo panels via Tabs content.
+
+- F013: DemoSection wrapper provides title, description, and demo container styling.
