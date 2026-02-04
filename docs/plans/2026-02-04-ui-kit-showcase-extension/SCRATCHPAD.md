@@ -325,3 +325,5 @@ ls -la ui/dist/iframe/
 - T017: Layout tests assert header title text.
 
 - T018: Layout tests assert theme toggle visibility.
+
+- T019: Layout tests assert six category tabs.
