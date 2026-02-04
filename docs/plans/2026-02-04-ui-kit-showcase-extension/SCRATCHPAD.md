@@ -407,3 +407,5 @@ ls -la ui/dist/iframe/
 - T058: DataTable tests assert badge render in custom cell.
 
 - T059: Dialog tests assert open on trigger.
+
+- T060: Dialog tests assert close on cancel.

@@ -481,7 +481,7 @@
   {
     "id": "T060",
     "description": "Dialog demo: Dialog closes when close button is clicked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
