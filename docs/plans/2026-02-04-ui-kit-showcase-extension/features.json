@@ -371,7 +371,7 @@
   {
     "id": "F047",
     "description": "Checkbox demo: Show checked and unchecked states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

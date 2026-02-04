@@ -224,3 +224,5 @@ ls -la ui/dist/iframe/
 - F045: Skeleton demo includes SkeletonCircle example.
 
 - F046: Skeleton demo includes SkeletonRectangle example.
+
+- F047: Checkbox demo includes checked/unchecked states.
