@@ -66,6 +66,11 @@
       "import": "./dist/hooks/*.mjs",
       "require": "./dist/hooks/*.js"
     },
+    "./context": {
+      "types": "./src/context/index.ts",
+      "import": "./dist/context/index.mjs",
+      "require": "./dist/context/index.js"
+    },
     "./editor": {
       "types": "./src/editor/index.ts",
       "import": "./dist/editor/index.mjs",
