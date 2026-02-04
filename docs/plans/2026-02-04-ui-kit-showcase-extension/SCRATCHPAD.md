@@ -425,3 +425,5 @@ ls -la ui/dist/iframe/
 - T067: LoadingIndicator tests assert text renders.
 
 - T068: Tooltip tests assert hover shows tooltip.
+
+- T069: Tooltip tests assert multiple positions render.
