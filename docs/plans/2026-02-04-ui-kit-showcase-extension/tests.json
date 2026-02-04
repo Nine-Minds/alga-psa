@@ -681,7 +681,7 @@
   {
     "id": "T085",
     "description": "Switch demo: Disabled switch cannot be toggled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
