@@ -441,3 +441,5 @@ ls -la ui/dist/iframe/
 - T075: Skeleton tests assert pulse animation.
 
 - T076: Skeleton tests assert multiple text lines.
+
+- T077: Skeleton tests assert circular shape.

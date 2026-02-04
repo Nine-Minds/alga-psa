@@ -617,7 +617,7 @@
   {
     "id": "T077",
     "description": "Skeleton demo: SkeletonCircle renders as circle shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
