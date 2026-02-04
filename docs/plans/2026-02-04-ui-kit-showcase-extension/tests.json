@@ -401,7 +401,7 @@
   {
     "id": "T050",
     "description": "Badge demo: Default tone renders neutral styling",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
