@@ -152,7 +152,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
           <Button
             id="add-task-button"
             onClick={onAddTask}
-            className="text-sm"
+            size="sm"
             disabled={!selectedPhase || isAddingTask}
           >
             {isAddingTask ? 'Adding...' : '+ Add Task'}
@@ -160,7 +160,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
           <Button
             id="add-phase-button"
             onClick={onAddPhase}
-            className="text-sm"
+            size="sm"
           >
             + Add Phase
           </Button>
@@ -169,7 +169,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               id="import-phases-tasks-button"
               onClick={onImport}
               variant="outline"
-              className="text-sm"
+              size="sm"
             >
               <Upload className="h-4 w-4 mr-1" />
               Import

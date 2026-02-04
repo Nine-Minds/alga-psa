@@ -37,7 +37,7 @@ import KanbanZoomControl from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -48,6 +48,16 @@ const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
+
+// Task type icons for the filter dropdown
+const taskTypeIcons: Record<string, React.ComponentType<any>> = {
+  task: CheckSquare,
+  bug: Bug,
+  feature: Sparkles,
+  improvement: TrendingUp,
+  epic: Flag,
+  story: BookOpen
+};
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
@@ -286,6 +296,7 @@ export default function ProjectDetail({
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
+  const [selectedTaskTypeFilter, setSelectedTaskTypeFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
   const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
@@ -334,6 +345,11 @@ export default function ProjectDetail({
       tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
     }
 
+    // Apply task type filter
+    if (selectedTaskTypeFilter !== 'all') {
+      tasks = tasks.filter(task => task.task_type_key === selectedTaskTypeFilter);
+    }
+
     // Apply tag filter
     if (selectedTaskTags.length > 0) {
       tasks = tasks.filter(task => {
@@ -379,7 +395,7 @@ export default function ProjectDetail({
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -446,6 +462,11 @@ export default function ProjectDetail({
       filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
     }
 
+    // Apply task type filter
+    if (selectedTaskTypeFilter !== 'all') {
+      filtered = filtered.filter(task => task.task_type_key === selectedTaskTypeFilter);
+    }
+
     // Apply tag filter
     if (selectedTaskTags.length > 0) {
       filtered = filtered.filter(task => {
@@ -485,7 +506,7 @@ export default function ProjectDetail({
     }
 
     return filtered;
-  }, [allProjectTasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+  }, [allProjectTasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
 
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
@@ -1752,9 +1773,9 @@ export default function ProjectDetail({
           </div>
 
           {/* Bottom row: Search + Filters */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Search Input with Options */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -1763,8 +1784,18 @@ export default function ProjectDetail({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <Button
                 id="search-whole-word-list"
@@ -1844,6 +1875,60 @@ export default function ProjectDetail({
               className="w-40"
               placeholder="Priority"
             />
+
+            {/* Task Type Filter */}
+            <CustomSelect
+              value={selectedTaskTypeFilter}
+              onValueChange={setSelectedTaskTypeFilter}
+              options={[
+                { value: 'all', label: 'All Types' },
+                ...taskTypes.map(t => {
+                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  return {
+                    value: t.type_key,
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <Icon
+                          className="w-4 h-4"
+                          style={{ color: t.color || '#6B7280' }}
+                        />
+                        <span>{t.type_name}</span>
+                      </div>
+                    )
+                  };
+                })
+              ]}
+              className="w-40"
+              placeholder="Task Type"
+            />
+
+            {/* Clear all filters button */}
+            {(searchQuery || searchWholeWord || searchCaseSensitive ||
+              selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 ||
+              includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' ||
+              selectedTaskTypeFilter !== 'all') && (
+              <Tooltip content="Clear all filters">
+                <Button
+                  id="clear-task-filters-list"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchWholeWord(false);
+                    setSearchCaseSensitive(false);
+                    setSelectedTaskTags([]);
+                    setSelectedAgentFilter([]);
+                    setIncludeUnassignedAgents(false);
+                    setPrimaryAgentOnly(false);
+                    setSelectedPriorityFilter('all');
+                    setSelectedTaskTypeFilter('all');
+                  }}
+                  className="-ml-1 shrink-0 text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         </div>
       );
@@ -1892,10 +1977,10 @@ export default function ProjectDetail({
         </div>
 
         {/* Bottom row: Search + Filters + Completion */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Search Input with Options */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -1904,8 +1989,18 @@ export default function ProjectDetail({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <Button
                 id="search-whole-word-kanban"
@@ -1985,6 +2080,60 @@ export default function ProjectDetail({
               className="w-40"
               placeholder="Priority"
             />
+
+            {/* Task Type Filter */}
+            <CustomSelect
+              value={selectedTaskTypeFilter}
+              onValueChange={setSelectedTaskTypeFilter}
+              options={[
+                { value: 'all', label: 'All Types' },
+                ...taskTypes.map(t => {
+                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  return {
+                    value: t.type_key,
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <Icon
+                          className="w-4 h-4"
+                          style={{ color: t.color || '#6B7280' }}
+                        />
+                        <span>{t.type_name}</span>
+                      </div>
+                    )
+                  };
+                })
+              ]}
+              className="w-40"
+              placeholder="Task Type"
+            />
+
+            {/* Clear all filters button */}
+            {(searchQuery || searchWholeWord || searchCaseSensitive ||
+              selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 ||
+              includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' ||
+              selectedTaskTypeFilter !== 'all') && (
+              <Tooltip content="Clear all filters">
+                <Button
+                  id="clear-task-filters-kanban"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchWholeWord(false);
+                    setSearchCaseSensitive(false);
+                    setSelectedTaskTags([]);
+                    setSelectedAgentFilter([]);
+                    setIncludeUnassignedAgents(false);
+                    setPrimaryAgentOnly(false);
+                    setSelectedPriorityFilter('all');
+                    setSelectedTaskTypeFilter('all');
+                  }}
+                  className="-ml-1 shrink-0 text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
 
           {/* Completion Stats */}
