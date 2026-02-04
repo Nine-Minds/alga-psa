@@ -195,7 +195,7 @@
   {
     "id": "F025",
     "description": "Stack demo: Show horizontal and vertical stacking",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
