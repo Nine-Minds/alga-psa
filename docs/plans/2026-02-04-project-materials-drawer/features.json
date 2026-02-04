@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Add form with searchable product dropdown (searchServiceCatalogForPicker)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Secondary Flow: Add Material"]
   },
   {

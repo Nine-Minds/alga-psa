@@ -3,10 +3,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Label } from '@alga-psa/ui/components/Label';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Package, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { IProjectMaterial } from '@alga-psa/types';
-import { listProjectMaterials } from '@alga-psa/billing/actions';
+import {
+  listProjectMaterials,
+  searchServiceCatalogForPicker,
+  type CatalogPickerItem,
+} from '@alga-psa/billing/actions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 interface ProjectMaterialsDrawerProps {
@@ -18,6 +24,9 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   const [showAddForm, setShowAddForm] = useState(false);
   const [materials, setMaterials] = useState<IProjectMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<CatalogPickerItem[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -36,6 +45,29 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   useEffect(() => {
     loadMaterials();
   }, [loadMaterials]);
+
+  const loadProducts = useCallback(async () => {
+    setIsLoadingProducts(true);
+    try {
+      const result = await searchServiceCatalogForPicker({
+        item_kinds: ['product'],
+        is_active: true,
+        limit: 100,
+      });
+      setProducts(result.items);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Failed to load products');
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showAddForm && products.length === 0) {
+      loadProducts();
+    }
+  }, [showAddForm, products.length, loadProducts]);
 
   const calculateTotal = (material: IProjectMaterial) => material.quantity * material.rate;
 
@@ -66,8 +98,25 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
       </div>
 
       {showAddForm && (
-        <div className="text-sm text-gray-500">
-          Add form coming soon. (projectId: {projectId})
+        <div className="border rounded-md p-4 space-y-4 bg-gray-50">
+          <div className="space-y-2">
+            <Label htmlFor="project-materials-product-select">Product</Label>
+            <SearchableSelect
+              id="project-materials-product-select"
+              options={products.map((product) => ({
+                value: product.service_id,
+                label: product.sku ? `${product.service_name} (${product.sku})` : product.service_name,
+              }))}
+              value={selectedProductId}
+              onChange={(value) => setSelectedProductId(value)}
+              placeholder="Select a product..."
+              searchPlaceholder="Search products..."
+              emptyMessage={isLoadingProducts ? 'Loading products...' : 'No products found'}
+              dropdownMode="overlay"
+              maxListHeight="200px"
+              disabled={isLoadingProducts}
+            />
+          </div>
         </div>
       )}
 

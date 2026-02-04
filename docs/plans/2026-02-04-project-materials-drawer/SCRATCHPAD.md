@@ -79,3 +79,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Wired `ProjectMaterialsDrawer` to `listProjectMaterials` with loading and empty states.
 - 2026-02-04: Added materials table layout with product, SKU, qty, rate, total, and status badge columns.
 - 2026-02-04: Added per-currency unbilled totals summary to support multi-currency projects.
+- 2026-02-04: Implemented add-form product picker with searchable catalog lookup.
