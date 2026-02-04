@@ -515,3 +515,5 @@ ls -la ui/dist/iframe/
 - T112: DropdownMenu tests assert menu opens.
 
 - T113: DropdownMenu tests assert item clicks update state.
+
+- T114: DropdownMenu tests assert divider elements present.
