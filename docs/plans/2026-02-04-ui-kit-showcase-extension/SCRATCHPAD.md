@@ -413,3 +413,5 @@ ls -la ui/dist/iframe/
 - T061: Dialog tests assert title render.
 
 - T062: ConfirmDialog tests assert confirm action.
+
+- T063: ConfirmDialog tests assert cancel action.

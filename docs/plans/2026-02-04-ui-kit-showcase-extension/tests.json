@@ -505,7 +505,7 @@
   {
     "id": "T063",
     "description": "ConfirmDialog demo: Cancel button triggers onCancel callback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
