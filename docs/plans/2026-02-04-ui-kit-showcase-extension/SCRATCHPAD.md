@@ -254,3 +254,5 @@ ls -la ui/dist/iframe/
 - F060: Label demo includes size variants.
 
 - F061: SearchInput demo includes basic search input.
+
+- F062: SearchInput demo includes clear button behavior.
