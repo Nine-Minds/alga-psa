@@ -78,3 +78,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added drawer header scaffold and set project materials drawer width to 560px via `openDrawer`.
 - 2026-02-04: Wired `ProjectMaterialsDrawer` to `listProjectMaterials` with loading and empty states.
 - 2026-02-04: Added materials table layout with product, SKU, qty, rate, total, and status badge columns.
+- 2026-02-04: Added per-currency unbilled totals summary to support multi-currency projects.

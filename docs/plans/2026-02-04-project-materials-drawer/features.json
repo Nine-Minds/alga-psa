@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Multi-currency support: format amounts, group unbilled totals by currency",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals"]
   },
   {

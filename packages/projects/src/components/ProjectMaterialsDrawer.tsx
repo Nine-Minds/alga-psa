@@ -39,6 +39,15 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
 
   const calculateTotal = (material: IProjectMaterial) => material.quantity * material.rate;
 
+  const unbilledByCurrency = materials
+    .filter((material) => !material.is_billed)
+    .reduce((acc, material) => {
+      const currency = material.currency_code || 'USD';
+      if (!acc[currency]) acc[currency] = 0;
+      acc[currency] += calculateTotal(material);
+      return acc;
+    }, {} as Record<string, number>);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -117,6 +126,20 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
               </tbody>
             </table>
           </div>
+          {Object.keys(unbilledByCurrency).length > 0 && (
+            <div className="flex justify-end pt-2 border-t">
+              <div className="text-sm space-y-1">
+                {Object.entries(unbilledByCurrency).map(([currency, total]) => (
+                  <div key={currency} className="text-right">
+                    <span className="text-gray-500">Unbilled ({currency}): </span>
+                    <span className="font-semibold">
+                      {formatCurrencyFromMinorUnits(total, 'en-US', currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
