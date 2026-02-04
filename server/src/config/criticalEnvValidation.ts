@@ -6,73 +6,81 @@ import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
 /**
  * Critical configuration keys required for application startup
  */
-type RequiredConfigSpec = {
+type RequiredConfigSpec = Readonly<{
+  /** Canonical config key (usually the env var name). */
   key: string;
   description: string;
-  lookups: string[];
-  masked?: boolean;
-};
+  /** Candidate names in secret providers (env + filesystem). Tried in order. */
+  candidates?: readonly string[];
+  /** Reject values that look like a secret-file path (e.g. `/run/secrets/...`). */
+  rejectFilePath?: boolean;
+  /** Optional validation for non-empty values. */
+  validate?: (value: string) => boolean;
+}>;
 
-const REQUIRED_CONFIGS: RequiredConfigSpec[] = [
+const REQUIRED_CONFIGS: readonly RequiredConfigSpec[] = [
   // Authentication
   {
     key: 'NEXTAUTH_URL',
     description: 'Authentication URL (e.g., http://localhost:3000)',
-    lookups: ['NEXTAUTH_URL'],
+    candidates: ['NEXTAUTH_URL', 'nextauth_url'],
   },
   {
-    // NOTE: Prefer validating the filesystem/Docker secret file name (`nextauth_secret`) rather than
-    // the env var to avoid false positives when an env var contains a file path like `/run/secrets/nextauth_secret`.
-    key: 'nextauth_secret',
-    description: 'NextAuth secret (filesystem/Docker secret file: secrets/nextauth_secret)',
-    lookups: ['nextauth_secret', 'NEXTAUTH_SECRET'],
-    masked: true,
+    key: 'NEXTAUTH_SECRET',
+    description: 'Authentication secret (generate with: openssl rand -base64 32)',
+    // Prefer the filesystem/Docker secret name first to avoid accepting env vars that are set to a file path.
+    candidates: ['nextauth_secret', 'NEXTAUTH_SECRET'],
+    rejectFilePath: true,
   },
 
-  // Database
+  // Database (required by env validation + connectivity)
   {
     key: 'DB_TYPE',
     description: 'Database type (must be "postgres")',
-    lookups: ['DB_TYPE'],
+    candidates: ['DB_TYPE', 'db_type'],
+    validate: (value) => value === 'postgres',
   },
   {
     key: 'DB_NAME_SERVER',
     description: 'Server database name',
-    lookups: ['DB_NAME_SERVER'],
+    candidates: ['DB_NAME_SERVER', 'db_name_server'],
   },
   {
     key: 'DB_USER_SERVER',
     description: 'Server database username',
-    lookups: ['DB_USER_SERVER'],
+    candidates: ['DB_USER_SERVER', 'db_user_server'],
   },
   {
     key: 'DB_USER_ADMIN',
     description: 'Admin database username (e.g., postgres)',
-    lookups: ['DB_USER_ADMIN'],
+    candidates: ['DB_USER_ADMIN', 'db_user_admin'],
   },
   {
     key: 'DB_HOST',
     description: 'Database host (e.g., localhost or postgres)',
-    lookups: ['DB_HOST'],
+    candidates: ['DB_HOST', 'db_host'],
   },
   {
     key: 'DB_PORT',
     description: 'Database port (e.g., 5432)',
-    lookups: ['DB_PORT'],
+    candidates: ['DB_PORT', 'db_port'],
   },
   {
-    key: 'db_password_server',
-    description: 'Server database password (filesystem/Docker secret file: secrets/db_password_server)',
-    lookups: ['db_password_server', 'DB_PASSWORD_SERVER'],
-    masked: true,
+    key: 'DB_PASSWORD_SERVER',
+    description: 'Server database password (secret file: secrets/db_password_server)',
+    candidates: ['db_password_server', 'DB_PASSWORD_SERVER'],
+    rejectFilePath: true,
   },
   {
-    key: 'postgres_password',
-    description: 'Admin database password (filesystem/Docker secret file: secrets/postgres_password)',
-    lookups: ['postgres_password', 'DB_PASSWORD_ADMIN'],
-    masked: true,
+    key: 'DB_PASSWORD_ADMIN',
+    description: 'Admin database password (secret file: secrets/postgres_password)',
+    candidates: ['postgres_password', 'DB_PASSWORD_ADMIN'],
+    rejectFilePath: true,
   },
-];
+] as const;
+
+const looksLikeSecretFilePath = (value: string): boolean =>
+  value.startsWith('/') || value.includes('/run/secrets/');
 
 /**
  * Validates that all required configuration values are present
@@ -85,40 +93,32 @@ export async function validateRequiredConfiguration(): Promise<void> {
   const missingConfigs: string[] = [];
   const validatedConfigs: Record<string, string> = {};
 
-  const resolveSpecValue = async (spec: RequiredConfigSpec): Promise<string | undefined> => {
-    for (const lookupKey of spec.lookups) {
-      const value = await secretProvider.getAppSecret(lookupKey);
-      const trimmed = value?.trim();
-      if (!trimmed) {
-        continue;
-      }
-
-      if ((spec.key === 'nextauth_secret' || lookupKey === 'NEXTAUTH_SECRET') && trimmed.startsWith('/run/secrets/')) {
-        continue;
-      }
-
-      if (trimmed !== '') {
-        return value;
+  const readFirstAvailable = async (spec: RequiredConfigSpec): Promise<string | undefined> => {
+    const candidates = spec.candidates ?? [spec.key, spec.key.toLowerCase()];
+    for (const candidate of candidates) {
+      try {
+        const value = await secretProvider.getAppSecret(candidate);
+        const trimmed = (value ?? '').trim();
+        if (!trimmed) continue;
+        if (spec.rejectFilePath && looksLikeSecretFilePath(trimmed)) continue;
+        if (spec.validate && !spec.validate(trimmed)) continue;
+        return trimmed;
+      } catch {
+        // ignore and continue
       }
     }
     return undefined;
   };
 
   for (const spec of REQUIRED_CONFIGS) {
-    try {
-      const value = await resolveSpecValue(spec);
-      if (!value || value.trim() === '') {
-        missingConfigs.push(`${spec.key}: ${spec.description}`);
-      } else {
-        validatedConfigs[spec.key] = value;
-      }
-    } catch (error) {
-      // If secret provider throws, treat as missing
+    const value = await readFirstAvailable(spec);
+    if (!value) {
       missingConfigs.push(`${spec.key}: ${spec.description}`);
+      continue;
     }
+    validatedConfigs[spec.key] = value;
   }
-  
-  // Report results
+
   if (missingConfigs.length > 0) {
     const errorMessage = [
       '\n🚨 Required Configuration Missing 🚨\n',
@@ -131,23 +131,23 @@ export async function validateRequiredConfiguration(): Promise<void> {
       '  4. .env file (for local development)',
       '\nFor more information, see docs/getting-started/configuration_guide.md'
     ].join('\n');
-    
+
     logger.error(errorMessage);
     throw new Error('Required configuration validation failed');
   }
-  
+
   // Log successful validation (with sensitive values masked)
   logger.info('✅ All required configuration values are present', {
     NEXTAUTH_URL: validatedConfigs.NEXTAUTH_URL,
-    nextauth_secret: '***',
+    NEXTAUTH_SECRET: '***',
     DB_TYPE: validatedConfigs.DB_TYPE,
     DB_HOST: validatedConfigs.DB_HOST,
     DB_PORT: validatedConfigs.DB_PORT,
     DB_NAME_SERVER: validatedConfigs.DB_NAME_SERVER,
     DB_USER_SERVER: validatedConfigs.DB_USER_SERVER,
     DB_USER_ADMIN: validatedConfigs.DB_USER_ADMIN,
-    db_password_server: '***',
-    postgres_password: '***',
+    DB_PASSWORD_SERVER: '***',
+    DB_PASSWORD_ADMIN: '***',
   });
 }
 
@@ -177,6 +177,7 @@ export async function validateDatabaseConnectivity(): Promise<void> {
 
       const knex = await getConnection(null);
       await knex.raw('SELECT 1');
+
       logger.info('✅ Database connection successful');
       return;
     } catch (error) {
@@ -184,7 +185,6 @@ export async function validateDatabaseConnectivity(): Promise<void> {
 
       const isLastAttempt = attempt === maxAttempts;
       const delayMs = Math.min(baseDelayMs * attempt, 5000);
-
       const errorMessage =
         error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
 
@@ -217,46 +217,49 @@ export async function validateDatabaseConnectivity(): Promise<void> {
  */
 export async function validateSecretUniqueness(): Promise<void> {
   logger.info('Validating secret provider uniqueness...');
-  
+
   // Get individual providers to test
   const envProvider = new EnvSecretProvider();
   const fileProvider = new FileSystemSecretProvider();
-  
+
   const duplicateSecrets: string[] = [];
   const secretSources: Record<string, string[]> = {};
-  
-  // Check all critical configs and common secrets
+
+  const requiredCandidateKeys = Array.from(
+    new Set(REQUIRED_CONFIGS.flatMap(spec => [spec.key, ...(spec.candidates ?? [])])),
+  );
   const secretsToCheck = [
-    ...REQUIRED_CONFIGS.flatMap(spec => spec.lookups),
+    ...requiredCandidateKeys,
+    ...requiredCandidateKeys.map(k => k.toLowerCase()),
     // Add other common secrets that might conflict
     'ALGA_AUTH_KEY',
     'alga_auth_key',
     'SECRET_KEY',
     'secret_key'
   ];
-  
+
   // Check each secret across providers
   for (const secretName of secretsToCheck) {
     const sources: string[] = [];
-    
+
     try {
       const envValue = await envProvider.getAppSecret(secretName);
       if (envValue && envValue.trim() !== '') {
         sources.push('environment');
       }
-    } catch (error) {
+    } catch {
       // Provider error, skip
     }
-    
+
     try {
       const fileValue = await fileProvider.getAppSecret(secretName);
       if (fileValue && fileValue.trim() !== '') {
         sources.push('filesystem');
       }
-    } catch (error) {
+    } catch {
       // Provider error, skip
     }
-    
+
     // Check if Vault provider is configured
     if (process.env.VAULT_ADDR && process.env.VAULT_TOKEN) {
       try {
@@ -266,32 +269,31 @@ export async function validateSecretUniqueness(): Promise<void> {
         if (vaultValue && vaultValue.trim() !== '') {
           sources.push('vault');
         }
-      } catch (error) {
+      } catch {
         // Vault not available or error, skip
       }
     }
-    
+
     if (sources.length > 1) {
       secretSources[secretName] = sources;
       duplicateSecrets.push(secretName);
     }
   }
-  
+
   // Report conflicts
   if (duplicateSecrets.length > 0) {
     const errorMessage = [
       '\n⚠️  Secret Configuration Conflict Detected ⚠️\n',
       'The following secrets are defined in multiple providers:',
-      ...duplicateSecrets.map(secret => 
-        `  • ${secret}: found in ${secretSources[secret].join(', ')}`
-      ),
+      ...duplicateSecrets.map(secret => `  • ${secret}: found in ${secretSources[secret].join(', ')}`),
       '\nEach secret should be defined in exactly one provider to avoid conflicts.',
       'Please remove duplicate definitions and keep secrets in only one location.',
     ].join('\n');
-    
+
     logger.error(errorMessage);
     // throw new Error('Secret provider conflict detected');
   }
-  
+
   logger.info('✅ No secret conflicts detected - each secret has a unique source');
 }
+

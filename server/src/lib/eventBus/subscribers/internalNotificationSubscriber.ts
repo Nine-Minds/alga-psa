@@ -2039,7 +2039,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
  */
 async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, projectId, taskId, userId, assignedByUserId } = payload;
+  const { tenantId, projectId, taskId, assignedToId, assignedByUserId } = payload;
 
   try {
     const db = await getConnection(tenantId);
@@ -2065,7 +2065,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       })
       .first();
 
-    if (!task || !userId) {
+    if (!task || !assignedToId) {
       logger.warn('[InternalNotificationSubscriber] Task not found or not assigned', {
         taskId,
         projectId,
@@ -2095,7 +2095,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     // Primary assignment notification
     await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
-      user_id: userId,
+      user_id: assignedToId,
       template_name: 'task-assigned',
       type: 'info',
       category: 'projects',
@@ -2110,7 +2110,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
       taskId,
       projectId,
-      userId: userId,
+      assignedToId,
       tenantId
     });
   } catch (error) {

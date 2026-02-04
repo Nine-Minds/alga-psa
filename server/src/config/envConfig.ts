@@ -1,12 +1,19 @@
 import { z } from 'zod';
 import process from 'process';
 
-// Helper functions for type coercion
-const coerceString = (val: unknown): string | undefined => {
-  if (typeof val === 'string') return val.split(/[;#]/)[0].trim();
+const stripInlineComment = (val: unknown): string | undefined => {
+  if (typeof val === 'string') {
+    // Support inline comments in .env files, e.g. `DB_TYPE=postgres  # comment`
+    // Only strip when comment delimiter is preceded by whitespace to avoid mangling values like URLs with fragments.
+    const cleaned = val.replace(/\s[;#].*$/, '').trim();
+    return cleaned === '' ? undefined : cleaned;
+  }
+  if (typeof val === 'number') return String(val);
+  if (typeof val === 'boolean') return val ? 'true' : 'false';
   return undefined;
 };
 
+// Helper functions for type coercion
 const coerceNumber = (val: unknown): number | undefined => {
   if (typeof val === 'number') return val;
   if (typeof val === 'string') {
@@ -29,10 +36,11 @@ const coerceBoolean = (val: unknown): boolean | undefined => {
 };
 
 const normalizeDbType = (val: unknown): string | undefined => {
-  const cleaned = coerceString(val)?.toLowerCase();
+  const cleaned = stripInlineComment(val);
   if (!cleaned) return undefined;
-  if (cleaned === 'postgres' || cleaned === 'postgresql' || cleaned === 'pg') return 'postgres';
-  return cleaned;
+  const lower = cleaned.toLowerCase();
+  if (lower === 'postgres' || lower === 'postgresql' || lower === 'pg') return 'postgres';
+  return lower;
 };
 
 // App Schema
@@ -41,7 +49,7 @@ const appSchema = z.object({
   APP_NAME: z.string().default('sebastian'),
   HOST: z.string().default('localhost:3000'),
   APP_HOST: z.string().default('localhost:3000'),
-  APP_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  APP_ENV: z.preprocess(stripInlineComment, z.enum(['development', 'production', 'test'])).default('development'),
   VERIFY_EMAIL_ENABLED: z.preprocess(coerceBoolean, z.boolean()).default(true),
 });
 
@@ -55,14 +63,14 @@ const redisSchema = z.object({
 // Database Schema
 const dbSchema = z.object({
   DB_TYPE: z.preprocess(normalizeDbType, z.literal('postgres')).default('postgres'),
-  DB_HOST: z.string(),
-  DB_PORT: z.preprocess(coerceNumber, z.number().int().positive()),
+  DB_HOST: z.preprocess(stripInlineComment, z.string()).default('localhost'),
+  DB_PORT: z.preprocess(coerceNumber, z.number().int().positive()).default(5432),
   DB_NAME_HOCUSPOCUS: z.string().default('hocuspocus'),
   DB_USER_HOCUSPOCUS: z.string().default('hocuspocus_user'),
   DB_PASSWORD_HOCUSPOCUS: z.string().optional(), // Optional since using Docker secrets
-  DB_NAME_SERVER: z.string().default('server'),
-  DB_USER_SERVER: z.string().default('app_user'),
-  DB_USER_ADMIN: z.string().default('postgres'),
+  DB_NAME_SERVER: z.preprocess(stripInlineComment, z.string()).default('server'),
+  DB_USER_SERVER: z.preprocess(stripInlineComment, z.string()).default('app_user'),
+  DB_USER_ADMIN: z.preprocess(stripInlineComment, z.string()).default('postgres'),
   // Make password fields optional since they're managed via Docker secrets
   DB_PASSWORD_SERVER: z.string().optional(),
   DB_PASSWORD_ADMIN: z.string().optional(),
@@ -79,7 +87,9 @@ const storageSchema = z.object({
 
 // Logging Schema
 const logSchema = z.object({
-  LOG_LEVEL: z.enum(['SYSTEM', 'TRACE', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']).default('SYSTEM'),
+  LOG_LEVEL: z
+    .preprocess(stripInlineComment, z.enum(['SYSTEM', 'TRACE', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']))
+    .default('SYSTEM'),
   LOG_IS_FORMAT_JSON: z.preprocess(coerceBoolean, z.boolean()).default(false),
   LOG_IS_FULL_DETAILS: z.preprocess(coerceBoolean, z.boolean()).default(false),
   LOG_ENABLE_FILE_LOGGING: z.preprocess(coerceBoolean, z.boolean()).default(true),
@@ -124,7 +134,7 @@ const tokenSchema = z.object({
 
 // Auth Schema
 const authSchema = z.object({
-  NEXTAUTH_URL: z.string().url().default('http://localhost:3000'),
+  NEXTAUTH_URL: z.preprocess(stripInlineComment, z.string().url()).default('http://localhost:3000'),
   NEXTAUTH_SECRET: z.string().optional(), // Required as environment variable
   NEXTAUTH_SESSION_EXPIRES: z.preprocess(coerceNumber, z.number().int().positive()).default(86400),
 });
@@ -154,25 +164,6 @@ const envSchema = z.object({
   ...authSchema.shape,
   ...googleAuthSchema.shape,
   ...anthropicSchema.shape,
-}).superRefine((val, ctx) => {
-  if (val.APP_ENV !== 'production') return;
-
-  const productionRequired: Array<keyof typeof val> = [
-    'DB_TYPE',
-    'DB_NAME_SERVER',
-    'DB_USER_SERVER',
-    'DB_USER_ADMIN',
-  ];
-
-  for (const key of productionRequired) {
-    if (!process.env[key]) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: [key],
-        message: 'Required in production',
-      });
-    }
-  }
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -242,3 +233,4 @@ export function validateEnv(): EnvConfig {
 
 // Export the validation function and types, but don't run validation at module load
 export default validateEnv;
+
