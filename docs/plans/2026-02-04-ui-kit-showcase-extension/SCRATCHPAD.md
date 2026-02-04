@@ -280,3 +280,5 @@ ls -la ui/dist/iframe/
 - F073: Drawer demo supports sm/md/lg/full sizes.
 
 - F074: Drawer demo renders title and content.
+
+- F075: DropdownMenu demo includes basic menu items.
