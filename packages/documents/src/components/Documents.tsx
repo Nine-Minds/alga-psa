@@ -487,15 +487,22 @@ const Documents = ({
   useRegisterUnsavedChanges(`document-editor-${id}`, hasUnsavedDocumentChanges);
 
   // Execute the actual drawer close (after confirmation or when no unsaved changes)
+  // Resets all editor state back to saved values, matching the pattern in ContractDetail
   const executeDrawerClose = useCallback(() => {
+    setShowUnsavedChangesDialog(false);
     setIsDrawerOpen(false);
     setDrawerError(null);
     setHasContentChanged(false);
-    setShowUnsavedChangesDialog(false);
-    if (!isCreatingNew) {
+    // Reset form fields to their saved values
+    if (isCreatingNew) {
+      setNewDocumentName('');
+      setCurrentContent(DEFAULT_BLOCKS);
+    } else if (selectedDocument) {
+      setDocumentName(selectedDocument.document_name);
       setIsEditModeInDrawer(false);
     }
-  }, [isCreatingNew]);
+    setSelectedDocument(null);
+  }, [isCreatingNew, selectedDocument]);
 
   // Handle drawer close with unsaved changes check
   const handleDrawerClose = useCallback(() => {
