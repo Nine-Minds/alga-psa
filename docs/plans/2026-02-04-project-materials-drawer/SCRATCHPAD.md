@@ -85,3 +85,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Implemented add-material submission with validation, toast feedback, and list refresh.
 - 2026-02-04: Added delete action for unbilled materials with toast feedback and reload.
 - 2026-02-04: Allowed materials drawer to open without a client and display a no-client warning while hiding the Add button.
+- 2026-02-04: Wrapped drawer content in `ReflectionContainer` and added automation IDs for key elements.

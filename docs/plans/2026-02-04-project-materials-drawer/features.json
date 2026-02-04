@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Data automation IDs for E2E testing (ReflectionContainer, withDataAutomationId)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria"]
   }
 ]
