@@ -519,3 +519,5 @@ ls -la ui/dist/iframe/
 - T114: DropdownMenu tests assert divider elements present.
 
 - T115: DropdownMenu tests assert disabled items not clickable.
+
+- T116: DropdownMenu tests assert danger item styling.

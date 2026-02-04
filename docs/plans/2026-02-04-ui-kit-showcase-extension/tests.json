@@ -931,7 +931,7 @@
   {
     "id": "T116",
     "description": "DropdownMenu demo: Danger items have red text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
