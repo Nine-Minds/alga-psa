@@ -4,13 +4,14 @@ import React, { useState, useEffect, useImperativeHandle } from 'react';
 import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { Ban, GitBranch, Link2, Plus, Trash2 } from 'lucide-react';
 import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskActions';
 import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
 
 interface TaskDependenciesProps {
-  task: IProjectTask;
+  task?: IProjectTask;
   allTasksInProject: IProjectTask[];
   taskTypes: ITaskType[];
   initialPredecessors?: IProjectTaskDependency[];
@@ -19,11 +20,21 @@ interface TaskDependenciesProps {
   users?: any[];
   phases?: any[];
   onUnsavedChanges?: (hasUnsaved: boolean) => void;
+  pendingMode?: boolean;
+}
+
+export interface PendingDependency {
+  tempId: string;
+  targetTaskId: string;
+  targetTaskName: string;
+  targetTaskTypeKey: string;
+  dependencyType: DependencyType;
 }
 
 export interface TaskDependenciesRef {
   savePendingDependency: () => Promise<boolean>;
   hasPendingChanges: () => boolean;
+  getPendingDependencies: () => PendingDependency[];
 }
 
 // Get dependency type display info with icons
@@ -76,7 +87,8 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   refreshDependencies,
   users = [],
   phases = [],
-  onUnsavedChanges
+  onUnsavedChanges,
+  pendingMode = false
 }, ref) => {
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
@@ -86,18 +98,20 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
 
   const [predecessors, setPredecessors] = useState<IProjectTaskDependency[]>(initialPredecessors);
   const [successors, setSuccessors] = useState<IProjectTaskDependency[]>(initialSuccessors);
+  const [pendingDeps, setPendingDeps] = useState<PendingDependency[]>([]);
 
   useImperativeHandle(ref, () => ({
     savePendingDependency: async () => {
-      if (selectedTaskId) {
+      if (selectedTaskId && !pendingMode) {
         await handleAdd();
         return true;
       }
       return false;
     },
     hasPendingChanges: () => {
-      return !!selectedTaskId;
-    }
+      return !!selectedTaskId || (pendingMode && pendingDeps.length > 0);
+    },
+    getPendingDependencies: () => pendingDeps,
   }));
 
   useEffect(() => {
@@ -154,7 +168,26 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   };
 
   const handleAdd = async () => {
-    if (selectedTaskId && task.task_id) {
+    if (!selectedTaskId) return;
+
+    if (pendingMode) {
+      // In pending mode (create), store locally instead of calling API
+      const targetTask = allTasksInProject.find(t => t.task_id === selectedTaskId);
+      if (targetTask) {
+        setPendingDeps(prev => [...prev, {
+          tempId: `pending-${Date.now()}`,
+          targetTaskId: selectedTaskId,
+          targetTaskName: targetTask.task_name,
+          targetTaskTypeKey: targetTask.task_type_key || 'task',
+          dependencyType: selectedType,
+        }]);
+      }
+      setSelectedTaskId('');
+      setSelectedType('blocked_by');
+      return;
+    }
+
+    if (task?.task_id) {
       setError(null);
       setIsLoading(true);
       try {
@@ -162,19 +195,10 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         let predecessorId: string;
         let successorId: string;
 
-        if (selectedType === 'blocks') {
-          // Current task blocks the selected task
-          predecessorId = task.task_id;
-          successorId = selectedTaskId;
-        } else if (selectedType === 'blocked_by') {
-          // Current task is blocked by the selected task
-          predecessorId = selectedTaskId;
-          successorId = task.task_id;
-        } else {
-          // For 'related_to', order doesn't matter but we'll keep it consistent
-          predecessorId = task.task_id;
-          successorId = selectedTaskId;
-        }
+        // Always pass current task as predecessor and selected task as successor.
+        // addTaskDependency handles the swap for 'blocked_by' internally.
+        predecessorId = task.task_id;
+        successorId = selectedTaskId;
 
         await addTaskDependency(predecessorId, successorId, selectedType, 0, undefined);
         setSelectedTaskId('');
@@ -202,7 +226,14 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   };
 
   const availableTasks = allTasksInProject.filter(t => {
-    if (t.task_id === task.task_id) return false;
+    if (task && t.task_id === task.task_id) return false;
+
+    if (pendingMode) {
+      // In pending mode, filter out tasks already added with the same dependency type
+      return !pendingDeps.find(d =>
+        d.targetTaskId === t.task_id && d.dependencyType === selectedType
+      );
+    }
 
     // Check based on what dependency will actually be created
     if (selectedType === 'blocks') {
@@ -256,6 +287,11 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   };
 
   const hasDependencies = predecessors.length > 0 || successors.length > 0;
+  const hasPendingDeps = pendingDeps.length > 0;
+
+  const handleRemovePending = (tempId: string) => {
+    setPendingDeps(prev => prev.filter(d => d.tempId !== tempId));
+  };
 
   return (
     <div className="border-t pt-4 space-y-3">
@@ -265,7 +301,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      {/* Existing dependencies list */}
+      {/* Existing dependencies list (edit mode) */}
       {hasDependencies && (
         <div className="space-y-2">
           {predecessors.map(dep => {
@@ -319,6 +355,45 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         </div>
       )}
 
+      {/* Pending dependencies list (create mode) */}
+      {pendingMode && hasPendingDeps && (
+        <div className="space-y-2">
+          {pendingDeps.map(dep => {
+            const typeInfo = getDependencyTypeInfo(dep.dependencyType);
+            const taskTypeInfo = getTaskTypeInfo(dep.targetTaskTypeKey);
+            return (
+              <div
+                key={dep.tempId}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  {typeInfo.icon}
+                  <span className="text-sm text-gray-600">{typeInfo.label}</span>
+                  <div className="flex items-center gap-2">
+                    {taskTypeInfo && (
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: taskTypeInfo.color || '#6B7280' }}
+                        title={taskTypeInfo.type_name}
+                      />
+                    )}
+                    <span className="text-sm font-medium">{dep.targetTaskName}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemovePending(dep.tempId)}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  title="Remove dependency"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Add new dependency - inline form */}
       {availableTasks.length > 0 && (
         <div className="flex items-center gap-2">
@@ -333,20 +408,19 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
             className="w-32"
             disabled={isLoading}
           />
-          <CustomSelect
-            value={selectedTaskId}
-            onValueChange={setSelectedTaskId}
-            options={[
-              { value: '', label: 'Select task...' },
-              ...availableTasks.map(t => ({
+          <div className="flex-1">
+            <SearchableSelect
+              value={selectedTaskId}
+              onChange={setSelectedTaskId}
+              options={availableTasks.map(t => ({
                 value: t.task_id,
                 label: t.task_name,
-              })),
-            ]}
-            className="flex-1"
-            placeholder="Select task..."
-            disabled={isLoading}
-          />
+              }))}
+              placeholder="Select task..."
+              disabled={isLoading}
+              dropdownMode="overlay"
+            />
+          </div>
           <Button
             id="add-dependency"
             type="button"
@@ -360,7 +434,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         </div>
       )}
 
-      {availableTasks.length === 0 && !hasDependencies && (
+      {availableTasks.length === 0 && !hasDependencies && !hasPendingDeps && (
         <p className="text-sm text-gray-500 italic">
           No other tasks available for dependencies
         </p>

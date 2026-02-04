@@ -21,7 +21,8 @@ import {
   getTaskResourcesAction,
   addTicketLinkAction,
   duplicateTaskToPhase,
-  getTaskDependencies
+  getTaskDependencies,
+  addTaskDependency
 } from '../actions/projectTaskActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
@@ -47,7 +48,7 @@ import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
 import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -533,6 +534,15 @@ export default function TaskForm({
               const documentIds = pendingDocuments.map(d => d.document_id);
               await createDocumentAssociations(resultTask.task_id, 'project_task', documentIds);
             }
+
+            // Save pending dependencies
+            // Always pass new task as predecessor — addTaskDependency handles the swap for 'blocked_by'
+            if (dependenciesRef.current) {
+              const pendingDeps = dependenciesRef.current.getPendingDependencies();
+              for (const dep of pendingDeps) {
+                await addTaskDependency(resultTask.task_id, dep.targetTaskId, dep.dependencyType, 0, undefined);
+              }
+            }
           } catch (error) {
             console.error('Error adding resources or linking tickets:', error);
             toast.error('Task created but failed to link some items');
@@ -607,6 +617,7 @@ export default function TaskForm({
       if (selectedServiceId !== null) return true; // User explicitly selected a service
       if (pendingTags.length > 0) return true;
       if (pendingDocuments.length > 0) return true; // User has added pending documents
+      if (dependenciesRef.current?.getPendingDependencies()?.length) return true; // User has added pending dependencies
       return false; // No changes detected
     }
 
@@ -1008,10 +1019,10 @@ export default function TaskForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Service (for time entries)
             </label>
-            <CustomSelect
+            <SearchableSelect
               id="task-service-select"
               value={selectedServiceId || ''}
-              onValueChange={(value) => setSelectedServiceId(value || null)}
+              onChange={(value) => setSelectedServiceId(value || null)}
               options={[
                 { value: '', label: 'No service' },
                 ...availableServices.map(s => ({
@@ -1021,6 +1032,7 @@ export default function TaskForm({
               ]}
               placeholder="Select service for time entry prefill..."
               className="w-full"
+              dropdownMode="overlay"
             />
             <p className="text-xs text-gray-500 mt-1">
               When set, this service will be automatically selected when creating time entries from this task.
@@ -1333,7 +1345,7 @@ export default function TaskForm({
           </div>
 
           {/* Full width Dependencies section */}
-          {mode === 'edit' && task && (
+          {mode === 'edit' && task ? (
             <TaskDependencies
               ref={dependenciesRef}
               task={task}
@@ -1351,6 +1363,15 @@ export default function TaskForm({
                   console.error('Error refreshing dependencies:', error);
                 }
               }}
+            />
+          ) : mode === 'create' && allProjectTasks.length > 0 && (
+            <TaskDependencies
+              ref={dependenciesRef}
+              allTasksInProject={allProjectTasks}
+              taskTypes={taskTypes}
+              users={users}
+              phases={phases}
+              pendingMode
             />
           )}
 
