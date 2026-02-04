@@ -10,6 +10,7 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
   { value: 'GBP', label: 'GBP (£)', symbol: '£' },
   { value: 'CAD', label: 'CAD (C$)', symbol: 'C$' },
   { value: 'AUD', label: 'AUD (A$)', symbol: 'A$' },
+  { value: 'NZD', label: 'NZD (NZ$)', symbol: 'NZ$' },
   { value: 'JPY', label: 'JPY (¥)', symbol: '¥' },
 ];
 
@@ -17,4 +18,3 @@ export const getCurrencySymbol = (code: string): string => {
   const currency = CURRENCY_OPTIONS.find((entry) => entry.value === code);
   return currency ? currency.symbol : '$';
 };
-

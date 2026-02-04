@@ -2,29 +2,51 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { EnvSecretProvider } from '@alga-psa/core/secrets';
 import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
-import { DB_HOST } from '@/lib/init/serverInit';
 
 /**
  * Critical configuration keys required for application startup
  */
-const REQUIRED_CONFIGS = {
-  // Authentication
-  NEXTAUTH_URL: 'Authentication URL (e.g., http://localhost:3000)',
-  NEXTAUTH_SECRET: 'Authentication secret (generate with: openssl rand -base64 32)',
+type RequiredConfigSpec = Readonly<{
+  key: string;
+  description: string;
+  candidates?: readonly string[];
+  requireEnv?: boolean;
+}>;
 
-  DB_USER_ADMIN: 'Admin database username (e.g., postgres)',
-  DB_PASSWORD_ADMIN: 'Admin database password (postgres password)',
-  DB_PASSWORD_SUPERUSER: 'Admin database superuser password (duplicate of DB_PASSWORD_ADMIN)',
-
-  // Database
-  DB_HOST: 'Database host (e.g., localhost or postgres)',
-  DB_PORT: 'Database port (e.g., 5432)',
-  DB_NAME_SERVER: 'Server database name',
-  DB_USER_SERVER: 'Server database username',
-  DB_PASSWORD_SERVER: 'Server database password',
-} as const;
-
-type RequiredConfigKey = keyof typeof REQUIRED_CONFIGS;
+const REQUIRED_CONFIGS: readonly RequiredConfigSpec[] = [
+  {
+    key: 'NEXTAUTH_URL',
+    description: 'Authentication URL (e.g., http://localhost:3000)',
+    candidates: ['NEXTAUTH_URL', 'nextauth_url'],
+  },
+  {
+    key: 'NEXTAUTH_SECRET',
+    description: 'Authentication secret (generate with: openssl rand -base64 32)',
+    // Edge auth initialization requires this value to be present as an env var (not only as a Docker secret file).
+    requireEnv: true,
+    candidates: ['NEXTAUTH_SECRET'],
+  },
+  {
+    key: 'DB_HOST',
+    description: 'Database host (e.g., localhost or postgres)',
+    candidates: ['DB_HOST', 'db_host'],
+  },
+  {
+    key: 'DB_PORT',
+    description: 'Database port (e.g., 5432)',
+    candidates: ['DB_PORT', 'db_port'],
+  },
+  {
+    key: 'DB_PASSWORD_SERVER',
+    description: 'Server database password (env var DB_PASSWORD_SERVER or secret file db_password_server)',
+    candidates: ['DB_PASSWORD_SERVER', 'db_password_server'],
+  },
+  {
+    key: 'DB_PASSWORD_ADMIN',
+    description: 'Admin database password (env var DB_PASSWORD_ADMIN or secret file postgres_password)',
+    candidates: ['DB_PASSWORD_ADMIN', 'postgres_password'],
+  },
+] as const;
 
 /**
  * Validates that all required configuration values are present
@@ -37,27 +59,47 @@ export async function validateRequiredConfiguration(): Promise<void> {
   const missingConfigs: string[] = [];
   const validatedConfigs: Record<string, string> = {};
 
-  // Check each required configuration
-  for (const [key, description] of Object.entries(REQUIRED_CONFIGS)) {
-    try {
-      // Try uppercase first (environment variables)
-      let value = await secretProvider.getAppSecret(key);
-      
-      // If not found, try lowercase (Docker secrets convention)
-      if (!value || value.trim() === '') {
-        const lowercaseKey = key.toLowerCase();
-        value = await secretProvider.getAppSecret(lowercaseKey);
+  const readFirstAvailable = async (candidates: readonly string[]): Promise<string | undefined> => {
+    for (const candidate of candidates) {
+      try {
+        const value = await secretProvider.getAppSecret(candidate);
+        if (value && value.trim() !== '') return value;
+      } catch {
+        // ignore and continue
       }
-      
-      if (!value || value.trim() === '') {
-        missingConfigs.push(`${key}: ${description}`);
-      } else {
-        validatedConfigs[key] = value;
-      }
-    } catch (error) {
-      // If secret provider throws, treat as missing
-      missingConfigs.push(`${key}: ${description}`);
     }
+    return undefined;
+  };
+
+  for (const spec of REQUIRED_CONFIGS) {
+    const candidates = spec.candidates ?? [spec.key, spec.key.toLowerCase()];
+
+    // Some values must exist in env explicitly (not only from a secret file)
+    if (spec.requireEnv) {
+      const envValue = process.env[spec.key];
+      if (!envValue || envValue.trim() === '') {
+        // Give a targeted hint if the matching Docker secret file exists.
+        const secretValue = await readFirstAvailable([spec.key.toLowerCase(), 'nextauth_secret']);
+        if (secretValue) {
+          missingConfigs.push(
+            `${spec.key}: ${spec.description} (found as secret "nextauth_secret", but must also be set as env var)`,
+          );
+        } else {
+          missingConfigs.push(`${spec.key}: ${spec.description}`);
+        }
+        continue;
+      }
+      validatedConfigs[spec.key] = envValue;
+      continue;
+    }
+
+    const value = await readFirstAvailable(candidates);
+    if (!value || value.trim() === '') {
+      missingConfigs.push(`${spec.key}: ${spec.description}`);
+      continue;
+    }
+
+    validatedConfigs[spec.key] = value;
   }
   
   // Report results
@@ -71,11 +113,12 @@ export async function validateRequiredConfiguration(): Promise<void> {
       '  2. Docker secrets (if using Docker)',
       '  3. Vault (if configured)',
       '  4. .env file (for local development)',
-      '\nFor more information, see docs/configuration_guide.md'
+      '\nFor more information, see docs/getting-started/configuration_guide.md'
     ].join('\n');
     
     logger.error(errorMessage);
     // throw new Error('Required configuration validation failed');
+    return;
   }
   
   // Log successful validation (with sensitive values masked)
@@ -84,9 +127,8 @@ export async function validateRequiredConfiguration(): Promise<void> {
     NEXTAUTH_SECRET: '***',
     DB_HOST: validatedConfigs.DB_HOST,
     DB_PORT: validatedConfigs.DB_PORT,
-    DB_NAME_SERVER: validatedConfigs.DB_NAME_SERVER,
-    DB_USER_SERVER: validatedConfigs.DB_USER_SERVER,
-    DB_PASSWORD_SERVER: '***'
+    DB_PASSWORD_SERVER: '***',
+    DB_PASSWORD_ADMIN: '***',
   });
 }
 
@@ -131,10 +173,12 @@ export async function validateSecretUniqueness(): Promise<void> {
   const secretSources: Record<string, string[]> = {};
   
   // Check all critical configs and common secrets
+  const requiredCandidateKeys = Array.from(
+    new Set(REQUIRED_CONFIGS.flatMap(spec => spec.candidates ?? [spec.key])),
+  );
   const secretsToCheck = [
-    ...Object.keys(REQUIRED_CONFIGS),
-    // Add lowercase variants
-    ...Object.keys(REQUIRED_CONFIGS).map(k => k.toLowerCase()),
+    ...requiredCandidateKeys,
+    ...requiredCandidateKeys.map(k => k.toLowerCase()),
     // Add other common secrets that might conflict
     'ALGA_AUTH_KEY',
     'alga_auth_key',
