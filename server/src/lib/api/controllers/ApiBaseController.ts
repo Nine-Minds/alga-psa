@@ -165,11 +165,12 @@ export abstract class ApiBaseController {
     if (this.options.resource === 'client') {
       resourcePlural = 'clients';
       resourceAlternative = 'clients'; // Support new client terminology
-    } else if (this.options.resource === 'client') {
-      resourcePlural = 'clients';
-      resourceAlternative = 'clients'; // Support old client terminology for backward compatibility
     } else if (this.options.resource === 'time_entry') {
       resourcePlural = 'time-entries';
+    } else if (this.options.resource === 'status') {
+      resourcePlural = 'statuses';
+    } else if (this.options.resource === 'priority') {
+      resourcePlural = 'priorities';
     } else {
       resourcePlural = this.options.resource + 's';
     }
