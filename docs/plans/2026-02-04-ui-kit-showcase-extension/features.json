@@ -531,7 +531,7 @@
   {
     "id": "F067",
     "description": "Tabs demo: Show pills variant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
