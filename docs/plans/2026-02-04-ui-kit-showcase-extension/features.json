@@ -291,7 +291,7 @@
   {
     "id": "F037",
     "description": "LoadingIndicator demo: Show with custom text",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
