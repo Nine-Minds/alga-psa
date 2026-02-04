@@ -198,3 +198,5 @@ ls -la ui/dist/iframe/
 - F032: Dialog demo opens/closes with trigger button.
 
 - F033: Dialog demo includes title and footer actions.
+
+- F034: ConfirmDialog demo shows confirm/cancel actions.
