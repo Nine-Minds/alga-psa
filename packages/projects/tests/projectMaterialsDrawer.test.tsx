@@ -96,4 +96,13 @@ describe('ProjectMaterialsDrawer', () => {
       expect(screen.getByText('No materials added to this project.')).toBeInTheDocument();
     });
   });
+
+  it('shows empty state when no materials exist (T004)', async () => {
+    mockMaterials = [];
+
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    expect(await screen.findByText('No materials added to this project.')).toBeInTheDocument();
+  });
 });

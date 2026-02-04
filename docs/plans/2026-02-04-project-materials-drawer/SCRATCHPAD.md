@@ -89,3 +89,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T001 test to assert billing dependency in projects package.json.
 - 2026-02-04: Added T002 test to assert ProjectInfo opens materials drawer with 560px width.
 - 2026-02-04: Added T003 test to verify loading state while materials fetch is pending.
+- 2026-02-04: Added T004 test to verify empty state when no materials are returned.

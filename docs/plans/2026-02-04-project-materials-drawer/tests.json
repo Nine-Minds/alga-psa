@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Empty state shown when no materials exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
