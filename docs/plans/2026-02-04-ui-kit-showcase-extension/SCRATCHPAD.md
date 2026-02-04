@@ -475,3 +475,5 @@ ls -la ui/dist/iframe/
 - T092: Label tests assert size variants.
 
 - T093: SearchInput tests assert search icon.
+
+- T094: SearchInput tests assert clear button appears.
