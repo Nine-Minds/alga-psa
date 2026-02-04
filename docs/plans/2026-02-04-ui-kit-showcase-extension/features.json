@@ -643,7 +643,7 @@
   {
     "id": "F081",
     "description": "Extension loads correctly in Alga PSA iframe context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
