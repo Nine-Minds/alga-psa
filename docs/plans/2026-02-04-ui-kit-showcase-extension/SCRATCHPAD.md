@@ -321,3 +321,5 @@ ls -la ui/dist/iframe/
 - T015: Theme toggle test asserts mode switch on click.
 
 - T016: Theme change test asserts document theme attribute updates.
+
+- T017: Layout tests assert header title text.
