@@ -50,7 +50,7 @@
   {
     "id": "T007",
     "description": "Extension scaffolding: vite config aliases @alga/ui-kit correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
