@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Materials table showing product name, SKU, quantity, rate, total, status badge",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Drawer Structure"]
   },
   {

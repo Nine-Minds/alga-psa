@@ -2,10 +2,12 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Package, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { IProjectMaterial } from '@alga-psa/types';
 import { listProjectMaterials } from '@alga-psa/billing/actions';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 interface ProjectMaterialsDrawerProps {
   projectId: string;
@@ -34,6 +36,8 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
   useEffect(() => {
     loadMaterials();
   }, [loadMaterials]);
+
+  const calculateTotal = (material: IProjectMaterial) => material.quantity * material.rate;
 
   return (
     <div className="space-y-4">
@@ -68,21 +72,51 @@ export default function ProjectMaterialsDrawer({ projectId }: ProjectMaterialsDr
           No materials added to this project.
         </div>
       ) : (
-        <div className="space-y-2 text-sm">
-          {materials.map((material) => (
-            <div
-              key={material.project_material_id}
-              className="flex items-center justify-between border-b pb-2 last:border-0"
-            >
-              <div>
-                <div className="font-medium">{material.service_name || 'Unknown Product'}</div>
-                {material.sku && (
-                  <div className="text-xs text-gray-500">{material.sku}</div>
-                )}
-              </div>
-              <div className="text-gray-500">Qty: {material.quantity}</div>
-            </div>
-          ))}
+        <div className="space-y-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="pb-2 font-medium">Product</th>
+                  <th className="pb-2 font-medium text-right">Qty</th>
+                  <th className="pb-2 font-medium text-right">Rate</th>
+                  <th className="pb-2 font-medium text-right">Total</th>
+                  <th className="pb-2 font-medium text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materials.map((material) => (
+                  <tr key={material.project_material_id} className="border-b last:border-0">
+                    <td className="py-2">
+                      <div>
+                        <span className="font-medium">{material.service_name || 'Unknown Product'}</span>
+                        {material.sku && (
+                          <span className="text-gray-500 ml-1">({material.sku})</span>
+                        )}
+                      </div>
+                      {material.description && (
+                        <div className="text-xs text-gray-500">{material.description}</div>
+                      )}
+                    </td>
+                    <td className="py-2 text-right">{material.quantity}</td>
+                    <td className="py-2 text-right">
+                      {formatCurrencyFromMinorUnits(material.rate, 'en-US', material.currency_code)}
+                    </td>
+                    <td className="py-2 text-right font-medium">
+                      {formatCurrencyFromMinorUnits(calculateTotal(material), 'en-US', material.currency_code)}
+                    </td>
+                    <td className="py-2 text-center">
+                      {material.is_billed ? (
+                        <Badge variant="default">Billed</Badge>
+                      ) : (
+                        <Badge variant="outline">Pending</Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
