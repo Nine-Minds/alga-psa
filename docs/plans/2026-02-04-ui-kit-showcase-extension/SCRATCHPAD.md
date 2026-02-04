@@ -184,3 +184,5 @@ ls -la ui/dist/iframe/
 - F025: Stack demo shows row and column layouts.
 
 - F026: Stack demo shows gap and alignment options.
+
+- F027: Badge demo shows default/info/success/warning/danger tones.
