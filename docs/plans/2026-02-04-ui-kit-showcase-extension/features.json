@@ -147,7 +147,7 @@
   {
     "id": "F019",
     "description": "CustomSelect demo: Show select with options",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
