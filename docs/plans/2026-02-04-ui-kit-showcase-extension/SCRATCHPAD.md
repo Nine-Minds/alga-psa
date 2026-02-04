@@ -503,3 +503,5 @@ ls -la ui/dist/iframe/
 - T106: Drawer tests assert bottom position.
 
 - T107: Drawer tests assert size changes.
+
+- T108: Drawer tests assert title renders.
