@@ -577,7 +577,7 @@
   {
     "id": "T072",
     "description": "Progress demo: Animated variant has moving animation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
