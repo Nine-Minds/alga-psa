@@ -585,7 +585,7 @@
   {
     "id": "T073",
     "description": "Progress demo: Size variants change bar height",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
