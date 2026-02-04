@@ -249,7 +249,7 @@
   {
     "id": "T031",
     "description": "Button demo: Disabled button has reduced opacity and is non-interactive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
