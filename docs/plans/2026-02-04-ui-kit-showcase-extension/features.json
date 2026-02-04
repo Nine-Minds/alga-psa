@@ -1,0 +1,488 @@
+[
+  {
+    "id": "F001",
+    "description": "Extension scaffolding: manifest.json with correct structure for iframe-based extension",
+    "implemented": false,
+    "prdRefs": ["Technical Approach"]
+  },
+  {
+    "id": "F002",
+    "description": "Extension scaffolding: package.json with @alga/ui-kit dependency",
+    "implemented": false,
+    "prdRefs": ["Technical Approach", "Dependencies"]
+  },
+  {
+    "id": "F003",
+    "description": "Extension scaffolding: vite.iframe.config.ts for building the iframe bundle",
+    "implemented": false,
+    "prdRefs": ["Technical Approach"]
+  },
+  {
+    "id": "F004",
+    "description": "Extension scaffolding: ui/index.html entry point",
+    "implemented": false,
+    "prdRefs": ["Technical Approach"]
+  },
+  {
+    "id": "F005",
+    "description": "Extension scaffolding: tsconfig.json with proper JSX and module settings",
+    "implemented": false,
+    "prdRefs": ["Technical Approach"]
+  },
+  {
+    "id": "F006",
+    "description": "Theme bridge: Create ThemeBridge component that maps --color-* to --alga-* CSS variables",
+    "implemented": false,
+    "prdRefs": ["Theme Bridge Implementation"]
+  },
+  {
+    "id": "F007",
+    "description": "Theme bridge: Support light mode variable mapping",
+    "implemented": false,
+    "prdRefs": ["Theme Bridge Implementation"]
+  },
+  {
+    "id": "F008",
+    "description": "Theme bridge: Support dark mode variable mapping",
+    "implemented": false,
+    "prdRefs": ["Theme Bridge Implementation"]
+  },
+  {
+    "id": "F009",
+    "description": "Theme bridge: Theme toggle button to switch between light/dark modes",
+    "implemented": false,
+    "prdRefs": ["Flow 3: Theme Preview"]
+  },
+  {
+    "id": "F010",
+    "description": "Main layout: Header with extension title and theme toggle",
+    "implemented": false,
+    "prdRefs": ["Layout Structure"]
+  },
+  {
+    "id": "F011",
+    "description": "Main layout: Tabbed navigation for component categories (Core, Data, Dialogs, Feedback, Form, Navigation)",
+    "implemented": false,
+    "prdRefs": ["Flow 1: Browse Component Categories"]
+  },
+  {
+    "id": "F012",
+    "description": "Main layout: Content area that displays selected category's component demos",
+    "implemented": false,
+    "prdRefs": ["Layout Structure"]
+  },
+  {
+    "id": "F013",
+    "description": "DemoSection component: Reusable wrapper with title, description, and demo area",
+    "implemented": false,
+    "prdRefs": ["Component Sections"]
+  },
+  {
+    "id": "F014",
+    "description": "Button demo: Show all variants (primary, secondary, ghost, danger)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F015",
+    "description": "Button demo: Show all sizes (sm, md, lg)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F016",
+    "description": "Button demo: Show disabled state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F017",
+    "description": "Input demo: Show basic input with placeholder",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F018",
+    "description": "Input demo: Show disabled state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F019",
+    "description": "CustomSelect demo: Show select with options",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F020",
+    "description": "CustomSelect demo: Show disabled state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F021",
+    "description": "Card demo: Show card with content",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F022",
+    "description": "Alert demo: Show all tones (info, success, warning, danger)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F023",
+    "description": "Text demo: Show different sizes and weights",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F024",
+    "description": "Text demo: Show as different HTML elements (h1, h2, p, span)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F025",
+    "description": "Stack demo: Show horizontal and vertical stacking",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F026",
+    "description": "Stack demo: Show different gap and alignment options",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F027",
+    "description": "Badge demo: Show all tones (default, success, warning, danger, info)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F028",
+    "description": "DataTable demo: Show table with sortable columns",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F029",
+    "description": "DataTable demo: Show pagination controls",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F030",
+    "description": "DataTable demo: Show responsive column hiding feature",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F031",
+    "description": "DataTable demo: Show custom cell rendering with Badge",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F032",
+    "description": "Dialog demo: Show basic dialog with open/close",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F033",
+    "description": "Dialog demo: Show dialog with title and footer",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F034",
+    "description": "ConfirmDialog demo: Show confirmation dialog with confirm/cancel actions",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F035",
+    "description": "ConfirmDialog demo: Show danger variant for destructive actions",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F036",
+    "description": "Spinner demo: Show different sizes",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F037",
+    "description": "LoadingIndicator demo: Show with custom text",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F038",
+    "description": "Tooltip demo: Show all positions (top, bottom, left, right)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F039",
+    "description": "Progress demo: Show different values (0%, 50%, 100%)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F040",
+    "description": "Progress demo: Show all variants (default, striped, animated)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F041",
+    "description": "Progress demo: Show all sizes (sm, md, lg)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F042",
+    "description": "Progress demo: Show indeterminate mode",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F043",
+    "description": "Skeleton demo: Show basic Skeleton component",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F044",
+    "description": "Skeleton demo: Show SkeletonText for text placeholders",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F045",
+    "description": "Skeleton demo: Show SkeletonCircle for avatar placeholders",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F046",
+    "description": "Skeleton demo: Show SkeletonRectangle for image placeholders",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F047",
+    "description": "Checkbox demo: Show checked and unchecked states",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F048",
+    "description": "Checkbox demo: Show indeterminate state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F049",
+    "description": "Checkbox demo: Show with label",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F050",
+    "description": "Checkbox demo: Show disabled state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F051",
+    "description": "Switch demo: Show on and off states",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F052",
+    "description": "Switch demo: Show all sizes (sm, md, lg)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F053",
+    "description": "Switch demo: Show disabled state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F054",
+    "description": "TextArea demo: Show basic text area",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F055",
+    "description": "TextArea demo: Show different row counts",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F056",
+    "description": "TextArea demo: Show resize options (none, vertical, horizontal, both)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F057",
+    "description": "TextArea demo: Show disabled state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F058",
+    "description": "Label demo: Show basic label",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F059",
+    "description": "Label demo: Show required indicator",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F060",
+    "description": "Label demo: Show all sizes (sm, md, lg)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F061",
+    "description": "SearchInput demo: Show basic search with icon",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F062",
+    "description": "SearchInput demo: Show clear button functionality",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F063",
+    "description": "SearchInput demo: Show loading state",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F064",
+    "description": "SearchInput demo: Show all sizes (sm, md, lg)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F065",
+    "description": "SearchInput demo: Demonstrate debounce functionality",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F066",
+    "description": "Tabs demo: Show default variant",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F067",
+    "description": "Tabs demo: Show pills variant",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F068",
+    "description": "Tabs demo: Show underline variant",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F069",
+    "description": "Tabs demo: Show disabled tab",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F070",
+    "description": "Drawer demo: Show right position (default)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F071",
+    "description": "Drawer demo: Show left position",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F072",
+    "description": "Drawer demo: Show bottom position",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F073",
+    "description": "Drawer demo: Show all sizes (sm, md, lg, full)",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F074",
+    "description": "Drawer demo: Show with title and content",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F075",
+    "description": "DropdownMenu demo: Show basic menu with items",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F076",
+    "description": "DropdownMenu demo: Show menu with dividers",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F077",
+    "description": "DropdownMenu demo: Show disabled items",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F078",
+    "description": "DropdownMenu demo: Show danger items",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F079",
+    "description": "DropdownMenu demo: Show left and right alignment",
+    "implemented": false,
+    "prdRefs": ["Components to Showcase"]
+  },
+  {
+    "id": "F080",
+    "description": "Extension builds successfully with vite",
+    "implemented": false,
+    "prdRefs": ["Technical Approach"]
+  },
+  {
+    "id": "F081",
+    "description": "Extension loads correctly in Alga PSA iframe context",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria"]
+  }
+]
