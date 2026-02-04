@@ -262,3 +262,5 @@ ls -la ui/dist/iframe/
 - F064: SearchInput demo includes size variants.
 
 - F065: SearchInput demo includes debounce example.
+
+- F066: Tabs demo includes default variant.
