@@ -447,3 +447,5 @@ ls -la ui/dist/iframe/
 - T078: Skeleton tests assert rectangle dimensions.
 
 - T079: Checkbox tests assert toggling state.
+
+- T080: Checkbox tests assert indeterminate property.
