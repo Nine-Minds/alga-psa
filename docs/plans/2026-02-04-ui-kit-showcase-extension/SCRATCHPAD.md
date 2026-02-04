@@ -230,3 +230,5 @@ ls -la ui/dist/iframe/
 - F048: Checkbox demo includes indeterminate example.
 
 - F049: Checkbox demo includes labeled checkbox.
+
+- F050: Checkbox demo includes disabled checkbox.
