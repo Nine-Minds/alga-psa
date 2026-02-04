@@ -419,7 +419,7 @@
   {
     "id": "F053",
     "description": "Switch demo: Show disabled state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]

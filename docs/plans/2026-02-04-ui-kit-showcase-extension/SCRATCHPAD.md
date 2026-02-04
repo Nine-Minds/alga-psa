@@ -236,3 +236,5 @@ ls -la ui/dist/iframe/
 - F051: Switch demo includes on/off states.
 
 - F052: Switch demo includes sm/md/lg sizes.
+
+- F053: Switch demo includes disabled state.
