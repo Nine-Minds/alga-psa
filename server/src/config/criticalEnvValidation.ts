@@ -21,14 +21,35 @@ const REQUIRED_CONFIGS: RequiredConfigSpec[] = [
     lookups: ['NEXTAUTH_URL'],
   },
   {
-    key: 'NEXTAUTH_SECRET',
-    description: 'Authentication secret (generate with: openssl rand -base64 32)',
-    // In Docker secrets, the filename is typically lower_snake_case.
-    lookups: ['NEXTAUTH_SECRET', 'nextauth_secret'],
+    // NOTE: Prefer validating the filesystem/Docker secret file name (`nextauth_secret`) rather than
+    // the env var to avoid false positives when an env var contains a file path like `/run/secrets/nextauth_secret`.
+    key: 'nextauth_secret',
+    description: 'NextAuth secret (filesystem/Docker secret file: secrets/nextauth_secret)',
+    lookups: ['nextauth_secret', 'NEXTAUTH_SECRET'],
     masked: true,
   },
 
   // Database
+  {
+    key: 'DB_TYPE',
+    description: 'Database type (must be "postgres")',
+    lookups: ['DB_TYPE'],
+  },
+  {
+    key: 'DB_NAME_SERVER',
+    description: 'Server database name',
+    lookups: ['DB_NAME_SERVER'],
+  },
+  {
+    key: 'DB_USER_SERVER',
+    description: 'Server database username',
+    lookups: ['DB_USER_SERVER'],
+  },
+  {
+    key: 'DB_USER_ADMIN',
+    description: 'Admin database username (e.g., postgres)',
+    lookups: ['DB_USER_ADMIN'],
+  },
   {
     key: 'DB_HOST',
     description: 'Database host (e.g., localhost or postgres)',
@@ -40,16 +61,15 @@ const REQUIRED_CONFIGS: RequiredConfigSpec[] = [
     lookups: ['DB_PORT'],
   },
   {
-    key: 'DB_PASSWORD_SERVER',
-    description: 'Server database password',
-    lookups: ['DB_PASSWORD_SERVER', 'db_password_server'],
+    key: 'db_password_server',
+    description: 'Server database password (filesystem/Docker secret file: secrets/db_password_server)',
+    lookups: ['db_password_server', 'DB_PASSWORD_SERVER'],
     masked: true,
   },
   {
-    key: 'DB_PASSWORD_ADMIN',
-    description: 'Admin database password (postgres password)',
-    // Knex/admin connections use the `postgres_password` secret file with a `DB_PASSWORD_ADMIN` env fallback.
-    lookups: ['DB_PASSWORD_ADMIN', 'postgres_password'],
+    key: 'postgres_password',
+    description: 'Admin database password (filesystem/Docker secret file: secrets/postgres_password)',
+    lookups: ['postgres_password', 'DB_PASSWORD_ADMIN'],
     masked: true,
   },
 ];
@@ -68,7 +88,16 @@ export async function validateRequiredConfiguration(): Promise<void> {
   const resolveSpecValue = async (spec: RequiredConfigSpec): Promise<string | undefined> => {
     for (const lookupKey of spec.lookups) {
       const value = await secretProvider.getAppSecret(lookupKey);
-      if (value && value.trim() !== '') {
+      const trimmed = value?.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      if ((spec.key === 'nextauth_secret' || lookupKey === 'NEXTAUTH_SECRET') && trimmed.startsWith('/run/secrets/')) {
+        continue;
+      }
+
+      if (trimmed !== '') {
         return value;
       }
     }
@@ -110,11 +139,15 @@ export async function validateRequiredConfiguration(): Promise<void> {
   // Log successful validation (with sensitive values masked)
   logger.info('✅ All required configuration values are present', {
     NEXTAUTH_URL: validatedConfigs.NEXTAUTH_URL,
-    NEXTAUTH_SECRET: '***',
+    nextauth_secret: '***',
+    DB_TYPE: validatedConfigs.DB_TYPE,
     DB_HOST: validatedConfigs.DB_HOST,
     DB_PORT: validatedConfigs.DB_PORT,
-    DB_PASSWORD_SERVER: '***',
-    DB_PASSWORD_ADMIN: '***',
+    DB_NAME_SERVER: validatedConfigs.DB_NAME_SERVER,
+    DB_USER_SERVER: validatedConfigs.DB_USER_SERVER,
+    DB_USER_ADMIN: validatedConfigs.DB_USER_ADMIN,
+    db_password_server: '***',
+    postgres_password: '***',
   });
 }
 

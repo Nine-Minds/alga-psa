@@ -2,14 +2,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { ISecretProvider } from './ISecretProvider';
 
-// Calculate secrets directory path once at module load
+// Common secrets mount location inside containers
 const DOCKER_SECRETS_PATH = '/run/secrets';
-const LOCAL_SECRETS_PATH = '../secrets';
-
-// Cache the secrets path promise
-const SECRETS_PATH_PROMISE = fs.access(DOCKER_SECRETS_PATH)
-  .then(() => DOCKER_SECRETS_PATH)
-  .catch(() => LOCAL_SECRETS_PATH);
 
 /**
  * A secret provider that reads secrets from the local filesystem.
@@ -29,11 +23,45 @@ export class FileSystemSecretProvider implements ISecretProvider {
     this.serverRoot = process.cwd();
   }
 
+  private async resolveBasePath(): Promise<string> {
+    const configured = process.env.SECRET_FS_BASE_PATH;
+    if (configured && configured.trim() !== '') {
+      return path.isAbsolute(configured) ? configured : path.resolve(this.serverRoot, configured);
+    }
+
+    // Prefer docker secrets if available
+    try {
+      await fs.access(DOCKER_SECRETS_PATH);
+      return DOCKER_SECRETS_PATH;
+    } catch {
+      // Not running in a container / secrets not mounted
+    }
+
+    // Support running from either the repo root or the `server/` directory.
+    // - repo root: ./secrets
+    // - server dir: ../secrets
+    const candidates = [
+      path.resolve(this.serverRoot, 'secrets'),
+      path.resolve(this.serverRoot, '../secrets'),
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        await fs.access(candidate);
+        return candidate;
+      } catch {
+        // Keep searching
+      }
+    }
+
+    // Fallback to historical default (best-effort)
+    return path.resolve(this.serverRoot, '../secrets');
+  }
+
   async getBasePath(): Promise<string> {
     if (!this._basePath) {
       // Return the base path for the secret provider
-      const basePath = process.env.SECRET_FS_BASE_PATH || await SECRETS_PATH_PROMISE || path.resolve(this.serverRoot, '../secrets');
-      this._basePath = basePath;
+      this._basePath = await this.resolveBasePath();
     }
     return this._basePath;
   }

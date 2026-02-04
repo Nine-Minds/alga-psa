@@ -1,0 +1,110 @@
+[
+  {
+    "id": "T001",
+    "description": "@alga-psa/billing is listed in projects package.json dependencies",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Drawer opens with correct width when Materials button clicked",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Loading spinner shown while fetching materials",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Empty state shown when no materials exist",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "Materials table renders with correct columns and data",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Status badges show Pending/Billed correctly",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "Currency amounts formatted correctly from minor units",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Unbilled totals grouped by currency code",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "Product dropdown loads and filters products",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T010",
+    "description": "Price selector shows after product selection with correct options",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T011",
+    "description": "Quantity defaults to 1 and cannot go below 1",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T012",
+    "description": "Total updates when quantity or currency changes",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T013",
+    "description": "Add material succeeds with valid data and refreshes list",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T014",
+    "description": "Add material shows validation errors for missing product/price",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Delete button only visible on unbilled materials",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Delete material succeeds and refreshes list",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T017",
+    "description": "Warning shown when project has no client, Add button hidden",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Data automation IDs present on key interactive elements",
+    "implemented": true,
+    "featureIds": ["F012"]
+  }
+]

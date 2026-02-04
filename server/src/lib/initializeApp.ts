@@ -29,7 +29,7 @@ import { initializeNotificationAccumulator, shutdownNotificationAccumulator } fr
 import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
-import { getSecret } from 'server/src/lib/utils/getSecret';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 let isFunctionExecuted = false;
 
@@ -62,8 +62,11 @@ export async function initializeApp() {
       throw error; // Cannot continue without critical configuration
     }
 
-    const nextAuthSecret = await getSecret('nextauth_secret', 'NEXTAUTH_SECRET');
-    if (nextAuthSecret) {
+    const secretProvider = await getSecretProviderInstance();
+    const nextAuthSecret =
+      (await secretProvider.getAppSecret('nextauth_secret')) ??
+      (await secretProvider.getAppSecret('NEXTAUTH_SECRET'));
+    if (nextAuthSecret && !nextAuthSecret.trim().startsWith('/run/secrets/')) {
       process.env.NEXTAUTH_SECRET = nextAuthSecret;
     }
 
