@@ -415,3 +415,5 @@ ls -la ui/dist/iframe/
 - T062: ConfirmDialog tests assert confirm action.
 
 - T063: ConfirmDialog tests assert cancel action.
+
+- T064: ConfirmDialog tests assert danger button styling.
