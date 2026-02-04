@@ -35,7 +35,7 @@
   {
     "id": "F005",
     "description": "Extension scaffolding: tsconfig.json with proper JSX and module settings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Technical Approach"
     ]
