@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Extension scaffolding: package.json with @alga/ui-kit dependency",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Technical Approach",
       "Dependencies"
