@@ -144,7 +144,7 @@
   {
     "id": "T018",
     "description": "Layout: Theme toggle button is visible in header",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
