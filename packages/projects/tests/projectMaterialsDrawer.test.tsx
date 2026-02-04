@@ -465,4 +465,41 @@ describe('ProjectMaterialsDrawer', () => {
       container.querySelector('[data-automation-id="project-materials-drawer-delete-material-2"]')
     ).toBeNull();
   });
+
+  it('deletes material and refreshes the list (T016)', async () => {
+    mockMaterials = [
+      {
+        project_material_id: 'material-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        service_id: 'service-1',
+        service_name: 'Widget',
+        sku: null,
+        quantity: 1,
+        rate: 1000,
+        currency_code: 'USD',
+        description: null,
+        is_billed: false,
+      } as IProjectMaterial,
+    ];
+
+    const actions = await import('@alga-psa/billing/actions');
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    await screen.findByText('Widget');
+
+    const deleteButton = container.querySelector(
+      '[data-automation-id="project-materials-drawer-delete-material-1"]'
+    ) as HTMLButtonElement;
+    deleteButton.click();
+
+    await waitFor(() => {
+      expect(actions.deleteProjectMaterial).toHaveBeenCalledWith('material-1');
+    });
+
+    await waitFor(() => {
+      expect(actions.listProjectMaterials).toHaveBeenCalledTimes(2);
+    });
+  });
 });

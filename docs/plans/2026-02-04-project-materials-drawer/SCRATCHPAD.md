@@ -101,3 +101,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T013 test to verify add-material submission and list refresh.
 - 2026-02-04: Added T014 test to verify validation toasts for missing product/price.
 - 2026-02-04: Added T015 test to ensure delete controls only show for unbilled items.
+- 2026-02-04: Added T016 test to verify delete action triggers list refresh.

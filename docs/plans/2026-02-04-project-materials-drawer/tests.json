@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Delete material succeeds and refreshes list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
