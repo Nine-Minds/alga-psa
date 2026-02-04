@@ -139,3 +139,6 @@ ls -la ui/dist/iframe/
 - [ ] Verify exact color mappings from globals.css
 - [ ] Test theme bridge in both light and dark modes
 - [ ] Confirm iframe sandbox doesn't block injected styles
+
+## Updates
+- F001: Added extension manifest at `ee/extensions/samples/ui-kit-showcase/manifest.json` with iframe UI entry and app menu hook for UI Kit Showcase.
