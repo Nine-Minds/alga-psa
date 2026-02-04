@@ -493,3 +493,5 @@ ls -la ui/dist/iframe/
 - T101: Tabs tests assert underline variant style.
 
 - T102: Tabs tests assert disabled tab state.
+
+- T103: Tabs tests assert content changes on selection.
