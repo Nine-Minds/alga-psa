@@ -204,3 +204,5 @@ ls -la ui/dist/iframe/
 - F035: ConfirmDialog demo includes danger variant.
 
 - F036: Spinner demo renders multiple sizes.
+
+- F037: LoadingIndicator demo shows spinner with text.
