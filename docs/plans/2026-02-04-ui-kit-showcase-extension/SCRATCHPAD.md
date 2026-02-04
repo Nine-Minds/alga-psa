@@ -145,3 +145,4 @@ ls -la ui/dist/iframe/
 - F002: Added `ee/extensions/samples/ui-kit-showcase/package.json` with React + @alga/ui-kit dependencies and build script.
 - F003: Added `ee/extensions/samples/ui-kit-showcase/vite.iframe.config.ts` to bundle iframe UI into `ui/dist/iframe/main.js` with @alga/ui-kit aliasing.
 - F004: Added `ee/extensions/samples/ui-kit-showcase/ui/index.html` with root div and iframe bundle script.
+- F005: Added `ee/extensions/samples/ui-kit-showcase/tsconfig.json` with React JSX and module settings for the iframe app.
