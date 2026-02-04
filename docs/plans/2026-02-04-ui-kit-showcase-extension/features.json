@@ -155,7 +155,7 @@
   {
     "id": "F020",
     "description": "CustomSelect demo: Show disabled state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
