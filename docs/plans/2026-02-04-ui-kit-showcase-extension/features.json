@@ -91,7 +91,7 @@
   {
     "id": "F012",
     "description": "Main layout: Content area that displays selected category's component demos",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Layout Structure"
     ]
