@@ -832,32 +832,6 @@
         "error_deleting": "Kan opmerking niet verwijderen. Probeer het opnieuw.",
         "confirm_delete": "Weet u zeker dat u deze opmerking wilt verwijderen?"
       }
-    },
-    "dependencies": {
-      "title": "Afhankelijkheden",
-      "types": {
-        "blocks": "Blokkeert",
-        "blocked_by": "Geblokkeerd door",
-        "related_to": "Gerelateerd aan"
-      },
-      "selectTask": "Taak selecteren...",
-      "noTasks": "Geen andere taken beschikbaar voor afhankelijkheden",
-      "unsavedHint": "Klik op de knop + om deze afhankelijkheid toe te voegen",
-      "dialog": {
-        "title": "Niet-opgeslagen wijzigingen",
-        "message": "U heeft een afhankelijkheid geselecteerd maar nog niet toegevoegd. Klik op de paarse knop + om deze toe te voegen, of verwerp de selectie en sla op.",
-        "discard": "Wijzigingen verwerpen",
-        "continueEditing": "Doorgaan met bewerken"
-      },
-      "actions": {
-        "remove": "Afhankelijkheid verwijderen",
-        "removeDependencyAria": "{{dependencyType}}-afhankelijkheid van {{taskName}} verwijderen"
-      },
-      "errors": {
-        "addFailed": "Afhankelijkheid toevoegen mislukt",
-        "removeFailed": "Afhankelijkheid verwijderen mislukt",
-        "taskRequired": "TaskDependencies vereist een taak wanneer pendingMode = false"
-      }
     }
   }
 }

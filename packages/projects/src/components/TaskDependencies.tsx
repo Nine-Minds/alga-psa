@@ -9,7 +9,6 @@ import { Ban, GitBranch, Link2, Plus, Trash2 } from 'lucide-react';
 import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskActions';
 import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Stable empty arrays to prevent useEffect dependency churn from default parameters
 const EMPTY_PREDECESSORS: IProjectTaskDependency[] = [];
@@ -54,7 +53,6 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   onUnsavedChanges,
   pendingMode = false
 }, ref) => {
-  const { t } = useTranslation('common');
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +76,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
 
   // Guard: task is required when not in pendingMode
   if (!pendingMode && !task) {
-    throw new Error(t('projects.dependencies.errors.taskRequired', 'TaskDependencies requires task when pendingMode = false'));
+    throw new Error('TaskDependencies requires task when pendingMode = false');
   }
 
   useEffect(() => {
@@ -133,15 +131,15 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   const getDependencyTypeInfo = useCallback((type: DependencyType) => {
     switch (type) {
       case 'blocks':
-        return { icon: <Ban className="h-4 w-4 text-red-500" />, label: t('projects.dependencies.types.blocks', 'Blocks') };
+        return { icon: <Ban className="h-4 w-4 text-red-500" />, label: 'Blocks' };
       case 'blocked_by':
-        return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: t('projects.dependencies.types.blocked_by', 'Blocked by') };
+        return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
       case 'related_to':
-        return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: t('projects.dependencies.types.related_to', 'Related to') };
+        return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: 'Related to' };
       default:
         return { icon: <Link2 className="h-4 w-4 text-gray-500" />, label: type };
     }
-  }, [t]);
+  }, []);
 
   const getDependencyDisplayInfo = useCallback((dependency: IProjectTaskDependency, isPredecessor: boolean) => {
     const { dependency_type } = dependency;
@@ -199,14 +197,14 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       setSelectedType('blocked_by');
       if (refreshDependencies) refreshDependencies();
     } catch (err: any) {
-      setError(err.message || t('projects.dependencies.errors.addFailed', 'Failed to add dependency'));
+      setError(err.message || 'Failed to add dependency');
     } finally {
       setIsLoading(false);
     }
   };
 
   // Imperative handle — callbacks read from refs for local state so the handle
-  // only recreates when task identity, refresh callback, or translation function changes.
+  // only recreates when task identity or refresh callback changes.
   useImperativeHandle(ref, () => ({
     savePendingDependency: async () => {
       const currentTaskId = selectedTaskIdRef.current;
@@ -221,7 +219,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
           if (refreshDependencies) refreshDependencies();
           return true;
         } catch (err: any) {
-          setError(err.message || t('projects.dependencies.errors.addFailed', 'Failed to add dependency'));
+          setError(err.message || 'Failed to add dependency');
           return false;
         } finally {
           setIsLoading(false);
@@ -234,7 +232,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       return !!selectedTaskIdRef.current;
     },
     getPendingDependencies: () => pendingDepsRef.current,
-  }), [task?.task_id, refreshDependencies, t]);
+  }), [task?.task_id, refreshDependencies]);
 
   const handleRemove = async (dependencyId: string) => {
     setError(null);
@@ -243,7 +241,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       await removeTaskDependency(dependencyId);
       if (refreshDependencies) refreshDependencies();
     } catch (err: any) {
-      setError(err.message || t('projects.dependencies.errors.removeFailed', 'Failed to remove dependency'));
+      setError(err.message || 'Failed to remove dependency');
     } finally {
       setIsLoading(false);
     }
@@ -309,10 +307,10 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   const hasPendingDeps = pendingDeps.length > 0;
 
   const dependencyTypeOptions = useMemo(() => ([
-    { value: 'blocked_by', label: t('projects.dependencies.types.blocked_by', 'Blocked by') },
-    { value: 'blocks', label: t('projects.dependencies.types.blocks', 'Blocks') },
-    { value: 'related_to', label: t('projects.dependencies.types.related_to', 'Related to') },
-  ]), [t]);
+    { value: 'blocked_by', label: 'Blocked by' },
+    { value: 'blocks', label: 'Blocks' },
+    { value: 'related_to', label: 'Related to' },
+  ]), []);
 
   const availableTaskOptions = useMemo(() => availableTasks.map(t => ({
     value: t.task_id,
@@ -331,7 +329,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     <div className="border-t pt-4 space-y-3">
       <div className="flex items-center gap-2 mb-1">
         <Link2 className="h-5 w-5 text-gray-500" />
-        <h3 className="font-semibold">{t('projects.dependencies.title', 'Dependencies')}</h3>
+        <h3 className="font-semibold">Dependencies</h3>
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
@@ -354,7 +352,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                   type="button"
                   onClick={() => handleRemove(dep.dependency_id)}
                   className="text-red-500 hover:text-red-700 p-1"
-                  title={t('projects.dependencies.actions.remove', 'Remove dependency')}
+                  title="Remove dependency"
                   disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -378,7 +376,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                   type="button"
                   onClick={() => handleRemove(dep.dependency_id)}
                   className="text-red-500 hover:text-red-700 p-1"
-                  title={t('projects.dependencies.actions.remove', 'Remove dependency')}
+                  title="Remove dependency"
                   disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -419,11 +417,8 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                   type="button"
                   onClick={() => handleRemovePending(dep.tempId)}
                   className="text-red-500 hover:text-red-700 p-1"
-                  title={t('projects.dependencies.actions.remove', 'Remove dependency')}
-                  aria-label={t('projects.dependencies.actions.removeDependencyAria', 'Remove {{dependencyType}} dependency on {{taskName}}', {
-                    dependencyType: dep.dependencyType,
-                    taskName: dep.targetTaskName
-                  })}
+                  title="Remove dependency"
+                  aria-label={`Remove ${dep.dependencyType} dependency on ${dep.targetTaskName}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -450,7 +445,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                 value={selectedTaskId}
                 onChange={setSelectedTaskId}
                 options={availableTaskOptions}
-                placeholder={t('projects.dependencies.selectTask', 'Select task...')}
+                placeholder="Select task..."
                 disabled={isLoading}
                 dropdownMode="inline"
               />
@@ -468,7 +463,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
           </div>
           {selectedTaskId && (
             <p className="text-xs text-amber-600">
-              {t('projects.dependencies.unsavedHint', 'Click the + button to add this dependency')}
+              Click the + button to add this dependency
             </p>
           )}
         </div>
@@ -476,7 +471,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
 
       {availableTasks.length === 0 && !hasDependencies && !hasPendingDeps && (
         <p className="text-sm text-gray-500 italic">
-          {t('projects.dependencies.noTasks', 'No other tasks available for dependencies')}
+          No other tasks available for dependencies
         </p>
       )}
     </div>

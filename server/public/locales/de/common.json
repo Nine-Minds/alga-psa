@@ -830,32 +830,6 @@
         "error_deleting": "Kommentar konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
         "confirm_delete": "Sind Sie sicher, dass Sie diesen Kommentar löschen möchten?"
       }
-    },
-    "dependencies": {
-      "title": "Abhängigkeiten",
-      "types": {
-        "blocks": "Blockiert",
-        "blocked_by": "Blockiert von",
-        "related_to": "Verwandt mit"
-      },
-      "selectTask": "Aufgabe auswählen...",
-      "noTasks": "Keine weiteren Aufgaben für Abhängigkeiten verfügbar",
-      "unsavedHint": "Klicken Sie auf die Schaltfläche +, um diese Abhängigkeit hinzuzufügen",
-      "dialog": {
-        "title": "Nicht gespeicherte Änderungen",
-        "message": "Sie haben eine Abhängigkeit ausgewählt, aber noch nicht hinzugefügt. Klicken Sie auf die lila Schaltfläche +, um sie hinzuzufügen, oder verwerfen Sie die Auswahl und speichern Sie.",
-        "discard": "Änderungen verwerfen",
-        "continueEditing": "Bearbeitung fortsetzen"
-      },
-      "actions": {
-        "remove": "Abhängigkeit entfernen",
-        "removeDependencyAria": "{{dependencyType}}-Abhängigkeit von {{taskName}} entfernen"
-      },
-      "errors": {
-        "addFailed": "Abhängigkeit konnte nicht hinzugefügt werden",
-        "removeFailed": "Abhängigkeit konnte nicht entfernt werden",
-        "taskRequired": "TaskDependencies erfordert eine Aufgabe, wenn pendingMode = false"
-      }
     }
   }
 }

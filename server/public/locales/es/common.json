@@ -832,32 +832,6 @@
         "error_deleting": "No se pudo eliminar el comentario. Inténtalo de nuevo.",
         "confirm_delete": "¿Seguro que deseas eliminar este comentario?"
       }
-    },
-    "dependencies": {
-      "title": "Dependencias",
-      "types": {
-        "blocks": "Bloquea",
-        "blocked_by": "Bloqueado por",
-        "related_to": "Relacionado con"
-      },
-      "selectTask": "Seleccionar tarea...",
-      "noTasks": "No hay otras tareas disponibles para dependencias",
-      "unsavedHint": "Haga clic en el botón + para agregar esta dependencia",
-      "dialog": {
-        "title": "Cambios sin guardar",
-        "message": "Tiene una dependencia seleccionada pero aún no agregada. Haga clic en el botón morado + para agregarla, o descarte la selección y guarde.",
-        "discard": "Descartar cambios",
-        "continueEditing": "Continuar editando"
-      },
-      "actions": {
-        "remove": "Eliminar dependencia",
-        "removeDependencyAria": "Eliminar dependencia {{dependencyType}} en {{taskName}}"
-      },
-      "errors": {
-        "addFailed": "Error al agregar la dependencia",
-        "removeFailed": "Error al eliminar la dependencia",
-        "taskRequired": "TaskDependencies requiere una tarea cuando pendingMode = false"
-      }
     }
   }
 }

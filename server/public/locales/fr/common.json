@@ -832,32 +832,6 @@
         "error_deleting": "Échec de la suppression du commentaire. Veuillez réessayer.",
         "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce commentaire ?"
       }
-    },
-    "dependencies": {
-      "title": "Dépendances",
-      "types": {
-        "blocks": "Bloque",
-        "blocked_by": "Bloqué par",
-        "related_to": "Lié à"
-      },
-      "selectTask": "Sélectionner une tâche...",
-      "noTasks": "Aucune autre tâche disponible pour les dépendances",
-      "unsavedHint": "Cliquez sur le bouton + pour ajouter cette dépendance",
-      "dialog": {
-        "title": "Modifications non enregistrées",
-        "message": "Vous avez sélectionné une dépendance mais ne l'avez pas encore ajoutée. Cliquez sur le bouton violet + pour l'ajouter, ou annulez la sélection et enregistrez.",
-        "discard": "Annuler les modifications",
-        "continueEditing": "Continuer la modification"
-      },
-      "actions": {
-        "remove": "Supprimer la dépendance",
-        "removeDependencyAria": "Supprimer la dépendance {{dependencyType}} sur {{taskName}}"
-      },
-      "errors": {
-        "addFailed": "Échec de l'ajout de la dépendance",
-        "removeFailed": "Échec de la suppression de la dépendance",
-        "taskRequired": "TaskDependencies nécessite une tâche lorsque pendingMode = false"
-      }
     }
   }
 }

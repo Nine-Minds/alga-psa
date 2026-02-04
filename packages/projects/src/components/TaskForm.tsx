@@ -53,7 +53,6 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 
@@ -88,7 +87,6 @@ export default function TaskForm({
   inDrawer = false,
   projectTreeData = []
 }: TaskFormProps): React.JSX.Element {
-  const { t } = useTranslation('common');
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || '');
@@ -1588,10 +1586,10 @@ export default function TaskForm({
         isOpen={showDependencyConfirmation}
         onClose={handleDependencyCancel}
         onConfirm={handleDependencyConfirm}
-        title={t('projects.dependencies.dialog.title', 'Unsaved Changes')}
-        message={t('projects.dependencies.dialog.message', 'You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save.')}
-        confirmLabel={t('projects.dependencies.dialog.discard', 'Discard changes')}
-        cancelLabel={t('projects.dependencies.dialog.continueEditing', 'Continue editing')}
+        title="Unsaved Changes"
+        message="You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save."
+        confirmLabel="Discard changes"
+        cancelLabel="Continue editing"
       />
 
     </>

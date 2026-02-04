@@ -826,32 +826,6 @@
         "error_deleting": "Nie udało się usunąć komentarza. Spróbuj ponownie.",
         "confirm_delete": "Czy na pewno chcesz usunąć ten komentarz?"
       }
-    },
-    "dependencies": {
-      "title": "Zależności",
-      "types": {
-        "blocks": "Blokuje",
-        "blocked_by": "Zablokowane przez",
-        "related_to": "Powiązane z"
-      },
-      "selectTask": "Wybierz zadanie...",
-      "noTasks": "Brak innych zadań dostępnych dla zależności",
-      "unsavedHint": "Kliknij przycisk +, aby dodać tę zależność",
-      "dialog": {
-        "title": "Niezapisane zmiany",
-        "message": "Masz wybraną zależność, ale jeszcze jej nie dodano. Kliknij fioletowy przycisk +, aby ją dodać, lub odrzuć wybór i zapisz.",
-        "discard": "Odrzuć zmiany",
-        "continueEditing": "Kontynuuj edycję"
-      },
-      "actions": {
-        "remove": "Usuń zależność",
-        "removeDependencyAria": "Usuń zależność {{dependencyType}} od {{taskName}}"
-      },
-      "errors": {
-        "addFailed": "Nie udało się dodać zależności",
-        "removeFailed": "Nie udało się usunąć zależności",
-        "taskRequired": "TaskDependencies wymaga zadania, gdy pendingMode = false"
-      }
     }
   }
 }

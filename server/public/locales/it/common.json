@@ -832,32 +832,6 @@
         "error_deleting": "Impossibile eliminare il commento. Riprova.",
         "confirm_delete": "Sei sicuro di voler eliminare questo commento?"
       }
-    },
-    "dependencies": {
-      "title": "Dipendenze",
-      "types": {
-        "blocks": "Blocca",
-        "blocked_by": "Bloccato da",
-        "related_to": "Correlato a"
-      },
-      "selectTask": "Seleziona attività...",
-      "noTasks": "Nessun'altra attività disponibile per le dipendenze",
-      "unsavedHint": "Fai clic sul pulsante + per aggiungere questa dipendenza",
-      "dialog": {
-        "title": "Modifiche non salvate",
-        "message": "Hai selezionato una dipendenza ma non l'hai ancora aggiunta. Fai clic sul pulsante viola + per aggiungerla, oppure elimina la selezione e salva.",
-        "discard": "Elimina modifiche",
-        "continueEditing": "Continua a modificare"
-      },
-      "actions": {
-        "remove": "Rimuovi dipendenza",
-        "removeDependencyAria": "Rimuovi dipendenza {{dependencyType}} su {{taskName}}"
-      },
-      "errors": {
-        "addFailed": "Impossibile aggiungere la dipendenza",
-        "removeFailed": "Impossibile rimuovere la dipendenza",
-        "taskRequired": "TaskDependencies richiede un'attività quando pendingMode = false"
-      }
     }
   }
 }
