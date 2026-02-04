@@ -267,7 +267,7 @@
   {
     "id": "F034",
     "description": "ConfirmDialog demo: Show confirmation dialog with confirm/cancel actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Components to Showcase"
     ]
