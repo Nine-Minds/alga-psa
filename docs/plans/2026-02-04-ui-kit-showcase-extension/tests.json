@@ -657,7 +657,7 @@
   {
     "id": "T082",
     "description": "Checkbox demo: Disabled checkbox cannot be toggled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
