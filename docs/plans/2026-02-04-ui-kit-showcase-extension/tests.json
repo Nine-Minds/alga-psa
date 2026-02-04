@@ -955,7 +955,7 @@
   {
     "id": "T119",
     "description": "DropdownMenu demo: Menu closes on outside click",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
