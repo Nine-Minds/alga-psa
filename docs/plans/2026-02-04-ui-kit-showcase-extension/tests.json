@@ -111,7 +111,7 @@
   {
     "id": "T014",
     "description": "Theme bridge: Dark mode applies different variable values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
