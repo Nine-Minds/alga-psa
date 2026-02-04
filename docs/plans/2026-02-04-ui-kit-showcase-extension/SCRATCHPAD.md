@@ -315,3 +315,5 @@ ls -la ui/dist/iframe/
 - T012: Theme bridge tests assert alga border mapping.
 
 - T013: Theme bridge tests assert alga danger mapping.
+
+- T014: Theme bridge tests assert dark mode token overrides.
