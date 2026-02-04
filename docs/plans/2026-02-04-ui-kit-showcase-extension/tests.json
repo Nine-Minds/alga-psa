@@ -665,7 +665,7 @@
   {
     "id": "T083",
     "description": "Switch demo: Switch toggles between on and off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
