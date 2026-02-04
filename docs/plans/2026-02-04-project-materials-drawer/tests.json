@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "Add material shows validation errors for missing product/price",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {

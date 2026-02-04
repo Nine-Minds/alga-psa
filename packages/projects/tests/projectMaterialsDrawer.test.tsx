@@ -76,6 +76,10 @@ describe('ProjectMaterialsDrawer', () => {
     vi.mocked(actions.getServicePrices).mockImplementation(async () => mockPrices);
     vi.mocked(actions.addProjectMaterial).mockClear();
     vi.mocked(actions.deleteProjectMaterial).mockClear();
+
+    const toast = await import('react-hot-toast');
+    vi.mocked(toast.toast.error).mockClear();
+    vi.mocked(toast.toast.success).mockClear();
   });
 
   it('shows loading state while materials are fetched (T003)', async () => {
@@ -389,5 +393,33 @@ describe('ProjectMaterialsDrawer', () => {
     await waitFor(() => {
       expect(actions.listProjectMaterials).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('shows validation errors for missing product or price (T014)', async () => {
+    mockProducts = [
+      { service_id: 'service-1', service_name: 'Widget', sku: null } as CatalogPickerItem,
+    ];
+    mockPrices = [];
+
+    const toast = await import('react-hot-toast');
+    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+
+    const addButton = await screen.findByRole('button', { name: 'Add' });
+    addButton.click();
+
+    const submitButton = await screen.findByRole('button', { name: 'Add Material' });
+    submitButton.removeAttribute('disabled');
+    submitButton.click();
+
+    expect(toast.toast.error).toHaveBeenCalledWith('Please select a product');
+
+    const productSelect = await screen.findByTestId('searchable-select');
+    fireEvent.change(productSelect, { target: { value: 'service-1' } });
+
+    submitButton.removeAttribute('disabled');
+    submitButton.click();
+
+    expect(toast.toast.error).toHaveBeenCalledWith('Please select a currency');
   });
 });

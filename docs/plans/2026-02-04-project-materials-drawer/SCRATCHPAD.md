@@ -99,3 +99,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 - 2026-02-04: Added T011 test for quantity default/min validation.
 - 2026-02-04: Added T012 test for total recalculation on quantity/currency changes.
 - 2026-02-04: Added T013 test to verify add-material submission and list refresh.
+- 2026-02-04: Added T014 test to verify validation toasts for missing product/price.
