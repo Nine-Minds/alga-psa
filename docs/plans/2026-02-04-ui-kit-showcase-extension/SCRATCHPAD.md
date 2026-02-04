@@ -465,3 +465,5 @@ ls -la ui/dist/iframe/
 - T087: TextArea tests assert rows prop.
 
 - T088: TextArea tests assert resize styles.
+
+- T089: TextArea tests assert disabled behavior.
