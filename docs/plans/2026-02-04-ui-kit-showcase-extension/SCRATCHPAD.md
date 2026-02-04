@@ -152,3 +152,5 @@ ls -la ui/dist/iframe/
 - F009: Implemented theme toggle button in `src/iframe/App.tsx` to switch light/dark modes.
 
 - F010: Header layout with title and theme toggle in App.
+
+- F011: Tabbed navigation for categories uses UI kit Tabs in App.
