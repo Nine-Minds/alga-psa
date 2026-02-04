@@ -593,7 +593,7 @@
   {
     "id": "T074",
     "description": "Progress demo: Indeterminate mode shows continuous animation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
