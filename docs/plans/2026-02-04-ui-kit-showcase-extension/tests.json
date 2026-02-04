@@ -329,7 +329,7 @@
   {
     "id": "T041",
     "description": "Alert demo: Success tone has green styling",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

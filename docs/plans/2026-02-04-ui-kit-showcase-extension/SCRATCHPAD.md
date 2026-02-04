@@ -369,3 +369,5 @@ ls -la ui/dist/iframe/
 - T039: Card tests assert content rendering.
 
 - T040: Alert tests assert info styling.
+
+- T041: Alert tests assert success styling.
