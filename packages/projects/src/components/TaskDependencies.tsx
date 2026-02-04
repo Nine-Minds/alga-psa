@@ -1,16 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useImperativeHandle, useMemo, useRef, useCallback } from 'react';
 import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { Ban, GitBranch, Link2, Plus, Trash2 } from 'lucide-react';
 import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskActions';
 import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
 
+// Stable empty arrays to prevent useEffect dependency churn from default parameters
+const EMPTY_PREDECESSORS: IProjectTaskDependency[] = [];
+const EMPTY_SUCCESSORS: IProjectTaskDependency[] = [];
+
 interface TaskDependenciesProps {
-  task: IProjectTask;
+  task?: IProjectTask;
   allTasksInProject: IProjectTask[];
   taskTypes: ITaskType[];
   initialPredecessors?: IProjectTaskDependency[];
@@ -19,64 +24,34 @@ interface TaskDependenciesProps {
   users?: any[];
   phases?: any[];
   onUnsavedChanges?: (hasUnsaved: boolean) => void;
+  pendingMode?: boolean;
+}
+
+export interface PendingDependency {
+  tempId: string;
+  targetTaskId: string;
+  targetTaskName: string;
+  targetTaskTypeKey: string;
+  dependencyType: DependencyType;
 }
 
 export interface TaskDependenciesRef {
   savePendingDependency: () => Promise<boolean>;
   hasPendingChanges: () => boolean;
+  getPendingDependencies: () => PendingDependency[];
 }
-
-// Get dependency type display info with icons
-const getDependencyTypeInfo = (type: DependencyType) => {
-  switch (type) {
-    case 'blocks':
-      return { icon: <Ban className="h-4 w-4 text-red-500" />, label: 'Blocks' };
-    case 'blocked_by':
-      return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
-    case 'related_to':
-      return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: 'Related to' };
-    default:
-      return { icon: <Link2 className="h-4 w-4 text-gray-500" />, label: type };
-  }
-};
-
-// Function to get the display label and icon from the perspective of the viewing task
-const getDependencyDisplayInfo = (dependency: IProjectTaskDependency, isPredecessor: boolean) => {
-  const { dependency_type } = dependency;
-
-  if (dependency_type === 'related_to') {
-    return getDependencyTypeInfo('related_to');
-  }
-
-  if (isPredecessor) {
-    // This task depends on the predecessor
-    if (dependency_type === 'blocks') {
-      return getDependencyTypeInfo('blocked_by');
-    } else if (dependency_type === 'blocked_by') {
-      return getDependencyTypeInfo('blocks');
-    }
-  } else {
-    // This task is the predecessor to the successor
-    if (dependency_type === 'blocks') {
-      return getDependencyTypeInfo('blocks');
-    } else if (dependency_type === 'blocked_by') {
-      return getDependencyTypeInfo('blocked_by');
-    }
-  }
-
-  return getDependencyTypeInfo(dependency_type);
-};
 
 export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDependenciesProps>(({
   task,
   allTasksInProject,
   taskTypes,
-  initialPredecessors = [],
-  initialSuccessors = [],
+  initialPredecessors = EMPTY_PREDECESSORS,
+  initialSuccessors = EMPTY_SUCCESSORS,
   refreshDependencies,
   users = [],
   phases = [],
-  onUnsavedChanges
+  onUnsavedChanges,
+  pendingMode = false
 }, ref) => {
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
@@ -86,19 +61,23 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
 
   const [predecessors, setPredecessors] = useState<IProjectTaskDependency[]>(initialPredecessors);
   const [successors, setSuccessors] = useState<IProjectTaskDependency[]>(initialSuccessors);
+  const [pendingDeps, setPendingDeps] = useState<PendingDependency[]>([]);
 
-  useImperativeHandle(ref, () => ({
-    savePendingDependency: async () => {
-      if (selectedTaskId) {
-        await handleAdd();
-        return true;
-      }
-      return false;
-    },
-    hasPendingChanges: () => {
-      return !!selectedTaskId;
-    }
-  }));
+  // Refs to allow useImperativeHandle callbacks to read latest values
+  // without adding them as dependencies (which would cause handle recreation)
+  const selectedTaskIdRef = useRef(selectedTaskId);
+  selectedTaskIdRef.current = selectedTaskId;
+  const selectedTypeRef = useRef(selectedType);
+  selectedTypeRef.current = selectedType;
+  const pendingModeRef = useRef(pendingMode);
+  pendingModeRef.current = pendingMode;
+  const pendingDepsRef = useRef(pendingDeps);
+  pendingDepsRef.current = pendingDeps;
+
+  // Guard: task is required when not in pendingMode
+  if (!pendingMode && !task) {
+    throw new Error('TaskDependencies requires task when pendingMode = false');
+  }
 
   useEffect(() => {
     setPredecessors(initialPredecessors);
@@ -106,7 +85,6 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   }, [initialPredecessors, initialSuccessors]);
 
   useEffect(() => {
-    // Notify parent when there are unsaved changes
     if (onUnsavedChanges) {
       onUnsavedChanges(!!selectedTaskId);
     }
@@ -122,15 +100,12 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       return;
     }
 
-    // Find the phase for this task
     let taskPhase = phases?.find(p => p.phase_id === taskData.phase_id);
 
-    // If phase not found or phases array is empty, create a minimal phase object
     if (!taskPhase && phases && phases.length > 0) {
       taskPhase = phases[0];
     }
 
-    // If still no phase or no project_id, we can't open the task editor safely
     if (!taskPhase || !taskPhase.project_id) {
       console.error('Cannot open task: missing phase or project information');
       return;
@@ -143,8 +118,8 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         phases={phases}
         users={users}
         inDrawer={true}
-        onClose={() => {}} // Drawer handles its own closing
-        onTaskUpdated={(updatedTask: IProjectTask | null) => {
+        onClose={() => {}}
+        onTaskUpdated={(_updatedTask: IProjectTask | null) => {
           if (refreshDependencies) {
             refreshDependencies();
           }
@@ -153,40 +128,111 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     );
   };
 
-  const handleAdd = async () => {
-    if (selectedTaskId && task.task_id) {
-      setError(null);
-      setIsLoading(true);
-      try {
-        // Determine the correct order based on the relationship type
-        let predecessorId: string;
-        let successorId: string;
+  const getDependencyTypeInfo = useCallback((type: DependencyType) => {
+    switch (type) {
+      case 'blocks':
+        return { icon: <Ban className="h-4 w-4 text-red-500" />, label: 'Blocks' };
+      case 'blocked_by':
+        return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
+      case 'related_to':
+        return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: 'Related to' };
+      default:
+        return { icon: <Link2 className="h-4 w-4 text-gray-500" />, label: type };
+    }
+  }, []);
 
-        if (selectedType === 'blocks') {
-          // Current task blocks the selected task
-          predecessorId = task.task_id;
-          successorId = selectedTaskId;
-        } else if (selectedType === 'blocked_by') {
-          // Current task is blocked by the selected task
-          predecessorId = selectedTaskId;
-          successorId = task.task_id;
-        } else {
-          // For 'related_to', order doesn't matter but we'll keep it consistent
-          predecessorId = task.task_id;
-          successorId = selectedTaskId;
-        }
+  const getDependencyDisplayInfo = useCallback((dependency: IProjectTaskDependency, isPredecessor: boolean) => {
+    const { dependency_type } = dependency;
 
-        await addTaskDependency(predecessorId, successorId, selectedType, 0, undefined);
-        setSelectedTaskId('');
-        setSelectedType('blocked_by');
-        if (refreshDependencies) refreshDependencies();
-      } catch (err: any) {
-        setError(err.message || 'Failed to add dependency');
-      } finally {
-        setIsLoading(false);
+    if (dependency_type === 'related_to') {
+      return getDependencyTypeInfo('related_to');
+    }
+
+    if (isPredecessor) {
+      if (dependency_type === 'blocks') {
+        return getDependencyTypeInfo('blocked_by');
+      } else if (dependency_type === 'blocked_by') {
+        return getDependencyTypeInfo('blocks');
+      }
+    } else {
+      if (dependency_type === 'blocks') {
+        return getDependencyTypeInfo('blocks');
+      } else if (dependency_type === 'blocked_by') {
+        return getDependencyTypeInfo('blocked_by');
       }
     }
+
+    return getDependencyTypeInfo(dependency_type);
+  }, [getDependencyTypeInfo]);
+
+  const handleAdd = async () => {
+    if (!selectedTaskId) return;
+
+    if (pendingMode) {
+      const targetTask = allTasksInProject.find(t => t.task_id === selectedTaskId);
+      if (targetTask) {
+        setPendingDeps(prev => [...prev, {
+          tempId: crypto?.randomUUID?.() ?? `pending-${Date.now()}`,
+          targetTaskId: selectedTaskId,
+          targetTaskName: targetTask.task_name,
+          targetTaskTypeKey: targetTask.task_type_key || 'task',
+          dependencyType: selectedType,
+        }]);
+      }
+      setSelectedTaskId('');
+      setSelectedType('blocked_by');
+      return;
+    }
+
+    if (!task?.task_id) return;
+
+    setError(null);
+    setIsLoading(true);
+    try {
+      // Always pass current task as predecessor and selected task as successor.
+      // addTaskDependency handles the swap for 'blocked_by' internally.
+      await addTaskDependency(task.task_id, selectedTaskId, selectedType, 0, undefined);
+      setSelectedTaskId('');
+      selectedTaskIdRef.current = '';
+      setSelectedType('blocked_by');
+      if (refreshDependencies) refreshDependencies();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add dependency');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Imperative handle — callbacks read from refs for local state so the handle
+  // only recreates when task identity or refresh callback changes.
+  useImperativeHandle(ref, () => ({
+    savePendingDependency: async () => {
+      const currentTaskId = selectedTaskIdRef.current;
+      if (currentTaskId && !pendingModeRef.current && task?.task_id) {
+        setError(null);
+        setIsLoading(true);
+        try {
+          await addTaskDependency(task.task_id, currentTaskId, selectedTypeRef.current, 0, undefined);
+          setSelectedTaskId('');
+          selectedTaskIdRef.current = '';
+          setSelectedType('blocked_by');
+          if (refreshDependencies) refreshDependencies();
+          return true;
+        } catch (err: any) {
+          setError(err.message || 'Failed to add dependency');
+          return false;
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      return false;
+    },
+    hasPendingChanges: () => {
+      // Only a selected task that hasn't been added should trigger the save warning.
+      return !!selectedTaskIdRef.current;
+    },
+    getPendingDependencies: () => pendingDepsRef.current,
+  }), [task?.task_id, refreshDependencies]);
 
   const handleRemove = async (dependencyId: string) => {
     setError(null);
@@ -201,24 +247,26 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     }
   };
 
-  const availableTasks = allTasksInProject.filter(t => {
-    if (t.task_id === task.task_id) return false;
+  const availableTasks = useMemo(() => allTasksInProject.filter(t => {
+    if (task && t.task_id === task.task_id) return false;
 
-    // Check based on what dependency will actually be created
+    if (pendingMode) {
+      return !pendingDeps.find(d =>
+        d.targetTaskId === t.task_id && d.dependencyType === selectedType
+      );
+    }
+
     if (selectedType === 'blocks') {
-      // Current task blocks selected task: check if this dependency exists
       return !successors.find(d =>
         d.successor_task_id === t.task_id &&
         d.dependency_type === 'blocks'
       );
     } else if (selectedType === 'blocked_by') {
-      // Current task blocked by selected task: check if reverse exists
       return !predecessors.find(d =>
         d.predecessor_task_id === t.task_id &&
         d.dependency_type === 'blocks'
       );
     } else {
-      // Related to - check both directions
       return !predecessors.find(d =>
         d.predecessor_task_id === t.task_id &&
         d.dependency_type === 'related_to'
@@ -227,7 +275,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         d.dependency_type === 'related_to'
       );
     }
-  });
+  }), [allTasksInProject, task?.task_id, pendingMode, pendingDeps, selectedType, predecessors, successors]);
 
   const renderTaskName = (taskInfo: any) => {
     const typeInfo = getTaskTypeInfo(taskInfo.task_type_key);
@@ -256,6 +304,26 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   };
 
   const hasDependencies = predecessors.length > 0 || successors.length > 0;
+  const hasPendingDeps = pendingDeps.length > 0;
+
+  const dependencyTypeOptions = useMemo(() => ([
+    { value: 'blocked_by', label: 'Blocked by' },
+    { value: 'blocks', label: 'Blocks' },
+    { value: 'related_to', label: 'Related to' },
+  ]), []);
+
+  const availableTaskOptions = useMemo(() => availableTasks.map(t => ({
+    value: t.task_id,
+    label: t.task_name,
+  })), [availableTasks]);
+
+  const handleTypeChange = useCallback((v: string) => {
+    setSelectedType(v as DependencyType);
+  }, []);
+
+  const handleRemovePending = useCallback((tempId: string) => {
+    setPendingDeps(prev => prev.filter(d => d.tempId !== tempId));
+  }, []);
 
   return (
     <div className="border-t pt-4 space-y-3">
@@ -265,7 +333,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      {/* Existing dependencies list */}
+      {/* Existing dependencies list (edit mode) */}
       {hasDependencies && (
         <div className="space-y-2">
           {predecessors.map(dep => {
@@ -319,48 +387,89 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         </div>
       )}
 
-      {/* Add new dependency - inline form */}
-      {availableTasks.length > 0 && (
-        <div className="flex items-center gap-2">
-          <CustomSelect
-            value={selectedType}
-            onValueChange={(v: string) => setSelectedType(v as DependencyType)}
-            options={[
-              { value: 'blocked_by', label: 'Blocked by' },
-              { value: 'blocks', label: 'Blocks' },
-              { value: 'related_to', label: 'Related to' },
-            ]}
-            className="w-32"
-            disabled={isLoading}
-          />
-          <CustomSelect
-            value={selectedTaskId}
-            onValueChange={setSelectedTaskId}
-            options={[
-              { value: '', label: 'Select task...' },
-              ...availableTasks.map(t => ({
-                value: t.task_id,
-                label: t.task_name,
-              })),
-            ]}
-            className="flex-1"
-            placeholder="Select task..."
-            disabled={isLoading}
-          />
-          <Button
-            id="add-dependency"
-            type="button"
-            variant="soft"
-            size="sm"
-            onClick={handleAdd}
-            disabled={!selectedTaskId || isLoading}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+      {/* Pending dependencies list (create mode) */}
+      {pendingMode && hasPendingDeps && (
+        <div className="space-y-2">
+          {pendingDeps.map((dep, index) => {
+            const typeInfo = getDependencyTypeInfo(dep.dependencyType);
+            const taskTypeInfo = getTaskTypeInfo(dep.targetTaskTypeKey);
+            return (
+              <div
+                key={dep.tempId}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  {typeInfo.icon}
+                  <span className="text-sm text-gray-600">{typeInfo.label}</span>
+                  <div className="flex items-center gap-2">
+                    {taskTypeInfo && (
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: taskTypeInfo.color || '#6B7280' }}
+                        title={taskTypeInfo.type_name}
+                      />
+                    )}
+                    <span className="text-sm font-medium">{dep.targetTaskName}</span>
+                  </div>
+                </div>
+                <button
+                  id={`remove-pending-dependency-${index}`}
+                  type="button"
+                  onClick={() => handleRemovePending(dep.tempId)}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  title="Remove dependency"
+                  aria-label={`Remove ${dep.dependencyType} dependency on ${dep.targetTaskName}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {availableTasks.length === 0 && !hasDependencies && (
+      {/* Add new dependency - inline form */}
+      {availableTasks.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <CustomSelect
+              value={selectedType}
+              onValueChange={handleTypeChange}
+              options={dependencyTypeOptions}
+              className="w-32"
+              disabled={isLoading}
+            />
+            <div className="flex-1">
+              <SearchableSelect
+                id="dependency-target-task-select"
+                value={selectedTaskId}
+                onChange={setSelectedTaskId}
+                options={availableTaskOptions}
+                placeholder="Select task..."
+                disabled={isLoading}
+                dropdownMode="inline"
+              />
+            </div>
+            <Button
+              id="add-dependency"
+              type="button"
+              variant="soft"
+              size="sm"
+              onClick={handleAdd}
+              disabled={!selectedTaskId || isLoading}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {selectedTaskId && (
+            <p className="text-xs text-amber-600">
+              Click the + button to add this dependency
+            </p>
+          )}
+        </div>
+      )}
+
+      {availableTasks.length === 0 && !hasDependencies && !hasPendingDeps && (
         <p className="text-sm text-gray-500 italic">
           No other tasks available for dependencies
         </p>
