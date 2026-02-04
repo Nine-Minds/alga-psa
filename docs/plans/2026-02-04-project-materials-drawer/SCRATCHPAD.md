@@ -75,3 +75,4 @@ All actions are already exported from `@alga-psa/billing/actions`.
 ## Updates
 
 - 2026-02-04: Added `@alga-psa/billing` dependency to `packages/projects/package.json` for project materials drawer actions.
+- 2026-02-04: Added drawer header scaffold and set project materials drawer width to 560px via `openDrawer`.

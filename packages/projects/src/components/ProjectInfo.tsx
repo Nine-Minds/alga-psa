@@ -109,7 +109,10 @@ export default function ProjectInfo({
       <ProjectMaterialsDrawer
         projectId={currentProject.project_id}
         clientId={clientId}
-      />
+      />,
+      undefined,
+      undefined,
+      '560px'
     );
   };
 

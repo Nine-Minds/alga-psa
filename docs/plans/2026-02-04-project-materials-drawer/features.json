@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Drawer container with 560px width, header with title and Add button",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Drawer Layout", "Drawer Structure"]
   },
   {
