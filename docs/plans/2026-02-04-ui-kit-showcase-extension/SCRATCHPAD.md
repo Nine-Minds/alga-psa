@@ -375,3 +375,5 @@ ls -la ui/dist/iframe/
 - T042: Alert tests assert warning styling.
 
 - T043: Alert tests assert danger styling.
+
+- T044: Text tests assert size changes.

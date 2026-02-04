@@ -353,7 +353,7 @@
   {
     "id": "T044",
     "description": "Text demo: Different size props change font size",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
