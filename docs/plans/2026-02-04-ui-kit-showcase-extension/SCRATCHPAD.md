@@ -305,3 +305,5 @@ ls -la ui/dist/iframe/
 - T007: Scaffold tests assert ui-kit alias in vite config.
 
 - T008: Scaffold tests assert index.html root div and bundle script.
+
+- T009: Theme bridge tests assert alga background mapping.
