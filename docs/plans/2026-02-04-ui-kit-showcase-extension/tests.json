@@ -817,7 +817,7 @@
   {
     "id": "T102",
     "description": "Tabs demo: Disabled tab cannot be selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
