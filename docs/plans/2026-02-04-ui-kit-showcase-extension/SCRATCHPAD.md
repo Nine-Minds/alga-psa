@@ -327,3 +327,5 @@ ls -la ui/dist/iframe/
 - T018: Layout tests assert theme toggle visibility.
 
 - T019: Layout tests assert six category tabs.
+
+- T020: Layout tests assert tab switching updates content.
