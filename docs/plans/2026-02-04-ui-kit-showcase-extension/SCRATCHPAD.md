@@ -365,3 +365,5 @@ ls -la ui/dist/iframe/
 - T037: CustomSelect tests assert disabled select doesn't open.
 
 - T038: Card tests assert border and padding.
+
+- T039: Card tests assert content rendering.
