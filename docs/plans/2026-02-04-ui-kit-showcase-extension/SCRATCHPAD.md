@@ -337,3 +337,5 @@ ls -la ui/dist/iframe/
 - T023: DemoSection test asserts description render.
 
 - T024: DemoSection test asserts children render.
+
+- T025: Button tests assert primary background mapping.

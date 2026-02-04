@@ -201,7 +201,7 @@
   {
     "id": "T025",
     "description": "Button demo: Primary variant renders with purple background",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
