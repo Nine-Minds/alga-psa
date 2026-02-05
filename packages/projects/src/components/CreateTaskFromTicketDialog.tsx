@@ -195,7 +195,7 @@ export default function CreateTaskFromTicketDialog({
                 onValueChange={setSelectedPhaseId}
                 options={phaseOptions}
                 placeholder="Select a phase"
-                disabled={!selectedProjectId}
+                disabled={!selectedProjectId || phaseOptions.length === 0}
               />
             </div>
 

@@ -35,6 +35,7 @@
 - (2026-02-05) TaskForm now passes edit-mode field values as `taskData` (minutes) into TaskTicketLinks.
 - (2026-02-05) Added `CreateTaskFromTicketDialog` with project selector and supporting state for project-driven task creation.
 - (2026-02-05) CreateTaskFromTicketDialog now refreshes phases/statuses whenever the selected project changes.
+- (2026-02-05) Phase selector now derives options from fetched phases and disables when none are available.
 
 ## Discoveries / Constraints
 
