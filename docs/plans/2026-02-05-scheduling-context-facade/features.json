@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Create AgentScheduleView component in scheduling package with agentId prop",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 1", "Flow 2"]
   },
   {
