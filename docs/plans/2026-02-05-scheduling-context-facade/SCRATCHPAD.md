@@ -74,3 +74,4 @@
 - (2026-02-05) TicketDetails now launches time entry via SchedulingContext with ticket timer context.
 - (2026-02-05) InteractionDetails now launches time entry via SchedulingContext with interaction context.
 - (2026-02-05) TaskForm now launches time entry via SchedulingContext with project/phase/task and service context.
+- (2026-02-05) Default SchedulingContext callbacks provide alert/toast fallbacks when no provider is present.

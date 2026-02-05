@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Graceful fallback: without MspSchedulingProvider, AgentScheduleDrawer shows alert and time entry shows toast",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals"]
   }
 ]
