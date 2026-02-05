@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "AgentScheduleView renders CalendarStyleProvider and AgentScheduleDrawerStyles for calendar styling",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {

@@ -60,3 +60,4 @@
 - (2026-02-05) AgentScheduleView opens EntryPopup on event click (view-only mode).
 - (2026-02-05) AgentScheduleView auto-scrolls to 8 AM on initial render.
 - (2026-02-05) AgentScheduleView gates viewing by user_schedule permissions and shows a permission error when disallowed.
+- (2026-02-05) AgentScheduleView includes CalendarStyleProvider and AgentScheduleDrawerStyles for drawer styling.
