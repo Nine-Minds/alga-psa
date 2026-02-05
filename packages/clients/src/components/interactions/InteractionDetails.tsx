@@ -9,6 +9,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { useDrawer } from "@alga-psa/ui";
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import AgentScheduleDrawer from '@alga-psa/tickets/components/ticket/AgentScheduleDrawer';
@@ -48,6 +49,7 @@ const formatDuration = (totalMinutes: number): string => {
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { openDrawer, goBack, closeDrawer } = useDrawer();
+  const { launchTimeEntry } = useSchedulingCallbacks();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -229,7 +231,19 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
   const handleAddTimeEntry = async () => {
     try {
-      toast('Time entry is managed in Scheduling.');
+      await launchTimeEntry({
+        openDrawer,
+        closeDrawer,
+        context: {
+          workItemId: interaction.interaction_id,
+          workItemType: 'interaction',
+          workItemName: interaction.title || interaction.type_name,
+          interactionType: interaction.type_name,
+          clientName: interaction.client_name ?? null,
+          startTime: interaction.start_time ? new Date(interaction.start_time) : undefined,
+          endTime: interaction.end_time ? new Date(interaction.end_time) : undefined,
+        },
+      });
     } catch (error) {
       console.error('Error preparing time entry:', error);
       toast.error('Failed to prepare time entry. Please try again.');

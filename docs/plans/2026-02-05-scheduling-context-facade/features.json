@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Replace InteractionDetails handleAddTimeEntry stub with useSchedulingCallbacks().launchTimeEntry using interaction context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 4"]
   },
   {
