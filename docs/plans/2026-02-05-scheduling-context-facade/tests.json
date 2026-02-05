@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "@alga-psa/scheduling listed in msp-composition package.json dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {

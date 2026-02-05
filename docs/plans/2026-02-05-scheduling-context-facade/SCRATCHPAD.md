@@ -105,3 +105,4 @@
 - (2026-02-05) Added timeEntryLauncher onComplete callback test.
 - (2026-02-05) Added msp-composition SchedulingProvider tests and vitest config.
 - (2026-02-05) Added MspSchedulingProvider launchTimeEntry wiring test.
+- (2026-02-05) Added msp-composition package dependency test for scheduling.
