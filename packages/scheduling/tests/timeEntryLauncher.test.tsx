@@ -51,4 +51,18 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(getCurrentTimePeriod).toHaveBeenCalled();
     expect(openDrawer).toHaveBeenCalled();
   });
+
+  it('creates or fetches a time sheet for the current user and period', async () => {
+    await launchTimeEntryForWorkItem({
+      openDrawer: vi.fn(),
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'ticket-1',
+        workItemType: 'ticket',
+        workItemName: 'Ticket 1',
+      },
+    });
+
+    expect(fetchOrCreateTimeSheet).toHaveBeenCalledWith('user-1', 'period-1');
+  });
 });

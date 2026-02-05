@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "launchTimeEntryForWorkItem creates/fetches time sheet for current user and period",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
