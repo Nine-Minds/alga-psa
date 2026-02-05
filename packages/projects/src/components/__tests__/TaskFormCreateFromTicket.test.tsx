@@ -329,4 +329,43 @@ describe('TaskForm create-from-ticket flow', () => {
     await waitFor(() => expect(addTaskToPhaseMock).toHaveBeenCalled());
     expect(addTicketLinkActionMock).not.toHaveBeenCalled();
   });
+
+  it('E2E: prefill from ticket and save links ticket', async () => {
+    prefillPayload = {
+      prefillData: {
+        task_name: 'Prefilled Task',
+        description: 'Prefilled description',
+        assigned_to: 'user-1',
+        due_date: new Date('2026-02-05T00:00:00.000Z'),
+        estimated_hours: 1.5
+      },
+      ticket: {
+        ticket_id: 'ticket-1',
+        ticket_number: 'T-001',
+        title: 'Prefilled Task',
+        status_name: 'Open',
+        is_closed: false
+      },
+      shouldLink: true
+    };
+
+    render(
+      <TaskForm
+        phase={phase}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        projectStatuses={projectStatuses}
+        users={users}
+        mode="create"
+        onPhaseChange={() => undefined}
+        inDrawer={true}
+      />
+    );
+
+    fireEvent.click(document.querySelector('#task-create-from-ticket') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Prefill' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(addTicketLinkActionMock).toHaveBeenCalled());
+  });
 });

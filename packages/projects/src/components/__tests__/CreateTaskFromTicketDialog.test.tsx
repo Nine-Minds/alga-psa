@@ -229,4 +229,19 @@ describe('CreateTaskFromTicketDialog', () => {
 
     expect(lastTaskQuickAddProps.prefillData.pendingTicketLink).toBeUndefined();
   });
+
+  it('E2E: opens drawer with prefilled task on create', async () => {
+    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+
+    fireEvent.change(screen.getByTestId('create-task-project'), { target: { value: 'project-1' } });
+    await waitFor(() => expect(screen.getByTestId('create-task-phase').querySelectorAll('option').length).toBeGreaterThan(1));
+
+    fireEvent.change(screen.getByTestId('create-task-phase'), { target: { value: 'phase-1' } });
+    fireEvent.change(screen.getByTestId('create-task-status'), { target: { value: 'status-1' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(openDrawerMock).toHaveBeenCalled();
+  });
 });

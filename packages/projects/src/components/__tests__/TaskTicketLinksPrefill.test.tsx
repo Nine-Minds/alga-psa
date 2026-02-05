@@ -115,4 +115,48 @@ describe('TaskTicketLinks prefill', () => {
 
     expect(lastQuickAddProps.prefilledClient).toEqual({ id: 'client-1', name: 'Acme' });
   });
+
+  it('E2E: create ticket from task prefills key fields', () => {
+    render(
+      <TaskTicketLinks
+        phaseId="phase-1"
+        projectId="project-1"
+        users={[]}
+        taskData={{
+          task_name: 'Task A',
+          description: 'Desc',
+          assigned_to: 'user-1',
+          due_date: new Date('2026-02-05T00:00:00.000Z'),
+          estimated_hours: 120
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
+
+    expect(lastQuickAddProps.prefilledTitle).toBe('Task A');
+    expect(lastQuickAddProps.prefilledDescription).toBe('Desc');
+    expect(lastQuickAddProps.prefilledClient).toEqual({ id: 'client-1', name: 'Acme' });
+  });
+
+  it('does not prefill priority in QuickAddTicket props', () => {
+    render(
+      <TaskTicketLinks
+        phaseId="phase-1"
+        projectId="project-1"
+        users={[]}
+        taskData={{
+          task_name: 'Task A',
+          description: 'Desc',
+          assigned_to: 'user-1',
+          due_date: new Date('2026-02-05T00:00:00.000Z'),
+          estimated_hours: 120
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
+
+    expect(lastQuickAddProps.prefilledPriority).toBeUndefined();
+  });
 });

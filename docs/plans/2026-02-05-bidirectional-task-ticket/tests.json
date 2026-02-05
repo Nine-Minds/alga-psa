@@ -338,7 +338,7 @@
   {
     "id": "T057",
     "description": "E2E: Create new task in project, use 'Create from ticket' to prefill from existing ticket, save task, verify ticket is linked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005", "F006", "F007", "F008", "F009"]
   },
   {
