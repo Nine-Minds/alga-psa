@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "TaskForm: prefillData prop initializes description state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
