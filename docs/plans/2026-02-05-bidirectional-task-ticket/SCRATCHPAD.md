@@ -47,6 +47,7 @@
 - (2026-02-05) Added initial unit test for `mapTicketToTaskFields` title→task_name mapping.
 - (2026-02-05) Added unit test for `mapTicketToTaskFields` description mapping.
 - (2026-02-05) Added unit test for `mapTicketToTaskFields` assigned_to mapping.
+- (2026-02-05) Added unit test for `mapTicketToTaskFields` due_date ISO→Date conversion.
 
 ## Discoveries / Constraints
 

@@ -16,4 +16,10 @@ describe('mapTicketToTaskFields', () => {
     const result = mapTicketToTaskFields({ assigned_to: 'user-123' });
     expect(result.assigned_to).toBe('user-123');
   });
+
+  it('converts due_date ISO string to Date', () => {
+    const result = mapTicketToTaskFields({ due_date: '2026-02-05T12:30:00.000Z' });
+    expect(result.due_date).toBeInstanceOf(Date);
+    expect(result.due_date?.toISOString()).toBe('2026-02-05T12:30:00.000Z');
+  });
 });
