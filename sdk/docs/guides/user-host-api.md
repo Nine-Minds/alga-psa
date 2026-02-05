@@ -121,7 +121,7 @@ import { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/extensi
 
 // Import WIT functions (these are resolved at runtime by jco)
 // @ts-ignore
-import { getUser } from 'alga:extension/user';
+import { getUser } from 'alga:extension/user-v2';
 // @ts-ignore
 import { logInfo, logWarn, logError } from 'alga:extension/logging';
 // @ts-ignore
@@ -157,7 +157,7 @@ When using WIT imports, your build must mark them as external. Add a custom buil
 ```json
 {
   "scripts": {
-    "build:backend": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/js/index.js --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context --external:alga:extension/user",
+    "build:backend": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/js/index.js --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context --external:alga:extension/user --external:alga:extension/user-v2",
     "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/main.wasm",
     "build": "npm run build:backend && npm run build:component"
   },
@@ -170,16 +170,17 @@ When using WIT imports, your build must mark them as external. Add a custom buil
 
 ## WIT Definition
 
-Ensure your `wit/extension-runner.wit` includes the user interface:
+Ensure your `wit/extension-runner.wit` includes the user interface (v2):
 
 ```wit
-record user-data {
+record user-data-v2 {
     tenant-id: string,
     client-name: string,
     user-id: string,
     user-email: string,
     user-name: string,
     user-type: string,
+    client-id: option<string>,
 }
 
 enum user-error {
@@ -187,13 +188,13 @@ enum user-error {
     not-allowed,
 }
 
-interface user {
-    get-user: func() -> result<user-data, user-error>;
+interface user-v2 {
+    get-user: func() -> result<user-data-v2, user-error>;
 }
 
 world runner {
     // ... other imports
-    import user;
+    import user-v2;
 
     export handler: func(request: execute-request) -> execute-response;
 }
