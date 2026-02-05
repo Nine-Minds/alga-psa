@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "TaskForm: Ticket icon button is visible in create mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
