@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "CreateTaskFromTicketDialog: status selector populated from selected project's statuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

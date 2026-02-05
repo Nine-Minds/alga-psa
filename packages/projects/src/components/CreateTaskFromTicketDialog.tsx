@@ -209,7 +209,7 @@ export default function CreateTaskFromTicketDialog({
                 onValueChange={setSelectedStatusId}
                 options={statusOptions}
                 placeholder="Select a status"
-                disabled={!selectedProjectId}
+                disabled={!selectedProjectId || statusOptions.length === 0}
               />
             </div>
 
