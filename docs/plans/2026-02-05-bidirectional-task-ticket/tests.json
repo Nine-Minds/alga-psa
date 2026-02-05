@@ -302,7 +302,7 @@
   {
     "id": "T051",
     "description": "CreateTaskFromTicketDialog: with auto-link off, prefillData does NOT include pendingTicketLink",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
