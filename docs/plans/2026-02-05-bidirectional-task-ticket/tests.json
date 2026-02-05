@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "TaskForm: passes current field values as taskData to TaskTicketLinks in edit mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
