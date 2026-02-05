@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "QuickAddTicket: add prefilledTitle prop that initializes title state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

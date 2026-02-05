@@ -76,6 +76,7 @@ interface QuickAddTicketProps {
     name: string;
   };
   prefilledDescription?: string;
+  prefilledTitle?: string;
   isEmbedded?: boolean;
   assetId?: string;
 }
@@ -88,6 +89,7 @@ export function QuickAddTicket({
   prefilledClient,
   prefilledContact,
   prefilledDescription,
+  prefilledTitle,
   isEmbedded = false,
   assetId
 }: QuickAddTicketProps) {
@@ -95,7 +97,7 @@ export function QuickAddTicket({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(prefilledTitle || '');
   const [description, setDescription] = useState(prefilledDescription || '');
   const [assignedTo, setAssignedTo] = useState('');
   const [boardId, setBoardId] = useState('');
@@ -217,6 +219,9 @@ export function QuickAddTicket({
 
         if (prefilledDescription) {
           setDescription(prefilledDescription);
+        }
+        if (prefilledTitle) {
+          setTitle(prefilledTitle);
         }
 
       } catch (error) {
@@ -368,7 +373,7 @@ export function QuickAddTicket({
 
 
   const resetForm = () => {
-    setTitle('');
+    setTitle(prefilledTitle || '');
     setDescription(prefilledDescription || '');
     setAssignedTo('');
     setBoardId('');
