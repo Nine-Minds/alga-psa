@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Contact detail page renders children inside MspSchedulingProvider",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

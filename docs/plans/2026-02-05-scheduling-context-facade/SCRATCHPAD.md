@@ -107,3 +107,4 @@
 - (2026-02-05) Added MspSchedulingProvider launchTimeEntry wiring test.
 - (2026-02-05) Added msp-composition package dependency test for scheduling.
 - (2026-02-05) Added server page provider presence tests for ticket/contact/project pages.
+- (2026-02-05) Verified contact detail/activity pages include scheduling provider via server page tests.
