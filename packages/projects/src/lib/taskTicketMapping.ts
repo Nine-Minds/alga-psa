@@ -8,7 +8,9 @@ export interface TaskPrefillFields {
   estimated_hours: number;
 }
 
-type TicketLike = Pick<ITicket, 'title' | 'description' | 'assigned_to' | 'due_date' | 'estimated_hours'>;
+type TicketLike = Pick<ITicket, 'title' | 'description' | 'assigned_to' | 'due_date' | 'estimated_hours'> & {
+  priority_id?: string | null;
+};
 
 export interface TicketPrefillFields {
   title: string;
@@ -26,6 +28,7 @@ interface ProjectLike {
 }
 
 export const mapTicketToTaskFields = (ticket: Partial<TicketLike> | null | undefined): TaskPrefillFields => {
+  const { priority_id: _ignoredPriority } = ticket ?? {};
   const dueDate = ticket?.due_date ? new Date(ticket.due_date) : null;
   return {
     task_name: ticket?.title ?? '',
@@ -37,9 +40,17 @@ export const mapTicketToTaskFields = (ticket: Partial<TicketLike> | null | undef
 };
 
 export const mapTaskToTicketPrefill = (
-  task: { task_name?: string | null; description?: string | null; assigned_to?: string | null; due_date?: Date | null; estimated_hours?: number | null } | null | undefined,
+  task: {
+    task_name?: string | null;
+    description?: string | null;
+    assigned_to?: string | null;
+    due_date?: Date | null;
+    estimated_hours?: number | null;
+    priority_id?: string | null;
+  } | null | undefined,
   project: ProjectLike | null | undefined
 ): TicketPrefillFields => {
+  const { priority_id: _ignoredPriority } = task ?? {};
   return {
     title: task?.task_name ?? '',
     description: task?.description ?? '',

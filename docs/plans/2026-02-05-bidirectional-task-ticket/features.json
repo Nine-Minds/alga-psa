@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Shared field mapping: priorities are explicitly excluded from mapping in both directions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1"]
   },
   {
