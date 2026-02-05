@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ContractBasicsStep } from './wizard-steps/ContractBasicsStep';
 import { FixedFeeServicesStep } from './wizard-steps/FixedFeeServicesStep';
 import { ProductsStep } from './wizard-steps/ProductsStep';
@@ -28,6 +29,49 @@ const STEPS = [
 ] as const;
 
 const REQUIRED_STEPS = [0, 5];
+
+function isEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || a === undefined || b === undefined) return a === b;
+  if (typeof a !== typeof b) return false;
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!isEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  if (typeof a === 'object' && typeof b === 'object') {
+    const objA = a as Record<string, unknown>;
+    const objB = b as Record<string, unknown>;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(objB, key)) return false;
+      if (!isEqual(objA[key], objB[key])) return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function deepClone<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map((item) => deepClone(item)) as T;
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const cloned: Record<string, unknown> = {};
+    for (const key of Object.keys(obj)) {
+      cloned[key] = deepClone(obj[key]);
+    }
+    return cloned as T;
+  }
+  return value;
+}
 
 export interface BucketOverlayInput {
   total_minutes?: number;
@@ -105,10 +149,12 @@ export function ContractWizard({
   onComplete,
   editingContract = null,
 }: ContractWizardProps) {
+  const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
 
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -142,6 +188,8 @@ export function ContractWizard({
 
   useEffect(() => {
     if (!open) {
+      initialWizardDataRef.current = null;
+      setShowUnsavedChangesDialog(false);
       resetWizard();
       return;
     }
@@ -150,11 +198,14 @@ export function ContractWizard({
     setCompletedSteps(new Set());
     setCurrentStep(0);
 
+    const initialWizardData = { ...defaultWizardData, ...(editingContract ?? {}) };
+    initialWizardDataRef.current = deepClone(initialWizardData);
+
     if (editingContract) {
-      setWizardData({ ...defaultWizardData, ...editingContract });
+      setWizardData(initialWizardData);
       setSelectedTemplateId(editingContract.template_id ?? null);
     } else {
-      setWizardData(defaultWizardData);
+      setWizardData(initialWizardData);
       setSelectedTemplateId(null);
     }
 
@@ -185,6 +236,20 @@ export function ContractWizard({
 
   const updateData = (data: Partial<ContractWizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
+  };
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!open) return false;
+    if (!initialWizardDataRef.current) return false;
+    return !isEqual(wizardData, initialWizardDataRef.current);
+  }, [open, wizardData]);
+
+  const handleCloseRequest = () => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedChangesDialog(true);
+      return;
+    }
+    onOpenChange(false);
   };
 
   const applyTemplateSnapshot = (snapshot: ClientTemplateSnapshot, templateId: string) => {
@@ -450,55 +515,71 @@ export function ContractWizard({
   };
 
   return (
-    <Dialog
-      isOpen={open}
-      onClose={() => onOpenChange(false)}
-      title={editingContract ? 'Edit Contract' : 'Create New Contract'}
-      className="max-w-4xl max-h-[90vh]"
-      disableFocusTrap
-    >
-      <div className="flex flex-col h-full">
-        <div className="flex-shrink-0 px-6 pt-6">
-          <WizardProgress
-            steps={STEPS as unknown as string[]}
-            currentStep={currentStep}
-            completedSteps={completedSteps}
-            onStepClick={handleStepClick}
-            canNavigateToStep={(stepIndex) =>
-              stepIndex === 0 ||
-              stepIndex === currentStep ||
-              completedSteps.has(stepIndex) ||
-              (stepIndex > 0 && completedSteps.has(stepIndex - 1))
-            }
-          />
-        </div>
+    <>
+      <Dialog
+        isOpen={open}
+        onClose={handleCloseRequest}
+        title={editingContract ? 'Edit Contract' : 'Create New Contract'}
+        className="max-w-4xl max-h-[90vh]"
+        disableFocusTrap
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex-shrink-0 px-6 pt-6">
+            <WizardProgress
+              steps={STEPS as unknown as string[]}
+              currentStep={currentStep}
+              completedSteps={completedSteps}
+              onStepClick={handleStepClick}
+              canNavigateToStep={(stepIndex) =>
+                stepIndex === 0 ||
+                stepIndex === currentStep ||
+                completedSteps.has(stepIndex) ||
+                (stepIndex > 0 && completedSteps.has(stepIndex - 1))
+              }
+            />
+          </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="mb-4">{renderStep()}</div>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="mb-4">{renderStep()}</div>
 
-          {errors[currentStep] && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-700 text-sm">{errors[currentStep]}</p>
-            </div>
-          )}
-        </div>
+            {errors[currentStep] && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-700 text-sm">{errors[currentStep]}</p>
+              </div>
+            )}
+          </div>
 
-        <div className="flex-shrink-0 px-6 pb-6 border-t bg-white">
-          <WizardNavigation
-            currentStep={currentStep}
-            totalSteps={STEPS.length}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSkip={handleSkip}
-            onFinish={handleFinish}
-            onSaveDraft={handleSaveDraft}
-            isNextDisabled={isLoading}
-            isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
-            isLoading={isLoading}
-            showSaveDraft
-          />
+          <div className="flex-shrink-0 px-6 pb-6 border-t bg-white">
+            <WizardNavigation
+              currentStep={currentStep}
+              totalSteps={STEPS.length}
+              onBack={handleBack}
+              onNext={handleNext}
+              onSkip={handleSkip}
+              onFinish={handleFinish}
+              onSaveDraft={handleSaveDraft}
+              isNextDisabled={isLoading}
+              isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+              isLoading={isLoading}
+              showSaveDraft
+            />
+          </div>
         </div>
-      </div>
-    </Dialog>
+      </Dialog>
+
+      <ConfirmationDialog
+        id="contract-wizard-unsaved-changes"
+        isOpen={showUnsavedChangesDialog}
+        onClose={() => setShowUnsavedChangesDialog(false)}
+        onConfirm={() => {
+          setShowUnsavedChangesDialog(false);
+          onOpenChange(false);
+        }}
+        title="Discard changes?"
+        message="You have unsaved changes. If you close this dialog now, your changes will be discarded."
+        confirmLabel="Discard Changes"
+        cancelLabel="Stay"
+      />
+    </>
   );
 }
