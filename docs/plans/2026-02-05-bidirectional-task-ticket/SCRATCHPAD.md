@@ -32,6 +32,7 @@
 - (2026-02-05) Added `taskData` prop to `TaskTicketLinks` for passing current task field values.
 - (2026-02-05) TaskTicketLinks now fetches project client data before opening QuickAddTicket.
 - (2026-02-05) TaskTicketLinks now maps task data to QuickAddTicket prefill props (title/description/assignee/due date/estimated hours + client).
+- (2026-02-05) TaskForm now passes edit-mode field values as `taskData` (minutes) into TaskTicketLinks.
 
 ## Discoveries / Constraints
 

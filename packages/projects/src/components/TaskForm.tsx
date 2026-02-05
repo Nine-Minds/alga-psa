@@ -1484,6 +1484,17 @@ export default function TaskForm({
             initialLinks={task?.ticket_links}
             users={users}
             onLinksChange={setPendingTicketLinks}
+            taskData={
+              mode === 'edit'
+                ? {
+                    task_name: taskName,
+                    description,
+                    assigned_to: assignedUser,
+                    due_date: dueDate ?? null,
+                    estimated_hours: Math.round(estimatedHours * 60)
+                  }
+                : undefined
+            }
           />
 
           {/* Full width Attachments section */}
