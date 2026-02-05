@@ -64,7 +64,7 @@ interface types {
 
     record user-data {
         tenant-id: string,
-        client-name: string,
+        client-name: option<string>,
         user-id: string,
         user-email: string,
         user-name: string,
