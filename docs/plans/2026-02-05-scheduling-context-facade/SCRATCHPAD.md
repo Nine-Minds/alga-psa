@@ -57,3 +57,4 @@
 - (2026-02-05) AgentScheduleView now loads entries via `getScheduleEntries` scoped to agentId and current date range.
 - (2026-02-05) AgentScheduleView uses DynamicBigCalendar with week/day/month views and default week view.
 - (2026-02-05) AgentScheduleView applies work-item color mapping via eventPropGetter.
+- (2026-02-05) AgentScheduleView opens EntryPopup on event click (view-only mode).

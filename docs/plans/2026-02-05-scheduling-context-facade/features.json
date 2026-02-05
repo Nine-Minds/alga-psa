@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "AgentScheduleView opens EntryPopup on event click for viewing/editing details",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 1"]
   },
   {
