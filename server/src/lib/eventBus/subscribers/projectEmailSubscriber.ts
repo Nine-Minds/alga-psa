@@ -17,6 +17,14 @@ import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import { isValidEmail } from '@alga-psa/core';
 
 /**
+ * Get the base URL from NEXTAUTH_URL environment variable
+ */
+function getBaseUrl(): string {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+/**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Project Created")
@@ -435,7 +443,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         startDate: project.start_date,
         endDate: project.end_date,
         createdBy: payload.userId,
-        url: `/projects/${project.project_number}`,
+        url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
         client: project.client_name || 'No Client'
       }
     };
@@ -691,7 +699,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
         changes: formattedChanges,
         updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : updaterUserId,
-        url: `/projects/${project.project_number}`,
+        url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
         client: project.client_name || 'No Client'
       }
     };
@@ -889,7 +897,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         changes: await formatChanges(db, payload.changes || {}),
         closedBy: await resolveValue(db, 'closed_by', closedByUserId),
         closedAt: new Date().toISOString(),
-        url: `/projects/${project.project_number}`,
+        url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
         client: project.client_name || 'No Client'
       }
     };
@@ -1039,7 +1047,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
           descriptionHtml: projectDescriptionHtml,
           startDate: project.start_date,
           assignedBy: `${project.assigner_first_name} ${project.assigner_last_name}`,
-          url: `/projects/${project.project_number}`,
+          url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
           client: project.client_name || 'No Client'
         }
       },
@@ -1136,7 +1144,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     const taskUrlParams = new URLSearchParams();
     taskUrlParams.set('phaseId', task.phase_id);
     taskUrlParams.set('taskId', task.task_id);
-    const taskUrl = `/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
+    const taskUrl = `${getBaseUrl()}/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
 
     // Use assigner name from payload, fallback to 'Someone' if not available
     const assignedByName = assignedByNameFromPayload || 'Someone';

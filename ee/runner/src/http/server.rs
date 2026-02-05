@@ -14,6 +14,7 @@ use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use url::{form_urlencoded, Url};
 
 use crate::cache::fs as cache_fs;
+use crate::engine::debug;
 use crate::engine::loader::{HostExecutionContext, ModuleLoader};
 use crate::models::{ExecuteRequest, ExecuteResponse};
 use crate::providers;
@@ -298,6 +299,23 @@ async fn execute(
             Ok(material) => Some(material),
             Err(err) => {
                 tracing::error!(tenant=%tenant, extension=%ext, err=%err.to_string(), "secret envelope decryption failed");
+                let debug_ctx = HostExecutionContext {
+                    request_id: req.context.request_id.clone(),
+                    tenant_id: Some(req.context.tenant_id.clone()),
+                    extension_id: Some(req.context.extension_id.clone()),
+                    install_id: req.context.install_id.clone(),
+                    version_id: req.context.version_id.clone(),
+                    config: req.context.config.clone(),
+                    providers: provider_set.clone(),
+                    secrets: None,
+                    user: req.user.clone(),
+                };
+                debug::emit_log(
+                    &debug_ctx,
+                    tracing::Level::ERROR,
+                    &format!("secret envelope decryption failed: {err}"),
+                )
+                .await;
                 let resp = ExecuteResponse {
                     status: 500,
                     headers: Default::default(),
@@ -322,6 +340,10 @@ async fn execute(
         user: req.user.clone(),
     };
 
+    // Keep a copy of the execution context so we can emit internal failures to the debug stream
+    // even if the guest never instantiates (and therefore never emits stdout/stderr/log events).
+    let debug_ctx = host_ctx.clone();
+
     let exec_resp = match loader
         .execute_handler(
             &wasm,
@@ -335,6 +357,7 @@ async fn execute(
         Ok(v) => v,
         Err(e) => {
             let dur_ms = started.elapsed().as_millis() as u64;
+            let err_text = format!("{e:#}");
             tracing::error!(
                 request_id=%req_id,
                 tenant=%tenant,
@@ -346,6 +369,15 @@ async fn execute(
                 err_debug=?e,
                 "execute failed"
             );
+
+            // Best-effort: publish execute failures to the live debug stream so operators can
+            // see why an invocation failed even when the component never links/instantiates.
+            debug::emit_log(
+                &debug_ctx,
+                tracing::Level::ERROR,
+                &format!("execute failed: {err_text}"),
+            )
+            .await;
             let resp = ExecuteResponse {
                 status: 500,
                 headers: Default::default(),
