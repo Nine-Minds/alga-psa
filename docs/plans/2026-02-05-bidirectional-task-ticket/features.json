@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "TicketDetails: add renderCreateProjectTask render prop for cross-package button injection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {
