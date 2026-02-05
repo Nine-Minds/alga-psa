@@ -260,7 +260,7 @@
   {
     "id": "T044",
     "description": "CreateTaskFromTicketDialog: project list filtered by ticket's client when possible",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
