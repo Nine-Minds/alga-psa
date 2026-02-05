@@ -320,7 +320,7 @@
   {
     "id": "T054",
     "description": "TicketDetails: when renderCreateProjectTask is not provided, no button renders",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {

@@ -62,7 +62,7 @@
 - (2026-02-05) Added PrefillFromTicketDialog test ensuring mapped fields returned to onPrefill.
 - (2026-02-05) Added TaskForm prefill tests: task_name, description, assigned_to, due_date, estimated_hours, and pending ticket link initialization.
 - (2026-02-05) Added TaskForm create-from-ticket tests: auto-link on/off link handling and field population.
-- (2026-02-05) Added TicketDetails tests for renderCreateProjectTask button rendering.
+- (2026-02-05) Added TicketDetails tests for renderCreateProjectTask presence/absence.
 
 ## Discoveries / Constraints
 
