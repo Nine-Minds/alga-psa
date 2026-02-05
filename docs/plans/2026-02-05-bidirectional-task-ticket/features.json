@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "QuickAddTicket: add prefilledEstimatedHours prop that initializes estimated hours state and shows input field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
