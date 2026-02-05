@@ -53,6 +53,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 
@@ -104,6 +105,7 @@ export default function TaskForm({
   const [isDeletingDocuments, setIsDeletingDocuments] = useState(false);
   const [tempTaskId] = useState<string>(`temp-${Date.now()}`);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { launchTimeEntry } = useSchedulingCallbacks();
   // Convert from minutes to hours for display
   const [estimatedHours, setEstimatedHours] = useState<number>(Number(task?.estimated_hours) / 60 || 0);
   const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) / 60 || 0);
@@ -824,7 +826,36 @@ export default function TaskForm({
     }
 
     try {
-      toast('Time entry is managed in Scheduling.');
+      const findProjectName = (options: Array<TreeSelectOption<'project' | 'phase' | 'status'>>, phaseId: string): string | undefined => {
+        for (const option of options) {
+          if (option.type === 'project' && option.children?.some(child => child.value === phaseId)) {
+            return typeof option.label === 'string' ? option.label : undefined;
+          }
+          if (option.children) {
+            const nested = findProjectName(option.children, phaseId);
+            if (nested) return nested;
+          }
+        }
+        return undefined;
+      };
+
+      const projectName = findProjectName(projectTreeOptions, selectedPhaseId);
+      const serviceName = availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null;
+
+      await launchTimeEntry({
+        openDrawer,
+        closeDrawer,
+        context: {
+          workItemId: task.task_id,
+          workItemType: 'project_task',
+          workItemName: taskName || task.task_name,
+          projectName,
+          phaseName: selectedPhase.phase_name,
+          taskName,
+          serviceId: selectedServiceId,
+          serviceName,
+        },
+      });
     } catch (error) {
       console.error('Error preparing time entry:', error);
       toast.error('Failed to prepare time entry. Please try again.');

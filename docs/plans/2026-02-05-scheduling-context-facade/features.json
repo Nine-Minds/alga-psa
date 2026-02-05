@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Replace TaskForm handleAddTimeEntry stub with useSchedulingCallbacks().launchTimeEntry using task context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 5"]
   },
   {

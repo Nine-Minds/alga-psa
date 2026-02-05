@@ -73,3 +73,4 @@
 - (2026-02-05) Updated AgentScheduleDrawer to use SchedulingContext renderAgentSchedule callback.
 - (2026-02-05) TicketDetails now launches time entry via SchedulingContext with ticket timer context.
 - (2026-02-05) InteractionDetails now launches time entry via SchedulingContext with interaction context.
+- (2026-02-05) TaskForm now launches time entry via SchedulingContext with project/phase/task and service context.
