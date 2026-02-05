@@ -33,11 +33,11 @@ import MoveTaskDialog from './MoveTaskDialog';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
-import KanbanZoomControl from './KanbanZoomControl';
+import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -48,6 +48,11 @@ const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
+const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
+
+const STATUS_FALLBACK_BACKGROUNDS = ['#f3f4f6', '#e0e7ff', '#dcfce7', '#fef9c3'];
+const STATUS_FALLBACK_BADGES = ['#e5e7eb', '#c7d2fe', '#bbf7d0', '#fef08a'];
+const STATUS_FALLBACK_BORDERS = ['#d1d5db', '#a5b4fc', '#86efac', '#fde047'];
 
 // Task type icons for the filter dropdown
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -62,6 +67,50 @@ const taskTypeIcons: Record<string, React.ComponentType<any>> = {
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
 const MAX_SCROLL_SPEED = 20; // Maximum scroll speed in pixels per frame
+
+const normalizeHexColor = (color: string): string | null => {
+  const value = color.trim();
+  if (!value.startsWith('#')) return null;
+  const hex = value.slice(1);
+  if (hex.length === 3) {
+    return `#${hex.split('').map((ch) => ch + ch).join('')}`;
+  }
+  if (hex.length === 6) {
+    return value;
+  }
+  return null;
+};
+
+const hexToRgb = (hex: string): [number, number, number] | null => {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return null;
+  const raw = normalized.slice(1);
+  const num = Number.parseInt(raw, 16);
+  if (Number.isNaN(num)) return null;
+  return [
+    (num >> 16) & 0xff,
+    (num >> 8) & 0xff,
+    num & 0xff
+  ];
+};
+
+const hexToRgba = (hex: string, alpha: number): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const lightenHexColor = (hex: string, amount: number): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  const blend = (channel: number) => Math.min(255, Math.round(channel + (255 - channel) * amount));
+  const next = [blend(r), blend(g), blend(b)]
+    .map((channel) => channel.toString(16).padStart(2, '0'))
+    .join('');
+  return `#${next}`;
+};
 
 interface ProjectDetailProps {
   project: IProject;
@@ -142,6 +191,19 @@ export default function ProjectDetail({
     {
       defaultValue: false,
       localStorageKey: PROJECT_HEADER_PINNED_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Sticky status names strip visibility (default: off)
+  const {
+    value: showStickyStatusNames,
+    setValue: setShowStickyStatusNames,
+  } = useUserPreference<boolean>(
+    PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
+    {
+      defaultValue: false,
+      localStorageKey: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
       debounceMs: 300
     }
   );
@@ -527,6 +589,7 @@ export default function ProjectDetail({
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
   const scrollbarProxyRef = useRef<HTMLDivElement>(null);
+  const stickyStatusStripRef = useRef<HTMLDivElement>(null);
   const [boardScrollWidth, setBoardScrollWidth] = useState(0);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
@@ -543,30 +606,53 @@ export default function ProjectDetail({
     };
   }, []);
 
-  // Proxy scrollbar: sync scroll position bidirectionally and track board width
+  const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
+  const visibleKanbanStatuses = useMemo(
+    () => projectStatuses.filter((status) => status.is_visible),
+    [projectStatuses]
+  );
+  const statusTaskCounts = useMemo(() => {
+    return filteredTasks.reduce<Record<string, number>>((counts, task) => {
+      const statusId = task.project_status_mapping_id;
+      counts[statusId] = (counts[statusId] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [filteredTasks]);
+
+  // Proxy scrollbar and sticky status strip: keep horizontal scroll positions in sync.
   useEffect(() => {
     const container = kanbanBoardRef.current;
     const proxy = scrollbarProxyRef.current;
+    const stickyStrip = stickyStatusStripRef.current;
     if (!container || !proxy) return;
 
     let isSyncing = false;
 
-    const onContainerScroll = () => {
+    const syncScrollPositions = (source: 'container' | 'proxy' | 'sticky') => {
       if (isSyncing) return;
       isSyncing = true;
-      proxy.scrollLeft = container.scrollLeft;
+      const nextLeft = source === 'container'
+        ? container.scrollLeft
+        : source === 'proxy'
+          ? proxy.scrollLeft
+          : (stickyStrip?.scrollLeft ?? 0);
+
+      if (source !== 'container') container.scrollLeft = nextLeft;
+      if (source !== 'proxy') proxy.scrollLeft = nextLeft;
+      if (stickyStrip && source !== 'sticky') stickyStrip.scrollLeft = nextLeft;
       isSyncing = false;
     };
 
-    const onProxyScroll = () => {
-      if (isSyncing) return;
-      isSyncing = true;
-      container.scrollLeft = proxy.scrollLeft;
-      isSyncing = false;
-    };
+    const onContainerScroll = () => syncScrollPositions('container');
+    const onProxyScroll = () => syncScrollPositions('proxy');
+    const onStickyStripScroll = () => syncScrollPositions('sticky');
 
     container.addEventListener('scroll', onContainerScroll);
     proxy.addEventListener('scroll', onProxyScroll);
+    if (stickyStrip) {
+      stickyStrip.addEventListener('scroll', onStickyStripScroll);
+    }
+    syncScrollPositions('container');
 
     // Track the board's scroll width with ResizeObserver
     const updateWidth = () => {
@@ -584,9 +670,12 @@ export default function ProjectDetail({
     return () => {
       container.removeEventListener('scroll', onContainerScroll);
       proxy.removeEventListener('scroll', onProxyScroll);
+      if (stickyStrip) {
+        stickyStrip.removeEventListener('scroll', onStickyStripScroll);
+      }
       ro.disconnect();
     };
-  }, []);
+  }, [showStickyStatusNames, viewMode]);
 
   // Lazy load list view data when switching to list mode
   const loadListViewData = useCallback(async () => {
@@ -1787,6 +1876,42 @@ export default function ProjectDetail({
   // Render the sticky header with title, view switcher, search, and filters
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
+    const getStatusStripStyles = (status: ProjectStatus, index: number) => {
+      if (status.color) {
+        const base = status.color;
+        const itemBgHex = lightenHexColor(base, 0.72) ?? base;
+        const itemBorderHex = lightenHexColor(base, 0.45) ?? base;
+        const badgeBgHex = lightenHexColor(base, 0.62) ?? base;
+
+        return {
+          itemStyle: {
+            backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
+            borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
+            color: base,
+          } as React.CSSProperties,
+          countStyle: {
+            backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
+            color: base,
+          } as React.CSSProperties,
+        };
+      }
+
+      const paletteIndex = index % STATUS_FALLBACK_BACKGROUNDS.length;
+      const itemBg = STATUS_FALLBACK_BACKGROUNDS[paletteIndex];
+      const badgeBg = STATUS_FALLBACK_BADGES[paletteIndex];
+      const border = STATUS_FALLBACK_BORDERS[paletteIndex];
+      return {
+        itemStyle: {
+          backgroundColor: hexToRgba(itemBg, 0.72) ?? itemBg,
+          borderColor: hexToRgba(border, 0.85) ?? border,
+          color: 'rgb(var(--color-text-700))',
+        } as React.CSSProperties,
+        countStyle: {
+          backgroundColor: hexToRgba(badgeBg, 0.82) ?? badgeBg,
+          color: 'rgb(var(--color-text-700))',
+        } as React.CSSProperties,
+      };
+    };
 
     if (viewMode === 'list') {
       return (
@@ -1999,6 +2124,26 @@ export default function ProjectDetail({
               zoomLevel={kanbanZoomLevel}
               onZoomChange={setKanbanZoomLevel}
             />
+            <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
+              <button
+                id="sticky-status-names-toggle-kanban"
+                onClick={() => {
+                  const nextValue = !showStickyStatusNames;
+                  setShowStickyStatusNames(nextValue);
+                  if (nextValue && !isHeaderPinned) {
+                    setIsHeaderPinned(true);
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
+                  showStickyStatusNames
+                    ? 'bg-primary-100 text-primary-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
+              >
+                <Columns3 className="h-4 w-4" />
+              </button>
+            </Tooltip>
             <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
               <button
                 onClick={() => setIsHeaderPinned(!isHeaderPinned)}
@@ -2196,6 +2341,38 @@ export default function ProjectDetail({
             </div>
           )}
         </div>
+
+        {showStickyStatusNames && (
+          <div className={styles.kanbanStatusStrip}>
+            <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
+              <div className={styles.kanbanStatusStripTrack}>
+                {visibleKanbanStatuses.map((status, index) => {
+                  const { itemStyle, countStyle } = getStatusStripStyles(status, index);
+                  return (
+                    <div
+                      key={status.project_status_mapping_id}
+                      className={styles.kanbanStatusStripItem}
+                      style={{
+                        ...itemStyle,
+                        width: `${kanbanColumnWidth}px`,
+                        minWidth: `${kanbanColumnWidth}px`,
+                        maxWidth: `${kanbanColumnWidth}px`,
+                      }}
+                      title={status.custom_name || status.name}
+                    >
+                      <span className={styles.kanbanStatusStripName}>
+                        {status.custom_name || status.name}
+                      </span>
+                      <span className={styles.kanbanStatusStripCount} style={countStyle}>
+                        {statusTaskCounts[status.project_status_mapping_id] ?? 0}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
