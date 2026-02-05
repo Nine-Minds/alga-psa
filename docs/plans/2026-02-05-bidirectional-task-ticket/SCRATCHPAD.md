@@ -66,6 +66,7 @@
 - (2026-02-05) Added E2E-style TaskForm create-from-ticket test (prefill + link on save).
 - (2026-02-05) Added E2E-style TaskTicketLinks test for create-ticket prefill props.
 - (2026-02-05) Added E2E-style CreateTaskFromTicketDialog test for drawer open flow.
+- (2026-02-05) Added test ensuring priority is not prefilled in create-ticket flow.
 
 ## Discoveries / Constraints
 
