@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Wrap project detail server page with MspSchedulingProvider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture"]
   },
   {
