@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Create timeEntryLauncher in scheduling package: orchestrates getCurrentTimePeriod, fetchOrCreateTimeSheet, builds IExtendedWorkItem, opens TimeEntryDialog via openDrawer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 3", "Flow 4", "Flow 5"]
   },
   {
