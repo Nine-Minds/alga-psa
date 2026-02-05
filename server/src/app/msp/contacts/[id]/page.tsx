@@ -6,7 +6,7 @@ import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentAction
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
-import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
+
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;
@@ -54,7 +54,6 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
     }
 
     return (
-      <MspSchedulingProvider>
         <div className="p-6">
           <ContactDetails
             contact={contact}
@@ -64,7 +63,6 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
             userPermissions={permissions}
           />
         </div>
-      </MspSchedulingProvider>
     );
   } catch (error) {
     console.error(`Error fetching data for contact with id ${id}:`, error);

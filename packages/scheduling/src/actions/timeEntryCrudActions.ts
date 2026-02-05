@@ -237,7 +237,7 @@ export const saveTimeEntry = withAuth(async (
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
   const actorUserId = user.user_id;
-  let timeEntryUserId = validatedTimeEntry.user_id;
+  let timeEntryUserId = validatedTimeEntry.user_id || actorUserId;
 
   try {
     if (validatedTimeEntry.entry_id) {

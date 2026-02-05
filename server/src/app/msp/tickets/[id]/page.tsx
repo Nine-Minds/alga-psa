@@ -6,7 +6,7 @@ import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/Ticke
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
-import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
+
 
 interface TicketDetailsPageProps {
   params: Promise<{
@@ -47,7 +47,6 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
       ) : null;
     
     return (
-      <MspSchedulingProvider>
         <div id="ticket-details-container" className="bg-gray-100">
           <Suspense fallback={<TicketDetailsSkeleton />}>
             <MspTicketDetailsContainerClient
@@ -57,7 +56,6 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
             />
           </Suspense>
         </div>
-      </MspSchedulingProvider>
     );
   } catch (error) {
     console.error(`Error fetching ticket with id ${id}:`, error);

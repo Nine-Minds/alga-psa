@@ -41,27 +41,31 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
   const [view, setView] = useState<View>('week');
   const [showEntryPopup, setShowEntryPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [userPermissions, setUserPermissions] = useState<string[] | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   const { users = [] } = useUsers();
 
+  const permissionsLoaded = userPermissions !== null;
+
   const canViewOthers = useMemo(() => {
+    if (!userPermissions) return false;
     return userPermissions.some((permission) => permission === 'user_schedule:read:all' || permission === 'user_schedule:update');
   }, [userPermissions]);
 
   const canReadOwn = useMemo(() => {
+    if (!userPermissions) return false;
     return userPermissions.some((permission) => permission === 'user_schedule:read' || permission === 'user_schedule:update' || permission === 'user_schedule:read:all');
   }, [userPermissions]);
 
   const canViewAgent = useMemo(() => {
-    if (!currentUserId) return false;
+    if (!currentUserId || !permissionsLoaded) return false;
     if (agentId === currentUserId) {
       return canReadOwn;
     }
     return canViewOthers;
-  }, [agentId, canReadOwn, canViewOthers, currentUserId]);
+  }, [agentId, canReadOwn, canViewOthers, currentUserId, permissionsLoaded]);
 
   const dateRange = useMemo(() => {
     const start = moment(date).startOf(view === 'day' ? 'day' : view === 'week' ? 'week' : 'month').toDate();
@@ -96,8 +100,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
       setIsLoading(true);
       setError(null);
 
-      if (!currentUserId) {
-        setIsLoading(false);
+      if (!currentUserId || !permissionsLoaded) {
         return;
       }
 
@@ -124,7 +127,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
     return () => {
       active = false;
     };
-  }, [agentId, canViewAgent, currentUserId, dateRange.end, dateRange.start]);
+  }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start]);
 
   useEffect(() => {
     if (!hasScrolled && calendarRef.current && (view === 'day' || view === 'week')) {
