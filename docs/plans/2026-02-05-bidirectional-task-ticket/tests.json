@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "TaskForm: clicking Ticket icon opens PrefillFromTicketDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
