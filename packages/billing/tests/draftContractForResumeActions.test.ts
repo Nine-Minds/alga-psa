@@ -27,6 +27,16 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(() => true),
 }));
 
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
+vi.mock('@shared/workflow/streams/domainEventBuilders/contractEventBuilders', () => ({
+  buildContractCreatedPayload: vi.fn(() => ({})),
+  buildContractRenewalUpcomingPayload: vi.fn(() => ({})),
+  computeContractRenewalUpcoming: vi.fn(() => null),
+}));
+
 const fetchDetailedContractLines = vi.fn();
 vi.mock('../src/repositories/contractLineRepository', () => ({
   fetchDetailedContractLines: (...args: any[]) => fetchDetailedContractLines(...args),
@@ -34,10 +44,12 @@ vi.mock('../src/repositories/contractLineRepository', () => ({
 }));
 
 const getContractLineServicesWithConfigurations = vi.fn();
+const getTemplateLineServicesWithConfigurations = vi.fn();
 vi.mock('../src/actions/contractLineServiceActions', () => ({
   getContractLineServicesWithConfigurations: (...args: any[]) =>
     getContractLineServicesWithConfigurations(...args),
-  getTemplateLineServicesWithConfigurations: vi.fn(),
+  getTemplateLineServicesWithConfigurations: (...args: any[]) =>
+    getTemplateLineServicesWithConfigurations(...args),
 }));
 
 vi.mock('../src/actions/bucketOverlayActions', () => ({
@@ -46,7 +58,7 @@ vi.mock('../src/actions/bucketOverlayActions', () => ({
 
 type KnexRow = Record<string, unknown> | null;
 
-const makeKnex = (rows: { contracts?: KnexRow; client_contracts?: KnexRow }) => {
+const makeKnex = (rows: { contracts?: KnexRow; client_contracts?: KnexRow; contract_templates?: KnexRow }) => {
   const builderFor = (table: string) => {
     const builder: any = {};
     builder.where = vi.fn(() => builder);
@@ -63,6 +75,7 @@ const makeKnex = (rows: { contracts?: KnexRow; client_contracts?: KnexRow }) => 
     builder.first = vi.fn(async () => {
       if (table === 'contracts') return rows.contracts ?? null;
       if (table === 'client_contracts') return rows.client_contracts ?? null;
+      if (table === 'contract_templates') return rows.contract_templates ?? null;
       return null;
     });
     return builder;
@@ -308,6 +321,176 @@ describe('getDraftContractForResume action', () => {
         allow_rollover: true,
         billing_period: 'monthly',
       },
+    });
+  });
+
+  it('falls back to catalog default rates when draft hourly/usage rates are 0 (T029b)', async () => {
+    const knex = makeKnex({
+      contracts: {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        contract_description: null,
+        status: 'draft',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+      },
+      client_contracts: {
+        contract_id: 'contract-1',
+        client_id: 'client-1',
+        start_date: '2026-01-01T00:00:00.000Z',
+        end_date: null,
+        po_required: false,
+        po_number: null,
+        po_amount: null,
+        template_contract_id: null,
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'hourly-1',
+        contract_line_type: 'Hourly',
+        billing_frequency: 'monthly',
+      },
+      {
+        contract_line_id: 'usage-1',
+        contract_line_type: 'Usage',
+        billing_frequency: 'monthly',
+      },
+    ]);
+
+    getContractLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
+      if (lineId === 'hourly-1') {
+        return [
+          {
+            service: {
+              service_id: 'svc-hourly',
+              service_name: 'Hourly Service',
+              item_kind: 'service',
+              default_rate: 9200,
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              hourly_rate: 0,
+              minimum_billable_time: 15,
+              round_up_to_nearest: 5,
+            },
+            bucketConfig: null,
+          },
+        ];
+      }
+      if (lineId === 'usage-1') {
+        return [
+          {
+            service: {
+              service_id: 'svc-usage',
+              service_name: 'Usage Service',
+              item_kind: 'service',
+              default_rate: 375,
+              unit_of_measure: 'seat',
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              base_rate: 0,
+              unit_of_measure: 'seat',
+              enable_tiered_pricing: false,
+            },
+            bucketConfig: null,
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    const result = await getDraftContractForResume('contract-1');
+
+    expect(result.hourly_services[0]).toMatchObject({
+      service_id: 'svc-hourly',
+      hourly_rate: 9200,
+    });
+    expect(result.usage_services[0]).toMatchObject({
+      service_id: 'svc-usage',
+      unit_rate: 375,
+    });
+  });
+
+  it('falls back to catalog default rates in template snapshot when stored rates are 0', async () => {
+    const knex = makeKnex({
+      contract_templates: {
+        template_id: 'template-1',
+        template_name: 'Template Alpha',
+        template_description: 'Test',
+        default_billing_frequency: 'monthly',
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'hourly-template-line',
+        contract_line_type: 'Hourly',
+      },
+      {
+        contract_line_id: 'usage-template-line',
+        contract_line_type: 'Usage',
+      },
+    ]);
+
+    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
+      if (lineId === 'hourly-template-line') {
+        return [
+          {
+            service: {
+              service_id: 'svc-hourly',
+              service_name: 'Hourly Service',
+              item_kind: 'service',
+              default_rate: 11300,
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              hourly_rate: 0,
+              minimum_billable_time: 20,
+              round_up_to_nearest: 10,
+            },
+            bucketConfig: null,
+          },
+        ];
+      }
+      if (lineId === 'usage-template-line') {
+        return [
+          {
+            service: {
+              service_id: 'svc-usage',
+              service_name: 'Usage Service',
+              item_kind: 'service',
+              default_rate: 640,
+              unit_of_measure: 'device',
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              base_rate: 0,
+              unit_of_measure: 'device',
+              enable_tiered_pricing: false,
+            },
+            bucketConfig: null,
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
+    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
+
+    expect(snapshot.hourly_services?.[0]).toMatchObject({
+      service_id: 'svc-hourly',
+      hourly_rate: 11300,
+    });
+    expect(snapshot.usage_services?.[0]).toMatchObject({
+      service_id: 'svc-usage',
+      unit_rate: 640,
     });
   });
 
