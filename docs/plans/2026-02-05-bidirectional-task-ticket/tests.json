@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "PrefillFromTicketDialog: confirm button calls getConsolidatedTicketData for selected ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {

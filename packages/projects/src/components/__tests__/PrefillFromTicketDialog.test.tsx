@@ -131,4 +131,33 @@ describe('PrefillFromTicketDialog', () => {
       expect.objectContaining({ shouldLink: false })
     );
   });
+
+  it('calls getConsolidatedTicketData for the selected ticket on confirm', async () => {
+    getTicketsForListMock.mockResolvedValue([
+      { ticket_id: 'ticket-2', ticket_number: 'T-002', title: 'VPN issue', status_name: 'New' }
+    ]);
+    getConsolidatedTicketDataMock.mockResolvedValue({
+      ticket_id: 'ticket-2',
+      ticket_number: 'T-002',
+      title: 'VPN issue'
+    });
+
+    render(
+      <PrefillFromTicketDialog
+        open={true}
+        onOpenChange={() => undefined}
+        onPrefill={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketsForListMock).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText('ticket-select'), {
+      target: { value: 'ticket-2' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
+
+    expect(getConsolidatedTicketDataMock).toHaveBeenCalledWith('ticket-2');
+  });
 });
