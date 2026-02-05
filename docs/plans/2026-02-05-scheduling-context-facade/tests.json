@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "launchTimeEntryForWorkItem builds correct IExtendedWorkItem from interaction context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

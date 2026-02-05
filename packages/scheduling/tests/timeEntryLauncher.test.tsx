@@ -89,4 +89,32 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(element.props.workItem.client_name).toBe('Acme');
     expect(element.props.workItem.description).toBe('Worked on issue');
   });
+
+  it('builds an interaction work item with interaction context', async () => {
+    const openDrawer = vi.fn();
+    const start = new Date('2026-02-01T09:00:00Z');
+    const end = new Date('2026-02-01T10:00:00Z');
+
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'interaction-1',
+        workItemType: 'interaction',
+        workItemName: 'Follow-up',
+        interactionType: 'Call',
+        clientName: 'Globex',
+        startTime: start,
+        endTime: end,
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    expect(element.props.workItem.work_item_id).toBe('interaction-1');
+    expect(element.props.workItem.type).toBe('interaction');
+    expect(element.props.workItem.interaction_type).toBe('Call');
+    expect(element.props.workItem.client_name).toBe('Globex');
+    expect(element.props.workItem.startTime).toEqual(start);
+    expect(element.props.workItem.endTime).toEqual(end);
+  });
 });
