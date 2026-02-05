@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "AgentScheduleView renders week/day/month calendar using DynamicBigCalendar with view toggle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {

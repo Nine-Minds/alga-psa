@@ -55,3 +55,4 @@
 - (2026-02-05) Re-exported `SchedulingContext` from `packages/ui/src/context/index.ts`.
 - (2026-02-05) Created `packages/scheduling/src/components/schedule/AgentScheduleView.tsx` and `AgentScheduleDrawerStyles.tsx` for single-agent calendar drawer view.
 - (2026-02-05) AgentScheduleView now loads entries via `getScheduleEntries` scoped to agentId and current date range.
+- (2026-02-05) AgentScheduleView uses DynamicBigCalendar with week/day/month views and default week view.
