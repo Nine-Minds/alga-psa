@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "TaskForm: prefillData prop initializes estimated_hours state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
