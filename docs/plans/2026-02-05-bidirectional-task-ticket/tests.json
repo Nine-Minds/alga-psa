@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "TaskForm: after prefill confirm with auto-link on, ticket appears in Associated Tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
