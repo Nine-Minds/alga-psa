@@ -50,13 +50,11 @@ export function TagFilter({
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
             />
-            <div className="max-h-[200px] overflow-y-auto">
-              <TagGrid
-                tags={filteredTags}
-                selectedTags={selectedTags}
-                onTagSelect={onToggleTag}
-              />
-            </div>
+            <TagGrid
+              tags={filteredTags}
+              selectedTags={selectedTags}
+              onTagSelect={onToggleTag}
+            />
             {selectedTags.length > 0 && (
               <div className="pt-2 border-t flex justify-end">
                 <Button id="tag-filter-clear" variant="ghost" size="sm" onClick={onClearTags}>
