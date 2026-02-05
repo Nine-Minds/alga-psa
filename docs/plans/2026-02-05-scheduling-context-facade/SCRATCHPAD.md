@@ -63,3 +63,4 @@
 - (2026-02-05) AgentScheduleView includes CalendarStyleProvider and AgentScheduleDrawerStyles for drawer styling.
 - (2026-02-05) Added `packages/scheduling/src/lib/timeEntryLauncher.tsx` to orchestrate time entry dialog launch from work-item context.
 - (2026-02-05) timeEntryLauncher now toasts when no active time period exists.
+- (2026-02-05) timeEntryLauncher opens TimeEntryDialog in drawer mode with time period and time sheet context.

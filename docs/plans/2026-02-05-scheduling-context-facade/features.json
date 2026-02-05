@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "timeEntryLauncher opens TimeEntryDialog in inDrawer mode with correct work item, date, timePeriod, and timeSheetId",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 3"]
   },
   {
