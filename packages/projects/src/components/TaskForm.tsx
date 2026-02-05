@@ -56,6 +56,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
+import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -845,16 +846,14 @@ export default function TaskForm({
       await launchTimeEntry({
         openDrawer,
         closeDrawer,
-        context: {
-          workItemId: task.task_id,
-          workItemType: 'project_task',
-          workItemName: taskName || task.task_name,
+        context: buildTaskTimeEntryContext({
+          taskId: task.task_id,
+          taskName: taskName || task.task_name,
           projectName,
           phaseName: selectedPhase.phase_name,
-          taskName,
           serviceId: selectedServiceId,
           serviceName,
-        },
+        }),
       });
     } catch (error) {
       console.error('Error preparing time entry:', error);

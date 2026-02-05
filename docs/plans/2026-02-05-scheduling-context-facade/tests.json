@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "Task Add Time Entry opens TimeEntryDialog with project/phase/task context and serviceId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
