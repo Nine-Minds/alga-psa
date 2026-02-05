@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "QuickAddTicket: estimated_hours is included in FormData when > 0",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
