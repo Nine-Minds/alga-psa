@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "launchTimeEntryForWorkItem builds correct IExtendedWorkItem from project task context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

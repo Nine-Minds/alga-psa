@@ -117,4 +117,31 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(element.props.workItem.startTime).toEqual(start);
     expect(element.props.workItem.endTime).toEqual(end);
   });
+
+  it('builds a project task work item with task context', async () => {
+    const openDrawer = vi.fn();
+
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'task-1',
+        workItemType: 'project_task',
+        workItemName: 'Build feature',
+        projectName: 'Project A',
+        phaseName: 'Phase 2',
+        taskName: 'Build feature',
+        serviceId: 'service-1',
+        serviceName: 'Implementation',
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    expect(element.props.workItem.type).toBe('project_task');
+    expect(element.props.workItem.project_name).toBe('Project A');
+    expect(element.props.workItem.phase_name).toBe('Phase 2');
+    expect(element.props.workItem.task_name).toBe('Build feature');
+    expect(element.props.workItem.service_id).toBe('service-1');
+    expect(element.props.workItem.service_name).toBe('Implementation');
+  });
 });
