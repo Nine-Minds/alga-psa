@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "TaskForm: does NOT pass taskData in create mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
