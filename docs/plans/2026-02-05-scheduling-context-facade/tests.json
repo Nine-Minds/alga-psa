@@ -230,7 +230,7 @@
   {
     "id": "T039",
     "description": "Ticket Add Time Entry onComplete resets timer (elapsedTime=0, isRunning=false)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
