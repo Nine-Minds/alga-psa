@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "CreateTaskFromTicketDialog: dialog with project selector (CustomSelect + getProjects)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {
