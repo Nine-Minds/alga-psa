@@ -46,4 +46,12 @@ describe('mapTaskToTicketPrefill', () => {
     );
     expect(result.title).toBe('Network upgrade');
   });
+
+  it('converts estimated_hours from minutes to hours', () => {
+    const result = mapTaskToTicketPrefill(
+      { task_name: 'Network upgrade', estimated_hours: 150 },
+      { client_id: 'client-1', client_name: 'Acme' }
+    );
+    expect(result.estimated_hours).toBe(2.5);
+  });
 });

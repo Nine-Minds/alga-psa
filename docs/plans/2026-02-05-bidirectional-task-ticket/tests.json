@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "mapTaskToTicketPrefill: estimated_hours converts from minutes to hours (÷60)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
