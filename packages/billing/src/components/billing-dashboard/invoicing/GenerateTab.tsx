@@ -26,6 +26,7 @@ type InvoiceType = 'automatic' | 'manual' | 'prepayment';
 interface SelectOption {
   value: string;
   label: React.JSX.Element;
+  textValue?: string;
 }
 
 const GenerateTab: React.FC<GenerateTabProps> = ({
@@ -86,6 +87,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const allInvoiceTypeOptions: SelectOption[] = [
     {
       value: 'automatic',
+      textValue: 'Automatic Invoices',
       label: (
         <div className="flex items-center gap-2">
           <Receipt className="h-4 w-4" />
@@ -95,6 +97,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     },
     {
       value: 'manual',
+      textValue: 'Manual Invoice',
       label: (
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
@@ -104,6 +107,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     },
     {
       value: 'prepayment',
+      textValue: 'Prepayment',
       label: (
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4" />

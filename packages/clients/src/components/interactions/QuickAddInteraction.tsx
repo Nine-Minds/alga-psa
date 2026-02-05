@@ -568,9 +568,10 @@ export function QuickAddInteraction({
               )}
               <CustomSelect
                   {...typeSelectProps}
-                  options={interactionTypes.map((type) => ({ 
-                    value: type.type_id, 
-                    label: getTypeLabel(type)
+                  options={interactionTypes.map((type) => ({
+                    value: type.type_id,
+                    label: getTypeLabel(type),
+                    textValue: type.type_name
                   }))}
                   value={typeId}
                   onValueChange={setTypeId}

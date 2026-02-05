@@ -361,7 +361,8 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
                 { value: 'all', label: 'All Types' },
                 ...interactionTypes.map((type) => ({
                   value: type.type_id,
-                  label: getTypeLabel(type)
+                  label: getTypeLabel(type),
+                  textValue: type.type_name
                 }))
               ]}
               value={interactionTypeId}

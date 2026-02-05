@@ -10,6 +10,8 @@ import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndR
 export interface SelectOption {
   value: string;
   label: string | React.JSX.Element;
+  /** Plain-text value used by Radix for the trigger display when label is JSX */
+  textValue?: string;
   className?: string;
   is_inactive?: boolean;
 }
@@ -271,6 +273,7 @@ const CustomSelect = ({
                 <RadixSelect.Item
                   key={option.radixValue}
                   value={option.radixValue}
+                  textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : undefined)}
                   className={`
                     relative flex items-center px-3 py-2 text-sm rounded text-gray-900
                     cursor-pointer hover:bg-gray-100 focus:bg-gray-100

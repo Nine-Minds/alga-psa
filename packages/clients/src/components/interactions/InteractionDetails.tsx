@@ -158,6 +158,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
               documents={[]}
               contacts={[]}
               isInDrawer={true}
+              quickView={true}
             />
           );
         } else {
