@@ -7,6 +7,7 @@ import type { IClient } from '@alga-psa/types';
 
 import { Input } from './Input';
 import CustomSelect from './CustomSelect';
+import { useModality } from './ModalityContext';
 import { Button } from './Button';
 import ClientAvatar from './ClientAvatar';
 import type { EntityAvatarProps } from './EntityAvatar';
@@ -66,10 +67,13 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   fitContent = false,
   className = '',
   placeholder = 'Select Client',
-  modal = true,
+  modal,
   size = 'sm',
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
+  const { modal: parentModal } = useModality();
+  const isModal = modal !== undefined ? modal : parentModal;
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -346,8 +350,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </Button>
         </div>
-        {isOpen && modal && createPortal(dropdown, document.body)}
-        {isOpen && !modal && dropdown}
+        {isOpen && isModal && createPortal(dropdown, document.body)}
+        {isOpen && !isModal && dropdown}
       </div>
     </ReflectionContainer>
   );
