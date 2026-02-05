@@ -284,7 +284,7 @@
   {
     "id": "T048",
     "description": "CreateTaskFromTicketDialog: auto-link checkbox renders and defaults to checked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
