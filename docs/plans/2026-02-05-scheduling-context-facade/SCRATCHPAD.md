@@ -75,3 +75,5 @@
 - (2026-02-05) InteractionDetails now launches time entry via SchedulingContext with interaction context.
 - (2026-02-05) TaskForm now launches time entry via SchedulingContext with project/phase/task and service context.
 - (2026-02-05) Default SchedulingContext callbacks provide alert/toast fallbacks when no provider is present.
+- (2026-02-05) Added helper builders for time entry contexts in tickets/clients/projects to simplify test coverage.
+- (2026-02-05) Added type-level test for TimeEntryWorkItemContext in `packages/scheduling/tests/timeEntryWorkItemContext.test.ts`.
