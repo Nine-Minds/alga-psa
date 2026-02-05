@@ -20,6 +20,7 @@ interface CreateTaskFromTicketDialogProps {
     ticket_number: string;
     title: string;
     description?: string | null;
+    attributes?: Record<string, unknown> | null;
     assigned_to?: string | null;
     due_date?: string | null;
     estimated_hours?: number | null;
@@ -113,9 +114,13 @@ export default function CreateTaskFromTicketDialog({
       (status) => status.project_status_mapping_id === selectedStatusId
     );
 
+    const resolvedDescription =
+      ticket.description ??
+      (typeof ticket.attributes?.description === 'string' ? ticket.attributes.description : '');
+
     const prefillData: TaskPrefillFields = mapTicketToTaskFields({
       title: ticket.title,
-      description: ticket.description ?? '',
+      description: resolvedDescription,
       assigned_to: ticket.assigned_to ?? null,
       due_date: ticket.due_date ?? undefined,
       estimated_hours: ticket.estimated_hours ?? 0

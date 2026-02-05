@@ -5,6 +5,7 @@ import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDe
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import type { IClient, IContact } from '@alga-psa/types';
+import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
@@ -31,6 +32,11 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
     []
   );
 
+  const renderCreateProjectTask = useCallback(
+    ({ ticket }: { ticket: any }) => <CreateTaskFromTicketDialog ticket={ticket} />,
+    []
+  );
+
   const renderClientDetails = useCallback(
     ({ id, client }: { id: string; client: IClient }) => {
       return <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />;
@@ -39,11 +45,13 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
   );
 
   return (
+    (
     <TicketDetailsContainer
       {...props}
       renderContactDetails={renderContactDetails}
+      renderCreateProjectTask={renderCreateProjectTask}
       renderClientDetails={renderClientDetails}
     />
+  )
   );
 }
-

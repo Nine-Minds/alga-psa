@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "MspTicketDetailsContainerClient: inject CreateTaskFromTicketDialog button via renderCreateProjectTask",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

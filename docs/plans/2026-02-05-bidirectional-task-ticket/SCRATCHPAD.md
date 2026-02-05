@@ -42,6 +42,7 @@
 - (2026-02-05) TaskQuickAdd now accepts `prefillData` and forwards it into TaskForm.
 - (2026-02-05) Added `renderCreateProjectTask` render prop hook in `TicketDetails` header area.
 - (2026-02-05) TicketDetailsContainer now forwards `renderCreateProjectTask` to TicketDetails.
+- (2026-02-05) MSP ticket container now injects CreateTaskFromTicketDialog via `renderCreateProjectTask`.
 
 ## Discoveries / Constraints
 
