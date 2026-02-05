@@ -326,7 +326,7 @@
   {
     "id": "T055",
     "description": "TicketDetailsContainer: passes renderCreateProjectTask through to TicketDetails",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
