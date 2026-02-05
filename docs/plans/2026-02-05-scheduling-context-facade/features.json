@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Add TimeEntryWorkItemContext type to @alga-psa/types scheduling interfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

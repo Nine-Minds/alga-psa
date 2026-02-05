@@ -47,3 +47,7 @@
 ## Open Questions
 
 - None currently blocking.
+
+## Updates
+
+- (2026-02-05) Added TimeEntryWorkItemContext to `packages/types/src/interfaces/scheduling.interfaces.ts` for shared work-item launch context.
