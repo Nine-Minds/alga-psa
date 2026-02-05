@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "launchTimeEntryForWorkItem builds correct IExtendedWorkItem from ticket context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

@@ -65,4 +65,28 @@ describe('launchTimeEntryForWorkItem', () => {
 
     expect(fetchOrCreateTimeSheet).toHaveBeenCalledWith('user-1', 'period-1');
   });
+
+  it('builds a ticket work item with ticket context', async () => {
+    const openDrawer = vi.fn();
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'ticket-1',
+        workItemType: 'ticket',
+        workItemName: 'Ticket 1',
+        ticketNumber: 'T-123',
+        clientName: 'Acme',
+        timeDescription: 'Worked on issue',
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    expect(element.props.workItem.work_item_id).toBe('ticket-1');
+    expect(element.props.workItem.type).toBe('ticket');
+    expect(element.props.workItem.name).toBe('Ticket 1');
+    expect(element.props.workItem.ticket_number).toBe('T-123');
+    expect(element.props.workItem.client_name).toBe('Acme');
+    expect(element.props.workItem.description).toBe('Worked on issue');
+  });
 });
