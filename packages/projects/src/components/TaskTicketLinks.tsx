@@ -31,6 +31,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TicketSelect from './TicketSelect';
+import { getProject } from '../actions/projectActions';
 
 interface TaskTicketLinksProps {
   taskId?: string;
@@ -105,6 +106,7 @@ export default function TaskTicketLinks({
   const [clientOptions, setClientOptions] = useState<SelectOption[]>([]);
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
   const [selectedTicketId, setSelectedTicketId] = useState('');
+  const [prefilledClient, setPrefilledClient] = useState<{ id: string; name: string } | undefined>(undefined);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -376,6 +378,25 @@ export default function TaskTicketLinks({
     }
   };
 
+  const handleCreateTicket = async () => {
+    try {
+      const project = await getProject(projectId);
+      if (project?.client_id) {
+        setPrefilledClient({
+          id: project.client_id,
+          name: project.client_name || 'Client'
+        });
+      } else {
+        setPrefilledClient(undefined);
+      }
+    } catch (error) {
+      console.error('Error fetching project for ticket prefill:', error);
+      setPrefilledClient(undefined);
+    } finally {
+      setShowCreateDialog(true);
+    }
+  };
+
   const onViewTicket = async (ticketId: string) => {
     try {
       const user = await getCurrentUser();
@@ -531,7 +552,7 @@ export default function TaskTicketLinks({
             id="show-create-dialog-button"
             type="button"
             variant="soft"
-            onClick={() => setShowCreateDialog(true)}
+            onClick={handleCreateTicket}
             className="flex items-center"
           >
             <Plus className="h-4 w-4 mr-1" />
