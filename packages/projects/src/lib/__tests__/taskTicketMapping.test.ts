@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapTicketToTaskFields } from '../taskTicketMapping';
+import { mapTicketToTaskFields, mapTaskToTicketPrefill } from '../taskTicketMapping';
 
 describe('mapTicketToTaskFields', () => {
   it('maps title to task_name', () => {
@@ -35,5 +35,15 @@ describe('mapTicketToTaskFields', () => {
     expect(result.assigned_to).toBeNull();
     expect(result.due_date).toBeNull();
     expect(result.estimated_hours).toBe(0);
+  });
+});
+
+describe('mapTaskToTicketPrefill', () => {
+  it('maps task_name to title', () => {
+    const result = mapTaskToTicketPrefill(
+      { task_name: 'Network upgrade', estimated_hours: 0 },
+      { client_id: 'client-1', client_name: 'Acme' }
+    );
+    expect(result.title).toBe('Network upgrade');
   });
 });

@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "mapTaskToTicketPrefill: task_name maps to title",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
