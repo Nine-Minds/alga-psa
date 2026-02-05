@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "PrefillFromTicketDialog: unchecking auto-link excludes ticket from returned prefill data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

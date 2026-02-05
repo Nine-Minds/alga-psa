@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PrefillFromTicketDialog from '../PrefillFromTicketDialog';
 
 const getTicketsForListMock = vi.fn();
@@ -92,5 +92,43 @@ describe('PrefillFromTicketDialog', () => {
 
     const checkbox = screen.getByLabelText('Link this ticket to the task') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
+  });
+
+  it('excludes ticket link when auto-link is unchecked', async () => {
+    getTicketsForListMock.mockResolvedValue([
+      { ticket_id: 'ticket-1', ticket_number: 'T-001', title: 'Printer issue', status_name: 'New' }
+    ]);
+    getConsolidatedTicketDataMock.mockResolvedValue({
+      ticket_id: 'ticket-1',
+      ticket_number: 'T-001',
+      title: 'Printer issue',
+      status_name: 'New',
+      is_closed: false
+    });
+
+    const onPrefill = vi.fn();
+
+    render(
+      <PrefillFromTicketDialog
+        open={true}
+        onOpenChange={() => undefined}
+        onPrefill={onPrefill}
+      />
+    );
+
+    await waitFor(() => expect(getTicketsForListMock).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText('ticket-select'), {
+      target: { value: 'ticket-1' }
+    });
+
+    const checkbox = screen.getByLabelText('Link this ticket to the task');
+    fireEvent.click(checkbox);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
+
+    expect(onPrefill).toHaveBeenCalledWith(
+      expect.objectContaining({ shouldLink: false })
+    );
   });
 });
