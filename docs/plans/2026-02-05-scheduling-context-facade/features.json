@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Replace AgentScheduleDrawer stub with useSchedulingCallbacks().renderAgentSchedule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 1", "Flow 2"]
   },
   {

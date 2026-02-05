@@ -70,3 +70,4 @@
 - (2026-02-05) Wrapped ticket detail page with `MspSchedulingProvider`.
 - (2026-02-05) Wrapped contact detail and activity pages with `MspSchedulingProvider`.
 - (2026-02-05) Wrapped project detail page with `MspSchedulingProvider`.
+- (2026-02-05) Updated AgentScheduleDrawer to use SchedulingContext renderAgentSchedule callback.
