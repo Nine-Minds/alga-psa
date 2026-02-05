@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "TaskForm: after prefill confirm, all form fields are populated from ticket data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
