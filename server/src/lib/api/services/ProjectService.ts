@@ -191,17 +191,27 @@ export class ProjectService extends BaseService<IProject> {
 
   async getById(id: string, context: ServiceContext): Promise<IProject | null> {
       const { knex } = await this.getKnex();
+      const tableName = this.tableName;
       
-      const project = await knex(this.tableName)
-        .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
-        .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
-        .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
+      const project = await knex(tableName)
+        .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+          this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+            .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+        })
+        .leftJoin('contacts', function joinContacts(this: Knex.JoinClause) {
+          this.on(`${tableName}.contact_name_id`, '=', 'contacts.contact_name_id')
+            .andOn(`${tableName}.tenant`, '=', 'contacts.tenant');
+        })
+        .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
+          this.on(`${tableName}.assigned_to`, '=', 'users.user_id')
+            .andOn(`${tableName}.tenant`, '=', 'users.tenant');
+        })
         .where({
-          [`${this.tableName}.${this.primaryKey}`]: id,
-          [`${this.tableName}.tenant`]: context.tenant
+          [`${tableName}.${this.primaryKey}`]: id,
+          [`${tableName}.tenant`]: context.tenant
         })
         .select(
-          `${this.tableName}.*`,
+          `${tableName}.*`,
           'clients.client_name as client_name',
           'contacts.full_name as contact_name',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
@@ -807,7 +817,10 @@ export class ProjectService extends BaseService<IProject> {
       
       return knex('project_ticket_links')
         .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-        .leftJoin('clients', 'tickets.client_id', 'clients.client_id')
+        .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+          this.on('tickets.client_id', '=', 'clients.client_id')
+            .andOn('tickets.tenant', '=', 'clients.tenant');
+        })
         .where({
           'project_ticket_links.project_id': projectId,
           'project_ticket_links.tenant': context.tenant
@@ -883,7 +896,10 @@ export class ProjectService extends BaseService<IProject> {
       }
   
       // Add client join for client name search
-      query.leftJoin('clients', `${tableName}.client_id`, 'clients.client_id')
+      query.leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+        this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+          .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+      })
         .select(`${tableName}.*`, 'clients.client_name')
         .orderBy(`${tableName}.project_name`)
         .limit(searchData.limit || 25);
@@ -928,7 +944,10 @@ export class ProjectService extends BaseService<IProject> {
   
       // Get projects by client
       const projectsByClient = await knex(tableName)
-        .join('clients', `${tableName}.client_id`, 'clients.client_id')
+        .join('clients', function joinClients(this: Knex.JoinClause) {
+          this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+            .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+        })
         .where(`${tableName}.tenant`, context.tenant)
         .groupBy('clients.client_name')
         .select('clients.client_name', knex.raw('COUNT(*) as count'))
@@ -1110,7 +1129,7 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return knex('users')
-        .where({ user_id: userId })
+        .where({ user_id: userId, tenant: context.tenant })
         .select('user_id', 'first_name', 'last_name', 'email')
         .first();
     }
@@ -1126,40 +1145,50 @@ export class ProjectService extends BaseService<IProject> {
 
   async exportProjects(filters: any, format: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    const query = knex(this.tableName)
-      .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
-      .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
-      .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
-      .where(`${this.tableName}.tenant`, context.tenant)
+    const tableName = this.tableName;
+    const query = knex(tableName)
+      .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+        this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+          .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+      })
+      .leftJoin('contacts', function joinContacts(this: Knex.JoinClause) {
+        this.on(`${tableName}.contact_name_id`, '=', 'contacts.contact_name_id')
+          .andOn(`${tableName}.tenant`, '=', 'contacts.tenant');
+      })
+      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
+        this.on(`${tableName}.assigned_to`, '=', 'users.user_id')
+          .andOn(`${tableName}.tenant`, '=', 'users.tenant');
+      })
+      .where(`${tableName}.tenant`, context.tenant)
       .select(
-        `${this.tableName}.*`,
+        `${tableName}.*`,
         'clients.client_name',
         'contacts.full_name as contact_name',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
       )
-      .orderBy(`${this.tableName}.project_name`);
+      .orderBy(`${tableName}.project_name`);
 
     // Apply filters
     if (filters.project_name) {
-      query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+      query.where(`${tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
     }
     if (filters.client_id) {
-      query.where(`${this.tableName}.client_id`, filters.client_id);
+      query.where(`${tableName}.client_id`, filters.client_id);
     }
     if (filters.status) {
-      query.where(`${this.tableName}.status`, filters.status);
+      query.where(`${tableName}.status`, filters.status);
     }
     if (filters.assigned_to) {
-      query.where(`${this.tableName}.assigned_to`, filters.assigned_to);
+      query.where(`${tableName}.assigned_to`, filters.assigned_to);
     }
     if (filters.start_date_from) {
-      query.where(`${this.tableName}.start_date`, '>=', filters.start_date_from);
+      query.where(`${tableName}.start_date`, '>=', filters.start_date_from);
     }
     if (filters.start_date_to) {
-      query.where(`${this.tableName}.start_date`, '<=', filters.start_date_to);
+      query.where(`${tableName}.start_date`, '<=', filters.start_date_to);
     }
     if (filters.is_inactive !== undefined) {
-      query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
+      query.where(`${tableName}.is_inactive`, filters.is_inactive);
     }
 
     const projects = await query;
@@ -1182,8 +1211,14 @@ export class ProjectService extends BaseService<IProject> {
     // Get tickets related to this project through project_ticket_links
     const baseQuery = knex('project_ticket_links')
       .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-      .leftJoin('clients', 'tickets.client_id', 'clients.client_id')
-      .leftJoin('users', 'tickets.assigned_to', 'users.user_id')
+      .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+        this.on('tickets.client_id', '=', 'clients.client_id')
+          .andOn('tickets.tenant', '=', 'clients.tenant');
+      })
+      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
+        this.on('tickets.assigned_to', '=', 'users.user_id')
+          .andOn('tickets.tenant', '=', 'users.tenant');
+      })
       .where({
         'project_ticket_links.project_id': projectId,
         'project_ticket_links.tenant': context.tenant
