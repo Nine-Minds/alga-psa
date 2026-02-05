@@ -48,7 +48,12 @@ export default function CreateTaskFromTicketDialog({
     const fetchProjects = async () => {
       try {
         const projectList = await getProjects();
-        setProjects(projectList);
+        if (ticket.client_id) {
+          const filtered = projectList.filter(project => project.client_id === ticket.client_id);
+          setProjects(filtered.length > 0 ? filtered : projectList);
+        } else {
+          setProjects(projectList);
+        }
       } catch (error) {
         console.error('Error fetching projects:', error);
         setProjects([]);

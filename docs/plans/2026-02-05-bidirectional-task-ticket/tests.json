@@ -254,7 +254,7 @@
   {
     "id": "T043",
     "description": "CreateTaskFromTicketDialog: renders project selector with projects list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
