@@ -64,6 +64,7 @@
 - (2026-02-05) Added TaskForm create-from-ticket tests: auto-link on/off link handling and field population.
 - (2026-02-05) Added MSP container test for CreateTaskFromTicketDialog injection.
 - (2026-02-05) Added E2E-style TaskForm create-from-ticket test (prefill + link on save).
+- (2026-02-05) Added E2E-style TaskTicketLinks test for create-ticket prefill props.
 
 ## Discoveries / Constraints
 

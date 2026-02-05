@@ -344,7 +344,7 @@
   {
     "id": "T058",
     "description": "E2E: Edit existing task, click 'Create Ticket', verify QuickAddTicket has title/description/client prefilled from task/project, save ticket, verify link",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017", "F018", "F019"]
   },
   {
