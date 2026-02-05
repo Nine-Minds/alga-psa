@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "TaskTicketLinks: 'Create Ticket' fetches project client before opening QuickAddTicket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
