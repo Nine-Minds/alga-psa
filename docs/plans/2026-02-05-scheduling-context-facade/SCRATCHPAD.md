@@ -123,3 +123,4 @@
 - (2026-02-05) Fixed msp-composition test mock hoisting for timeEntryLauncher.
 - (2026-02-05) Fixed tickets test config aliasing for @shared and toast mock hoisting.
 - (2026-02-05) Added tickets test alias for @alga-psa/event-schemas to unblock existing tests.
+- (2026-02-05) Added tickets package aliasing for @alga-psa/tickets to fix existing SLA tests.
