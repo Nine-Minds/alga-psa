@@ -160,4 +160,44 @@ describe('PrefillFromTicketDialog', () => {
 
     expect(getConsolidatedTicketDataMock).toHaveBeenCalledWith('ticket-2');
   });
+
+  it('returns mapped fields via onPrefill', async () => {
+    getTicketsForListMock.mockResolvedValue([
+      { ticket_id: 'ticket-3', ticket_number: 'T-003', title: 'WiFi outage', status_name: 'Open' }
+    ]);
+    getConsolidatedTicketDataMock.mockResolvedValue({
+      ticket_id: 'ticket-3',
+      ticket_number: 'T-003',
+      title: 'WiFi outage',
+      description: 'AP reboot required',
+      assigned_to: 'user-9',
+      due_date: '2026-02-05T08:00:00.000Z',
+      estimated_hours: 3
+    });
+
+    const onPrefill = vi.fn();
+
+    render(
+      <PrefillFromTicketDialog
+        open={true}
+        onOpenChange={() => undefined}
+        onPrefill={onPrefill}
+      />
+    );
+
+    await waitFor(() => expect(getTicketsForListMock).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText('ticket-select'), {
+      target: { value: 'ticket-3' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
+
+    const payload = onPrefill.mock.calls[0][0];
+    expect(payload.prefillData.task_name).toBe('WiFi outage');
+    expect(payload.prefillData.description).toBe('AP reboot required');
+    expect(payload.prefillData.assigned_to).toBe('user-9');
+    expect(payload.prefillData.estimated_hours).toBe(3);
+    expect(payload.prefillData.due_date).toBeInstanceOf(Date);
+  });
 });

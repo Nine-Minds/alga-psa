@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "PrefillFromTicketDialog: returns correctly mapped fields via onPrefill callback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {

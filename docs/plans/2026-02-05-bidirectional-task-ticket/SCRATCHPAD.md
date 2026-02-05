@@ -59,6 +59,7 @@
 - (2026-02-05) Added PrefillFromTicketDialog test for auto-link checkbox default state.
 - (2026-02-05) Added PrefillFromTicketDialog test ensuring unchecked auto-link yields shouldLink=false.
 - (2026-02-05) Added PrefillFromTicketDialog test verifying consolidated ticket fetch on confirm.
+- (2026-02-05) Added PrefillFromTicketDialog test ensuring mapped fields returned to onPrefill.
 
 ## Discoveries / Constraints
 
