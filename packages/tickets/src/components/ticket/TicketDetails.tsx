@@ -57,6 +57,7 @@ import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUti
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
@@ -1015,20 +1016,17 @@ const handleClose = () => {
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
-                context: {
-                    workItemId: ticket.ticket_id,
-                    workItemType: 'ticket',
-                    workItemName: ticket.title || `Ticket ${ticket.ticket_number}`,
-                    ticketNumber: ticket.ticket_number,
-                    clientName: client?.client_name ?? ticket.client_name ?? null,
+                context: buildTicketTimeEntryContext({
+                    ticket,
+                    clientName: client?.client_name ?? null,
                     elapsedTime,
                     timeDescription,
-                },
-                onComplete: () => {
-                    stopTracking().catch(() => {});
-                    setElapsedTime(0);
-                    setIsRunning(false);
-                }
+                }),
+                onComplete: createTicketTimeEntryOnComplete({
+                    stopTracking,
+                    setElapsedTime,
+                    setIsRunning,
+                }),
             });
         } catch (error) {
             console.error('Error in handleAddTimeEntry:', error);

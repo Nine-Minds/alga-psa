@@ -218,7 +218,7 @@
   {
     "id": "T037",
     "description": "Ticket Add Time Entry opens TimeEntryDialog with ticket_id, ticket_number, and title",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
