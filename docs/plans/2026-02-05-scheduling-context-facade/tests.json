@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "launchTimeEntryForWorkItem fetches current time period before opening dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
