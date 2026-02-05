@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Replace TicketDetails handleAddTimeEntry stub with useSchedulingCallbacks().launchTimeEntry using ticket context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 3"]
   },
   {
