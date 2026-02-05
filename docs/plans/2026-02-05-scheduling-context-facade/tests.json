@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "TimeEntryDialog receives work item with pre-filled service for project tasks",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {

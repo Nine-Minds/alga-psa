@@ -180,4 +180,23 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(element.props.timePeriod.period_id).toBe('period-1');
     expect(element.props.timeSheetId).toBe('sheet-1');
   });
+
+  it('prefills service information for project tasks', async () => {
+    const openDrawer = vi.fn();
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'task-2',
+        workItemType: 'project_task',
+        workItemName: 'Configure service',
+        serviceId: 'service-99',
+        serviceName: 'Deployment',
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    expect(element.props.workItem.service_id).toBe('service-99');
+    expect(element.props.workItem.service_name).toBe('Deployment');
+  });
 });
