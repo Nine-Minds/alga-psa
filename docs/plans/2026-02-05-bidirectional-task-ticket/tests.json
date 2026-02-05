@@ -350,7 +350,7 @@
   {
     "id": "T059",
     "description": "E2E: Open ticket detail, click 'Create Project Task', select project/phase/status, verify TaskForm opens in drawer with fields prefilled, save task",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F021", "F022", "F023", "F024", "F025", "F027", "F029"]
   },
   {
