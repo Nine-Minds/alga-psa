@@ -10,6 +10,21 @@ export interface TaskPrefillFields {
 
 type TicketLike = Pick<ITicket, 'title' | 'description' | 'assigned_to' | 'due_date' | 'estimated_hours'>;
 
+export interface TicketPrefillFields {
+  title: string;
+  description: string;
+  assigned_to: string | null;
+  due_date: Date | null;
+  estimated_hours: number;
+  client_id: string | null;
+  client_name?: string | null;
+}
+
+interface ProjectLike {
+  client_id: string | null;
+  client_name?: string | null;
+}
+
 export const mapTicketToTaskFields = (ticket: Partial<TicketLike> | null | undefined): TaskPrefillFields => {
   const dueDate = ticket?.due_date ? new Date(ticket.due_date) : null;
   return {
@@ -18,5 +33,20 @@ export const mapTicketToTaskFields = (ticket: Partial<TicketLike> | null | undef
     assigned_to: ticket?.assigned_to ?? null,
     due_date: dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : null,
     estimated_hours: typeof ticket?.estimated_hours === 'number' ? ticket.estimated_hours : 0
+  };
+};
+
+export const mapTaskToTicketPrefill = (
+  task: { task_name?: string | null; description?: string | null; assigned_to?: string | null; due_date?: Date | null; estimated_hours?: number | null } | null | undefined,
+  project: ProjectLike | null | undefined
+): TicketPrefillFields => {
+  return {
+    title: task?.task_name ?? '',
+    description: task?.description ?? '',
+    assigned_to: task?.assigned_to ?? null,
+    due_date: task?.due_date ?? null,
+    estimated_hours: typeof task?.estimated_hours === 'number' ? task.estimated_hours / 60 : 0,
+    client_id: project?.client_id ?? null,
+    client_name: project?.client_name ?? null
   };
 };

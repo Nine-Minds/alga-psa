@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Shared field mapping utility: mapTaskToTicketPrefill converts task data to ticket-compatible prefill (task_name→title, description, assigned_to, due_date, estimated_hours minutes→hours, project client_id)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1"]
   },
   {

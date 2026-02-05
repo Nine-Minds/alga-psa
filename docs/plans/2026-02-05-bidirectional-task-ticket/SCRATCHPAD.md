@@ -15,6 +15,7 @@
 ## Progress
 
 - (2026-02-05) Implemented `mapTicketToTaskFields` mapping utility in `packages/projects/src/lib/taskTicketMapping.ts` for ticket→task prefill defaults (safe defaults, due date parsing, estimated hours passthrough).
+- (2026-02-05) Added `mapTaskToTicketPrefill` in `packages/projects/src/lib/taskTicketMapping.ts` to derive ticket prefill data from tasks and project client (minutes→hours conversion, client id/name).
 
 ## Discoveries / Constraints
 
