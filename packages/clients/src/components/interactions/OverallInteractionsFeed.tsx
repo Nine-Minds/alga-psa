@@ -167,6 +167,18 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
     );
   };
 
+  const typeFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All Types' },
+      ...interactionTypes.map((type) => ({
+        value: type.type_id,
+        label: getTypeLabel(type),
+        textValue: type.type_name
+      }))
+    ],
+    [interactionTypes]
+  );
+
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction => {
       // Text search
@@ -357,14 +369,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect
-              options={[
-                { value: 'all', label: 'All Types' },
-                ...interactionTypes.map((type) => ({
-                  value: type.type_id,
-                  label: getTypeLabel(type),
-                  textValue: type.type_name
-                }))
-              ]}
+              options={typeFilterOptions}
               value={interactionTypeId}
               onValueChange={setInteractionTypeId}
               placeholder="Interaction Type"

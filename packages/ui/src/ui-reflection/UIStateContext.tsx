@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { PageState, UIComponent, DatePickerComponent } from './types';
 import { create } from 'jsondiffpatch';
@@ -413,12 +413,12 @@ export function UIStateProvider({ children, initialPageState }: {
     setPageState(newPageState);
   }, []);
 
-  // Provide context
-  const value = {
+  // Provide context – memoize so consumers don't re-render when only pageState changes
+  const value = useMemo(() => ({
     registerComponent,
     unregisterComponent,
     updateComponent
-  };
+  }), [registerComponent, unregisterComponent, updateComponent]);
 
   return (
     <UIStateContext value={value}>

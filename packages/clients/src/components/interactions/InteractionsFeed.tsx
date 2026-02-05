@@ -150,6 +150,18 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     );
   };
 
+  const typeFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All Types' },
+      ...interactionTypes.map((type) => ({
+        value: type.type_id,
+        label: getTypeLabel(type),
+        textValue: type.type_name
+      }))
+    ],
+    [interactionTypes]
+  );
+
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction =>
       (interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -292,14 +304,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
           <div className="space-y-4">
             <CustomSelect
               {...typeFilterProps}
-              options={[
-                { value: 'all', label: 'All Types' },
-                ...interactionTypes.map((type) => ({
-                  value: type.type_id,
-                  label: getTypeLabel(type),
-                  textValue: type.type_name
-                }))
-              ]}
+              options={typeFilterOptions}
               value={selectedType}
               onValueChange={setSelectedType}
               placeholder="Interaction Type"

@@ -1,7 +1,7 @@
 // server/src/components/interactions/QuickAddInteraction.tsx
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -266,47 +266,35 @@ export function QuickAddInteraction({
       
       // Contacts are now fetched in the main fetchData function above
       
-      // Parse notes content with better error handling
-      try {
-        if (editingInteraction.notes && editingInteraction.notes.trim() !== '') {
-          const parsedNotes = JSON.parse(editingInteraction.notes);
-          if (Array.isArray(parsedNotes) && parsedNotes.length > 0) {
-            // Validate that the parsed content has proper structure
-            const validNotes = parsedNotes.every(block => 
-              block && typeof block === 'object' && block.type
-            );
-            if (validNotes) {
-              setNotesContent(parsedNotes);
-            } else {
-              console.warn('Invalid notes structure, using default');
-              setNotesContent([]);
-            }
+      // Parse notes content – detect plain text vs JSON to avoid throwing
+      const rawNotes = editingInteraction.notes?.trim() ?? '';
+      if (rawNotes === '') {
+        setNotesContent([]);
+      } else if (rawNotes.startsWith('[') || rawNotes.startsWith('{')) {
+        // Looks like JSON – attempt to parse
+        try {
+          const parsedNotes = JSON.parse(rawNotes);
+          if (Array.isArray(parsedNotes) && parsedNotes.length > 0 &&
+              parsedNotes.every((block: any) => block && typeof block === 'object' && block.type)) {
+            setNotesContent(parsedNotes);
           } else {
             setNotesContent([]);
           }
-        } else {
-          setNotesContent([]);
-        }
-      } catch (e) {
-        console.error('Error parsing notes content:', e);
-        // Create a default paragraph with the text content if JSON parsing fails
-        if (editingInteraction.notes && editingInteraction.notes.trim() !== '') {
+        } catch {
+          // Malformed JSON that starts with [ or { – wrap as plain text
           setNotesContent([{
             type: "paragraph",
-            props: {
-              textAlignment: "left",
-              backgroundColor: "default",
-              textColor: "default"
-            },
-            content: [{
-              type: "text",
-              text: editingInteraction.notes,
-              styles: {}
-            }]
+            props: { textAlignment: "left", backgroundColor: "default", textColor: "default" },
+            content: [{ type: "text", text: rawNotes, styles: {} }]
           }]);
-        } else {
-          setNotesContent([]);
         }
+      } else {
+        // Plain text notes – wrap in a paragraph block
+        setNotesContent([{
+          type: "paragraph",
+          props: { textAlignment: "left", backgroundColor: "default", textColor: "default" },
+          content: [{ type: "text", text: rawNotes, styles: {} }]
+        }]);
       }
       
       // Mark notes content as ready after processing
@@ -537,6 +525,15 @@ export function QuickAddInteraction({
     );
   };
 
+  const typeOptions = useMemo(
+    () => interactionTypes.map((type) => ({
+      value: type.type_id,
+      label: getTypeLabel(type),
+      textValue: type.type_name
+    })),
+    [interactionTypes]
+  );
+
   return (
     <ReflectionContainer id={id} label="Quick Add Interaction">
       <Dialog
@@ -568,11 +565,7 @@ export function QuickAddInteraction({
               )}
               <CustomSelect
                   {...typeSelectProps}
-                  options={interactionTypes.map((type) => ({
-                    value: type.type_id,
-                    label: getTypeLabel(type),
-                    textValue: type.type_name
-                  }))}
+                  options={typeOptions}
                   value={typeId}
                   onValueChange={setTypeId}
                   placeholder="Select Interaction Type"
