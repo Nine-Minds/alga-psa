@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "TaskTicketLinks: QuickAddTicket receives project client as prefilledClient",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
