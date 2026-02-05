@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
 
 const calendarSpy = vi.fn();
@@ -41,5 +41,17 @@ describe('AgentScheduleView', () => {
   it('renders without error for a valid agent', () => {
     const { getByTestId } = render(<AgentScheduleView agentId="agent-1" />);
     expect(getByTestId('calendar')).toBeTruthy();
+  });
+
+  it('calls getScheduleEntries with the agent ID and date range', async () => {
+    render(<AgentScheduleView agentId="agent-1" />);
+
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalled());
+
+    const [start, end, technicianIds] = getScheduleEntries.mock.calls[0];
+    expect(technicianIds).toEqual(['agent-1']);
+    expect(start).toBeInstanceOf(Date);
+    expect(end).toBeInstanceOf(Date);
+    expect((end as Date).getTime()).toBeGreaterThan((start as Date).getTime());
   });
 });

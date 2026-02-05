@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "AgentScheduleView calls getScheduleEntries with agent's ID and current date range",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
