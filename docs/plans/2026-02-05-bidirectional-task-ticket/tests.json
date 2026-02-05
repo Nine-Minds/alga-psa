@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "TaskForm: Ticket icon button is NOT visible in edit mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
