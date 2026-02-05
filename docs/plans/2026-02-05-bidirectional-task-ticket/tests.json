@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "TaskForm: prefillData prop initializes due_date state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

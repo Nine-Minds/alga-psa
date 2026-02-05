@@ -60,7 +60,7 @@
 - (2026-02-05) Added PrefillFromTicketDialog test ensuring unchecked auto-link yields shouldLink=false.
 - (2026-02-05) Added PrefillFromTicketDialog test verifying consolidated ticket fetch on confirm.
 - (2026-02-05) Added PrefillFromTicketDialog test ensuring mapped fields returned to onPrefill.
-- (2026-02-05) Added TaskForm prefill tests: task_name, description, and assigned_to initialization.
+- (2026-02-05) Added TaskForm prefill tests: task_name, description, assigned_to, and due_date initialization.
 
 ## Discoveries / Constraints
 
