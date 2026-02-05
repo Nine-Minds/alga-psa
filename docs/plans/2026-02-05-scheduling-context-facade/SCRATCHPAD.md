@@ -65,3 +65,4 @@
 - (2026-02-05) timeEntryLauncher now toasts when no active time period exists.
 - (2026-02-05) timeEntryLauncher opens TimeEntryDialog in drawer mode with time period and time sheet context.
 - (2026-02-05) timeEntryLauncher saves time entry, closes drawer, and triggers onComplete on success.
+- (2026-02-05) Added `MspSchedulingProvider` in msp-composition to supply scheduling callbacks via context.

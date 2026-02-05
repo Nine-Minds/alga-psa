@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Create MspSchedulingProvider in msp-composition that provides real renderAgentSchedule and launchTimeEntry callbacks via SchedulingCallbackProvider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture"]
   },
   {
