@@ -22,4 +22,9 @@ describe('mapTicketToTaskFields', () => {
     expect(result.due_date).toBeInstanceOf(Date);
     expect(result.due_date?.toISOString()).toBe('2026-02-05T12:30:00.000Z');
   });
+
+  it('keeps estimated_hours in hours', () => {
+    const result = mapTicketToTaskFields({ estimated_hours: 4.5 });
+    expect(result.estimated_hours).toBe(4.5);
+  });
 });

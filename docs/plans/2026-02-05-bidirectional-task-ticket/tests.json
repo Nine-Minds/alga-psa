@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "mapTicketToTaskFields: estimated_hours in hours stays as hours (TaskForm displays hours)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
