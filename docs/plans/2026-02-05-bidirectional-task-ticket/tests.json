@@ -266,7 +266,7 @@
   {
     "id": "T045",
     "description": "CreateTaskFromTicketDialog: selecting project fetches phases and statuses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
