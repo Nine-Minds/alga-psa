@@ -1,0 +1,182 @@
+[
+  {
+    "id": "F001",
+    "description": "Shared field mapping utility: mapTicketToTaskFields converts ticket data to task-compatible fields (title→task_name, description, assigned_to, due_date, estimated_hours hours→minutes)",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002",
+    "description": "Shared field mapping utility: mapTaskToTicketPrefill converts task data to ticket-compatible prefill (task_name→title, description, assigned_to, due_date, estimated_hours minutes→hours, project client_id)",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Shared field mapping: priorities are explicitly excluded from mapping in both directions",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004",
+    "description": "PrefillFromTicketDialog: dialog component with searchable ticket list using TicketSelect",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F005",
+    "description": "PrefillFromTicketDialog: auto-link checkbox (default: on) controls whether selected ticket is added to pending links",
+    "implemented": false,
+    "prdRefs": ["FR-2", "FR-5"]
+  },
+  {
+    "id": "F006",
+    "description": "PrefillFromTicketDialog: on confirm, fetches full ticket data via getConsolidatedTicketData and returns mapped fields",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F007",
+    "description": "TaskForm: add prefillData prop that initializes form state (task_name, description, assigned_to, due_date, estimated_hours, pendingTicketLink)",
+    "implemented": false,
+    "prdRefs": ["FR-2", "FR-4"]
+  },
+  {
+    "id": "F008",
+    "description": "TaskForm: icon button (Ticket icon) visible only in create mode, near task name label, tooltip 'Create from ticket'",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F009",
+    "description": "TaskForm: clicking prefill icon opens PrefillFromTicketDialog, on confirm populates all form fields and optionally adds ticket to pendingTicketLinks",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F010",
+    "description": "QuickAddTicket: add prefilledTitle prop that initializes title state",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F011",
+    "description": "QuickAddTicket: add prefilledAssignedTo prop that initializes assignedTo state",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F012",
+    "description": "QuickAddTicket: add prefilledDueDate prop that initializes due date state",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F013",
+    "description": "QuickAddTicket: add prefilledEstimatedHours prop that initializes estimated hours state and shows input field",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F014",
+    "description": "QuickAddTicket: estimated_hours appended to FormData in handleSubmit",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F015",
+    "description": "addTicket server action: parse estimated_hours from FormData and include in ticket creation",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F016",
+    "description": "TaskTicketLinks: add taskData prop to receive current task field values from TaskForm",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F017",
+    "description": "TaskTicketLinks: on 'Create Ticket' click, fetch project client via getProject(projectId)",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F018",
+    "description": "TaskTicketLinks: pass all prefill props (title, description, client, assignedTo, dueDate, estimatedHours) to QuickAddTicket",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F019",
+    "description": "TaskForm: pass current field values as taskData to TaskTicketLinks in edit mode",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F020",
+    "description": "CreateTaskFromTicketDialog: dialog with project selector (CustomSelect + getProjects)",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F021",
+    "description": "CreateTaskFromTicketDialog: on project select, fetches phases and statuses for that project",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F022",
+    "description": "CreateTaskFromTicketDialog: phase selector populated from selected project's phases",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F023",
+    "description": "CreateTaskFromTicketDialog: status selector populated from selected project's statuses",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F024",
+    "description": "CreateTaskFromTicketDialog: auto-link checkbox (default: on)",
+    "implemented": false,
+    "prdRefs": ["FR-4", "FR-5"]
+  },
+  {
+    "id": "F025",
+    "description": "CreateTaskFromTicketDialog: on confirm, opens TaskQuickAdd in drawer with prefillData mapped from ticket",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F026",
+    "description": "TaskQuickAdd: add prefillData prop and pass through to TaskForm",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F027",
+    "description": "TicketDetails: add renderCreateProjectTask render prop for cross-package button injection",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F028",
+    "description": "TicketDetailsContainer: pass renderCreateProjectTask prop through to TicketDetails",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F029",
+    "description": "MspTicketDetailsContainerClient: inject CreateTaskFromTicketDialog button via renderCreateProjectTask",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F030",
+    "description": "Projects package exports CreateTaskFromTicketDialog for use by msp-composition",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  }
+]
