@@ -144,4 +144,22 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(element.props.workItem.service_id).toBe('service-1');
     expect(element.props.workItem.service_name).toBe('Implementation');
   });
+
+  it('shows a toast error when no active time period exists', async () => {
+    const openDrawer = vi.fn();
+    getCurrentTimePeriod.mockResolvedValueOnce(null);
+
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'ticket-1',
+        workItemType: 'ticket',
+        workItemName: 'Ticket 1',
+      },
+    });
+
+    expect(toastError).toHaveBeenCalled();
+    expect(openDrawer).not.toHaveBeenCalled();
+  });
 });

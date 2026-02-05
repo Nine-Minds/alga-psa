@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Toast error shown when no active time period exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
