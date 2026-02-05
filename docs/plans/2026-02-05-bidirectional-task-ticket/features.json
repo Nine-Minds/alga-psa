@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "TaskTicketLinks: add taskData prop to receive current task field values from TaskForm",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

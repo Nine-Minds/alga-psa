@@ -39,6 +39,13 @@ interface TaskTicketLinksProps {
   initialLinks?: IProjectTicketLinkWithDetails[];
   users: IUser[];
   onLinksChange?: (links: IProjectTicketLinkWithDetails[]) => void;
+  taskData?: {
+    task_name: string;
+    description: string;
+    assigned_to: string | null;
+    due_date: Date | null;
+    estimated_hours: number;
+  };
 }
 
 interface SelectOption {
@@ -67,7 +74,8 @@ export default function TaskTicketLinks({
   projectId,
   initialLinks = undefined,
   users,
-  onLinksChange
+  onLinksChange,
+  taskData
 }: TaskTicketLinksProps) {
 
   const [taskTicketLinks, setTaskTicketLinks] = useState<IProjectTicketLinkWithDetails[] | undefined>(initialLinks);
