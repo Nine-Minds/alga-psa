@@ -308,7 +308,7 @@
   {
     "id": "T052",
     "description": "TaskQuickAdd: accepts prefillData prop and passes it to TaskForm",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
