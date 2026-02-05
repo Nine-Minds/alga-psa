@@ -129,7 +129,7 @@ When building with jco componentize, host capabilities are imported from WIT mod
 ```typescript
 // Import WIT functions
 // @ts-ignore
-import { getUser } from 'alga:extension/user';
+import { getUser } from 'alga:extension/user-v2';
 // @ts-ignore
 import { logInfo } from 'alga:extension/logging';
 

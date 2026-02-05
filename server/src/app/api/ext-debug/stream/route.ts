@@ -212,7 +212,58 @@ function createSseStream(options: StreamOptions): ReadableStream {
         await options.redisClient.quit().catch(() => options.redisClient.disconnect());
       };
 
+      const resolveTailCount = (): number => {
+        const raw = process.env.EXT_DEBUG_SSE_TAIL_COUNT;
+        const parsed = raw ? Number(raw) : 200;
+        if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+        // Streams are capped server-side by RUNNER_DEBUG_REDIS_MAXLEN (default 2000),
+        // so a hard clamp keeps worst-case initial payload bounded.
+        return Math.min(2000, Math.floor(parsed));
+      };
+
+      const seedTail = async () => {
+        const tailCount = resolveTailCount();
+        if (tailCount <= 0) return;
+
+        for (const key of options.streamKeys) {
+          if (closed) return;
+          try {
+            const tail = await options.redisClient.xRevRange(key, '+', '-', {
+              COUNT: tailCount,
+            });
+
+            if (!tail || tail.length === 0) {
+              continue;
+            }
+
+            // xRevRange returns newest→oldest; emit oldest→newest for readability.
+            const chronological = [...tail].reverse();
+            const newestId = tail[0]?.id;
+            if (newestId) {
+              lastIds.set(key, newestId);
+            }
+
+            for (const message of chronological) {
+              const event = mapRedisEvent(
+                message.message,
+                options.extensionId,
+                options.tenantId,
+              );
+              if (!passthroughFilter(event, { installId: options.installId, requestId: options.requestId })) {
+                continue;
+              }
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+            }
+          } catch (err) {
+            // If the tail read fails (e.g. key missing or transient redis error),
+            // fall back to streaming-only mode.
+            console.error('[ext-debug] redis tail read error', err);
+          }
+        }
+      };
+
       const pump = async () => {
+        await seedTail();
         while (!closed) {
           try {
             const descriptors = options.streamKeys.map((key) => ({
