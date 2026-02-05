@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "PrefillFromTicketDialog: dialog component with searchable ticket list using TicketSelect",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {
