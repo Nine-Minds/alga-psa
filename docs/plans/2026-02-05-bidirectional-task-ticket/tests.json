@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "PrefillFromTicketDialog: renders ticket search input and TicketSelect dropdown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

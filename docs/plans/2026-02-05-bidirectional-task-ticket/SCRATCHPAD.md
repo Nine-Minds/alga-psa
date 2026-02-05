@@ -54,6 +54,7 @@
 - (2026-02-05) Added unit test for `mapTaskToTicketPrefill` estimated hours minutes→hours conversion.
 - (2026-02-05) Added unit test verifying `mapTaskToTicketPrefill` includes project client metadata.
 - (2026-02-05) Added tests ensuring priority_id is not included in either mapping output.
+- (2026-02-05) Added PrefillFromTicketDialog test for search input and dropdown rendering.
 
 ## Discoveries / Constraints
 
