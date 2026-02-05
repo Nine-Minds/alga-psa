@@ -6,12 +6,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ListTodo } from 'lucide-react';
 import type { IProject, ProjectStatus } from '@alga-psa/types';
-import { getProjects, getProjectTreeData, getProjectTaskStatuses } from '../actions/projectActions';
+import { getProjects, getProjectDetails } from '../actions/projectActions';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMapping';
 import { useDrawer } from '@alga-psa/ui';
 import TaskQuickAdd from './TaskQuickAdd';
+import { IUser } from '@shared/interfaces/user.interfaces';
 
 interface CreateTaskFromTicketDialogProps {
   ticket: {
@@ -37,7 +38,8 @@ export default function CreateTaskFromTicketDialog({
   const [selectedPhaseId, setSelectedPhaseId] = useState('');
   const [selectedStatusId, setSelectedStatusId] = useState('');
   const [shouldLink, setShouldLink] = useState(true);
-  const { openDrawer } = useDrawer();
+  const [users, setUsers] = useState<IUser[]>([]);
+  const { openDrawer, closeDrawer } = useDrawer();
 
   useEffect(() => {
     if (!open) return;
@@ -60,25 +62,15 @@ export default function CreateTaskFromTicketDialog({
       try {
         setPhases([]);
         setStatuses([]);
-        const [treeData, projectStatuses] = await Promise.all([
-          getProjectTreeData(selectedProjectId),
-          getProjectTaskStatuses(selectedProjectId)
-        ]);
-        const projectNode = treeData?.[0];
-        const phaseNodes = projectNode?.children ?? [];
-        setPhases(
-          phaseNodes.map((phase) => ({
-            phase_id: phase.value,
-            phase_name: phase.label,
-            project_id: selectedProjectId,
-            tenant: ''
-          }))
-        );
-        setStatuses(projectStatuses || []);
+        const projectDetails = await getProjectDetails(selectedProjectId);
+        setPhases(projectDetails.phases || []);
+        setStatuses(projectDetails.statuses || []);
+        setUsers(projectDetails.users || []);
       } catch (error) {
         console.error('Error fetching project phases/statuses:', error);
         setPhases([]);
         setStatuses([]);
+        setUsers([]);
       }
     };
     fetchProjectDetails();
@@ -114,6 +106,13 @@ export default function CreateTaskFromTicketDialog({
   const handleCreate = () => {
     if (!selectedProjectId || !selectedPhaseId || !selectedStatusId) return;
 
+    const selectedPhase = phases.find((phase) => phase.phase_id === selectedPhaseId);
+    if (!selectedPhase) return;
+
+    const defaultStatus = statuses.find(
+      (status) => status.project_status_mapping_id === selectedStatusId
+    );
+
     const prefillData: TaskPrefillFields = mapTicketToTaskFields({
       title: ticket.title,
       description: ticket.description ?? '',
@@ -122,34 +121,36 @@ export default function CreateTaskFromTicketDialog({
       estimated_hours: ticket.estimated_hours ?? 0
     });
 
-    openDrawer({
-      title: 'Create Task',
-      content: (
-        <TaskQuickAdd
-          projectId={selectedProjectId}
-          phaseId={selectedPhaseId}
-          statusId={selectedStatusId}
-          prefillData={{
-            ...prefillData,
-            pendingTicketLink: shouldLink
-              ? {
-                  link_id: `temp-${Date.now()}`,
-                  task_id: 'temp',
-                  ticket_id: ticket.ticket_id,
-                  ticket_number: ticket.ticket_number,
-                  title: ticket.title,
-                  created_at: new Date(),
-                  project_id: selectedProjectId,
-                  phase_id: selectedPhaseId,
-                  status_name: 'New',
-                  is_closed: false
-                }
-              : undefined
-          }}
-          onClose={() => setOpen(false)}
-        />
-      )
-    });
+    openDrawer(
+      <TaskQuickAdd
+        phase={selectedPhase}
+        onClose={closeDrawer}
+        onTaskAdded={() => null}
+        onTaskUpdated={async () => undefined}
+        projectStatuses={statuses}
+        defaultStatus={defaultStatus}
+        onCancel={() => undefined}
+        users={users}
+        projectTreeData={undefined}
+        prefillData={{
+          ...prefillData,
+          pendingTicketLink: shouldLink
+            ? {
+                link_id: `temp-${Date.now()}`,
+                task_id: 'temp',
+                ticket_id: ticket.ticket_id,
+                ticket_number: ticket.ticket_number,
+                title: ticket.title,
+                created_at: new Date(),
+                project_id: selectedProjectId,
+                phase_id: selectedPhaseId,
+                status_name: defaultStatus?.custom_name || defaultStatus?.name || 'New',
+                is_closed: false
+              }
+            : undefined
+        }}
+      />
+    );
     setOpen(false);
   };
 

@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "CreateTaskFromTicketDialog: on confirm, opens TaskQuickAdd in drawer with prefillData mapped from ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {
