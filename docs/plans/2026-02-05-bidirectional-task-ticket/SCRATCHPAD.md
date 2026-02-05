@@ -28,6 +28,7 @@
 - (2026-02-05) Added `prefilledDueDate` support in `QuickAddTicket` with safe date parsing for the date picker.
 - (2026-02-05) Added `prefilledEstimatedHours` support and an Estimated Hours input in `QuickAddTicket`.
 - (2026-02-05) QuickAddTicket now appends `estimated_hours` to FormData when provided.
+- (2026-02-05) Parsed `estimated_hours` in `addTicket` and plumbed it through `ticketModel` creation/schema.
 
 ## Discoveries / Constraints
 

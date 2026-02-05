@@ -222,6 +222,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const location_id = data.get('location_id');
       const asset_id = data.get('asset_id');
       const due_date = data.get('due_date');
+      const estimated_hours = data.get('estimated_hours');
+      const parsedEstimatedHours = estimated_hours ? Number(estimated_hours) : undefined;
 
       // ITIL-specific fields
       const itil_impact = data.get('itil_impact');
@@ -267,6 +269,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         itil_impact: itil_impact ? parseInt(itil_impact as string) : undefined,
         itil_urgency: itil_urgency ? parseInt(itil_urgency as string) : undefined,
         due_date: due_date === '' ? undefined : (due_date as string),
+        estimated_hours: Number.isFinite(parsedEstimatedHours) ? parsedEstimatedHours : undefined,
         entered_by: user.user_id,
         source: 'web_app'
       };

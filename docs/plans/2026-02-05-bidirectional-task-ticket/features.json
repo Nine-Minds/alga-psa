@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "addTicket server action: parse estimated_hours from FormData and include in ticket creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
