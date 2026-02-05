@@ -28,4 +28,33 @@ describe('MspSchedulingProvider', () => {
 
     expect(getByTestId('agent-view-agent-1')).toBeTruthy();
   });
+
+  it('provides launchTimeEntry that calls launchTimeEntryForWorkItem', () => {
+    const openDrawer = vi.fn();
+    const closeDrawer = vi.fn();
+
+    const Consumer = () => {
+      const { launchTimeEntry } = useSchedulingCallbacks();
+      useEffect(() => {
+        launchTimeEntry({
+          openDrawer,
+          closeDrawer,
+          context: {
+            workItemId: 'ticket-1',
+            workItemType: 'ticket',
+            workItemName: 'Ticket 1',
+          },
+        });
+      }, [launchTimeEntry]);
+      return null;
+    };
+
+    render(
+      <MspSchedulingProvider>
+        <Consumer />
+      </MspSchedulingProvider>
+    );
+
+    expect(launchTimeEntryForWorkItem).toHaveBeenCalled();
+  });
 });

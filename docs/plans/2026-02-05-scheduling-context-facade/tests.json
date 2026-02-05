@@ -170,7 +170,7 @@
   {
     "id": "T029",
     "description": "MspSchedulingProvider provides launchTimeEntry that calls launchTimeEntryForWorkItem",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
