@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Wrap contact detail and activity server pages with MspSchedulingProvider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture"]
   },
   {

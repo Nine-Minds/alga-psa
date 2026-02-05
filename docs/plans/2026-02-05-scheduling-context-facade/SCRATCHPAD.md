@@ -68,3 +68,4 @@
 - (2026-02-05) Added `MspSchedulingProvider` in msp-composition to supply scheduling callbacks via context.
 - (2026-02-05) Added `@alga-psa/scheduling` dependency and exports to msp-composition package.json.
 - (2026-02-05) Wrapped ticket detail page with `MspSchedulingProvider`.
+- (2026-02-05) Wrapped contact detail and activity pages with `MspSchedulingProvider`.
