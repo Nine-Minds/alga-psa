@@ -1,0 +1,260 @@
+[
+  {
+    "id": "T001",
+    "description": "TimeEntryWorkItemContext type includes all required fields (workItemId, workItemType, workItemName) and optional context-specific fields",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "useSchedulingCallbacks returns default no-op callbacks when no provider is present",
+    "implemented": false,
+    "featureIds": ["F002", "F025"]
+  },
+  {
+    "id": "T003",
+    "description": "Default renderAgentSchedule returns a fallback alert element (not null)",
+    "implemented": false,
+    "featureIds": ["F002", "F025"]
+  },
+  {
+    "id": "T004",
+    "description": "Default launchTimeEntry shows toast message instead of crashing",
+    "implemented": false,
+    "featureIds": ["F002", "F025"]
+  },
+  {
+    "id": "T005",
+    "description": "SchedulingCallbackProvider overrides defaults with real callbacks when wrapped",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T006",
+    "description": "SchedulingContext re-exported from packages/ui/src/context/index.ts",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T007",
+    "description": "AgentScheduleView renders without error when given a valid agentId",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T008",
+    "description": "AgentScheduleView calls getScheduleEntries with agent's ID and current date range",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "AgentScheduleView shows loading state while events are being fetched",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "AgentScheduleView defaults to week view",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "AgentScheduleView allows switching between day, week, and month views",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T012",
+    "description": "Events are color-coded by work item type (ticket, project_task, interaction, etc.)",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T013",
+    "description": "Clicking an event opens EntryPopup with event details",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T014",
+    "description": "Calendar auto-scrolls to 8 AM on initial render",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T015",
+    "description": "User with user_schedule:read can only see own schedule entries",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "User with user_schedule:read:all can see any agent's schedule entries",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T017",
+    "description": "CalendarStyleProvider and AgentScheduleDrawerStyles are applied to the calendar",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "launchTimeEntryForWorkItem fetches current time period before opening dialog",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T019",
+    "description": "launchTimeEntryForWorkItem creates/fetches time sheet for current user and period",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T020",
+    "description": "launchTimeEntryForWorkItem builds correct IExtendedWorkItem from ticket context",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T021",
+    "description": "launchTimeEntryForWorkItem builds correct IExtendedWorkItem from interaction context",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T022",
+    "description": "launchTimeEntryForWorkItem builds correct IExtendedWorkItem from project task context",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T023",
+    "description": "Toast error shown when no active time period exists",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T024",
+    "description": "TimeEntryDialog opens in drawer mode (inDrawer=true) with correct props",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T025",
+    "description": "TimeEntryDialog receives work item with pre-filled service for project tasks",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T026",
+    "description": "Saving time entry calls saveTimeEntry action and closes drawer on success",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T027",
+    "description": "onComplete callback is invoked after successful save (for timer reset)",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T028",
+    "description": "MspSchedulingProvider provides renderAgentSchedule that returns AgentScheduleView",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T029",
+    "description": "MspSchedulingProvider provides launchTimeEntry that calls launchTimeEntryForWorkItem",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T030",
+    "description": "@alga-psa/scheduling listed in msp-composition package.json dependencies",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T031",
+    "description": "Ticket detail page renders children inside MspSchedulingProvider",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T032",
+    "description": "Contact detail page renders children inside MspSchedulingProvider",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T033",
+    "description": "Project detail page renders children inside MspSchedulingProvider",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T034",
+    "description": "AgentScheduleDrawer renders calendar (not stub alert) when provider is present",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T035",
+    "description": "Clicking agent name from ticket detail opens agent schedule drawer",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T036",
+    "description": "Clicking user name from interaction detail opens agent schedule drawer",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T037",
+    "description": "Ticket Add Time Entry opens TimeEntryDialog with ticket_id, ticket_number, and title",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T038",
+    "description": "Ticket Add Time Entry passes elapsedTime and timeDescription from timer state",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T039",
+    "description": "Ticket Add Time Entry onComplete resets timer (elapsedTime=0, isRunning=false)",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T040",
+    "description": "Interaction Add Time Entry opens TimeEntryDialog with interaction context (type, client, times)",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T041",
+    "description": "Task Add Time Entry opens TimeEntryDialog with project/phase/task context and serviceId",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T042",
+    "description": "Without MspSchedulingProvider, AgentScheduleDrawer shows fallback alert",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T043",
+    "description": "Without MspSchedulingProvider, Add Time Entry shows fallback toast",
+    "implemented": false,
+    "featureIds": ["F025"]
+  }
+]

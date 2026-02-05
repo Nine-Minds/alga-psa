@@ -1,0 +1,152 @@
+[
+  {
+    "id": "F001",
+    "description": "Add TimeEntryWorkItemContext type to @alga-psa/types scheduling interfaces",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Create SchedulingContext with SchedulingCallbacks interface, useSchedulingCallbacks hook, and no-op default provider in @alga-psa/ui",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F003",
+    "description": "Re-export SchedulingContext from packages/ui/src/context/index.ts",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F004",
+    "description": "Create AgentScheduleView component in scheduling package with agentId prop",
+    "implemented": false,
+    "prdRefs": ["Flow 1", "Flow 2"]
+  },
+  {
+    "id": "F005",
+    "description": "AgentScheduleView fetches events via getScheduleEntries for single agent with date range",
+    "implemented": false,
+    "prdRefs": ["Flow 1"]
+  },
+  {
+    "id": "F006",
+    "description": "AgentScheduleView renders week/day/month calendar using DynamicBigCalendar with view toggle",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F007",
+    "description": "AgentScheduleView shows color-coded events by work item type via getEventColors",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F008",
+    "description": "AgentScheduleView opens EntryPopup on event click for viewing/editing details",
+    "implemented": false,
+    "prdRefs": ["Flow 1"]
+  },
+  {
+    "id": "F009",
+    "description": "AgentScheduleView auto-scrolls to 8 AM working hours on mount",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "AgentScheduleView respects user_schedule:read / user_schedule:read:all permissions",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F011",
+    "description": "AgentScheduleView renders CalendarStyleProvider and AgentScheduleDrawerStyles for calendar styling",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F012",
+    "description": "Create timeEntryLauncher in scheduling package: orchestrates getCurrentTimePeriod, fetchOrCreateTimeSheet, builds IExtendedWorkItem, opens TimeEntryDialog via openDrawer",
+    "implemented": false,
+    "prdRefs": ["Flow 3", "Flow 4", "Flow 5"]
+  },
+  {
+    "id": "F013",
+    "description": "timeEntryLauncher shows toast error when no active time period exists",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria"]
+  },
+  {
+    "id": "F014",
+    "description": "timeEntryLauncher opens TimeEntryDialog in inDrawer mode with correct work item, date, timePeriod, and timeSheetId",
+    "implemented": false,
+    "prdRefs": ["Flow 3"]
+  },
+  {
+    "id": "F015",
+    "description": "timeEntryLauncher onSave callback calls saveTimeEntry, closes drawer, and calls onComplete",
+    "implemented": false,
+    "prdRefs": ["Flow 3"]
+  },
+  {
+    "id": "F016",
+    "description": "Create MspSchedulingProvider in msp-composition that provides real renderAgentSchedule and launchTimeEntry callbacks via SchedulingCallbackProvider",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F017",
+    "description": "Add @alga-psa/scheduling dependency to msp-composition package.json",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F018",
+    "description": "Wrap ticket detail server page with MspSchedulingProvider",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F019",
+    "description": "Wrap contact detail and activity server pages with MspSchedulingProvider",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F020",
+    "description": "Wrap project detail server page with MspSchedulingProvider",
+    "implemented": false,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F021",
+    "description": "Replace AgentScheduleDrawer stub with useSchedulingCallbacks().renderAgentSchedule",
+    "implemented": false,
+    "prdRefs": ["Flow 1", "Flow 2"]
+  },
+  {
+    "id": "F022",
+    "description": "Replace TicketDetails handleAddTimeEntry stub with useSchedulingCallbacks().launchTimeEntry using ticket context",
+    "implemented": false,
+    "prdRefs": ["Flow 3"]
+  },
+  {
+    "id": "F023",
+    "description": "Replace InteractionDetails handleAddTimeEntry stub with useSchedulingCallbacks().launchTimeEntry using interaction context",
+    "implemented": false,
+    "prdRefs": ["Flow 4"]
+  },
+  {
+    "id": "F024",
+    "description": "Replace TaskForm handleAddTimeEntry stub with useSchedulingCallbacks().launchTimeEntry using task context",
+    "implemented": false,
+    "prdRefs": ["Flow 5"]
+  },
+  {
+    "id": "F025",
+    "description": "Graceful fallback: without MspSchedulingProvider, AgentScheduleDrawer shows alert and time entry shows toast",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  }
+]
