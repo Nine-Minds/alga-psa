@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Create SchedulingContext with SchedulingCallbacks interface, useSchedulingCallbacks hook, and no-op default provider in @alga-psa/ui",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture"]
   },
   {

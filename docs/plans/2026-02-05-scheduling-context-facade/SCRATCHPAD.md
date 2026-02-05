@@ -51,3 +51,4 @@
 ## Updates
 
 - (2026-02-05) Added TimeEntryWorkItemContext to `packages/types/src/interfaces/scheduling.interfaces.ts` for shared work-item launch context.
+- (2026-02-05) Added `SchedulingContext` in `packages/ui/src/context/SchedulingContext.tsx` with no-op defaults and hook.
