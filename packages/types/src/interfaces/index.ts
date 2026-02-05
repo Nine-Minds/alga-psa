@@ -68,3 +68,6 @@ export * from './emailProvider.interface';
 
 // Selectively export portal user types without re-exporting IUser/IRole/etc. (which would collide with auth.interfaces).
 export type { CreatePortalUserInput, CreatePortalUserResult, PortalRoleOptions, PortalUserWithContext } from './user.interfaces';
+
+// SLA backend interface types (used by both @alga-psa/sla and @alga-psa/ee-stubs)
+export * from './sla.interfaces';

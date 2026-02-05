@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { isEnterprise } from 'server/src/lib/features';
+import { isEnterprise } from '@alga-psa/core/features';
 import type { ISlaBackend } from './ISlaBackend';
 import { PgBossSlaBackend } from './PgBossSlaBackend';
 
