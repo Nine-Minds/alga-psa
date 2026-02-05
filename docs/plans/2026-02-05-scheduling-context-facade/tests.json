@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "Ticket Add Time Entry passes elapsedTime and timeDescription from timer state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
