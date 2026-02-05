@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "Interaction Add Time Entry opens TimeEntryDialog with interaction context (type, client, times)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {

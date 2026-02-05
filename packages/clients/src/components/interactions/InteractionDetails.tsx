@@ -24,6 +24,7 @@ import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
+import { buildInteractionTimeEntryContext } from '../../lib/timeEntryContext';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -234,15 +235,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
       await launchTimeEntry({
         openDrawer,
         closeDrawer,
-        context: {
-          workItemId: interaction.interaction_id,
-          workItemType: 'interaction',
-          workItemName: interaction.title || interaction.type_name,
-          interactionType: interaction.type_name,
-          clientName: interaction.client_name ?? null,
-          startTime: interaction.start_time ? new Date(interaction.start_time) : undefined,
-          endTime: interaction.end_time ? new Date(interaction.end_time) : undefined,
-        },
+        context: buildInteractionTimeEntryContext(interaction),
       });
     } catch (error) {
       console.error('Error preparing time entry:', error);
