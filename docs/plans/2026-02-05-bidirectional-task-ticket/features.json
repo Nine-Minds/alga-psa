@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Projects package exports CreateTaskFromTicketDialog for use by msp-composition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   }
 ]
