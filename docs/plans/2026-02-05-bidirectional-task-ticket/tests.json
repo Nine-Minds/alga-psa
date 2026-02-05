@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "QuickAddTicket: prefilledAssignedTo initializes assigned user picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
