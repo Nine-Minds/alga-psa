@@ -272,7 +272,7 @@
   {
     "id": "T046",
     "description": "CreateTaskFromTicketDialog: phase selector shows fetched phases",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
