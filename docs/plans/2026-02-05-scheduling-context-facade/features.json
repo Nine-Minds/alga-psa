@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "AgentScheduleView respects user_schedule:read / user_schedule:read:all permissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
