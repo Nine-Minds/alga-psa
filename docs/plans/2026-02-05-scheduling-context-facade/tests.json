@@ -254,7 +254,7 @@
   {
     "id": "T043",
     "description": "Without MspSchedulingProvider, Add Time Entry shows fallback toast",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   }
 ]
