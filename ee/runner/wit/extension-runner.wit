@@ -64,12 +64,12 @@ interface types {
 
     record user-data {
         tenant-id: string,
-        client-name: option<string>,
+        client-id: option<string>,
+        client-name: string,
         user-id: string,
         user-email: string,
         user-name: string,
         user-type: string,
-        client-id: option<string>,
     }
 
     record user-data-v2 {

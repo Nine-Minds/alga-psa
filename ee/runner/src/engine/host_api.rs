@@ -2165,12 +2165,12 @@ impl user::HostWithStore for HasSelf<HostState> {
                     );
                     Ok(UserData {
                         tenant_id: tenant,
-                        client_name: Some(user_info.client_name.clone()),
+                        client_id: user_info.client_id.clone(),
+                        client_name: user_info.client_name.clone(),
                         user_id: user_info.user_id.clone(),
                         user_email: user_info.user_email.clone(),
                         user_name: user_info.user_name.clone(),
                         user_type: user_info.user_type.clone(),
-                        client_id: user_info.client_id.clone(),
                     })
                 }
                 None => {
