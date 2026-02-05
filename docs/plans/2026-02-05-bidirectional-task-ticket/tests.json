@@ -332,7 +332,7 @@
   {
     "id": "T056",
     "description": "MspTicketDetailsContainerClient: injects CreateTaskFromTicketDialog button into TicketDetails",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
