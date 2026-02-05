@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QuickAddTicket } from '../QuickAddTicket';
 
 const addTicketMock = vi.fn();
@@ -146,77 +146,4 @@ describe('QuickAddTicket prefills', () => {
     expect(screen.getByTestId('due-date')).toHaveValue('2026-02-05T12:00:00.000Z');
   });
 
-  it('initializes estimated hours from prefilledEstimatedHours', async () => {
-    render(
-      <QuickAddTicket
-        open={true}
-        onOpenChange={() => undefined}
-        onTicketAdded={() => undefined}
-        prefilledEstimatedHours={2}
-      />
-    );
-
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-    expect(screen.getByDisplayValue('2')).toBeInTheDocument();
-  });
-
-  it('includes estimated_hours in FormData when > 0', async () => {
-    render(
-      <QuickAddTicket
-        open={true}
-        onOpenChange={() => undefined}
-        onTicketAdded={() => undefined}
-        prefilledTitle="Prefilled Title"
-        prefilledDescription="Prefilled description"
-        prefilledAssignedTo="user-1"
-        prefilledEstimatedHours={2}
-        prefilledClient={{ id: 'client-1', name: 'Acme' }}
-      />
-    );
-
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-
-    const selects = screen.getAllByTestId('custom-select');
-    fireEvent.change(selects[0], { target: { value: 'status-1' } });
-    fireEvent.change(selects[1], { target: { value: 'priority-1' } });
-
-    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
-      target: { value: 'Prefilled Title' }
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
-
-    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
-
-    const formData = addTicketMock.mock.calls[0][0] as FormData;
-    expect(formData.get('estimated_hours')).toBe('2');
-  });
-
-  it('does not include estimated_hours in FormData when 0', async () => {
-    render(
-      <QuickAddTicket
-        open={true}
-        onOpenChange={() => undefined}
-        onTicketAdded={() => undefined}
-        prefilledTitle="Prefilled Title"
-        prefilledDescription="Prefilled description"
-        prefilledAssignedTo="user-1"
-        prefilledEstimatedHours={0}
-        prefilledClient={{ id: 'client-1', name: 'Acme' }}
-      />
-    );
-
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-
-    const selects = screen.getAllByTestId('custom-select');
-    fireEvent.change(selects[0], { target: { value: 'status-1' } });
-    fireEvent.change(selects[1], { target: { value: 'priority-1' } });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
-
-    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
-
-    const formData = addTicketMock.mock.calls[0][0] as FormData;
-    expect(formData.get('estimated_hours')).toBeNull();
-  });
 });

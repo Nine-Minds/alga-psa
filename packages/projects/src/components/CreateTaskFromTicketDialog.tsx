@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { ListTodo } from 'lucide-react';
 import type { IProject, ProjectStatus } from '@alga-psa/types';
 import { getProjects, getProjectDetails } from '../actions/projectActions';
@@ -12,7 +12,8 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMapping';
 import { useDrawer } from '@alga-psa/ui';
 import TaskQuickAdd from './TaskQuickAdd';
-import { IUser } from '@shared/interfaces/user.interfaces';
+import { IUserWithRoles } from '@alga-psa/types';
+import { useTicketIntegration, TicketIntegrationProvider } from '../context/TicketIntegrationContext';
 
 interface CreateTaskFromTicketDialogProps {
   ticket: {
@@ -23,7 +24,6 @@ interface CreateTaskFromTicketDialogProps {
     attributes?: Record<string, unknown> | null;
     assigned_to?: string | null;
     due_date?: string | null;
-    estimated_hours?: number | null;
     client_id?: string | null;
   };
 }
@@ -39,8 +39,9 @@ export default function CreateTaskFromTicketDialog({
   const [selectedPhaseId, setSelectedPhaseId] = useState('');
   const [selectedStatusId, setSelectedStatusId] = useState('');
   const [shouldLink, setShouldLink] = useState(true);
-  const [users, setUsers] = useState<IUser[]>([]);
+  const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const { openDrawer, closeDrawer } = useDrawer();
+  const ticketIntegration = useTicketIntegration();
 
   useEffect(() => {
     if (!open) return;
@@ -49,8 +50,13 @@ export default function CreateTaskFromTicketDialog({
       try {
         const projectList = await getProjects();
         if (ticket.client_id) {
-          const filtered = projectList.filter(project => project.client_id === ticket.client_id);
-          setProjects(filtered.length > 0 ? filtered : projectList);
+          // Sort client-matching projects first
+          const sorted = [...projectList].sort((a, b) => {
+            const aMatch = a.client_id === ticket.client_id ? 0 : 1;
+            const bMatch = b.client_id === ticket.client_id ? 0 : 1;
+            return aMatch - bMatch;
+          });
+          setProjects(sorted);
         } else {
           setProjects(projectList);
         }
@@ -86,7 +92,9 @@ export default function CreateTaskFromTicketDialog({
     () =>
       projects.map((project) => ({
         value: project.project_id,
-        label: project.project_name
+        label: project.client_name
+          ? `${project.project_name} (${project.client_name})`
+          : project.project_name
       })),
     [projects]
   );
@@ -127,39 +135,41 @@ export default function CreateTaskFromTicketDialog({
       title: ticket.title,
       description: resolvedDescription,
       assigned_to: ticket.assigned_to ?? null,
-      due_date: ticket.due_date ?? undefined,
-      estimated_hours: ticket.estimated_hours ?? 0
+      due_date: ticket.due_date ?? undefined
     });
 
     openDrawer(
-      <TaskQuickAdd
-        phase={selectedPhase}
-        onClose={closeDrawer}
-        onTaskAdded={() => null}
-        onTaskUpdated={async () => undefined}
-        projectStatuses={statuses}
-        defaultStatus={defaultStatus}
-        onCancel={() => undefined}
-        users={users}
-        projectTreeData={undefined}
-        prefillData={{
-          ...prefillData,
-          pendingTicketLink: shouldLink
-            ? {
-                link_id: `temp-${Date.now()}`,
-                task_id: 'temp',
-                ticket_id: ticket.ticket_id,
-                ticket_number: ticket.ticket_number,
-                title: ticket.title,
-                created_at: new Date(),
-                project_id: selectedProjectId,
-                phase_id: selectedPhaseId,
-                status_name: defaultStatus?.custom_name || defaultStatus?.name || 'New',
-                is_closed: false
-              }
-            : undefined
-        }}
-      />
+      <TicketIntegrationProvider value={ticketIntegration}>
+        <TaskQuickAdd
+          inDrawer
+          phase={selectedPhase}
+          onClose={closeDrawer}
+          onTaskAdded={() => null}
+          onTaskUpdated={async () => undefined}
+          projectStatuses={statuses}
+          defaultStatus={defaultStatus}
+          onCancel={() => undefined}
+          users={users}
+          projectTreeData={undefined}
+          prefillData={{
+            ...prefillData,
+            pendingTicketLink: shouldLink
+              ? {
+                  link_id: `temp-${Date.now()}`,
+                  task_id: 'temp',
+                  ticket_id: ticket.ticket_id,
+                  ticket_number: ticket.ticket_number,
+                  title: ticket.title,
+                  created_at: new Date(),
+                  project_id: selectedProjectId,
+                  phase_id: selectedPhaseId,
+                  status_name: defaultStatus?.custom_name || defaultStatus?.name || 'New',
+                  is_closed: false
+                }
+              : undefined
+          }}
+        />
+      </TicketIntegrationProvider>
     );
     setOpen(false);
   };
@@ -177,77 +187,77 @@ export default function CreateTaskFromTicketDialog({
         Create Task
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project
-              </label>
-              <CustomSelect
-                id="create-task-project"
-                value={selectedProjectId}
-                onValueChange={(value) => {
-                  setSelectedProjectId(value);
-                  setSelectedPhaseId('');
-                  setSelectedStatusId('');
-                }}
-                options={projectOptions}
-                placeholder="Select a project"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phase
-              </label>
-              <CustomSelect
-                id="create-task-phase"
-                value={selectedPhaseId}
-                onValueChange={setSelectedPhaseId}
-                options={phaseOptions}
-                placeholder="Select a phase"
-                disabled={!selectedProjectId || phaseOptions.length === 0}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <CustomSelect
-                id="create-task-status"
-                value={selectedStatusId}
-                onValueChange={setSelectedStatusId}
-                options={statusOptions}
-                placeholder="Select a status"
-                disabled={!selectedProjectId || statusOptions.length === 0}
-              />
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <Checkbox
-                id="create-task-link-ticket"
-                checked={shouldLink}
-                onCheckedChange={(value) => setShouldLink(Boolean(value))}
-              />
-              Link ticket to the created task
+      <Dialog isOpen={open} onClose={() => setOpen(false)} title="Create Task from Ticket" className="max-w-lg">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Project
             </label>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                id="create-task-confirm"
-                onClick={handleCreate}
-                disabled={!selectedProjectId || !selectedPhaseId || !selectedStatusId}
-              >
-                Create
-              </Button>
-            </div>
+            <SearchableSelect
+              id="create-task-project"
+              value={selectedProjectId}
+              onChange={(value) => {
+                setSelectedProjectId(value);
+                setSelectedPhaseId('');
+                setSelectedStatusId('');
+              }}
+              options={projectOptions}
+              placeholder="Select a project"
+              dropdownMode="overlay"
+            />
           </div>
-        </DialogContent>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phase
+            </label>
+            <SearchableSelect
+              id="create-task-phase"
+              value={selectedPhaseId}
+              onChange={setSelectedPhaseId}
+              options={phaseOptions}
+              placeholder="Select a phase"
+              disabled={!selectedProjectId || phaseOptions.length === 0}
+              dropdownMode="overlay"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <SearchableSelect
+              id="create-task-status"
+              value={selectedStatusId}
+              onChange={setSelectedStatusId}
+              options={statusOptions}
+              placeholder="Select a status"
+              disabled={!selectedProjectId || statusOptions.length === 0}
+              dropdownMode="overlay"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <Checkbox
+              id="create-task-link-ticket"
+              checked={shouldLink}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLink(e.target.checked)}
+            />
+            Link ticket to the created task
+          </label>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            id="create-task-confirm"
+            onClick={handleCreate}
+            disabled={!selectedProjectId || !selectedPhaseId || !selectedStatusId}
+          >
+            Create
+          </Button>
+        </div>
       </Dialog>
     </>
   );

@@ -3,16 +3,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PrefillFromTicketDialog from '../PrefillFromTicketDialog';
+import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
 
-const getTicketsForListMock = vi.fn();
-const getConsolidatedTicketDataMock = vi.fn();
+function createMockTicketIntegration(
+  overrides: Partial<TicketIntegrationContextType> = {}
+): TicketIntegrationContextType {
+  return {
+    getTicketsForList: vi.fn().mockResolvedValue([]),
+    getConsolidatedTicketData: vi.fn().mockResolvedValue({}),
+    getTicketCategories: vi.fn().mockResolvedValue([]),
+    getAllBoards: vi.fn().mockResolvedValue([]),
+    openTicketInDrawer: vi.fn().mockResolvedValue(undefined),
+    renderQuickAddTicket: vi.fn().mockReturnValue(null),
+    renderCategoryPicker: vi.fn().mockReturnValue(null),
+    renderPrioritySelect: vi.fn().mockReturnValue(null),
+    ...overrides,
+  };
+}
 
-vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
-  getTicketsForList: (...args: unknown[]) => getTicketsForListMock(...args)
-}));
-
-vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
-  getConsolidatedTicketData: (...args: unknown[]) => getConsolidatedTicketDataMock(...args)
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ open, children }: any) => (open ? <div>{children}</div> : null),
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogHeader: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <div>{children}</div>,
+  DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
 
 vi.mock('../TicketSelect', () => ({
@@ -41,18 +55,21 @@ vi.mock('../TicketSelect', () => ({
 }));
 
 describe('PrefillFromTicketDialog', () => {
+  let mockCtx: TicketIntegrationContextType;
+
   beforeEach(() => {
-    getTicketsForListMock.mockResolvedValue([]);
-    getConsolidatedTicketDataMock.mockResolvedValue({});
+    mockCtx = createMockTicketIntegration();
   });
 
   it('renders ticket search input and TicketSelect dropdown', () => {
     render(
-      <PrefillFromTicketDialog
-        open={true}
-        onOpenChange={() => undefined}
-        onPrefill={() => undefined}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={true}
+          onOpenChange={() => undefined}
+          onPrefill={() => undefined}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(screen.getByLabelText('ticket-search')).toBeInTheDocument();
@@ -61,33 +78,39 @@ describe('PrefillFromTicketDialog', () => {
 
   it('fetches tickets lazily when dialog opens', () => {
     const { rerender } = render(
-      <PrefillFromTicketDialog
-        open={false}
-        onOpenChange={() => undefined}
-        onPrefill={() => undefined}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={false}
+          onOpenChange={() => undefined}
+          onPrefill={() => undefined}
+        />
+      </TicketIntegrationProvider>
     );
 
-    expect(getTicketsForListMock).not.toHaveBeenCalled();
+    expect(mockCtx.getTicketsForList).not.toHaveBeenCalled();
 
     rerender(
-      <PrefillFromTicketDialog
-        open={true}
-        onOpenChange={() => undefined}
-        onPrefill={() => undefined}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={true}
+          onOpenChange={() => undefined}
+          onPrefill={() => undefined}
+        />
+      </TicketIntegrationProvider>
     );
 
-    expect(getTicketsForListMock).toHaveBeenCalledTimes(1);
+    expect(mockCtx.getTicketsForList).toHaveBeenCalledTimes(1);
   });
 
   it('renders auto-link checkbox checked by default', () => {
     render(
-      <PrefillFromTicketDialog
-        open={true}
-        onOpenChange={() => undefined}
-        onPrefill={() => undefined}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={true}
+          onOpenChange={() => undefined}
+          onPrefill={() => undefined}
+        />
+      </TicketIntegrationProvider>
     );
 
     const checkbox = screen.getByLabelText('Link this ticket to the task') as HTMLInputElement;
@@ -95,28 +118,32 @@ describe('PrefillFromTicketDialog', () => {
   });
 
   it('excludes ticket link when auto-link is unchecked', async () => {
-    getTicketsForListMock.mockResolvedValue([
-      { ticket_id: 'ticket-1', ticket_number: 'T-001', title: 'Printer issue', status_name: 'New' }
-    ]);
-    getConsolidatedTicketDataMock.mockResolvedValue({
-      ticket_id: 'ticket-1',
-      ticket_number: 'T-001',
-      title: 'Printer issue',
-      status_name: 'New',
-      is_closed: false
+    mockCtx = createMockTicketIntegration({
+      getTicketsForList: vi.fn().mockResolvedValue([
+        { ticket_id: 'ticket-1', ticket_number: 'T-001', title: 'Printer issue', status_name: 'New' }
+      ]),
+      getConsolidatedTicketData: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-1',
+        ticket_number: 'T-001',
+        title: 'Printer issue',
+        status_name: 'New',
+        is_closed: false
+      }),
     });
 
     const onPrefill = vi.fn();
 
     render(
-      <PrefillFromTicketDialog
-        open={true}
-        onOpenChange={() => undefined}
-        onPrefill={onPrefill}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={true}
+          onOpenChange={() => undefined}
+          onPrefill={onPrefill}
+        />
+      </TicketIntegrationProvider>
     );
 
-    await waitFor(() => expect(getTicketsForListMock).toHaveBeenCalled());
+    await waitFor(() => expect(mockCtx.getTicketsForList).toHaveBeenCalled());
 
     fireEvent.change(screen.getByLabelText('ticket-select'), {
       target: { value: 'ticket-1' }
@@ -133,24 +160,28 @@ describe('PrefillFromTicketDialog', () => {
   });
 
   it('calls getConsolidatedTicketData for the selected ticket on confirm', async () => {
-    getTicketsForListMock.mockResolvedValue([
-      { ticket_id: 'ticket-2', ticket_number: 'T-002', title: 'VPN issue', status_name: 'New' }
-    ]);
-    getConsolidatedTicketDataMock.mockResolvedValue({
-      ticket_id: 'ticket-2',
-      ticket_number: 'T-002',
-      title: 'VPN issue'
+    mockCtx = createMockTicketIntegration({
+      getTicketsForList: vi.fn().mockResolvedValue([
+        { ticket_id: 'ticket-2', ticket_number: 'T-002', title: 'VPN issue', status_name: 'New' }
+      ]),
+      getConsolidatedTicketData: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-2',
+        ticket_number: 'T-002',
+        title: 'VPN issue'
+      }),
     });
 
     render(
-      <PrefillFromTicketDialog
-        open={true}
-        onOpenChange={() => undefined}
-        onPrefill={() => undefined}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={true}
+          onOpenChange={() => undefined}
+          onPrefill={() => undefined}
+        />
+      </TicketIntegrationProvider>
     );
 
-    await waitFor(() => expect(getTicketsForListMock).toHaveBeenCalled());
+    await waitFor(() => expect(mockCtx.getTicketsForList).toHaveBeenCalled());
 
     fireEvent.change(screen.getByLabelText('ticket-select'), {
       target: { value: 'ticket-2' }
@@ -158,34 +189,37 @@ describe('PrefillFromTicketDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
 
-    expect(getConsolidatedTicketDataMock).toHaveBeenCalledWith('ticket-2');
+    expect(mockCtx.getConsolidatedTicketData).toHaveBeenCalledWith('ticket-2');
   });
 
   it('returns mapped fields via onPrefill', async () => {
-    getTicketsForListMock.mockResolvedValue([
-      { ticket_id: 'ticket-3', ticket_number: 'T-003', title: 'WiFi outage', status_name: 'Open' }
-    ]);
-    getConsolidatedTicketDataMock.mockResolvedValue({
-      ticket_id: 'ticket-3',
-      ticket_number: 'T-003',
-      title: 'WiFi outage',
-      description: 'AP reboot required',
-      assigned_to: 'user-9',
-      due_date: '2026-02-05T08:00:00.000Z',
-      estimated_hours: 3
+    mockCtx = createMockTicketIntegration({
+      getTicketsForList: vi.fn().mockResolvedValue([
+        { ticket_id: 'ticket-3', ticket_number: 'T-003', title: 'WiFi outage', status_name: 'Open' }
+      ]),
+      getConsolidatedTicketData: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-3',
+        ticket_number: 'T-003',
+        title: 'WiFi outage',
+        description: 'AP reboot required',
+        assigned_to: 'user-9',
+        due_date: '2026-02-05T08:00:00.000Z'
+      }),
     });
 
     const onPrefill = vi.fn();
 
     render(
-      <PrefillFromTicketDialog
-        open={true}
-        onOpenChange={() => undefined}
-        onPrefill={onPrefill}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <PrefillFromTicketDialog
+          open={true}
+          onOpenChange={() => undefined}
+          onPrefill={onPrefill}
+        />
+      </TicketIntegrationProvider>
     );
 
-    await waitFor(() => expect(getTicketsForListMock).toHaveBeenCalled());
+    await waitFor(() => expect(mockCtx.getTicketsForList).toHaveBeenCalled());
 
     fireEvent.change(screen.getByLabelText('ticket-select'), {
       target: { value: 'ticket-3' }
@@ -197,7 +231,7 @@ describe('PrefillFromTicketDialog', () => {
     expect(payload.prefillData.task_name).toBe('WiFi outage');
     expect(payload.prefillData.description).toBe('AP reboot required');
     expect(payload.prefillData.assigned_to).toBe('user-9');
-    expect(payload.prefillData.estimated_hours).toBe(3);
+    expect(payload.prefillData.estimated_hours).toBe(0);
     expect(payload.prefillData.due_date).toBeInstanceOf(Date);
   });
 });

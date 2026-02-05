@@ -79,7 +79,6 @@ interface QuickAddTicketProps {
   prefilledTitle?: string;
   prefilledAssignedTo?: string;
   prefilledDueDate?: Date | string | null;
-  prefilledEstimatedHours?: number;
   isEmbedded?: boolean;
   assetId?: string;
 }
@@ -95,7 +94,6 @@ export function QuickAddTicket({
   prefilledTitle,
   prefilledAssignedTo,
   prefilledDueDate,
-  prefilledEstimatedHours,
   isEmbedded = false,
   assetId
 }: QuickAddTicketProps) {
@@ -139,8 +137,6 @@ export function QuickAddTicket({
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   });
   const [dueDateTime, setDueDateTime] = useState<string | undefined>(undefined);
-  const [estimatedHours, setEstimatedHours] = useState<number>(prefilledEstimatedHours ?? 0);
-
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
@@ -241,10 +237,6 @@ export function QuickAddTicket({
           const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
           setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
         }
-        if (typeof prefilledEstimatedHours === 'number') {
-          setEstimatedHours(prefilledEstimatedHours);
-        }
-
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -426,7 +418,6 @@ export function QuickAddTicket({
       setDueDateDate(undefined);
     }
     setDueDateTime(undefined);
-    setEstimatedHours(prefilledEstimatedHours ?? 0);
     setError(null);
     setHasAttemptedSubmit(false);
   };
@@ -538,10 +529,6 @@ export function QuickAddTicket({
           combinedDate.setHours(0, 0, 0, 0);
         }
         formData.append('due_date', combinedDate.toISOString());
-      }
-
-      if (estimatedHours > 0) {
-        formData.append('estimated_hours', estimatedHours.toString());
       }
 
       // ITIL categories now use the unified category system
@@ -935,24 +922,6 @@ export function QuickAddTicket({
                   )}
 
                   {/* ITIL Categories are now handled by the unified CategoryPicker above */}
-
-                  {/* Estimated Hours */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Hours</label>
-                    <Input
-                      id={`${id}-estimated-hours`}
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={estimatedHours}
-                      onChange={(event) => {
-                        const nextValue = Number(event.target.value);
-                        setEstimatedHours(Number.isNaN(nextValue) ? 0 : nextValue);
-                      }}
-                      placeholder="0"
-                      className="w-40"
-                    />
-                  </div>
 
                   {/* Due Date */}
                   <div>

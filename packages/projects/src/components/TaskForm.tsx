@@ -50,13 +50,12 @@ import TaskCommentThread from './TaskCommentThread';
 import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
-import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
+import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
@@ -177,6 +176,7 @@ export default function TaskForm({
   }>({ predecessors: [], successors: [] });
 
   const { openDrawer, closeDrawer } = useDrawer();
+  const { renderPrioritySelect } = useTicketIntegration();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -1046,6 +1046,7 @@ export default function TaskForm({
           open={showPrefillDialog}
           onOpenChange={setShowPrefillDialog}
           onPrefill={handlePrefillFromTicket}
+          users={users}
         />
       )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
@@ -1068,17 +1069,16 @@ export default function TaskForm({
               <div className="flex items-center gap-2">
                 <label className="block text-sm font-medium text-gray-700">Task Name *</label>
                 {mode === 'create' && (
-                  <Tooltip content="Create from ticket">
-                    <Button
-                      id="task-create-from-ticket"
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPrefillDialog(true)}
-                    >
-                      <Ticket className="h-4 w-4" />
-                    </Button>
-                  </Tooltip>
+                  <Button
+                    id="task-create-from-ticket"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPrefillDialog(true)}
+                    title="Create from ticket"
+                  >
+                    <Ticket className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
               <TaskStatusSelect
@@ -1154,19 +1154,19 @@ export default function TaskForm({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <PrioritySelect
-                value={selectedPriorityId}
-                options={priorities
+              {renderPrioritySelect({
+                value: selectedPriorityId,
+                options: priorities
                   .sort((a, b) => a.order_number - b.order_number)
                   .map(p => ({
                     value: p.priority_id,
                     label: p.priority_name,
                     color: p.color
-                  }))}
-                onValueChange={(value) => setSelectedPriorityId(value || null)}
-                placeholder="Select priority"
-                className="w-full"
-              />
+                  })),
+                onValueChange: (value) => setSelectedPriorityId(value || null),
+                placeholder: 'Select priority',
+                className: 'w-full',
+              })}
             </div>
 
             {/* Row 2: Move To and Duplicate To (Edit mode only) */}
@@ -1490,8 +1490,7 @@ export default function TaskForm({
                     task_name: taskName,
                     description,
                     assigned_to: assignedUser,
-                    due_date: dueDate ?? null,
-                    estimated_hours: Math.round(estimatedHours * 60)
+                    due_date: dueDate ?? null
                   }
                 : undefined
             }

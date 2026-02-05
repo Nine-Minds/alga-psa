@@ -1,18 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
   getTaskTicketLinksAction
 } from '../actions/projectTaskActions';
-import { getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
-import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ITicketListFilters } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { ITicketListItem, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -21,15 +17,13 @@ import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { IBoard } from '@alga-psa/types';
-import { getTicketCategories } from '@alga-psa/tickets/actions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
+import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import TicketSelect from './TicketSelect';
 import { getProject } from '../actions/projectActions';
 import { mapTaskToTicketPrefill } from '../lib/taskTicketMapping';
@@ -46,7 +40,6 @@ interface TaskTicketLinksProps {
     description: string;
     assigned_to: string | null;
     due_date: Date | null;
-    estimated_hours: number;
   };
 }
 
@@ -86,8 +79,17 @@ export default function TaskTicketLinks({
   const [ticketsLoaded, setTicketsLoaded] = useState(false);
   const [filterOptionsLoaded, setFilterOptionsLoaded] = useState(false);
   const { openDrawer } = useDrawer();
+  const {
+    getTicketsForList,
+    getTicketCategories,
+    getAllBoards,
+    openTicketInDrawer,
+    renderQuickAddTicket,
+    renderCategoryPicker,
+  } = useTicketIntegration();
   const [showLinkTicketDialog, setShowLinkTicketDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [shouldLinkNewTicket, setShouldLinkNewTicket] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -386,6 +388,7 @@ export default function TaskTicketLinks({
   };
 
   const handleCreateTicket = async () => {
+    setShouldLinkNewTicket(true);
     try {
       const project = await getProject(projectId);
       if (project?.client_id) {
@@ -405,47 +408,7 @@ export default function TaskTicketLinks({
   };
 
   const onViewTicket = async (ticketId: string) => {
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        toast.error('No user session found');
-        return;
-      }
-      
-      const ticketData = await getConsolidatedTicketData(ticketId);
-      if (!ticketData) {
-        toast.error('Failed to load ticket');
-        return;
-      }
-
-      openDrawer(
-        <TicketDetails
-          isInDrawer={true}
-          initialTicket={ticketData.ticket}
-          initialComments={ticketData.comments}
-          initialBoard={ticketData.board}
-          initialClient={ticketData.client}
-          initialContacts={ticketData.contacts}
-          initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
-          initialAdditionalAgents={ticketData.additionalAgents}
-          statusOptions={ticketData.options.status}
-          agentOptions={ticketData.options.agent}
-          boardOptions={ticketData.options.board}
-          priorityOptions={ticketData.options.priority}
-          initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
-          initialLocations={ticketData.locations}
-          initialAgentSchedules={ticketData.agentSchedules}
-          initialUserMap={ticketData.userMap}
-          initialAvailableAgents={ticketData.availableAgents}
-          currentUser={user}
-        />
-      );
-    } catch (error) {
-      console.error('Error loading ticket:', error);
-      toast.error('Failed to load ticket');
-    }
+    await openTicketInDrawer(ticketId);
   };
 
   const onDeleteLink = async (linkId: string) => {
@@ -481,9 +444,9 @@ export default function TaskTicketLinks({
       return;
     }
     try {
-      if (taskId) {
+      if (shouldLinkNewTicket && taskId) {
         await addTicketLinkAction(projectId, taskId, ticket.ticket_id, phaseId);
-        
+
         // Create a new link object instead of fetching all links again
         const newLink: IProjectTicketLinkWithDetails = {
           link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
@@ -497,16 +460,18 @@ export default function TaskTicketLinks({
           status_name: defaultStatus?.name || 'New',
           is_closed: false
         };
-        
+
         const updatedLinks = [...(taskTicketLinks || []), newLink];
         setTaskTicketLinks(updatedLinks);
         onLinksChange?.(updatedLinks);
-      } else {
+      } else if (shouldLinkNewTicket) {
         // For new tasks, add to temporary list
         const link = addTempTicketLink(ticket);
         if (link) {
           toast.success('Ticket created and linked successfully');
         }
+      } else {
+        toast.success('Ticket created successfully');
       }
       
       // Add the new ticket to available tickets instead of fetching all again
@@ -568,6 +533,18 @@ export default function TaskTicketLinks({
         </div>
       </div>
 
+      {taskId && (
+        <label className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300"
+            checked={shouldLinkNewTicket}
+            onChange={(e) => setShouldLinkNewTicket(e.target.checked)}
+          />
+          Auto-link new tickets to this task
+        </label>
+      )}
+
       <div className="space-y-2">
         {(taskTicketLinks || []).map((link): React.JSX.Element => (
           <div key={link.link_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
@@ -625,14 +602,14 @@ export default function TaskTicketLinks({
                         />
                       </div>
                       <div className="flex-1">
-                        <CategoryPicker
-                          id='category-picker'
-                          categories={categories}
-                          selectedCategories={selectedCategories}
-                          onSelect={setSelectedCategories}
-                          placeholder="Category"
-                          multiSelect={false}
-                        />
+                        {renderCategoryPicker({
+                          id: 'category-picker',
+                          categories,
+                          selectedCategories,
+                          onSelect: setSelectedCategories,
+                          placeholder: 'Category',
+                          multiSelect: false,
+                        })}
                       </div>
                     </div>
 
@@ -790,27 +767,21 @@ export default function TaskTicketLinks({
         </Dialog>
       )}
 
-      {showCreateDialog && (
-        <div className="relative z-[80]">
-          <QuickAddTicket
-            id='quick-add-ticket'
-            open={showCreateDialog}
-            onOpenChange={(open) => {
-              if (!open) {
-                setShowCreateDialog(false);
-              }
-            }}
-            onTicketAdded={onNewTicketCreated}
-            prefilledClient={prefilledClient}
-            prefilledTitle={ticketPrefill?.title}
-            prefilledDescription={ticketPrefill?.description}
-            prefilledAssignedTo={ticketPrefill?.assigned_to ?? undefined}
-            prefilledDueDate={ticketPrefill?.due_date ?? undefined}
-            prefilledEstimatedHours={ticketPrefill?.estimated_hours ?? undefined}
-            isEmbedded={true}
-          />
-        </div>
-      )}
+      {showCreateDialog && renderQuickAddTicket({
+        open: showCreateDialog,
+        onOpenChange: (open) => {
+          if (!open) {
+            setShowCreateDialog(false);
+          }
+        },
+        onTicketAdded: onNewTicketCreated,
+        prefilledClient: prefilledClient,
+        prefilledTitle: ticketPrefill?.title,
+        prefilledDescription: ticketPrefill?.description,
+        prefilledAssignedTo: ticketPrefill?.assigned_to ?? undefined,
+        prefilledDueDate: ticketPrefill?.due_date ?? undefined,
+        isEmbedded: true,
+      })}
     </div>
   );
 }

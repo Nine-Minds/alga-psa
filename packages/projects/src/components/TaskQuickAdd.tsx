@@ -26,21 +26,23 @@ interface TaskQuickAddProps {
   onPhaseChange?: (phaseId: string) => void;
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
+  inDrawer?: boolean;
 }
 
-export default function TaskQuickAdd({ 
+export default function TaskQuickAdd({
   phase,
-  onClose, 
+  onClose,
   onTaskAdded,
   onTaskUpdated,
-  projectStatuses, 
+  projectStatuses,
   defaultStatus,
   onCancel,
   users,
   task,
   onPhaseChange,
   projectTreeData,
-  prefillData
+  prefillData,
+  inDrawer
 }: TaskQuickAddProps): React.JSX.Element {
   const handleSubmit = async (resultTask: IProjectTask | null) => {
     // Ensure assigned_to is null if empty string or undefined
@@ -78,6 +80,7 @@ export default function TaskQuickAdd({
         onPhaseChange={handlePhaseChange}
         projectTreeData={projectTreeData}
         prefillData={prefillData}
+        inDrawer={inDrawer}
       />
     </Suspense>
   );

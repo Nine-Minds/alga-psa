@@ -64,7 +64,6 @@ export const ticketSchema = z.object({
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().nullable().optional(),
-  estimated_hours: z.number().nullable().optional(),
   attributes: z.record(z.unknown()).nullable(),
   priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
   // ITIL-specific fields
@@ -115,7 +114,6 @@ export interface CreateTicketInput {
   entered_by?: string;
   email_metadata?: any;
   attributes?: Record<string, any>;
-  estimated_hours?: number;
   // Additional fields for server compatibility
   url?: string;
   severity_id?: string;
@@ -623,7 +621,6 @@ export class TicketModel {
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),
       due_date: cleanedInput.due_date || null,
-      estimated_hours: cleanedInput.estimated_hours ?? null,
       // ITIL-specific fields (for UI display only - not stored in DB)
       itil_impact: cleanedInput.itil_impact || null,
       itil_urgency: cleanedInput.itil_urgency || null,

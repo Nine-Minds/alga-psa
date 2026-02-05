@@ -5,6 +5,23 @@ import { render } from '@testing-library/react';
 import TaskForm from '../TaskForm';
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
+import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
+
+function createMockTicketIntegration(
+  overrides: Partial<TicketIntegrationContextType> = {}
+): TicketIntegrationContextType {
+  return {
+    getTicketsForList: vi.fn().mockResolvedValue([]),
+    getConsolidatedTicketData: vi.fn().mockResolvedValue({}),
+    getTicketCategories: vi.fn().mockResolvedValue([]),
+    getAllBoards: vi.fn().mockResolvedValue([]),
+    openTicketInDrawer: vi.fn().mockResolvedValue(undefined),
+    renderQuickAddTicket: vi.fn().mockReturnValue(null),
+    renderCategoryPicker: vi.fn().mockReturnValue(null),
+    renderPrioritySelect: vi.fn().mockReturnValue(null),
+    ...overrides,
+  };
+}
 
 const getCurrentUserMock = vi.fn();
 const getAllPrioritiesMock = vi.fn();
@@ -100,7 +117,10 @@ describe('TaskForm taskData prop', () => {
     } as IUser
   ];
 
+  let mockCtx: TicketIntegrationContextType;
+
   beforeEach(() => {
+    mockCtx = createMockTicketIntegration();
     lastTaskTicketLinksProps = null;
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1' });
     getAllPrioritiesMock.mockResolvedValue([]);
@@ -111,32 +131,34 @@ describe('TaskForm taskData prop', () => {
 
   it('passes taskData to TaskTicketLinks in edit mode', () => {
     render(
-      <TaskForm
-        task={{
-          task_id: 'task-1',
-          phase_id: 'phase-1',
-          task_name: 'Existing Task',
-          description: 'Existing description',
-          assigned_to: 'user-1',
-          estimated_hours: 120,
-          actual_hours: null,
-          project_status_mapping_id: 'status-1',
-          created_at: new Date(),
-          updated_at: new Date(),
-          wbs_code: '1',
-          due_date: new Date('2026-02-05T00:00:00.000Z'),
-          task_type_key: 'task',
-          tenant: 'tenant-1'
-        }}
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="edit"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          task={{
+            task_id: 'task-1',
+            phase_id: 'phase-1',
+            task_name: 'Existing Task',
+            description: 'Existing description',
+            assigned_to: 'user-1',
+            estimated_hours: 120,
+            actual_hours: null,
+            project_status_mapping_id: 'status-1',
+            created_at: new Date(),
+            updated_at: new Date(),
+            wbs_code: '1',
+            due_date: new Date('2026-02-05T00:00:00.000Z'),
+            task_type_key: 'task',
+            tenant: 'tenant-1'
+          }}
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="edit"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(lastTaskTicketLinksProps.taskData).toBeDefined();
@@ -145,16 +167,18 @@ describe('TaskForm taskData prop', () => {
 
   it('does not pass taskData to TaskTicketLinks in create mode', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(lastTaskTicketLinksProps.taskData).toBeUndefined();

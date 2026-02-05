@@ -5,6 +5,23 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TaskForm from '../TaskForm';
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
+import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
+
+function createMockTicketIntegration(
+  overrides: Partial<TicketIntegrationContextType> = {}
+): TicketIntegrationContextType {
+  return {
+    getTicketsForList: vi.fn().mockResolvedValue([]),
+    getConsolidatedTicketData: vi.fn().mockResolvedValue({}),
+    getTicketCategories: vi.fn().mockResolvedValue([]),
+    getAllBoards: vi.fn().mockResolvedValue([]),
+    openTicketInDrawer: vi.fn().mockResolvedValue(undefined),
+    renderQuickAddTicket: vi.fn().mockReturnValue(null),
+    renderCategoryPicker: vi.fn().mockReturnValue(null),
+    renderPrioritySelect: vi.fn().mockReturnValue(null),
+    ...overrides,
+  };
+}
 
 const getCurrentUserMock = vi.fn();
 const getAllPrioritiesMock = vi.fn();
@@ -112,7 +129,10 @@ describe('TaskForm create-from-ticket flow', () => {
     } as IUser
   ];
 
+  let mockCtx: TicketIntegrationContextType;
+
   beforeEach(() => {
+    mockCtx = createMockTicketIntegration();
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1' });
     getAllPrioritiesMock.mockResolvedValue([]);
     getServicesMock.mockResolvedValue({ services: [] });
@@ -125,16 +145,18 @@ describe('TaskForm create-from-ticket flow', () => {
 
   it('shows create-from-ticket icon in create mode', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(document.querySelector('#task-create-from-ticket')).toBeTruthy();
@@ -142,32 +164,34 @@ describe('TaskForm create-from-ticket flow', () => {
 
   it('does not show create-from-ticket icon in edit mode', () => {
     render(
-      <TaskForm
-        task={{
-          task_id: 'task-1',
-          phase_id: 'phase-1',
-          task_name: 'Existing Task',
-          description: null,
-          assigned_to: null,
-          estimated_hours: null,
-          actual_hours: null,
-          project_status_mapping_id: 'status-1',
-          created_at: new Date(),
-          updated_at: new Date(),
-          wbs_code: '1',
-          due_date: null,
-          task_type_key: 'task',
-          tenant: 'tenant-1'
-        }}
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="edit"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          task={{
+            task_id: 'task-1',
+            phase_id: 'phase-1',
+            task_name: 'Existing Task',
+            description: null,
+            assigned_to: null,
+            estimated_hours: null,
+            actual_hours: null,
+            project_status_mapping_id: 'status-1',
+            created_at: new Date(),
+            updated_at: new Date(),
+            wbs_code: '1',
+            due_date: null,
+            task_type_key: 'task',
+            tenant: 'tenant-1'
+          }}
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="edit"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(document.querySelector('#task-create-from-ticket')).toBeNull();
@@ -193,16 +217,18 @@ describe('TaskForm create-from-ticket flow', () => {
     };
 
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     fireEvent.click(document.querySelector('#task-create-from-ticket') as HTMLElement);
@@ -229,16 +255,18 @@ describe('TaskForm create-from-ticket flow', () => {
     };
 
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     fireEvent.click(document.querySelector('#task-create-from-ticket') as HTMLElement);
@@ -270,16 +298,18 @@ describe('TaskForm create-from-ticket flow', () => {
     };
 
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     fireEvent.click(document.querySelector('#task-create-from-ticket') as HTMLElement);
@@ -310,16 +340,18 @@ describe('TaskForm create-from-ticket flow', () => {
     };
 
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     fireEvent.click(document.querySelector('#task-create-from-ticket') as HTMLElement);
@@ -350,16 +382,18 @@ describe('TaskForm create-from-ticket flow', () => {
     };
 
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+        />
+      </TicketIntegrationProvider>
     );
 
     fireEvent.click(document.querySelector('#task-create-from-ticket') as HTMLElement);

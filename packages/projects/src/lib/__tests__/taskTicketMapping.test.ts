@@ -23,11 +23,6 @@ describe('mapTicketToTaskFields', () => {
     expect(result.due_date?.toISOString()).toBe('2026-02-05T12:30:00.000Z');
   });
 
-  it('keeps estimated_hours in hours', () => {
-    const result = mapTicketToTaskFields({ estimated_hours: 4.5 });
-    expect(result.estimated_hours).toBe(4.5);
-  });
-
   it('provides safe defaults for null/undefined fields', () => {
     const result = mapTicketToTaskFields(null);
     expect(result.task_name).toBe('');
@@ -46,23 +41,15 @@ describe('mapTicketToTaskFields', () => {
 describe('mapTaskToTicketPrefill', () => {
   it('maps task_name to title', () => {
     const result = mapTaskToTicketPrefill(
-      { task_name: 'Network upgrade', estimated_hours: 0 },
+      { task_name: 'Network upgrade' },
       { client_id: 'client-1', client_name: 'Acme' }
     );
     expect(result.title).toBe('Network upgrade');
   });
 
-  it('converts estimated_hours from minutes to hours', () => {
-    const result = mapTaskToTicketPrefill(
-      { task_name: 'Network upgrade', estimated_hours: 150 },
-      { client_id: 'client-1', client_name: 'Acme' }
-    );
-    expect(result.estimated_hours).toBe(2.5);
-  });
-
   it('includes project client_id and client_name', () => {
     const result = mapTaskToTicketPrefill(
-      { task_name: 'Network upgrade', estimated_hours: 0 },
+      { task_name: 'Network upgrade' },
       { client_id: 'client-55', client_name: 'Globex' }
     );
     expect(result.client_id).toBe('client-55');
@@ -71,7 +58,7 @@ describe('mapTaskToTicketPrefill', () => {
 
   it('does not include priority_id', () => {
     const result = mapTaskToTicketPrefill(
-      { task_name: 'Network upgrade', estimated_hours: 0, priority_id: 'priority-2' },
+      { task_name: 'Network upgrade', priority_id: 'priority-2' },
       { client_id: 'client-55', client_name: 'Globex' }
     );
     expect('priority_id' in result).toBe(false);

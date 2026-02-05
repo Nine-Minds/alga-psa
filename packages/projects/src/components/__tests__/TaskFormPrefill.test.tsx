@@ -5,6 +5,23 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TaskForm from '../TaskForm';
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
+import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
+
+function createMockTicketIntegration(
+  overrides: Partial<TicketIntegrationContextType> = {}
+): TicketIntegrationContextType {
+  return {
+    getTicketsForList: vi.fn().mockResolvedValue([]),
+    getConsolidatedTicketData: vi.fn().mockResolvedValue({}),
+    getTicketCategories: vi.fn().mockResolvedValue([]),
+    getAllBoards: vi.fn().mockResolvedValue([]),
+    openTicketInDrawer: vi.fn().mockResolvedValue(undefined),
+    renderQuickAddTicket: vi.fn().mockReturnValue(null),
+    renderCategoryPicker: vi.fn().mockReturnValue(null),
+    renderPrioritySelect: vi.fn().mockReturnValue(null),
+    ...overrides,
+  };
+}
 
 const getCurrentUserMock = vi.fn();
 const getAllPrioritiesMock = vi.fn();
@@ -110,7 +127,10 @@ describe('TaskForm prefillData', () => {
     } as IUser
   ];
 
+  let mockCtx: TicketIntegrationContextType;
+
   beforeEach(() => {
+    mockCtx = createMockTicketIntegration();
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1' });
     getAllPrioritiesMock.mockResolvedValue([]);
     getServicesMock.mockResolvedValue({ services: [] });
@@ -122,23 +142,25 @@ describe('TaskForm prefillData', () => {
 
   it('initializes task_name from prefillData', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-        prefillData={{
-          task_name: 'Prefilled Task',
-          description: '',
-          assigned_to: null,
-          due_date: null,
-          estimated_hours: 0
-        }}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+          prefillData={{
+            task_name: 'Prefilled Task',
+            description: '',
+            assigned_to: null,
+            due_date: null,
+            estimated_hours: 0
+          }}
+        />
+      </TicketIntegrationProvider>
     );
 
     const nameField = screen.getByPlaceholderText('Enter task name...') as HTMLTextAreaElement;
@@ -147,23 +169,25 @@ describe('TaskForm prefillData', () => {
 
   it('initializes description from prefillData', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-        prefillData={{
-          task_name: '',
-          description: 'Prefilled description',
-          assigned_to: null,
-          due_date: null,
-          estimated_hours: 0
-        }}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+          prefillData={{
+            task_name: '',
+            description: 'Prefilled description',
+            assigned_to: null,
+            due_date: null,
+            estimated_hours: 0
+          }}
+        />
+      </TicketIntegrationProvider>
     );
 
     const descriptionField = screen.getByPlaceholderText('Add task description...') as HTMLTextAreaElement;
@@ -172,23 +196,25 @@ describe('TaskForm prefillData', () => {
 
   it('initializes assigned_to from prefillData', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-        prefillData={{
-          task_name: '',
-          description: '',
-          assigned_to: 'user-1',
-          due_date: null,
-          estimated_hours: 0
-        }}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+          prefillData={{
+            task_name: '',
+            description: '',
+            assigned_to: 'user-1',
+            due_date: null,
+            estimated_hours: 0
+          }}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(screen.getByTestId('assigned-user')).toHaveAttribute('data-value', 'user-1');
@@ -196,23 +222,25 @@ describe('TaskForm prefillData', () => {
 
   it('initializes due_date from prefillData', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-        prefillData={{
-          task_name: '',
-          description: '',
-          assigned_to: null,
-          due_date: new Date('2026-02-05T10:00:00.000Z'),
-          estimated_hours: 0
-        }}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+          prefillData={{
+            task_name: '',
+            description: '',
+            assigned_to: null,
+            due_date: new Date('2026-02-05T10:00:00.000Z'),
+            estimated_hours: 0
+          }}
+        />
+      </TicketIntegrationProvider>
     );
 
     expect(screen.getByTestId('due-date')).toHaveValue('2026-02-05T10:00:00.000Z');
@@ -220,23 +248,25 @@ describe('TaskForm prefillData', () => {
 
   it('initializes estimated_hours from prefillData', () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-        prefillData={{
-          task_name: '',
-          description: '',
-          assigned_to: null,
-          due_date: null,
-          estimated_hours: 2.5
-        }}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+          prefillData={{
+            task_name: '',
+            description: '',
+            assigned_to: null,
+            due_date: null,
+            estimated_hours: 2.5
+          }}
+        />
+      </TicketIntegrationProvider>
     );
 
     const spinbuttons = screen.getAllByRole('spinbutton');
@@ -245,36 +275,38 @@ describe('TaskForm prefillData', () => {
 
   it('initializes pendingTicketLinks from prefillData.pendingTicketLink', async () => {
     render(
-      <TaskForm
-        phase={phase}
-        onClose={() => undefined}
-        onSubmit={() => undefined}
-        projectStatuses={projectStatuses}
-        users={users}
-        mode="create"
-        onPhaseChange={() => undefined}
-        inDrawer={true}
-        prefillData={{
-          task_name: 'Prefilled Task',
-          description: '',
-          assigned_to: null,
-          due_date: null,
-          estimated_hours: 0,
-          pendingTicketLink: {
-            link_id: 'temp-1',
-            task_id: 'temp',
-            ticket_id: 'ticket-9',
-            ticket_number: 'T-009',
-            title: 'Prefilled ticket',
-            created_at: new Date(),
-            project_id: 'project-1',
-            phase_id: 'phase-1',
-            status_name: 'New',
-            is_closed: false,
-            tenant: 'tenant-1'
-          }
-        }}
-      />
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={phase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer={true}
+          prefillData={{
+            task_name: 'Prefilled Task',
+            description: '',
+            assigned_to: null,
+            due_date: null,
+            estimated_hours: 0,
+            pendingTicketLink: {
+              link_id: 'temp-1',
+              task_id: 'temp',
+              ticket_id: 'ticket-9',
+              ticket_number: 'T-009',
+              title: 'Prefilled ticket',
+              created_at: new Date(),
+              project_id: 'project-1',
+              phase_id: 'phase-1',
+              status_name: 'New',
+              is_closed: false,
+              tenant: 'tenant-1'
+            }
+          }}
+        />
+      </TicketIntegrationProvider>
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

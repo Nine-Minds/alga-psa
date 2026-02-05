@@ -27,7 +27,7 @@ vi.mock('./TaskQuickAdd', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ open, children }: any) => (open ? <div>{children}</div> : null),
+  Dialog: ({ isOpen, children }: any) => (isOpen ? <div>{children}</div> : null),
   DialogContent: ({ children }: any) => <div>{children}</div>
 }));
 
@@ -51,12 +51,12 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  Checkbox: ({ checked, onCheckedChange, id }: any) => (
+  Checkbox: ({ checked, onChange, id }: any) => (
     <input
       id={id}
       type="checkbox"
       checked={checked}
-      onChange={(event) => onCheckedChange(event.target.checked)}
+      onChange={onChange}
     />
   )
 }));
@@ -110,7 +110,6 @@ describe('CreateTaskFromTicketDialog', () => {
     description: 'Paper jam',
     assigned_to: 'user-1',
     due_date: '2026-02-05T00:00:00.000Z',
-    estimated_hours: 2,
     client_id: 'client-1'
   };
 
