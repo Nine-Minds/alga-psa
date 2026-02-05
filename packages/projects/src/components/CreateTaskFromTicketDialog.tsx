@@ -57,6 +57,8 @@ export default function CreateTaskFromTicketDialog({
     if (!selectedProjectId) return;
     const fetchProjectDetails = async () => {
       try {
+        setPhases([]);
+        setStatuses([]);
         const [treeData, projectStatuses] = await Promise.all([
           getProjectTreeData(selectedProjectId),
           getProjectTaskStatuses(selectedProjectId)

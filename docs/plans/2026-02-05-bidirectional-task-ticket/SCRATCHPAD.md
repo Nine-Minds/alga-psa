@@ -34,6 +34,7 @@
 - (2026-02-05) TaskTicketLinks now maps task data to QuickAddTicket prefill props (title/description/assignee/due date/estimated hours + client).
 - (2026-02-05) TaskForm now passes edit-mode field values as `taskData` (minutes) into TaskTicketLinks.
 - (2026-02-05) Added `CreateTaskFromTicketDialog` with project selector and supporting state for project-driven task creation.
+- (2026-02-05) CreateTaskFromTicketDialog now refreshes phases/statuses whenever the selected project changes.
 
 ## Discoveries / Constraints
 
