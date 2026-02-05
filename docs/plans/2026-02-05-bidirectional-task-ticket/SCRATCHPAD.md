@@ -18,6 +18,7 @@
 - (2026-02-05) Added `mapTaskToTicketPrefill` in `packages/projects/src/lib/taskTicketMapping.ts` to derive ticket prefill data from tasks and project client (minutes→hours conversion, client id/name).
 - (2026-02-05) Explicitly ignored `priority_id` in both mapping directions to enforce non-mapping of priorities.
 - (2026-02-05) Added `PrefillFromTicketDialog` component with searchable `TicketSelect` and lazy ticket list loading.
+- (2026-02-05) Added auto-link checkbox (default on) to `PrefillFromTicketDialog` to control link creation.
 
 ## Discoveries / Constraints
 

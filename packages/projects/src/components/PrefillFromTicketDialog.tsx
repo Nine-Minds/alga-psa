@@ -10,7 +10,7 @@ import TicketSelect, { TicketOption } from './TicketSelect';
 interface PrefillFromTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPrefill: (ticketId: string) => void;
+  onPrefill: (payload: { ticketId: string; shouldLink: boolean }) => void;
 }
 
 export default function PrefillFromTicketDialog({
@@ -22,6 +22,7 @@ export default function PrefillFromTicketDialog({
   const [ticketsLoaded, setTicketsLoaded] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [searchValue, setSearchValue] = useState('');
+  const [shouldLink, setShouldLink] = useState(true);
 
   useEffect(() => {
     if (!open || ticketsLoaded) return;
@@ -63,7 +64,7 @@ export default function PrefillFromTicketDialog({
 
   const handleConfirm = () => {
     if (!selectedTicketId) return;
-    onPrefill(selectedTicketId);
+    onPrefill({ ticketId: selectedTicketId, shouldLink });
     onOpenChange(false);
   };
 
@@ -81,6 +82,16 @@ export default function PrefillFromTicketDialog({
           searchValue={searchValue}
           onSearchChange={setSearchValue}
         />
+
+        <label className="flex items-center gap-2 text-sm text-gray-700 mt-3">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={shouldLink}
+            onChange={(event) => setShouldLink(event.target.checked)}
+          />
+          Link this ticket to the task
+        </label>
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
