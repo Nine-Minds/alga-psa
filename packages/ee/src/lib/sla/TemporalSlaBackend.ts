@@ -1,10 +1,12 @@
-import type { ISlaBackend } from '@alga-psa/sla/services';
+// Import from @alga-psa/types to break circular dependency:
+// auth -> ee-stubs -> sla -> auth
 import type {
+  ISlaBackend,
   IBusinessHoursScheduleWithEntries,
   ISlaPolicyTarget,
   ISlaStatus,
   SlaPauseReason,
-} from '@alga-psa/sla/types';
+} from '@alga-psa/types';
 
 export class TemporalSlaBackend implements ISlaBackend {
   private unavailable(): never {

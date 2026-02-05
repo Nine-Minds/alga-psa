@@ -88,10 +88,10 @@ export class PgBossSlaBackend implements ISlaBackend {
     }
 
     const knex = await getConnection(null);
-    const ticket = await knex<{ tenant: string }>('tickets')
-      .where({ ticket_id: ticketId })
+    const ticket = await knex('tickets')
+      .where('ticket_id', ticketId)
       .select('tenant')
-      .first();
+      .first<{ tenant: string } | undefined>();
 
     return ticket?.tenant ?? null;
   }
