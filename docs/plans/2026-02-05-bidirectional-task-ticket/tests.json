@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "addTicket action: parses estimated_hours from FormData and stores on ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
