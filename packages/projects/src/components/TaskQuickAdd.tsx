@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
+import type { TaskFormPrefillData } from './TaskForm';
 
 // Dynamic import for TaskForm
 const TaskForm = dynamic(() => import('./TaskForm'), {
@@ -24,6 +25,7 @@ interface TaskQuickAddProps {
   task?: IProjectTask;
   onPhaseChange?: (phaseId: string) => void;
   projectTreeData?: any[]; // Add projectTreeData prop
+  prefillData?: TaskFormPrefillData;
 }
 
 export default function TaskQuickAdd({ 
@@ -37,7 +39,8 @@ export default function TaskQuickAdd({
   users,
   task,
   onPhaseChange,
-  projectTreeData
+  projectTreeData,
+  prefillData
 }: TaskQuickAddProps): React.JSX.Element {
   const handleSubmit = async (resultTask: IProjectTask | null) => {
     // Ensure assigned_to is null if empty string or undefined
@@ -74,6 +77,7 @@ export default function TaskQuickAdd({
         mode={task ? 'edit' : 'create'}
         onPhaseChange={handlePhaseChange}
         projectTreeData={projectTreeData}
+        prefillData={prefillData}
       />
     </Suspense>
   );

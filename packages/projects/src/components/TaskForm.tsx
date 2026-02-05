@@ -63,7 +63,7 @@ import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
-interface TaskFormPrefillData extends TaskPrefillFields {
+export interface TaskFormPrefillData extends TaskPrefillFields {
   pendingTicketLink?: IProjectTicketLinkWithDetails | null;
 }
 

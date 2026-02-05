@@ -39,6 +39,7 @@
 - (2026-02-05) Status selector now derives options from fetched statuses and disables when none are available.
 - (2026-02-05) CreateTaskFromTicketDialog resets auto-link checkbox to on when opened.
 - (2026-02-05) CreateTaskFromTicketDialog now opens TaskQuickAdd in a drawer with ticket-derived prefill data and optional pending link.
+- (2026-02-05) TaskQuickAdd now accepts `prefillData` and forwards it into TaskForm.
 
 ## Discoveries / Constraints
 

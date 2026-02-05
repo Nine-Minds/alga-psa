@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "TaskQuickAdd: add prefillData prop and pass through to TaskForm",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {
