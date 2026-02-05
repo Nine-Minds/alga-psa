@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "TaskForm: prefillData.pendingTicketLink initializes pendingTicketLinks state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
