@@ -12,6 +12,10 @@
 - (2026-02-05) Ticket `description` is NOT on `ITicket` interface but IS stored in the DB and accessible via FormData / consolidated ticket data attributes.
 - (2026-02-05) Use render-prop injection pattern for cross-package composition (TicketDetails → MspTicketDetailsContainerClient), consistent with `renderContactDetails` and `associatedAssets` patterns.
 
+## Progress
+
+- (2026-02-05) Implemented `mapTicketToTaskFields` mapping utility in `packages/projects/src/lib/taskTicketMapping.ts` for ticket→task prefill defaults (safe defaults, due date parsing, estimated hours passthrough).
+
 ## Discoveries / Constraints
 
 - (2026-02-05) `TicketSelect` component already exists at `packages/projects/src/components/TicketSelect.tsx` — reusable for ticket search in Scenario 1.
