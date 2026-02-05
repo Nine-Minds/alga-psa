@@ -67,4 +67,11 @@ describe('AgentScheduleView', () => {
 
     resolvePromise({ success: true, entries: [] });
   });
+
+  it('defaults to week view', () => {
+    render(<AgentScheduleView agentId="agent-1" />);
+    const props = calendarSpy.mock.calls[0][0];
+    expect(props.defaultView).toBe('week');
+    expect(props.view).toBe('week');
+  });
 });

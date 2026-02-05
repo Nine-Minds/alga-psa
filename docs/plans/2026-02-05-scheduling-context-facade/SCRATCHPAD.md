@@ -85,3 +85,4 @@
 - (2026-02-05) Added initial AgentScheduleView render test with mocked calendar dependencies.
 - (2026-02-05) Added AgentScheduleView getScheduleEntries call verification test.
 - (2026-02-05) Added AgentScheduleView loading state test.
+- (2026-02-05) Added AgentScheduleView default week view test.

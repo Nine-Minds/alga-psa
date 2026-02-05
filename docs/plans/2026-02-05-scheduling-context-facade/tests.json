@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "AgentScheduleView defaults to week view",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
