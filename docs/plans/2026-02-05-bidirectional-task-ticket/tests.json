@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "TaskForm: prefillData prop initializes assigned_to state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
