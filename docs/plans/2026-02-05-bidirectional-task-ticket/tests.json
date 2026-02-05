@@ -230,7 +230,7 @@
   {
     "id": "T039",
     "description": "TaskTicketLinks: QuickAddTicket receives all prefill props from task data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
