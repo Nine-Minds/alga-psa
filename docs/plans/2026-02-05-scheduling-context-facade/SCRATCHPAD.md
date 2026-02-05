@@ -91,3 +91,4 @@
 - (2026-02-05) Added AgentScheduleView EntryPopup open-on-click test.
 - (2026-02-05) Added AgentScheduleView scroll-to-8am test via scrollToTime prop.
 - (2026-02-05) Added AgentScheduleView permission test for user_schedule:read (own-only).
+- (2026-02-05) Added AgentScheduleView permission test for user_schedule:read:all.

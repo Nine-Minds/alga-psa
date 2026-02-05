@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "User with user_schedule:read:all can see any agent's schedule entries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
