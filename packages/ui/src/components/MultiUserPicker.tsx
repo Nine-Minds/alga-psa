@@ -557,7 +557,7 @@ const MultiUserPicker = ({
         variant="outline"
         onClick={toggleDropdown}
         disabled={disabled}
-        className={`inline-flex items-start justify-between min-h-[38px] h-auto w-full py-2 ${compactDisplay ? 'min-w-[150px]' : ''}`}
+        className={`inline-flex justify-between w-full ${compactDisplay ? 'items-center h-[38px] py-0 min-w-[150px]' : 'items-start min-h-[38px] h-auto py-2'}`}
       >
         {renderTriggerContent()}
         <ChevronDown className="w-4 h-4 text-gray-500 ml-2 flex-shrink-0" />

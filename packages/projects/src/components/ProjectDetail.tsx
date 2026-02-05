@@ -526,6 +526,8 @@ export default function ProjectDetail({
 
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const scrollbarProxyRef = useRef<HTMLDivElement>(null);
+  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
     horizontal: 0,
@@ -538,6 +540,51 @@ export default function ProjectDetail({
       if (scrollIntervalRef.current) {
         clearInterval(scrollIntervalRef.current);
       }
+    };
+  }, []);
+
+  // Proxy scrollbar: sync scroll position bidirectionally and track board width
+  useEffect(() => {
+    const container = kanbanBoardRef.current;
+    const proxy = scrollbarProxyRef.current;
+    if (!container || !proxy) return;
+
+    let isSyncing = false;
+
+    const onContainerScroll = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      proxy.scrollLeft = container.scrollLeft;
+      isSyncing = false;
+    };
+
+    const onProxyScroll = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      container.scrollLeft = proxy.scrollLeft;
+      isSyncing = false;
+    };
+
+    container.addEventListener('scroll', onContainerScroll);
+    proxy.addEventListener('scroll', onProxyScroll);
+
+    // Track the board's scroll width with ResizeObserver
+    const updateWidth = () => {
+      setBoardScrollWidth(container.scrollWidth);
+    };
+    updateWidth();
+
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(container);
+    // Also observe the first child (the kanban board) if it exists
+    if (container.firstElementChild) {
+      ro.observe(container.firstElementChild);
+    }
+
+    return () => {
+      container.removeEventListener('scroll', onContainerScroll);
+      proxy.removeEventListener('scroll', onProxyScroll);
+      ro.disconnect();
     };
   }, []);
 
@@ -2344,9 +2391,12 @@ export default function ProjectDetail({
             </div>
           )}
           <div className={styles.kanbanArea}>
-            {/* Header - optionally sticky when pinned */}
             <div className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}>
               {renderHeader()}
+              {/* Proxy scrollbar — sits at the bottom edge of the header */}
+              <div className={styles.kanbanScrollbarProxy} ref={scrollbarProxyRef}>
+                <div className={styles.kanbanScrollbarProxyInner} style={{ width: boardScrollWidth }} />
+              </div>
             </div>
             {/* Scrollable content area */}
             <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">

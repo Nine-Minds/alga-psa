@@ -64,7 +64,10 @@
 
 /* Phases panel container with toggle */
 .phasesContainer {
-  position: relative;
+  position: sticky;
+  top: 1rem;
+  align-self: flex-start;
+  max-height: calc(100vh - 2rem);
   display: flex;
   flex-direction: row;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -81,6 +84,10 @@
   min-width: 32px;
   max-width: 32px;
   flex: 0 0 32px;
+  /* Override sticky/flex-start from base — stretch full height so the button can be sticky inside */
+  align-self: stretch;
+  position: relative;
+  max-height: none;
 }
 
 /* Toggle button for phases panel */
@@ -109,7 +116,12 @@
 }
 
 .phasesContainerCollapsed .phasesPanelToggle {
-  right: -12px;
+  /* Switch from absolute to sticky so the button stays visible on scroll */
+  position: sticky;
+  top: 1rem;
+  right: auto;
+  margin-left: auto;
+  transform: translateX(12px);
 }
 
 /* Phases panel (the white card) */
@@ -144,28 +156,34 @@
 }
 
 /* Scrollbar styling for phases scroll area */
+.phasesScrollArea {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border-200)) transparent;
+}
+
 .phasesScrollArea::-webkit-scrollbar {
   width: 6px;
 }
 
 .phasesScrollArea::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: transparent;
   border-radius: 3px;
 }
 
 .phasesScrollArea::-webkit-scrollbar-thumb {
-  background-color: rgba(155, 155, 155, 0.6);
+  background: rgb(var(--color-border-200));
   border-radius: 3px;
 }
 
 .phasesScrollArea::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(155, 155, 155, 0.8);
+  background: rgb(var(--color-border-300));
 }
 
 .phasesList {
   width: 250px;
   min-width: 250px;
   max-width: 250px;
+  max-height: 100%;
   overflow: hidden; /* Let the inner phasesScrollArea handle scrolling */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -200,7 +218,7 @@
   background-color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem 0.25rem;
+  padding: 0.5rem 0.75rem 0.125rem;
   margin-top: -0.5rem;
   margin-bottom: 0.25rem;
 }
@@ -211,6 +229,37 @@
   z-index: 30;
 }
 
+/* Proxy scrollbar inset at the bottom of the header card */
+.kanbanScrollbarProxy {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: -0.125rem -0.75rem 0; /* tight to content, edge-to-edge, flush with bottom */
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border-200)) transparent;
+}
+
+.kanbanScrollbarProxy::-webkit-scrollbar {
+  height: 6px;
+}
+
+.kanbanScrollbarProxy::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanbanScrollbarProxy::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border-200));
+  border-radius: 3px;
+}
+
+.kanbanScrollbarProxy::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-border-300));
+}
+
+.kanbanScrollbarProxyInner {
+  height: 1px;
+}
+
 .kanbanContainer {
   flex: 1;
   min-width: 0;
@@ -219,25 +268,12 @@
   min-height: 0; /* Allow it to shrink */
   overflow-x: auto; /* Horizontal scrolling only */
   overflow-y: hidden;
+  /* Hide native scrollbar - using proxy scrollbar instead */
+  scrollbar-width: none; /* Firefox */
 }
 
-/* Kanban container scrollbar styling */
 .kanbanContainer::-webkit-scrollbar {
-  height: 8px;
-}
-
-.kanbanContainer::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 4px;
-}
-
-.kanbanContainer::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 4px;
-}
-
-.kanbanContainer::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  display: none; /* Chrome/Safari/Edge */
 }
 
 
