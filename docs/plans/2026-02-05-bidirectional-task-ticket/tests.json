@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "QuickAddTicket: prefilledDueDate initializes date picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
