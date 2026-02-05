@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "SchedulingContext re-exported from packages/ui/src/context/index.ts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
