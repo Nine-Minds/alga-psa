@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "PrefillFromTicketDialog: auto-link checkbox renders and defaults to checked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

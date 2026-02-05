@@ -80,4 +80,17 @@ describe('PrefillFromTicketDialog', () => {
 
     expect(getTicketsForListMock).toHaveBeenCalledTimes(1);
   });
+
+  it('renders auto-link checkbox checked by default', () => {
+    render(
+      <PrefillFromTicketDialog
+        open={true}
+        onOpenChange={() => undefined}
+        onPrefill={() => undefined}
+      />
+    );
+
+    const checkbox = screen.getByLabelText('Link this ticket to the task') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+  });
 });

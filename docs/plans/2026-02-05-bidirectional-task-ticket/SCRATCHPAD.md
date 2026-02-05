@@ -56,6 +56,7 @@
 - (2026-02-05) Added tests ensuring priority_id is not included in either mapping output.
 - (2026-02-05) Added PrefillFromTicketDialog test for search input and dropdown rendering.
 - (2026-02-05) Added PrefillFromTicketDialog test ensuring ticket fetch occurs on open.
+- (2026-02-05) Added PrefillFromTicketDialog test for auto-link checkbox default state.
 
 ## Discoveries / Constraints
 
