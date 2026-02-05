@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "addTicket action: missing estimated_hours in FormData does not cause error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
