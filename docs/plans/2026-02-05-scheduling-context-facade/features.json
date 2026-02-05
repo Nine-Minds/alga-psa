@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "timeEntryLauncher shows toast error when no active time period exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria"]
   },
   {
