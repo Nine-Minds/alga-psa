@@ -33,6 +33,7 @@ import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "@alga-psa/ui";
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
@@ -56,6 +57,7 @@ import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUti
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
@@ -290,6 +292,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
+    const { launchTimeEntry } = useSchedulingCallbacks();
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
@@ -1005,7 +1008,26 @@ const handleClose = () => {
 
     const handleAddTimeEntry = async () => {
         try {
-            toast('Time entry is managed in Scheduling.');
+            if (!ticket.ticket_id) {
+                toast.error('Ticket ID is missing.');
+                return;
+            }
+
+            await launchTimeEntry({
+                openDrawer,
+                closeDrawer,
+                context: buildTicketTimeEntryContext({
+                    ticket,
+                    clientName: client?.client_name ?? null,
+                    elapsedTime,
+                    timeDescription,
+                }),
+                onComplete: createTicketTimeEntryOnComplete({
+                    stopTracking,
+                    setElapsedTime,
+                    setIsRunning,
+                }),
+            });
         } catch (error) {
             console.error('Error in handleAddTimeEntry:', error);
             toast.error('An error occurred while preparing the time entry. Please try again.');

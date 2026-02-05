@@ -1,21 +1,16 @@
 'use client';
 
 import React from 'react';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 
 interface AgentScheduleDrawerProps {
   agentId: string;
 }
 
 export default function AgentScheduleDrawer({ agentId }: AgentScheduleDrawerProps) {
+  const { renderAgentSchedule } = useSchedulingCallbacks();
+
   return (
-    <div className="p-4">
-      <Alert>
-        <AlertDescription>
-          Agent schedule view is now owned by Scheduling. (agentId: {agentId})
-        </AlertDescription>
-      </Alert>
-    </div>
+    <>{renderAgentSchedule(agentId)}</>
   );
 }
-
