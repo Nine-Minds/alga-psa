@@ -6,4 +6,9 @@ describe('mapTicketToTaskFields', () => {
     const result = mapTicketToTaskFields({ title: 'Server Upgrade' });
     expect(result.task_name).toBe('Server Upgrade');
   });
+
+  it('maps description from ticket data', () => {
+    const result = mapTicketToTaskFields({ description: 'Detailed ticket description.' });
+    expect(result.description).toBe('Detailed ticket description.');
+  });
 });

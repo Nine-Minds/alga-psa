@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "mapTicketToTaskFields: description is extracted from ticket data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
