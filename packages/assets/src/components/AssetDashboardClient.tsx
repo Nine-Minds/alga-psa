@@ -695,7 +695,7 @@ const handleAssetAdded = async () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="asset-search-input"
-                    placeholder="Search by name, tag, or client"
+                    placeholder="Search by name, tag, or serial number"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     className="pl-9"
