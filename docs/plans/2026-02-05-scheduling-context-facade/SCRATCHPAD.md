@@ -82,3 +82,4 @@
 - (2026-02-05) Added SchedulingContext default launchTimeEntry toast test.
 - (2026-02-05) Added SchedulingCallbackProvider override test.
 - (2026-02-05) Added context index re-export test for SchedulingContext.
+- (2026-02-05) Added initial AgentScheduleView render test with mocked calendar dependencies.

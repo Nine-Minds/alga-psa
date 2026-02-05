@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "AgentScheduleView renders without error when given a valid agentId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
