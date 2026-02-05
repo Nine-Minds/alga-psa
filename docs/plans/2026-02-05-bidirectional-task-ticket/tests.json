@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Both mapping functions never include priority_id in output",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
