@@ -81,6 +81,7 @@ interface QuickAddTicketProps {
   prefilledDueDate?: Date | string | null;
   isEmbedded?: boolean;
   assetId?: string;
+  renderBeforeFooter?: () => React.ReactNode;
 }
 
 export function QuickAddTicket({
@@ -95,7 +96,8 @@ export function QuickAddTicket({
   prefilledAssignedTo,
   prefilledDueDate,
   isEmbedded = false,
-  assetId
+  assetId,
+  renderBeforeFooter
 }: QuickAddTicketProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -973,6 +975,7 @@ export function QuickAddTicket({
                     disabled={isSubmitting}
                   />
 
+                  {renderBeforeFooter?.()}
                   <DialogFooter>
                     <Button
                       id={`${id}-cancel-btn`}

@@ -1472,7 +1472,6 @@ const handleClose = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        {renderCreateProjectTask?.({ ticket })}
                         {/* Add popout button only when in drawer */}
                         {isInDrawer && (
                             <Button
@@ -1751,6 +1750,7 @@ const handleClose = () => {
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    renderProjectTaskActions={renderCreateProjectTask}
                                 />
                             </div>
                         </Suspense>

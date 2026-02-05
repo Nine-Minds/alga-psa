@@ -12,6 +12,7 @@ import { useDrawer } from "@alga-psa/ui";
 import { ITicketListItem, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -533,17 +534,6 @@ export default function TaskTicketLinks({
         </div>
       </div>
 
-      {taskId && (
-        <label className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300"
-            checked={shouldLinkNewTicket}
-            onChange={(e) => setShouldLinkNewTicket(e.target.checked)}
-          />
-          Auto-link new tickets to this task
-        </label>
-      )}
 
       <div className="space-y-2">
         {(taskTicketLinks || []).map((link): React.JSX.Element => (
@@ -781,6 +771,15 @@ export default function TaskTicketLinks({
         prefilledAssignedTo: ticketPrefill?.assigned_to ?? undefined,
         prefilledDueDate: ticketPrefill?.due_date ?? undefined,
         isEmbedded: true,
+        renderBeforeFooter: () => (
+          <Checkbox
+            id="link-new-ticket-checkbox"
+            checked={shouldLinkNewTicket}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLinkNewTicket(e.target.checked)}
+            label="Link this ticket to the task"
+            containerClassName="mb-0 mt-2"
+          />
+        ),
       })}
     </div>
   );

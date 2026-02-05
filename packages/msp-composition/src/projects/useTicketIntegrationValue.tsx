@@ -72,6 +72,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
           prefilledAssignedTo={renderProps.prefilledAssignedTo}
           prefilledDueDate={renderProps.prefilledDueDate}
           isEmbedded={renderProps.isEmbedded}
+          renderBeforeFooter={renderProps.renderBeforeFooter}
         />
       </div>
     ),

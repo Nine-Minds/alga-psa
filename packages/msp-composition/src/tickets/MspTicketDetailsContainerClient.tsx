@@ -6,6 +6,7 @@ import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDet
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import type { IClient, IContact } from '@alga-psa/types';
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
+import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
 
@@ -37,7 +38,12 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
   );
 
   const renderCreateProjectTask = useCallback(
-    ({ ticket }: { ticket: any }) => <CreateTaskFromTicketDialog ticket={ticket} />,
+    ({ ticket }: { ticket: any }) => (
+      <>
+        <CreateTaskFromTicketDialog ticket={ticket} />
+        <LinkTicketToTaskDialog ticket={ticket} />
+      </>
+    ),
     []
   );
 

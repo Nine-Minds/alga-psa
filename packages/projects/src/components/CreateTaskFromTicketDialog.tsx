@@ -237,14 +237,13 @@ export default function CreateTaskFromTicketDialog({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <Checkbox
-              id="create-task-link-ticket"
-              checked={shouldLink}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLink(e.target.checked)}
-            />
-            Link ticket to the created task
-          </label>
+          <Checkbox
+            id="create-task-link-ticket"
+            checked={shouldLink}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLink(e.target.checked)}
+            label="Link ticket to the created task"
+            containerClassName="mb-0"
+          />
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>

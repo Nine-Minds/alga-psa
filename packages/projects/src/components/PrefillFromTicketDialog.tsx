@@ -13,6 +13,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { X } from 'lucide-react';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import TicketSelect, { TicketOption } from './TicketSelect';
 import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMapping';
@@ -196,17 +197,18 @@ export default function PrefillFromTicketDialog({
     if (!selectedTicketId) return;
     setIsSubmitting(true);
     try {
-      const ticketData = await getConsolidatedTicketData(selectedTicketId);
-      const prefillData = mapTicketToTaskFields(ticketData);
+      const consolidated = await getConsolidatedTicketData(selectedTicketId);
+      const ticket = consolidated.ticket;
+      const prefillData = mapTicketToTaskFields(ticket);
       onPrefill({
         prefillData,
         ticket: {
-          ticket_id: ticketData.ticket_id,
-          ticket_number: ticketData.ticket_number,
-          title: ticketData.title,
-          status_name: ticketData.status_name,
-          is_closed: ticketData.is_closed,
-          closed_at: ticketData.closed_at
+          ticket_id: ticket.ticket_id,
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          status_name: ticket.status_name,
+          is_closed: ticket.is_closed,
+          closed_at: ticket.closed_at
         },
         shouldLink
       });
@@ -380,22 +382,20 @@ export default function PrefillFromTicketDialog({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              className="h-4 w-4"
-              checked={shouldLink}
-              onChange={(event) => setShouldLink(event.target.checked)}
-            />
-            Link this ticket to the task
-          </label>
+          <Checkbox
+            id="prefill-link-checkbox"
+            checked={shouldLink}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setShouldLink(event.target.checked)}
+            label="Link this ticket to the task"
+            containerClassName="mb-0"
+          />
         </div>
 
         <div className="mt-6 flex justify-end space-x-2">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button id="prefill-cancel-button" type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!selectedTicketId || isSubmitting}>
+          <Button id="prefill-confirm-button" type="button" onClick={handleConfirm} disabled={!selectedTicketId || isSubmitting}>
             Prefill
           </Button>
         </div>

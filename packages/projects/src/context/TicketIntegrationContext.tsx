@@ -19,6 +19,7 @@ export interface QuickAddTicketRenderProps {
   prefilledAssignedTo?: string;
   prefilledDueDate?: Date | string | null;
   isEmbedded?: boolean;
+  renderBeforeFooter?: () => React.ReactNode;
 }
 
 export interface CategoryPickerRenderProps {
