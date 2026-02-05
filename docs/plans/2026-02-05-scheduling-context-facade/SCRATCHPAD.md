@@ -77,3 +77,4 @@
 - (2026-02-05) Default SchedulingContext callbacks provide alert/toast fallbacks when no provider is present.
 - (2026-02-05) Added helper builders for time entry contexts in tickets/clients/projects to simplify test coverage.
 - (2026-02-05) Added type-level test for TimeEntryWorkItemContext in `packages/scheduling/tests/timeEntryWorkItemContext.test.ts`.
+- (2026-02-05) Added SchedulingContext hook default test in `packages/ui/src/context/SchedulingContext.test.tsx`.

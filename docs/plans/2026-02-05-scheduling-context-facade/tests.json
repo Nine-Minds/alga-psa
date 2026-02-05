@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "useSchedulingCallbacks returns default no-op callbacks when no provider is present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F025"]
   },
   {
