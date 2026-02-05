@@ -46,6 +46,7 @@
 - (2026-02-05) Exported CreateTaskFromTicketDialog from projects components index.
 - (2026-02-05) Added initial unit test for `mapTicketToTaskFields` title→task_name mapping.
 - (2026-02-05) Added unit test for `mapTicketToTaskFields` description mapping.
+- (2026-02-05) Added unit test for `mapTicketToTaskFields` assigned_to mapping.
 
 ## Discoveries / Constraints
 

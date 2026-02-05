@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "mapTicketToTaskFields: assigned_to maps directly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
