@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "mapTicketToTaskFields: null/undefined fields produce safe defaults (empty string, null, 0)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {

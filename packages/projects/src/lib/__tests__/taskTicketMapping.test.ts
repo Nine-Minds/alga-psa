@@ -27,4 +27,13 @@ describe('mapTicketToTaskFields', () => {
     const result = mapTicketToTaskFields({ estimated_hours: 4.5 });
     expect(result.estimated_hours).toBe(4.5);
   });
+
+  it('provides safe defaults for null/undefined fields', () => {
+    const result = mapTicketToTaskFields(null);
+    expect(result.task_name).toBe('');
+    expect(result.description).toBe('');
+    expect(result.assigned_to).toBeNull();
+    expect(result.due_date).toBeNull();
+    expect(result.estimated_hours).toBe(0);
+  });
 });
