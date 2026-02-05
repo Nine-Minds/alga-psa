@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "TicketDetailsContainer: pass renderCreateProjectTask prop through to TicketDetails",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

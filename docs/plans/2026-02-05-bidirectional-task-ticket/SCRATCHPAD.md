@@ -41,6 +41,7 @@
 - (2026-02-05) CreateTaskFromTicketDialog now opens TaskQuickAdd in a drawer with ticket-derived prefill data and optional pending link.
 - (2026-02-05) TaskQuickAdd now accepts `prefillData` and forwards it into TaskForm.
 - (2026-02-05) Added `renderCreateProjectTask` render prop hook in `TicketDetails` header area.
+- (2026-02-05) TicketDetailsContainer now forwards `renderCreateProjectTask` to TicketDetails.
 
 ## Discoveries / Constraints
 
