@@ -25,6 +25,7 @@
 - (2026-02-05) Wired `PrefillFromTicketDialog` into `TaskForm` to populate fields and optionally add a pending ticket link.
 - (2026-02-05) Added `prefilledTitle` support in `QuickAddTicket` for title initialization and resets.
 - (2026-02-05) Added `prefilledAssignedTo` support in `QuickAddTicket` for assigned user initialization and resets.
+- (2026-02-05) Added `prefilledDueDate` support in `QuickAddTicket` with safe date parsing for the date picker.
 
 ## Discoveries / Constraints
 

@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "QuickAddTicket: add prefilledDueDate prop that initializes due date state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

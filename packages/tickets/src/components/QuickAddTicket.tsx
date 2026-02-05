@@ -78,6 +78,7 @@ interface QuickAddTicketProps {
   prefilledDescription?: string;
   prefilledTitle?: string;
   prefilledAssignedTo?: string;
+  prefilledDueDate?: Date | string | null;
   isEmbedded?: boolean;
   assetId?: string;
 }
@@ -92,6 +93,7 @@ export function QuickAddTicket({
   prefilledDescription,
   prefilledTitle,
   prefilledAssignedTo,
+  prefilledDueDate,
   isEmbedded = false,
   assetId
 }: QuickAddTicketProps) {
@@ -129,7 +131,11 @@ export function QuickAddTicket({
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [dueDateDate, setDueDateDate] = useState<Date | undefined>(undefined);
+  const [dueDateDate, setDueDateDate] = useState<Date | undefined>(() => {
+    if (!prefilledDueDate) return undefined;
+    const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  });
   const [dueDateTime, setDueDateTime] = useState<string | undefined>(undefined);
 
   // ITIL-specific state
@@ -227,6 +233,10 @@ export function QuickAddTicket({
         }
         if (prefilledAssignedTo) {
           setAssignedTo(prefilledAssignedTo);
+        }
+        if (prefilledDueDate) {
+          const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
+          setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
         }
 
       } catch (error) {
@@ -403,7 +413,12 @@ export function QuickAddTicket({
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
     setPendingTags([]);
-    setDueDateDate(undefined);
+    if (prefilledDueDate) {
+      const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
+      setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+    } else {
+      setDueDateDate(undefined);
+    }
     setDueDateTime(undefined);
     setError(null);
     setHasAttemptedSubmit(false);
