@@ -24,6 +24,7 @@
 - (2026-02-05) Added create-mode-only Ticket icon button with tooltip "Create from ticket" next to Task Name label.
 - (2026-02-05) Wired `PrefillFromTicketDialog` into `TaskForm` to populate fields and optionally add a pending ticket link.
 - (2026-02-05) Added `prefilledTitle` support in `QuickAddTicket` for title initialization and resets.
+- (2026-02-05) Added `prefilledAssignedTo` support in `QuickAddTicket` for assigned user initialization and resets.
 
 ## Discoveries / Constraints
 

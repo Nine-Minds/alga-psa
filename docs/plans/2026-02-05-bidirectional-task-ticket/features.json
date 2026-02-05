@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "QuickAddTicket: add prefilledAssignedTo prop that initializes assignedTo state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

@@ -77,6 +77,7 @@ interface QuickAddTicketProps {
   };
   prefilledDescription?: string;
   prefilledTitle?: string;
+  prefilledAssignedTo?: string;
   isEmbedded?: boolean;
   assetId?: string;
 }
@@ -90,6 +91,7 @@ export function QuickAddTicket({
   prefilledContact,
   prefilledDescription,
   prefilledTitle,
+  prefilledAssignedTo,
   isEmbedded = false,
   assetId
 }: QuickAddTicketProps) {
@@ -99,7 +101,7 @@ export function QuickAddTicket({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [title, setTitle] = useState(prefilledTitle || '');
   const [description, setDescription] = useState(prefilledDescription || '');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
   const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
@@ -222,6 +224,9 @@ export function QuickAddTicket({
         }
         if (prefilledTitle) {
           setTitle(prefilledTitle);
+        }
+        if (prefilledAssignedTo) {
+          setAssignedTo(prefilledAssignedTo);
         }
 
       } catch (error) {
@@ -375,7 +380,7 @@ export function QuickAddTicket({
   const resetForm = () => {
     setTitle(prefilledTitle || '');
     setDescription(prefilledDescription || '');
-    setAssignedTo('');
+    setAssignedTo(prefilledAssignedTo || '');
     setBoardId('');
     setStatusId('');
     setPriorityId('');
