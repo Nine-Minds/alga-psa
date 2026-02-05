@@ -122,6 +122,15 @@ interface TicketDetailsProps {
         clients: IClient[];
         userId?: string;
     }) => React.ReactNode;
+
+    /**
+     * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
+     * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
+     */
+    renderClientDetails?: (args: {
+        id: string;
+        client: IClient;
+    }) => React.ReactNode;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -160,7 +169,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     isSubmitting = false,
     surveySummary = null,
     associatedAssets = null,
-    renderContactDetails
+    renderContactDetails,
+    renderClientDetails
 }) => {
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -535,21 +545,42 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
     }, []);
 
-    const handleClientClick = () => {
-        if (client) {
-            openDrawer(
-                <div className="p-4 space-y-3">
-                    <div className="text-lg font-semibold">{client.client_name}</div>
-                    <Button
-                        id="ticket-details-open-client"
-                        type="button"
-                        variant="outline"
-                        onClick={() => window.open(`/msp/clients/${client.client_id}`, '_blank', 'noopener,noreferrer')}
-                    >
-                        Open Client <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                </div>
+    const handleClientClick = async () => {
+        if (!client?.client_id) return;
+
+        openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+        try {
+            const fullClient = await getClientById(client.client_id);
+            if (!fullClient) {
+                replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+                return;
+            }
+
+            replaceDrawer(
+                renderClientDetails
+                    ? renderClientDetails({
+                        id: `${id}-client-details`,
+                        client: fullClient
+                    })
+                    : (
+                        <div className="p-4 space-y-3">
+                            <div className="text-lg font-semibold">{fullClient.client_name}</div>
+                            <Button
+                                id="ticket-details-open-client"
+                                type="button"
+                                variant="outline"
+                                onClick={() => window.open(`/msp/clients/${fullClient.client_id}`, '_blank', 'noopener,noreferrer')}
+                            >
+                                Open Client <ExternalLink className="ml-2 h-4 w-4" />
+                            </Button>
+                        </div>
+                    ),
+                undefined,
+                '900px'
             );
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to load client.';
+            replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
         }
     };
 

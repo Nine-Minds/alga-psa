@@ -3,11 +3,12 @@
 import React, { useCallback } from 'react';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
+import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import type { IClient, IContact } from '@alga-psa/types';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
-  'renderContactDetails'
+  'renderContactDetails' | 'renderClientDetails'
 >;
 
 export default function MspTicketDetailsContainerClient(props: MspTicketDetailsContainerClientProps) {
@@ -30,6 +31,19 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
     []
   );
 
-  return <TicketDetailsContainer {...props} renderContactDetails={renderContactDetails} />;
+  const renderClientDetails = useCallback(
+    ({ id, client }: { id: string; client: IClient }) => {
+      return <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />;
+    },
+    []
+  );
+
+  return (
+    <TicketDetailsContainer
+      {...props}
+      renderContactDetails={renderContactDetails}
+      renderClientDetails={renderClientDetails}
+    />
+  );
 }
 

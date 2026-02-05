@@ -158,6 +158,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
               documents={[]}
               contacts={[]}
               isInDrawer={true}
+              quickView={true}
             />
           );
         } else {
@@ -283,24 +284,20 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             <Text size="2" weight="bold">Notes</Text>
             <div className="prose max-w-none">
               <RichTextViewer content={(() => {
-                try {
-                  return JSON.parse(interaction.notes || '[]');
-                } catch (e) {
-                  // If parsing fails, return a simple paragraph with the text
-                  return [{
-                    type: "paragraph",
-                    props: {
-                      textAlignment: "left",
-                      backgroundColor: "default",
-                      textColor: "default"
-                    },
-                    content: [{
-                      type: "text",
-                      text: interaction.notes || '',
-                      styles: {}
-                    }]
-                  }];
+                const raw = (interaction.notes || '').trim();
+                if (raw.startsWith('[') || raw.startsWith('{')) {
+                  try {
+                    return JSON.parse(raw);
+                  } catch {
+                    // fall through to plain-text wrapper
+                  }
                 }
+                // Plain text or malformed JSON – wrap in a paragraph block
+                return raw ? [{
+                  type: "paragraph",
+                  props: { textAlignment: "left", backgroundColor: "default", textColor: "default" },
+                  content: [{ type: "text", text: raw, styles: {} }]
+                }] : [];
               })()} />
             </div>
           </div>

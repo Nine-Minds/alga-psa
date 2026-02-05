@@ -52,6 +52,7 @@ interface TicketDetailsContainerProps {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   associatedAssets?: React.ReactNode;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
+  renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
 }
 
 export default function TicketDetailsContainer({
@@ -59,6 +60,7 @@ export default function TicketDetailsContainer({
   surveySummary = null,
   associatedAssets = null,
   renderContactDetails,
+  renderClientDetails,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -244,6 +246,7 @@ export default function TicketDetailsContainer({
             surveySummary={surveySummary}
             associatedAssets={associatedAssets}
             renderContactDetails={renderContactDetails}
+            renderClientDetails={renderClientDetails}
           />
         </Suspense>
       </div>

@@ -26,6 +26,10 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { ClientPicker } from '../clients/ClientPicker';
 
+// Stable empty array reference to avoid infinite re-render loops
+// when the `documents` prop is not passed (default `= []` creates a new ref each render).
+const EMPTY_DOCUMENTS: IDocument[] = [];
+
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
   initialContact: IContact;
@@ -70,7 +74,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   clients,
   isInDrawer = false,
   userId,
-  documents: initialDocuments = [],
+  documents: initialDocuments = EMPTY_DOCUMENTS,
   onDocumentCreated,
   quickView = false,
   showDocuments = !quickView,
