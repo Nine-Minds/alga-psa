@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "User with user_schedule:read can only see own schedule entries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

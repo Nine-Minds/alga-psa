@@ -135,4 +135,25 @@ describe('AgentScheduleView', () => {
     expect(scrollToTime.getHours()).toBe(8);
     expect(scrollToTime.getMinutes()).toBe(0);
   });
+
+  it('restricts users with user_schedule:read to their own schedule', async () => {
+    getCurrentUser.mockResolvedValueOnce({ user_id: 'user-1' });
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read']);
+
+    const { getByText } = render(<AgentScheduleView agentId="user-2" />);
+
+    await waitFor(() => expect(getByText(/permission/i)).toBeTruthy());
+    expect(getScheduleEntries).not.toHaveBeenCalled();
+  });
+
+  it('allows users with user_schedule:read:all to view any agent', async () => {
+    getCurrentUser.mockResolvedValueOnce({ user_id: 'user-1' });
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+
+    render(<AgentScheduleView agentId="user-2" />);
+
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalled());
+    const [, , technicianIds] = getScheduleEntries.mock.calls[0];
+    expect(technicianIds).toEqual(['user-2']);
+  });
 });
