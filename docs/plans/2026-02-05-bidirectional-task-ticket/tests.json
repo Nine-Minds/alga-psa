@@ -278,7 +278,7 @@
   {
     "id": "T047",
     "description": "CreateTaskFromTicketDialog: status selector shows fetched statuses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
