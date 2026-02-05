@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Add @alga-psa/scheduling dependency to msp-composition package.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture"]
   },
   {
