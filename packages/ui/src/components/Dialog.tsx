@@ -241,9 +241,11 @@ export function Dialog({
         if (node.hasAttribute('data-radix-dropdown-menu-content')) return true;
         if (node.hasAttribute('data-radix-menu-content')) return true;
         if (node.hasAttribute('data-radix-collection-item')) return true;
+        if (node.hasAttribute('data-radix-dialog-content')) return true;
+        if (node.hasAttribute('data-radix-dialog-overlay')) return true;
 
         const role = node.getAttribute('role');
-        return role === 'listbox' || role === 'menu' || role === 'option';
+        return role === 'listbox' || role === 'menu' || role === 'option' || role === 'dialog';
       });
 
       if (isInsidePortaledContent) return;
