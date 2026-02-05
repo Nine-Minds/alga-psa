@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "Project detail page renders children inside MspSchedulingProvider",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
