@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "AgentScheduleDrawer renders calendar (not stub alert) when provider is present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
