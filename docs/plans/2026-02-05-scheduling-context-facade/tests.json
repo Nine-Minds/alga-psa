@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "AgentScheduleView allows switching between day, week, and month views",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {

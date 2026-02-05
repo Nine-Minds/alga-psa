@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
 
 const calendarSpy = vi.fn();
@@ -73,5 +73,24 @@ describe('AgentScheduleView', () => {
     const props = calendarSpy.mock.calls[0][0];
     expect(props.defaultView).toBe('week');
     expect(props.view).toBe('week');
+  });
+
+  it('allows switching between day, week, and month views', () => {
+    render(<AgentScheduleView agentId="agent-1" />);
+    const initialProps = calendarSpy.mock.calls[0][0];
+
+    act(() => {
+      initialProps.onView('day');
+    });
+
+    const dayProps = calendarSpy.mock.calls.at(-1)[0];
+    expect(dayProps.view).toBe('day');
+
+    act(() => {
+      dayProps.onView('month');
+    });
+
+    const monthProps = calendarSpy.mock.calls.at(-1)[0];
+    expect(monthProps.view).toBe('month');
   });
 });

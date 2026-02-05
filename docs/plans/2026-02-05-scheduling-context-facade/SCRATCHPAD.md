@@ -86,3 +86,4 @@
 - (2026-02-05) Added AgentScheduleView getScheduleEntries call verification test.
 - (2026-02-05) Added AgentScheduleView loading state test.
 - (2026-02-05) Added AgentScheduleView default week view test.
+- (2026-02-05) Added AgentScheduleView view-switching test.
