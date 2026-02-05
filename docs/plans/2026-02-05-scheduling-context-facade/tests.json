@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Default renderAgentSchedule returns a fallback alert element (not null)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F025"]
   },
   {

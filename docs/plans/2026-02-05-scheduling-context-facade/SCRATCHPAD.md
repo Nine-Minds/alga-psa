@@ -78,3 +78,4 @@
 - (2026-02-05) Added helper builders for time entry contexts in tickets/clients/projects to simplify test coverage.
 - (2026-02-05) Added type-level test for TimeEntryWorkItemContext in `packages/scheduling/tests/timeEntryWorkItemContext.test.ts`.
 - (2026-02-05) Added SchedulingContext hook default test in `packages/ui/src/context/SchedulingContext.test.tsx`.
+- (2026-02-05) Added SchedulingContext default renderAgentSchedule fallback test.
