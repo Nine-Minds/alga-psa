@@ -314,7 +314,7 @@
   {
     "id": "T053",
     "description": "TicketDetails: renderCreateProjectTask prop renders button in header area",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
