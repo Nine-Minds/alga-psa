@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "AgentScheduleView shows color-coded events by work item type via getEventColors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
