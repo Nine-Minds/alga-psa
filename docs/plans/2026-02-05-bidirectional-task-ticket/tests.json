@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "mapTaskToTicketPrefill: project client_id and client_name are included",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

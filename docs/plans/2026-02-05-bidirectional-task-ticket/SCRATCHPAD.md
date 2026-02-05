@@ -52,6 +52,7 @@
 - (2026-02-05) Added unit test ensuring `mapTicketToTaskFields` defaults null/undefined safely.
 - (2026-02-05) Added unit test for `mapTaskToTicketPrefill` task_name→title mapping.
 - (2026-02-05) Added unit test for `mapTaskToTicketPrefill` estimated hours minutes→hours conversion.
+- (2026-02-05) Added unit test verifying `mapTaskToTicketPrefill` includes project client metadata.
 
 ## Discoveries / Constraints
 

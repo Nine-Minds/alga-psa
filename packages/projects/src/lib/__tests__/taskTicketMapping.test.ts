@@ -54,4 +54,13 @@ describe('mapTaskToTicketPrefill', () => {
     );
     expect(result.estimated_hours).toBe(2.5);
   });
+
+  it('includes project client_id and client_name', () => {
+    const result = mapTaskToTicketPrefill(
+      { task_name: 'Network upgrade', estimated_hours: 0 },
+      { client_id: 'client-55', client_name: 'Globex' }
+    );
+    expect(result.client_id).toBe('client-55');
+    expect(result.client_name).toBe('Globex');
+  });
 });
