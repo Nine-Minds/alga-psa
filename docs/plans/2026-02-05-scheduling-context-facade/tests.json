@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "Clicking user name from interaction detail opens agent schedule drawer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
