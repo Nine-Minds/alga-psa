@@ -126,4 +126,13 @@ describe('AgentScheduleView', () => {
 
     expect(getByTestId('entry-popup')).toBeTruthy();
   });
+
+  it('sets scrollToTime to 8 AM', () => {
+    render(<AgentScheduleView agentId="agent-1" />);
+    const props = calendarSpy.mock.calls[0][0];
+    const scrollToTime = props.scrollToTime as Date;
+
+    expect(scrollToTime.getHours()).toBe(8);
+    expect(scrollToTime.getMinutes()).toBe(0);
+  });
 });

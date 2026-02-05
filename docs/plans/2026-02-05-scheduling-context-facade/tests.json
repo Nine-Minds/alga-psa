@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "Calendar auto-scrolls to 8 AM on initial render",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
