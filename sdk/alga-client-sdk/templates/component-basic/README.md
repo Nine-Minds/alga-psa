@@ -57,7 +57,7 @@ import { handler as userHandler } from './handler-impl.js';
 import { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/extension-runtime';
 
 // @ts-ignore - WIT imports resolved at runtime
-import { getUser } from 'alga:extension/user';
+import { getUser } from 'alga:extension/user-v2';
 // @ts-ignore
 import { logInfo, logWarn, logError } from 'alga:extension/logging';
 // @ts-ignore
@@ -101,7 +101,7 @@ Update `package.json` with a custom build:
 ```json
 {
   "scripts": {
-    "build:backend": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/js/index.js --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context --external:alga:extension/user",
+    "build:backend": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/js/index.js --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context --external:alga:extension/user --external:alga:extension/user-v2",
     "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/main.wasm",
     "build": "npm run build:backend && npm run build:component"
   },

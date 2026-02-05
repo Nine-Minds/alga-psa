@@ -32,10 +32,11 @@ use component::alga::extension::{
     storage::{self, StorageEntry, StorageError},
     types::{
         ContextData, ExecuteRequest as WitExecuteRequest, ExecuteResponse as WitExecuteResponse,
-        HttpHeader, UserData, UserError,
+        HttpHeader, UserData, UserDataV2, UserError,
     },
     ui_proxy::{self, ProxyError},
     user,
+    user_v2,
 };
 
 #[derive(Clone)]
@@ -2169,7 +2170,6 @@ impl user::HostWithStore for HasSelf<HostState> {
                         user_email: user_info.user_email.clone(),
                         user_name: user_info.user_name.clone(),
                         user_type: user_info.user_type.clone(),
-                        client_id: user_info.client_id.clone(),
                     })
                 }
                 None => {
@@ -2177,6 +2177,60 @@ impl user::HostWithStore for HasSelf<HostState> {
                         tenant=%tenant,
                         extension=%extension,
                         "user capability granted but no user context available"
+                    );
+                    Err(UserError::NotAvailable)
+                }
+            }
+        }
+    }
+}
+
+impl user_v2::HostWithStore for HasSelf<HostState> {
+    fn get_user<T>(
+        accessor: &Accessor<T, Self>,
+    ) -> impl std::future::Future<Output = Result<UserDataV2, UserError>> + Send {
+        let (providers, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (state.context.providers.clone(), state.context.clone())
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_USER_READ) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "user-v2 capability denied - cap:user.read not granted"
+                );
+                return Err(UserError::NotAllowed);
+            }
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            match &ctx.user {
+                Some(user_info) => {
+                    tracing::info!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        user_id=%user_info.user_id,
+                        "user-v2 capability granted - returning user data"
+                    );
+                    Ok(UserDataV2 {
+                        tenant_id: tenant,
+                        client_name: user_info.client_name.clone(),
+                        user_id: user_info.user_id.clone(),
+                        user_email: user_info.user_email.clone(),
+                        user_name: user_info.user_name.clone(),
+                        user_type: user_info.user_type.clone(),
+                        client_id: user_info.client_id.clone(),
+                    })
+                }
+                None => {
+                    tracing::info!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        "user-v2 capability granted but no user context available"
                     );
                     Err(UserError::NotAvailable)
                 }
@@ -2193,6 +2247,7 @@ impl storage::Host for HostState {}
 impl logging::Host for HostState {}
 impl ui_proxy::Host for HostState {}
 impl user::Host for HostState {}
+impl user_v2::Host for HostState {}
 impl scheduler::Host for HostState {}
 impl invoicing::Host for HostState {}
 
