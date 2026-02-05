@@ -58,3 +58,4 @@
 - (2026-02-05) AgentScheduleView uses DynamicBigCalendar with week/day/month views and default week view.
 - (2026-02-05) AgentScheduleView applies work-item color mapping via eventPropGetter.
 - (2026-02-05) AgentScheduleView opens EntryPopup on event click (view-only mode).
+- (2026-02-05) AgentScheduleView auto-scrolls to 8 AM on initial render.

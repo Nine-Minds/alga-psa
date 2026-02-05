@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "AgentScheduleView auto-scrolls to 8 AM working hours on mount",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
