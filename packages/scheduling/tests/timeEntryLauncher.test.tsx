@@ -220,4 +220,26 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(saveTimeEntry).toHaveBeenCalled();
     expect(closeDrawer).toHaveBeenCalled();
   });
+
+  it('invokes onComplete after successful save', async () => {
+    const openDrawer = vi.fn();
+    const closeDrawer = vi.fn();
+    const onComplete = vi.fn();
+
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer,
+      onComplete,
+      context: {
+        workItemId: 'ticket-4',
+        workItemType: 'ticket',
+        workItemName: 'Ticket 4',
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    await element.props.onSave({ id: 'entry-2' });
+
+    expect(onComplete).toHaveBeenCalled();
+  });
 });

@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "onComplete callback is invoked after successful save (for timer reset)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {

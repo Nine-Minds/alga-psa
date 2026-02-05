@@ -102,3 +102,4 @@
 - (2026-02-05) Added timeEntryLauncher drawer mode props test.
 - (2026-02-05) Added timeEntryLauncher service prefill test for project tasks.
 - (2026-02-05) Added timeEntryLauncher save-and-close test.
+- (2026-02-05) Added timeEntryLauncher onComplete callback test.
