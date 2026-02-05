@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
-import { useSchedulingCallbacks } from './SchedulingContext';
+import { SchedulingCallbackProvider, useSchedulingCallbacks } from './SchedulingContext';
 
 const toastSpy = vi.fn();
 vi.mock('react-hot-toast', () => ({ toast: toastSpy }));
@@ -36,5 +36,25 @@ describe('SchedulingContext', () => {
     });
 
     expect(toastSpy).toHaveBeenCalledWith('Time entry is managed in Scheduling.');
+  });
+
+  it('uses provider callbacks when SchedulingCallbackProvider is present', () => {
+    const launchSpy = vi.fn();
+    const callbacks = {
+      renderAgentSchedule: (agentId: string) => <div data-testid={`custom-${agentId}`} />,
+      launchTimeEntry: launchSpy,
+    };
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SchedulingCallbackProvider value={callbacks}>
+        {children}
+      </SchedulingCallbackProvider>
+    );
+
+    const { result } = renderHook(() => useSchedulingCallbacks(), { wrapper });
+    const element = result.current.renderAgentSchedule('agent-42');
+    const { getByTestId } = render(<>{element}</>);
+
+    expect(getByTestId('custom-agent-42')).toBeTruthy();
   });
 });

@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "SchedulingCallbackProvider overrides defaults with real callbacks when wrapped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

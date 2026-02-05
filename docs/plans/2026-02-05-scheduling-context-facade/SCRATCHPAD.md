@@ -80,3 +80,4 @@
 - (2026-02-05) Added SchedulingContext hook default test in `packages/ui/src/context/SchedulingContext.test.tsx`.
 - (2026-02-05) Added SchedulingContext default renderAgentSchedule fallback test.
 - (2026-02-05) Added SchedulingContext default launchTimeEntry toast test.
+- (2026-02-05) Added SchedulingCallbackProvider override test.
