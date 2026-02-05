@@ -58,4 +58,26 @@ describe('PrefillFromTicketDialog', () => {
     expect(screen.getByLabelText('ticket-search')).toBeInTheDocument();
     expect(screen.getByLabelText('ticket-select')).toBeInTheDocument();
   });
+
+  it('fetches tickets lazily when dialog opens', () => {
+    const { rerender } = render(
+      <PrefillFromTicketDialog
+        open={false}
+        onOpenChange={() => undefined}
+        onPrefill={() => undefined}
+      />
+    );
+
+    expect(getTicketsForListMock).not.toHaveBeenCalled();
+
+    rerender(
+      <PrefillFromTicketDialog
+        open={true}
+        onOpenChange={() => undefined}
+        onPrefill={() => undefined}
+      />
+    );
+
+    expect(getTicketsForListMock).toHaveBeenCalledTimes(1);
+  });
 });

@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "PrefillFromTicketDialog: tickets are fetched lazily when dialog opens",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
