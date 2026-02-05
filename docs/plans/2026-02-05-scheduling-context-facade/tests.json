@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "Without MspSchedulingProvider, AgentScheduleDrawer shows fallback alert",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {

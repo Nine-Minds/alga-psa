@@ -110,3 +110,4 @@
 - (2026-02-05) Verified contact detail/activity pages include scheduling provider via server page tests.
 - (2026-02-05) Verified project detail page includes scheduling provider via server page tests.
 - (2026-02-05) Added AgentScheduleDrawer tests for provider rendering and fallback alert.
+- (2026-02-05) Verified AgentScheduleDrawer fallback alert without provider.
