@@ -677,19 +677,8 @@ export default function TaskForm({
     return false;
   };
 
-  const handleCancelClick = (e?: React.MouseEvent | boolean) => {
-    // If called from Dialog's onOpenChange, e will be false
-    if (typeof e === 'boolean' && !e) {
-      if (hasChanges()) {
-        setShowCancelConfirm(true);
-      } else {
-        onClose();
-      }
-      return;
-    }
-
-    // Original mouse event handling
-    if (e && typeof e !== 'boolean') {
+  const handleCancelClick = (e?: React.MouseEvent) => {
+    if (e) {
       e.preventDefault();
     }
 
@@ -1463,6 +1452,7 @@ export default function TaskForm({
           onClose={handleCancelClick}
           className="max-w-3xl"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
+          disableFocusTrap
         >
           <DialogContent>
             {renderContent()}
