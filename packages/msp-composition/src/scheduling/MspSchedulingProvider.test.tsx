@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { MspSchedulingProvider } from './MspSchedulingProvider';
 
-const launchTimeEntryForWorkItem = vi.fn();
+const launchTimeEntryForWorkItem = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/scheduling/lib/timeEntryLauncher', () => ({
   launchTimeEntryForWorkItem,
 }));
