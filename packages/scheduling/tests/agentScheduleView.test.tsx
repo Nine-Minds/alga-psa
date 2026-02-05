@@ -54,4 +54,17 @@ describe('AgentScheduleView', () => {
     expect(end).toBeInstanceOf(Date);
     expect((end as Date).getTime()).toBeGreaterThan((start as Date).getTime());
   });
+
+  it('shows a loading state while fetching events', async () => {
+    let resolvePromise: (value: any) => void = () => {};
+    const pending = new Promise((resolve) => {
+      resolvePromise = resolve as (value: any) => void;
+    });
+    getScheduleEntries.mockReturnValueOnce(pending);
+
+    const { getByText } = render(<AgentScheduleView agentId="agent-1" />);
+    expect(getByText(/Loading/i)).toBeTruthy();
+
+    resolvePromise({ success: true, entries: [] });
+  });
 });

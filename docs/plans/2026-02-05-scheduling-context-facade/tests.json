@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "AgentScheduleView shows loading state while events are being fetched",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
