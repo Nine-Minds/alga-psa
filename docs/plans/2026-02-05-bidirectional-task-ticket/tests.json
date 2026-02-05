@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "QuickAddTicket: prefilledEstimatedHours initializes estimated hours input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
