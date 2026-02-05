@@ -88,3 +88,4 @@
 - (2026-02-05) Added AgentScheduleView default week view test.
 - (2026-02-05) Added AgentScheduleView view-switching test.
 - (2026-02-05) Added AgentScheduleView event color mapping test.
+- (2026-02-05) Added AgentScheduleView EntryPopup open-on-click test.

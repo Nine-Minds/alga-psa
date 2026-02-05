@@ -30,6 +30,14 @@ vi.mock('@alga-psa/users/hooks', () => ({
   useUsers,
 }));
 
+const entryPopupSpy = vi.fn();
+vi.mock('../src/components/schedule/EntryPopup', () => ({
+  default: (props: any) => {
+    entryPopupSpy(props);
+    return <div data-testid="entry-popup" />;
+  },
+}));
+
 beforeEach(() => {
   calendarSpy.mockClear();
   getScheduleEntries.mockResolvedValue({ success: true, entries: [] });
@@ -100,5 +108,22 @@ describe('AgentScheduleView', () => {
     const result = props.eventPropGetter({ work_item_type: 'ticket' });
 
     expect(result.style.backgroundColor).toBe('rgb(var(--color-primary-200))');
+  });
+
+  it('opens EntryPopup when an event is clicked', () => {
+    const { getByTestId } = render(<AgentScheduleView agentId="agent-1" />);
+    const props = calendarSpy.mock.calls[0][0];
+
+    act(() => {
+      props.onSelectEvent({
+        entry_id: 'entry-1',
+        scheduled_start: new Date(),
+        scheduled_end: new Date(),
+        work_item_type: 'ticket',
+        assigned_user_ids: [],
+      });
+    });
+
+    expect(getByTestId('entry-popup')).toBeTruthy();
   });
 });
