@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Re-export SchedulingContext from packages/ui/src/context/index.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture"]
   },
   {
