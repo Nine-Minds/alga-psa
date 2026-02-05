@@ -296,7 +296,7 @@
   {
     "id": "T050",
     "description": "CreateTaskFromTicketDialog: with auto-link on, prefillData includes pendingTicketLink",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
