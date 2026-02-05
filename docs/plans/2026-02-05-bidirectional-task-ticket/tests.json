@@ -170,7 +170,7 @@
   {
     "id": "T029",
     "description": "QuickAddTicket: prefilledTitle initializes title input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
