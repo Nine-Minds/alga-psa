@@ -386,24 +386,13 @@ export function Dialog({
             </ReflectionParentContext.Provider>
           </div>
           {!hideCloseButton && (
-            disableFocusTrap ? (
-              <button
-                onClick={onClose}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-                aria-label="Close"
-              >
-                <Cross2Icon />
-              </button>
-            ) : (
-              <RadixDialog.Close asChild>
-                <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-                  aria-label="Close"
-                >
-                  <Cross2Icon />
-                </button>
-              </RadixDialog.Close>
-            )
+            <button
+              onClick={onClose}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+              aria-label="Close"
+            >
+              <Cross2Icon />
+            </button>
           )}
         </RadixDialog.Content>
       </RadixDialog.Portal>

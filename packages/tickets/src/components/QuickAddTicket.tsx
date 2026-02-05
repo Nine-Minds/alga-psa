@@ -436,6 +436,7 @@ export function QuickAddTicket({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setHasAttemptedSubmit(true);
 
       const validationErrors = validateForm();

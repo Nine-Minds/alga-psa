@@ -337,10 +337,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         )}
       </div>
 
-      <Dialog 
-        isOpen={isFilterDialogOpen} 
-        onClose={() => setIsFilterDialogOpen(false)} 
+      <Dialog
+        isOpen={isFilterDialogOpen}
+        onClose={() => setIsFilterDialogOpen(false)}
         title="Filter Interactions"
+        disableFocusTrap
       >
         <DialogContent>
           <div className="space-y-4">
