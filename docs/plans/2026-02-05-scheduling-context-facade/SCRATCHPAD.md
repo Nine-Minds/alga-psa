@@ -106,3 +106,4 @@
 - (2026-02-05) Added msp-composition SchedulingProvider tests and vitest config.
 - (2026-02-05) Added MspSchedulingProvider launchTimeEntry wiring test.
 - (2026-02-05) Added msp-composition package dependency test for scheduling.
+- (2026-02-05) Added server page provider presence tests for ticket/contact/project pages.

@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "Ticket detail page renders children inside MspSchedulingProvider",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
