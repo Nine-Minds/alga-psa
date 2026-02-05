@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "CalendarStyleProvider and AgentScheduleDrawerStyles are applied to the calendar",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {

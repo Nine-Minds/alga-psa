@@ -38,6 +38,14 @@ vi.mock('../src/components/schedule/EntryPopup', () => ({
   },
 }));
 
+vi.mock('../src/components/schedule/CalendarStyleProvider', () => ({
+  CalendarStyleProvider: () => <div data-testid="calendar-style-provider" />,
+}));
+
+vi.mock('../src/components/schedule/AgentScheduleDrawerStyles', () => ({
+  AgentScheduleDrawerStyles: () => <div data-testid="agent-drawer-styles" />,
+}));
+
 beforeEach(() => {
   calendarSpy.mockClear();
   getScheduleEntries.mockResolvedValue({ success: true, entries: [] });
@@ -155,5 +163,11 @@ describe('AgentScheduleView', () => {
     await waitFor(() => expect(getScheduleEntries).toHaveBeenCalled());
     const [, , technicianIds] = getScheduleEntries.mock.calls[0];
     expect(technicianIds).toEqual(['user-2']);
+  });
+
+  it('renders CalendarStyleProvider and AgentScheduleDrawerStyles', () => {
+    const { getByTestId } = render(<AgentScheduleView agentId="agent-1" />);
+    expect(getByTestId('calendar-style-provider')).toBeTruthy();
+    expect(getByTestId('agent-drawer-styles')).toBeTruthy();
   });
 });
