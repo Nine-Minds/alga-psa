@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "CreateTaskFromTicketDialog: auto-link checkbox (default: on)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4", "FR-5"]
   },
   {

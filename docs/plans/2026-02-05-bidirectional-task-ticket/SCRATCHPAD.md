@@ -37,6 +37,7 @@
 - (2026-02-05) CreateTaskFromTicketDialog now refreshes phases/statuses whenever the selected project changes.
 - (2026-02-05) Phase selector now derives options from fetched phases and disables when none are available.
 - (2026-02-05) Status selector now derives options from fetched statuses and disables when none are available.
+- (2026-02-05) CreateTaskFromTicketDialog resets auto-link checkbox to on when opened.
 
 ## Discoveries / Constraints
 

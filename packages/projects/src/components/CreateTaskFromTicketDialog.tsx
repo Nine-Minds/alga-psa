@@ -41,6 +41,7 @@ export default function CreateTaskFromTicketDialog({
 
   useEffect(() => {
     if (!open) return;
+    setShouldLink(true);
     const fetchProjects = async () => {
       try {
         const projectList = await getProjects();
