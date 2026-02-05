@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "MspSchedulingProvider provides renderAgentSchedule that returns AgentScheduleView",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
