@@ -121,3 +121,4 @@
 - (2026-02-05) Added fallback toast test for time entry without provider.
 - (2026-02-05) Fixed SchedulingContext test mock hoisting for react-hot-toast.
 - (2026-02-05) Fixed msp-composition test mock hoisting for timeEntryLauncher.
+- (2026-02-05) Fixed tickets test config aliasing for @shared and toast mock hoisting.

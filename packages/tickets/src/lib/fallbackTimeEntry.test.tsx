@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 
-const toastSpy = vi.fn();
+const toastSpy = vi.hoisted(() => vi.fn());
 vi.mock('react-hot-toast', () => ({ toast: toastSpy }));
 
 describe('fallback time entry behavior', () => {

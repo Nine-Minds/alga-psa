@@ -14,6 +14,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
+      { find: /^@shared$/, replacement: path.resolve(__dirname, '../../shared') },
+      { find: /^@shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
     ],
   },
 });
