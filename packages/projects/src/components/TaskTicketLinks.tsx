@@ -32,6 +32,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TicketSelect from './TicketSelect';
 import { getProject } from '../actions/projectActions';
+import { mapTaskToTicketPrefill } from '../lib/taskTicketMapping';
 
 interface TaskTicketLinksProps {
   taskId?: string;
@@ -107,6 +108,12 @@ export default function TaskTicketLinks({
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [prefilledClient, setPrefilledClient] = useState<{ id: string; name: string } | undefined>(undefined);
+  const ticketPrefill = taskData
+    ? mapTaskToTicketPrefill(taskData, {
+        client_id: prefilledClient?.id ?? null,
+        client_name: prefilledClient?.name ?? null
+      })
+    : null;
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -794,6 +801,12 @@ export default function TaskTicketLinks({
               }
             }}
             onTicketAdded={onNewTicketCreated}
+            prefilledClient={prefilledClient}
+            prefilledTitle={ticketPrefill?.title}
+            prefilledDescription={ticketPrefill?.description}
+            prefilledAssignedTo={ticketPrefill?.assigned_to ?? undefined}
+            prefilledDueDate={ticketPrefill?.due_date ?? undefined}
+            prefilledEstimatedHours={ticketPrefill?.estimated_hours ?? undefined}
             isEmbedded={true}
           />
         </div>
