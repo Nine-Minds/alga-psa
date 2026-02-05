@@ -1,7 +1,10 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
 import { useSchedulingCallbacks } from './SchedulingContext';
+
+const toastSpy = vi.fn();
+vi.mock('react-hot-toast', () => ({ toast: toastSpy }));
 
 describe('SchedulingContext', () => {
   it('returns default callbacks when no provider is present', () => {
@@ -17,5 +20,21 @@ describe('SchedulingContext', () => {
     const { getByText } = render(<>{element}</>);
 
     expect(getByText(/Agent schedule view is now owned by Scheduling/i)).toBeTruthy();
+  });
+
+  it('shows a toast when launching time entry without provider', async () => {
+    const { result } = renderHook(() => useSchedulingCallbacks());
+
+    await result.current.launchTimeEntry({
+      openDrawer: vi.fn(),
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'work-item-1',
+        workItemType: 'ticket',
+        workItemName: 'Sample',
+      },
+    });
+
+    expect(toastSpy).toHaveBeenCalledWith('Time entry is managed in Scheduling.');
   });
 });

@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Default launchTimeEntry shows toast message instead of crashing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F025"]
   },
   {
