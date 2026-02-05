@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "timeEntryLauncher onSave callback calls saveTimeEntry, closes drawer, and calls onComplete",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow 3"]
   },
   {
