@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "TimeEntryDialog opens in drawer mode (inDrawer=true) with correct props",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {

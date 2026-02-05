@@ -162,4 +162,22 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(toastError).toHaveBeenCalled();
     expect(openDrawer).not.toHaveBeenCalled();
   });
+
+  it('opens TimeEntryDialog in drawer mode with time period and time sheet', async () => {
+    const openDrawer = vi.fn();
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer: vi.fn(),
+      context: {
+        workItemId: 'ticket-2',
+        workItemType: 'ticket',
+        workItemName: 'Ticket 2',
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    expect(element.props.inDrawer).toBe(true);
+    expect(element.props.timePeriod.period_id).toBe('period-1');
+    expect(element.props.timeSheetId).toBe('sheet-1');
+  });
 });
