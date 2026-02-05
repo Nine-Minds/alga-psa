@@ -540,6 +540,10 @@ export function QuickAddTicket({
         formData.append('due_date', combinedDate.toISOString());
       }
 
+      if (estimatedHours > 0) {
+        formData.append('estimated_hours', estimatedHours.toString());
+      }
+
       // ITIL categories now use the unified category system
       // The selected ITIL category ID is already in selectedCategories/categoryId
 

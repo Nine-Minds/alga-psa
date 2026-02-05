@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "QuickAddTicket: estimated_hours appended to FormData in handleSubmit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
