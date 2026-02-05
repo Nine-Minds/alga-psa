@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "PrefillFromTicketDialog: on confirm, fetches full ticket data via getConsolidatedTicketData and returns mapped fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {

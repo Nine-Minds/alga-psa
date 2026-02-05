@@ -4,13 +4,26 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
+import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ITicketListFilters, ITicketListItem } from '@alga-psa/types';
 import TicketSelect, { TicketOption } from './TicketSelect';
+import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMapping';
 
 interface PrefillFromTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPrefill: (payload: { ticketId: string; shouldLink: boolean }) => void;
+  onPrefill: (payload: {
+    prefillData: TaskPrefillFields;
+    ticket: {
+      ticket_id: string;
+      ticket_number: string;
+      title: string;
+      status_name?: string;
+      is_closed?: boolean;
+      closed_at?: string | null;
+    };
+    shouldLink: boolean;
+  }) => void;
 }
 
 export default function PrefillFromTicketDialog({
@@ -23,6 +36,7 @@ export default function PrefillFromTicketDialog({
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [searchValue, setSearchValue] = useState('');
   const [shouldLink, setShouldLink] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open || ticketsLoaded) return;
@@ -62,10 +76,30 @@ export default function PrefillFromTicketDialog({
       .filter(option => option.value);
   }, [tickets, searchValue]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedTicketId) return;
-    onPrefill({ ticketId: selectedTicketId, shouldLink });
-    onOpenChange(false);
+    setIsSubmitting(true);
+    try {
+      const ticketData = await getConsolidatedTicketData(selectedTicketId);
+      const prefillData = mapTicketToTaskFields(ticketData);
+      onPrefill({
+        prefillData,
+        ticket: {
+          ticket_id: ticketData.ticket_id,
+          ticket_number: ticketData.ticket_number,
+          title: ticketData.title,
+          status_name: ticketData.status_name,
+          is_closed: ticketData.is_closed,
+          closed_at: ticketData.closed_at
+        },
+        shouldLink
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error fetching ticket data for prefill:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -97,7 +131,7 @@ export default function PrefillFromTicketDialog({
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!selectedTicketId}>
+          <Button type="button" onClick={handleConfirm} disabled={!selectedTicketId || isSubmitting}>
             Prefill
           </Button>
         </DialogFooter>

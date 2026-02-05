@@ -19,6 +19,7 @@
 - (2026-02-05) Explicitly ignored `priority_id` in both mapping directions to enforce non-mapping of priorities.
 - (2026-02-05) Added `PrefillFromTicketDialog` component with searchable `TicketSelect` and lazy ticket list loading.
 - (2026-02-05) Added auto-link checkbox (default on) to `PrefillFromTicketDialog` to control link creation.
+- (2026-02-05) Prefill dialog now fetches consolidated ticket data and returns mapped task prefill fields via `mapTicketToTaskFields`.
 
 ## Discoveries / Constraints
 
