@@ -14,11 +14,11 @@ export function buildTicketTimeEntryContext({
   timeDescription,
 }: BuildTicketTimeEntryContextParams): TimeEntryWorkItemContext {
   return {
-    workItemId: ticket.ticket_id,
+    workItemId: ticket.ticket_id ?? '',
     workItemType: 'ticket',
     workItemName: ticket.title || `Ticket ${ticket.ticket_number}`,
     ticketNumber: ticket.ticket_number,
-    clientName: clientName ?? ticket.client_name ?? null,
+    clientName: clientName ?? null,
     elapsedTime,
     timeDescription,
   };
