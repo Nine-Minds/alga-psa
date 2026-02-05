@@ -111,3 +111,4 @@
 - (2026-02-05) Verified project detail page includes scheduling provider via server page tests.
 - (2026-02-05) Added AgentScheduleDrawer tests for provider rendering and fallback alert.
 - (2026-02-05) Verified AgentScheduleDrawer fallback alert without provider.
+- (2026-02-05) Added TicketDetails schedule drawer wiring test via source inspection.
