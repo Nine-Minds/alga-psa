@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "TaskForm: icon button (Ticket icon) visible only in create mode, near task name label, tooltip 'Create from ticket'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {

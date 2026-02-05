@@ -31,7 +31,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { ListChecks, Trash2, Clock } from 'lucide-react';
+import { ListChecks, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -56,6 +56,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
@@ -149,6 +150,7 @@ export default function TaskForm({
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
   const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
+  const [showPrefillDialog, setShowPrefillDialog] = useState(false);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedTaskType, setSelectedTaskType] = useState<string>(task?.task_type_key || 'task');
   const [initialTaskType] = useState<string>(task?.task_type_key || 'task');
@@ -1015,7 +1017,22 @@ export default function TaskForm({
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Task Name *</label>
+              <div className="flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700">Task Name *</label>
+                {mode === 'create' && (
+                  <Tooltip content="Create from ticket">
+                    <Button
+                      id="task-create-from-ticket"
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPrefillDialog(true)}
+                    >
+                      <Ticket className="h-4 w-4" />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
               <TaskStatusSelect
                 id="task-status-select"
                 value={selectedStatusId}

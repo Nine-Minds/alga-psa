@@ -21,6 +21,7 @@
 - (2026-02-05) Added auto-link checkbox (default on) to `PrefillFromTicketDialog` to control link creation.
 - (2026-02-05) Prefill dialog now fetches consolidated ticket data and returns mapped task prefill fields via `mapTicketToTaskFields`.
 - (2026-02-05) Added `prefillData` support in `TaskForm` to initialize fields and pending ticket link for create-mode prefill.
+- (2026-02-05) Added create-mode-only Ticket icon button with tooltip "Create from ticket" next to Task Name label.
 
 ## Discoveries / Constraints
 
