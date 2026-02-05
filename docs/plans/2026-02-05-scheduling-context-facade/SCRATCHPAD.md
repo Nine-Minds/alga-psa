@@ -124,3 +124,11 @@
 - (2026-02-05) Fixed tickets test config aliasing for @shared and toast mock hoisting.
 - (2026-02-05) Added tickets test alias for @alga-psa/event-schemas to unblock existing tests.
 - (2026-02-05) Added tickets package aliasing for @alga-psa/tickets to fix existing SLA tests.
+
+## Test Runs
+- `npx vitest --config vitest.config.ts --run --root packages/ui`
+- `npx vitest --config vitest.config.ts --run --root packages/scheduling`
+- `npx vitest --config vitest.config.ts --run --root packages/msp-composition`
+- `npx vitest --config vitest.config.ts --run --root packages/tickets`
+- `npx vitest --config vitest.config.ts --run --root packages/clients`
+- `npx vitest --config vitest.config.ts --run --root packages/projects`
