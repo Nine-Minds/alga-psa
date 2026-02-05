@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Saving time entry calls saveTimeEntry action and closes drawer on success",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {

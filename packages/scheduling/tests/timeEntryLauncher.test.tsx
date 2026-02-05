@@ -199,4 +199,25 @@ describe('launchTimeEntryForWorkItem', () => {
     expect(element.props.workItem.service_id).toBe('service-99');
     expect(element.props.workItem.service_name).toBe('Deployment');
   });
+
+  it('saves time entry and closes the drawer on success', async () => {
+    const openDrawer = vi.fn();
+    const closeDrawer = vi.fn();
+
+    await launchTimeEntryForWorkItem({
+      openDrawer,
+      closeDrawer,
+      context: {
+        workItemId: 'ticket-3',
+        workItemType: 'ticket',
+        workItemName: 'Ticket 3',
+      },
+    });
+
+    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
+    await element.props.onSave({ id: 'entry-1' });
+
+    expect(saveTimeEntry).toHaveBeenCalled();
+    expect(closeDrawer).toHaveBeenCalled();
+  });
 });
