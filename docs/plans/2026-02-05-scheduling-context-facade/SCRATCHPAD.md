@@ -119,3 +119,4 @@
 - (2026-02-05) Added interaction time entry context helper test.
 - (2026-02-05) Added task time entry context helper test and projects vitest config.
 - (2026-02-05) Added fallback toast test for time entry without provider.
+- (2026-02-05) Fixed SchedulingContext test mock hoisting for react-hot-toast.

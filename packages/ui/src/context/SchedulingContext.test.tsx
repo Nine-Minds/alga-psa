@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
 import { SchedulingCallbackProvider, useSchedulingCallbacks } from './SchedulingContext';
 
-const toastSpy = vi.fn();
+const toastSpy = vi.hoisted(() => vi.fn());
 vi.mock('react-hot-toast', () => ({ toast: toastSpy }));
 
 describe('SchedulingContext', () => {
