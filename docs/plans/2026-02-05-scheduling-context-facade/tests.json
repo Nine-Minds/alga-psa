@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Events are color-coded by work item type (ticket, project_task, interaction, etc.)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

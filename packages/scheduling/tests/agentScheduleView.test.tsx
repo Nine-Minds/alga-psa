@@ -93,4 +93,12 @@ describe('AgentScheduleView', () => {
     const monthProps = calendarSpy.mock.calls.at(-1)[0];
     expect(monthProps.view).toBe('month');
   });
+
+  it('applies work item colors to events', () => {
+    render(<AgentScheduleView agentId="agent-1" />);
+    const props = calendarSpy.mock.calls[0][0];
+    const result = props.eventPropGetter({ work_item_type: 'ticket' });
+
+    expect(result.style.backgroundColor).toBe('rgb(var(--color-primary-200))');
+  });
 });
