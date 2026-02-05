@@ -44,6 +44,7 @@
 - (2026-02-05) TicketDetailsContainer now forwards `renderCreateProjectTask` to TicketDetails.
 - (2026-02-05) MSP ticket container now injects CreateTaskFromTicketDialog via `renderCreateProjectTask`.
 - (2026-02-05) Exported CreateTaskFromTicketDialog from projects components index.
+- (2026-02-05) Added initial unit test for `mapTicketToTaskFields` title→task_name mapping.
 
 ## Discoveries / Constraints
 
