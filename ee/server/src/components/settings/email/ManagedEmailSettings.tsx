@@ -13,7 +13,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Globe, Send, Inbox } from 'lucide-react';
+import { Globe, Send, Inbox, Mail, Eye, EyeOff } from 'lucide-react';
 import {
   getManagedEmailDomains,
   requestManagedEmailDomain,
@@ -23,10 +23,12 @@ import {
 } from '@ee/lib/actions/email-actions/managedDomainActions';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
-import type { TenantEmailSettings } from 'server/src/types/email.types';
+import type { TenantEmailSettings, EmailProviderConfig } from 'server/src/types/email.types';
 import { getEmailSettings, updateEmailSettings } from 'server/src/lib/actions/email-actions/emailSettingsActions';
 import { getEmailProviders } from 'server/src/lib/actions/email-actions/emailProviderActions';
 import ManagedDomainList from './ManagedDomainList';
+
+type OutboundProvider = 'resend' | 'smtp';
 
 type ManagedEmailOverrides = {
   getManagedEmailDomains?: () => Promise<ManagedDomainStatus[]>;
@@ -76,6 +78,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [ticketingFromWarning, setTicketingFromWarning] = useState<string | null>(null);
   const [savingTicketingFrom, setSavingTicketingFrom] = useState(false);
   const [loadingOutbound, setLoadingOutbound] = useState(true);
+  const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>('resend');
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [savingSmtp, setSavingSmtp] = useState(false);
 
   useEffect(() => {
     loadDomains();
@@ -109,6 +114,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
       if (settings) {
         setEmailSettings(settings);
+        setOutboundProvider(settings.emailProvider === 'smtp' ? 'smtp' : 'resend');
       }
 
       const providers = providerResult?.providers || [];
@@ -123,8 +129,19 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const getOutboundDomain = (settings?: TenantEmailSettings | null): string | null => {
+    if (settings?.defaultFromDomain) return settings.defaultFromDomain;
+
+    // For SMTP, derive from the SMTP from address
+    const smtpFrom = settings?.providerConfigs
+      .find(c => c.providerType === 'smtp')?.config.from as string | undefined;
+    if (settings?.emailProvider === 'smtp' && smtpFrom) {
+      const domain = smtpFrom.trim().split('@').pop()?.toLowerCase();
+      if (domain) return domain;
+    }
+
+    // For managed/resend, fall back to a verified managed domain
     const verifiedDomain = domains.find((d) => d.status === 'verified')?.domain || null;
-    return settings?.defaultFromDomain || verifiedDomain || null;
+    return verifiedDomain;
   };
 
   const validateTicketingFrom = (value: string, outboundDomain?: string | null): string | null => {
@@ -133,7 +150,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
 
     if (!outboundDomain) {
-      return 'Add and verify an outbound domain before choosing a from address';
+      return outboundProvider === 'smtp'
+        ? 'Save your SMTP configuration with a from address first'
+        : 'Add and verify an outbound domain before choosing a from address';
     }
 
     const trimmed = value.trim();
@@ -141,9 +160,13 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       return 'Enter a valid email address';
     }
 
-    const domain = trimmed.split('@').pop()?.toLowerCase();
-    if (!domain || domain !== outboundDomain.toLowerCase()) {
-      return `From address must use @${outboundDomain}`;
+    // For managed/resend, the domain must match exactly.
+    // For SMTP, domain mismatch is a warning (handled separately), not a hard error.
+    if (outboundProvider !== 'smtp') {
+      const domain = trimmed.split('@').pop()?.toLowerCase();
+      if (!domain || domain !== outboundDomain.toLowerCase()) {
+        return `From address must use @${outboundDomain}`;
+      }
     }
 
     return null;
@@ -191,7 +214,12 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       .filter(Boolean)
       .map((m) => m!.toLowerCase());
 
-    if (mailboxes.length > 0 && value && !mailboxes.includes(value.trim().toLowerCase())) {
+    const trimmedValue = value.trim().toLowerCase();
+    const enteredDomain = trimmedValue.split('@').pop();
+
+    if (outboundProvider === 'smtp' && outboundDomain && enteredDomain && enteredDomain !== outboundDomain.toLowerCase()) {
+      setTicketingFromWarning(`This domain does not match your SMTP from address domain (${outboundDomain}). Emails may fail to deliver or be flagged as spam if your SMTP server is not authorized to send from this domain.`);
+    } else if (mailboxes.length > 0 && value && !mailboxes.includes(trimmedValue)) {
       setTicketingFromWarning('Inbound ticket processing may not work with this address because it is not one of your connected inboxes.');
     } else {
       setTicketingFromWarning(null);
@@ -227,6 +255,90 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
+
+  const handleProviderSwitch = async (provider: OutboundProvider) => {
+    setOutboundProvider(provider);
+
+    if (!emailSettings) return;
+
+    const updatedSettings: Partial<TenantEmailSettings> = {
+      emailProvider: provider,
+      providerConfigs: emailSettings.providerConfigs.map(config => ({
+        ...config,
+        isEnabled: config.providerType === provider
+      }))
+    };
+
+    // Ensure a config entry exists for the selected provider
+    const hasProvider = emailSettings.providerConfigs.some(c => c.providerType === provider);
+    if (!hasProvider) {
+      const newConfig: EmailProviderConfig = {
+        providerId: `${provider}-provider`,
+        providerType: provider,
+        isEnabled: true,
+        config: provider === 'smtp' ? { host: '', port: 587, username: '', password: '', from: '' } : { apiKey: '', from: '' }
+      };
+      updatedSettings.providerConfigs = [...(updatedSettings.providerConfigs || []), newConfig];
+    }
+
+    try {
+      const updated = await updateEmailSettings(updatedSettings);
+      setEmailSettings(updated);
+    } catch (err: any) {
+      console.error('[ManagedEmailSettings] Failed to switch provider', err);
+      toast.error(err.message || 'Failed to switch provider');
+      // Revert UI selection
+      setOutboundProvider(emailSettings.emailProvider === 'smtp' ? 'smtp' : 'resend');
+    }
+  };
+
+  const getSmtpConfig = () => {
+    return emailSettings?.providerConfigs.find(c => c.providerType === 'smtp');
+  };
+
+  const updateSmtpField = (field: string, value: string | number) => {
+    if (!emailSettings) return;
+    const smtpConfig = getSmtpConfig();
+    if (!smtpConfig) return;
+
+    const updatedConfigs = emailSettings.providerConfigs.map(config =>
+      config.providerType === 'smtp'
+        ? { ...config, config: { ...config.config, [field]: value } }
+        : config
+    );
+    setEmailSettings({ ...emailSettings, providerConfigs: updatedConfigs });
+  };
+
+  const handleSaveSmtp = async () => {
+    const smtpConfig = getSmtpConfig();
+    if (!smtpConfig || !emailSettings) return;
+
+    const { host, from } = smtpConfig.config;
+    if (!host?.trim()) {
+      toast.error('SMTP host is required');
+      return;
+    }
+    if (!from?.trim()) {
+      toast.error('From address is required');
+      return;
+    }
+
+    setSavingSmtp(true);
+    try {
+      const updated = await updateEmailSettings({
+        emailProvider: 'smtp',
+        providerConfigs: emailSettings.providerConfigs,
+        defaultFromDomain: from.trim().split('@').pop() || emailSettings.defaultFromDomain
+      });
+      setEmailSettings(updated);
+      toast.success('SMTP settings saved');
+    } catch (err: any) {
+      console.error('[ManagedEmailSettings] Failed to save SMTP settings', err);
+      toast.error(err.message || 'Failed to save SMTP settings');
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
 
   const handleAddDomain = async () => {
     if (!newDomain.trim()) {
@@ -299,50 +411,180 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
       <TabsContent value="outbound" className="space-y-6">
         <div className="text-sm text-muted-foreground mb-4">
-          Configure managed sending domains for your organization.
+          Configure outbound email for your organization.
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Managed Domains
+              <Mail className="h-5 w-5" />
+              Outbound Provider
             </CardTitle>
             <CardDescription>
-              Add a custom domain and follow the DNS instructions to verify ownership.
+              Choose how outbound emails are sent from your organization.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="managed-domain-input">Domain</Label>
-                <Input
-                  id="managed-domain-input"
-                  placeholder="example.com"
-                  value={newDomain}
-                  onChange={(e) => setNewDomain(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                id="add-managed-domain-button"
-                onClick={handleAddDomain}
-                disabled={!newDomain.trim() || busyDomain !== null}
-              >
-                Add Domain
-              </Button>
-            </div>
-
-            <ManagedDomainList
-              domains={domains}
-              loading={loadingDomains}
-              busyDomain={busyDomain}
-              onRefresh={handleRefreshDomain}
-              onDelete={handleDeleteDomain}
+          <CardContent>
+            <CustomSelect
+              id="outbound-provider-select"
+              value={outboundProvider}
+              disabled={loadingOutbound}
+              onValueChange={(val: string) => handleProviderSwitch(val as OutboundProvider)}
+              options={[
+                { value: 'resend', label: 'Nine Minds Managed' },
+                { value: 'smtp', label: 'SMTP' }
+              ]}
+              placeholder="Select outbound provider"
             />
+            <p className="text-sm text-muted-foreground mt-2">
+              {outboundProvider === 'resend'
+                ? 'Emails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.'
+                : 'Emails are sent through your own SMTP server.'}
+            </p>
           </CardContent>
         </Card>
+
+        {outboundProvider === 'resend' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Managed Domains
+              </CardTitle>
+              <CardDescription>
+                Add a custom domain and follow the DNS instructions to verify ownership.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="managed-domain-input">Domain</Label>
+                  <Input
+                    id="managed-domain-input"
+                    placeholder="example.com"
+                    value={newDomain}
+                    onChange={(e) => setNewDomain(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  id="add-managed-domain-button"
+                  onClick={handleAddDomain}
+                  disabled={!newDomain.trim() || busyDomain !== null}
+                >
+                  Add Domain
+                </Button>
+              </div>
+
+              <ManagedDomainList
+                domains={domains}
+                loading={loadingDomains}
+                busyDomain={busyDomain}
+                onRefresh={handleRefreshDomain}
+                onDelete={handleDeleteDomain}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {outboundProvider === 'smtp' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                SMTP Configuration
+              </CardTitle>
+              <CardDescription>
+                Enter your SMTP server details to send outbound email.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {(() => {
+                const smtpConfig = getSmtpConfig();
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="smtp-host">SMTP Host</Label>
+                        <Input
+                          id="smtp-host"
+                          value={smtpConfig?.config.host || ''}
+                          placeholder="smtp.example.com"
+                          onChange={(e) => updateSmtpField('host', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="smtp-port">Port</Label>
+                        <Input
+                          id="smtp-port"
+                          type="number"
+                          value={smtpConfig?.config.port || 587}
+                          placeholder="587"
+                          onChange={(e) => updateSmtpField('port', parseInt(e.target.value) || 587)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="smtp-username">Username</Label>
+                        <Input
+                          id="smtp-username"
+                          value={smtpConfig?.config.username || ''}
+                          placeholder="your-email@example.com"
+                          onChange={(e) => updateSmtpField('username', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="smtp-password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="smtp-password"
+                            type={showSmtpPassword ? 'text' : 'password'}
+                            value={smtpConfig?.config.password === '***' ? '' : smtpConfig?.config.password || ''}
+                            placeholder="Enter password"
+                            onChange={(e) => updateSmtpField('password', e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                          >
+                            {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="smtp-from">From Address</Label>
+                      <Input
+                        id="smtp-from"
+                        value={smtpConfig?.config.from || ''}
+                        placeholder="noreply@example.com"
+                        onChange={(e) => updateSmtpField('from', e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The default sender address for outbound emails.
+                      </p>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        id="save-smtp-settings"
+                        onClick={handleSaveSmtp}
+                        disabled={savingSmtp || loadingOutbound}
+                      >
+                        {savingSmtp ? 'Saving...' : 'Save SMTP Settings'}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -356,14 +598,18 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              Address must use your outbound domain ({outboundDomain || 'not set'}). Replies work best when you use a connected inbound inbox.
+              {outboundProvider === 'smtp'
+                ? `Address should use a domain associated with your SMTP server (${outboundDomain || 'not set'}). Replies work best when you use a connected inbound inbox.`
+                : `Address must use your outbound domain (${outboundDomain || 'not set'}). Replies work best when you use a connected inbound inbox.`}
             </p>
 
             {!outboundDomain ? (
               <Alert variant="warning">
                 <AlertTitle>Outbound domain required</AlertTitle>
                 <AlertDescription>
-                  Add and verify a managed domain before selecting a ticketing from address.
+                  {outboundProvider === 'smtp'
+                    ? 'Save your SMTP configuration with a from address before selecting a ticketing from address.'
+                    : 'Add and verify a managed domain before selecting a ticketing from address.'}
                 </AlertDescription>
               </Alert>
             ) : (
@@ -407,7 +653,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       onChange={(e) => handleTicketingFromChange(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Must match {outboundDomain}. If this isn&apos;t one of your inbound inboxes, inbound ticket processing may not work.
+                      {outboundProvider === 'smtp'
+                        ? `Use a domain your SMTP server is authorized to send from. Using a mismatched domain may cause delivery failures or spam filtering.`
+                        : `Must match ${outboundDomain}. If this isn't one of your inbound inboxes, inbound ticket processing may not work.`}
                     </p>
                   </div>
                 )}
