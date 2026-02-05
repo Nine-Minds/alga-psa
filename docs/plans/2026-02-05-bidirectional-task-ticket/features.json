@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "TaskForm: clicking prefill icon opens PrefillFromTicketDialog, on confirm populates all form fields and optionally adds ticket to pendingTicketLinks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {

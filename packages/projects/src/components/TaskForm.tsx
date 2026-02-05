@@ -57,6 +57,7 @@ import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import PrefillFromTicketDialog from './PrefillFromTicketDialog';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
@@ -184,6 +185,46 @@ export default function TaskForm({
   );
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const handlePrefillFromTicket = (payload: {
+    prefillData: TaskFormPrefillData;
+    ticket: {
+      ticket_id: string;
+      ticket_number: string;
+      title: string;
+      status_name?: string;
+      is_closed?: boolean;
+      closed_at?: string | null;
+    };
+    shouldLink: boolean;
+  }) => {
+    const { prefillData, ticket, shouldLink } = payload;
+    setTaskName(prefillData.task_name);
+    setDescription(prefillData.description);
+    setAssignedUser(prefillData.assigned_to);
+    setDueDate(prefillData.due_date ?? undefined);
+    setEstimatedHours(prefillData.estimated_hours);
+
+    if (shouldLink) {
+      setPendingTicketLinks((prev) => {
+        const exists = prev.some(link => link.ticket_id === ticket.ticket_id);
+        if (exists) return prev;
+        const newLink: IProjectTicketLinkWithDetails = {
+          link_id: `temp-${Date.now()}`,
+          task_id: 'temp',
+          ticket_id: ticket.ticket_id,
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          created_at: new Date(),
+          project_id: phase.project_id,
+          phase_id: phase.phase_id,
+          status_name: ticket.status_name || 'New',
+          is_closed: ticket.is_closed ?? ticket.closed_at != null
+        };
+        return [...prev, newLink];
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -1000,6 +1041,13 @@ export default function TaskForm({
 
   const renderContent = () => (
     <div className="h-full">
+      {mode === 'create' && (
+        <PrefillFromTicketDialog
+          open={showPrefillDialog}
+          onOpenChange={setShowPrefillDialog}
+          onPrefill={handlePrefillFromTicket}
+        />
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
