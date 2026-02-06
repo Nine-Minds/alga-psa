@@ -118,3 +118,10 @@ Targeted surfaces:
 - Added fallback in `getCommentResponseSource`:
   - if explicit source is absent and comment is `author_type=client` with `user_id`, infer `client_portal`.
 - This keeps older client-authored comments source-identifiable without backfill migration.
+
+### F010 — MSP TicketDetails indicator
+
+- Added reusable UI component `packages/tickets/src/components/ResponseSourceBadge.tsx`.
+- Updated `packages/tickets/src/components/ticket/TicketDetails.tsx`:
+  - derives latest source with `getLatestCustomerResponseSource(conversations)`.
+  - renders source indicator next to response-state badge in header/status area.

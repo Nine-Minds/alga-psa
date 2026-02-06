@@ -47,7 +47,7 @@
   {
     "id": "F010",
     "description": "Render response source indicator in MSP TicketDetails header/status area",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",

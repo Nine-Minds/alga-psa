@@ -55,6 +55,9 @@ import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
+import ResponseSourceBadge from '../ResponseSourceBadge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getLatestCustomerResponseSource } from '../../lib/responseSource';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import {
     addChildrenToBundleAction,
@@ -172,6 +175,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderClientDetails
 }) => {
+    const { t } = useTranslation('clientPortal');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -255,6 +259,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [team, setTeam] = useState<ITeam | null>(null);
+    const latestCustomerResponseSource = useMemo(
+        () => getLatestCustomerResponseSource(conversations),
+        [conversations]
+    );
 
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
@@ -1434,6 +1442,16 @@ const handleClose = () => {
                                 responseState={ticket.response_state}
                                 size="sm"
                                 showTooltip={false}
+                                className="flex-shrink-0"
+                            />
+                        ) : null}
+                        {latestCustomerResponseSource ? (
+                            <ResponseSourceBadge
+                                source={latestCustomerResponseSource}
+                                labels={{
+                                    clientPortal: t('tickets.responseSource.clientPortal', 'Received via Client Portal'),
+                                    inboundEmail: t('tickets.responseSource.inboundEmail', 'Received via Inbound Email'),
+                                }}
                                 className="flex-shrink-0"
                             />
                         ) : null}

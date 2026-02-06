@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
-import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { TicketDocumentsSection, ResponseSourceBadge, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { getLatestCustomerResponseSource } from '@alga-psa/tickets/lib';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
@@ -65,6 +66,10 @@ export function TicketDetails({
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
+  const latestCustomerResponseSource = useMemo(
+    () => getLatestCustomerResponseSource(ticket.conversations),
+    [ticket.conversations]
+  );
   const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
     props: {
@@ -469,6 +474,16 @@ export function TicketDetails({
                       awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
                       awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
                       awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                    }}
+                  />
+                )}
+                {latestCustomerResponseSource && (
+                  <ResponseSourceBadge
+                    source={latestCustomerResponseSource}
+                    size="md"
+                    labels={{
+                      clientPortal: t('tickets.responseSource.clientPortal', 'Received via Client Portal'),
+                      inboundEmail: t('tickets.responseSource.inboundEmail', 'Received via Inbound Email'),
                     }}
                   />
                 )}
