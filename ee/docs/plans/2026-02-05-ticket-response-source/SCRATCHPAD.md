@@ -242,3 +242,7 @@ Targeted surfaces:
 ### T019
 
 - Covered by \: imap inbound provider path resolves/persists \.
+
+### T020
+
+- Covered by \: create-comment-from-email path remains non-internal/non-resolution and additive to response-state behavior.

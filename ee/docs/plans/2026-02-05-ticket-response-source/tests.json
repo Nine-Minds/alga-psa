@@ -162,7 +162,7 @@
   {
     "id": "T020",
     "description": "Response state transitions remain unchanged after adding source metadata (client-visible response still sets awaiting_internal)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
