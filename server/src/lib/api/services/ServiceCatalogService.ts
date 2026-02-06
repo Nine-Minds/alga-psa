@@ -198,9 +198,10 @@ export class ServiceCatalogService extends BaseService<IService> {
       }
     }
 
+    const rawData = data as any;
     const serviceData = {
       category_id: data.category_id ?? null,
-      currency_code: data.currency_code ?? 'USD',
+      currency_code: rawData.currency_code ?? 'USD',
       ...data,
       tenant,
       default_rate: typeof data.default_rate === 'string'

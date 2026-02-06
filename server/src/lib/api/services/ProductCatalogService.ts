@@ -187,12 +187,13 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
+    const rawData = data as any;
     const {
       prices,
       billing_method: _billing_method,
       unit_of_measure,
       ...rest
-    } = data;
+    } = rawData;
 
     const productData = {
       ...rest,
