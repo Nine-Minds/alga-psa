@@ -1,6 +1,6 @@
 import { TenantEntity } from './index';
 
-export type CommentAuthorType = 'internal' | 'client' | 'unknown';
+export type CommentAuthorType = 'internal' | 'client' | 'contact' | 'system' | 'unknown';
 export const COMMENT_RESPONSE_SOURCES = {
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',

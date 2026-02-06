@@ -160,3 +160,13 @@ Targeted surfaces:
 
 - This implementation only adds metadata writes and UI read/display logic.
 - No updates were made to response-state transition logic (`awaiting_client` / `awaiting_internal`) or ticket state machine code.
+
+## Test Log
+
+### T001 — Client portal metadata write
+
+- Added test: `packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts`
+- Asserts `addClientTicketComment` inserts `metadata.responseSource = "client_portal"`.
+- Also introduced `server/vitest.config.ts` alias for `@alga-psa/analytics` to support importing client-portal action modules in Vitest.
+- Validation command:
+  - `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts packages/tickets/src/lib/__tests__/responseSource.test.ts packages/tickets/src/components/ResponseSourceBadge.render.test.tsx packages/tickets/src/lib/__tests__/responseSourceLocales.test.ts packages/types/src/interfaces/comment.interface.typecheck.test.ts --config server/vitest.config.ts --coverage.enabled false`

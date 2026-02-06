@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "addClientTicketComment stores metadata.responseSource=client_portal on newly inserted comment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
