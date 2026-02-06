@@ -61,7 +61,7 @@
   {
     "id": "T008",
     "description": "Fallback logic returns inbound_email when metadata.email exists but metadata.responseSource is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

@@ -194,3 +194,7 @@ Targeted surfaces:
 ### T007
 
 - Covered by \: internal comments are ignored during source selection.
+
+### T008
+
+- Covered by \: fallback infers \ from legacy \.
