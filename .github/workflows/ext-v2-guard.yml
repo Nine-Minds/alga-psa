@@ -28,9 +28,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if ! npm ci; then
+          if ! npm ci --legacy-peer-deps; then
             echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install
+            npm install --legacy-peer-deps
           fi
 
       - name: Run legacy extension grep guard
