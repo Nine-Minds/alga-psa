@@ -872,7 +872,7 @@ export class TimeSheetService extends BaseService<any> {
 
   async createScheduleEntry(data: CreateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      const ScheduleEntry = (await import('../../models/scheduleEntry')).default;
+      const ScheduleEntry = (await import('@alga-psa/scheduling/models/scheduleEntry')).default;
 
       return withTransaction(knex, async (trx) => {
         // Map work_item_type to valid WorkItemType or default
