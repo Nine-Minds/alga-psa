@@ -188,7 +188,7 @@
   {
     "id": "T023",
     "description": "Locale keys for response source labels resolve correctly in English and do not break existing ticket detail translations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]

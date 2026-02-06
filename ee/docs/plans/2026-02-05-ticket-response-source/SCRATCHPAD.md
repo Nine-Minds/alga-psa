@@ -254,3 +254,7 @@ Targeted surfaces:
 ### T022
 
 - Covered by \: indicator output updates after adding inbound-email reply comment.
+
+### T023
+
+- Covered by \: English locale keys resolve and existing ticket response-state keys remain present.
