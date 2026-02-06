@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "IComment typing accepts metadata without breaking existing comment consumers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]

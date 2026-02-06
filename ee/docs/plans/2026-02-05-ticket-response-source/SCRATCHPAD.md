@@ -178,3 +178,7 @@ Targeted surfaces:
 ### T003
 
 - Covered by \: asserts provider normalization writes \ when available.
+
+### T004
+
+- Covered by \: validates \ accepts metadata + normalized source fields.
