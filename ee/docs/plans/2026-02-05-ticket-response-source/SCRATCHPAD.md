@@ -182,3 +182,7 @@ Targeted surfaces:
 ### T004
 
 - Covered by \: validates \ accepts metadata + normalized source fields.
+
+### T005
+
+- Covered by \: explicit inbound metadata on latest eligible comment resolves to \.

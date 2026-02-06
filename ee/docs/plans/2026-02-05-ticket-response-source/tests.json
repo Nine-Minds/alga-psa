@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Response source utility returns inbound_email when latest eligible comment has metadata.responseSource=inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
