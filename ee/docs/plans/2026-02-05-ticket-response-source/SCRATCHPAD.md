@@ -77,3 +77,11 @@ Targeted surfaces:
 - Updated `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts#addClientTicketComment` to persist:
   - `metadata.responseSource = "client_portal"` on inserted comments.
 - Implementation uses canonical constants from `@alga-psa/types` (`COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL`) to avoid string drift.
+
+### F004 — Inbound email writes response source
+
+- Added shared metadata normalizer in `shared/workflow/actions/emailWorkflowActions.ts`:
+  - `buildInboundEmailCommentMetadata(...)`
+  - `normalizeInboundEmailProvider(...)`
+- `createCommentFromEmail` now always persists `metadata.responseSource = "inbound_email"` via the shared metadata builder before calling `TicketModel.createComment`.
+- Rationale: centralize inbound source tagging in one path used by Google/Microsoft/IMAP ingestion to avoid per-caller drift.

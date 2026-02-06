@@ -261,6 +261,7 @@ export async function processInboundEmailInApp(
             metadata: {
               email: {
                 messageId: emailData.id,
+                provider: emailData.provider,
                 providerId,
                 threadId: emailData.threadId,
                 inReplyTo: emailData.inReplyTo,
@@ -374,6 +375,7 @@ export async function processInboundEmailInApp(
         metadata: {
           email: {
             messageId: emailData.id,
+            provider: emailData.provider,
             providerId,
             threadId: emailData.threadId,
             inReplyTo: emailData.inReplyTo,
@@ -499,6 +501,7 @@ export async function processInboundEmailInApp(
       metadata: {
         email: {
           messageId: emailData.id,
+          provider: emailData.provider,
           providerId,
           threadId: emailData.threadId,
           inReplyTo: emailData.inReplyTo,

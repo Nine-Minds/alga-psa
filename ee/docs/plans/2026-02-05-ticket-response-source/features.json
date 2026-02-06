@@ -17,7 +17,7 @@
   {
     "id": "F004",
     "description": "Inbound email comment creation writes metadata.responseSource=inbound_email in createCommentFromEmail",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
