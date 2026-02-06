@@ -56,9 +56,14 @@ import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
+import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
+
+interface TaskFormPrefillData extends TaskPrefillFields {
+  pendingTicketLink?: IProjectTicketLinkWithDetails | null;
+}
 
 interface TaskFormProps {
   task?: IProjectTask;
@@ -73,6 +78,7 @@ interface TaskFormProps {
   onPhaseChange: (phaseId: string) => void;
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
+  prefillData?: TaskFormPrefillData;
 }
 
 export default function TaskForm({
@@ -87,18 +93,19 @@ export default function TaskForm({
   mode,
   onPhaseChange,
   inDrawer = false,
-  projectTreeData = []
+  projectTreeData = [],
+  prefillData
 }: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [taskName, setTaskName] = useState(task?.task_name || '');
-  const [description, setDescription] = useState(task?.description || '');
+  const [taskName, setTaskName] = useState(task?.task_name || prefillData?.task_name || '');
+  const [description, setDescription] = useState(task?.description || prefillData?.description || '');
   const [projectTreeOptions, setProjectTreeOptions] = useState<Array<TreeSelectOption<'project' | 'phase' | 'status'>>>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>(phase.phase_id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checklistItems, setChecklistItems] = useState<Omit<ITaskChecklistItem, 'tenant'>[]>(task?.checklist_items || []);
   const [isEditingChecklist, setIsEditingChecklist] = useState(false);
-  const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? null);
+  const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? prefillData?.assigned_to ?? null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -108,9 +115,17 @@ export default function TaskForm({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { launchTimeEntry } = useSchedulingCallbacks();
   // Convert from minutes to hours for display
-  const [estimatedHours, setEstimatedHours] = useState<number>(Number(task?.estimated_hours) / 60 || 0);
+  const [estimatedHours, setEstimatedHours] = useState<number>(
+    task?.estimated_hours !== undefined && task?.estimated_hours !== null
+      ? Number(task?.estimated_hours) / 60
+      : prefillData?.estimated_hours ?? 0
+  );
   const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) / 60 || 0);
-  const [dueDate, setDueDate] = useState<Date | undefined>(task?.due_date ? new Date(task.due_date) : undefined);
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    task?.due_date
+      ? new Date(task.due_date)
+      : prefillData?.due_date ?? undefined
+  );
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
@@ -123,7 +138,11 @@ export default function TaskForm({
   const isProcessingAgentsRef = useRef(false);
   const [taskTags, setTaskTags] = useState<ITag[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
+  const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(() => {
+    if (task?.ticket_links?.length) return task.ticket_links;
+    if (prefillData?.pendingTicketLink) return [prefillData.pendingTicketLink];
+    return [];
+  });
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);

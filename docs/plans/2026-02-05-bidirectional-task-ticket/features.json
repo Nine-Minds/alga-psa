@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "TaskForm: add prefillData prop that initializes form state (task_name, description, assigned_to, due_date, estimated_hours, pendingTicketLink)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2", "FR-4"]
   },
   {
