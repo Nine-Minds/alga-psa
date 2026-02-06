@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
@@ -44,7 +44,7 @@ vi.mock('server/src/lib/db', () => ({
   getCurrentTenantId: vi.fn()
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn()
 }));
 

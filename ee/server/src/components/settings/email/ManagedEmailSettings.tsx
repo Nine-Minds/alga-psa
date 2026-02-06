@@ -24,8 +24,7 @@ import {
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings, EmailProviderConfig } from 'server/src/types/email.types';
-import { getEmailSettings, updateEmailSettings } from 'server/src/lib/actions/email-actions/emailSettingsActions';
-import { getEmailProviders } from 'server/src/lib/actions/email-actions/emailProviderActions';
+import { getEmailSettings, updateEmailSettings, getEmailProviders } from '@alga-psa/integrations/actions';
 import ManagedDomainList from './ManagedDomainList';
 
 type OutboundProvider = 'resend' | 'smtp';

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth-compat'
 import { hasPermission } from '@alga-psa/auth'
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
+import { getCurrentUser } from '@alga-psa/users/actions'
 
 type ExtensionPermissionAction = 'read' | 'write'
 

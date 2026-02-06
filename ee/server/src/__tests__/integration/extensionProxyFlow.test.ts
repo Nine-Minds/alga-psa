@@ -7,7 +7,7 @@ import { bootstrapIframe } from '../../lib/extensions/ui/iframeBridge';
 
 // Mocks for the Gateway test
 // We need to mock the dependencies of handler.ts
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -170,7 +170,7 @@ describe('Extension Proxy Flow Integration', () => {
     it('should forward request to RunnerBackend and propagate response headers/body', async () => {
       // Import dependencies
       const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
-      const { getCurrentUser } = await import('server/src/lib/actions/user-actions/userActions');
+      const { getCurrentUser } = await import('@alga-psa/users/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
       const { getTenantFromAuth } = await import('server/src/lib/extensions/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
@@ -237,7 +237,7 @@ describe('Extension Proxy Flow Integration', () => {
     it('should handle Runner errors gracefully', async () => {
       const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
       const { getRunnerBackend, RunnerRequestError } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
-      const { getCurrentUser } = await import('server/src/lib/actions/user-actions/userActions');
+      const { getCurrentUser } = await import('@alga-psa/users/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
       const { getTenantFromAuth } = await import('server/src/lib/extensions/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');

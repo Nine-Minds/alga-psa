@@ -12,7 +12,7 @@ import { GmailProviderForm } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import { TestContext } from '../../../test-utils/testContext';
 import * as tenantActions from '../../lib/actions/tenantActions';
-import * as userActions from '../../lib/actions/user-actions/userActions';
+import * as userActions from '@alga-psa/users/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 const localStorageProviderMock = vi.hoisted(() => ({

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { StorageServiceError, StorageValidationError } from '@/lib/extensions/storage/v2/errors';
 import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
 import type { StorageBulkPutRequest, StorageListRequest } from '@/lib/extensions/storage/v2/types';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import type { Knex } from 'knex';
 

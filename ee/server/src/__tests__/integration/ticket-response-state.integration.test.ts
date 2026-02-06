@@ -28,8 +28,8 @@ vi.mock('../../../../../server/src/lib/db', async (importOriginal) => {
 });
 
 // Mock getCurrentUser for user context
-vi.mock('../../../../../server/src/lib/actions/user-actions/userActions', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/actions/user-actions/userActions');
+vi.mock('@alga-psa/users/actions', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/users/actions');
   return {
     ...actual,
     getCurrentUser: vi.fn(async () => ({
