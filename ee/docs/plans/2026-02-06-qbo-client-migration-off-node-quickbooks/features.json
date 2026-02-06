@@ -130,7 +130,7 @@
   {
     "id": "F016",
     "description": "Remove node-quickbooks from packages/integrations/package.json dependencies.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Rollout / Migration"
@@ -139,7 +139,7 @@
   {
     "id": "F017",
     "description": "Refresh lockfile to remove node-quickbooks and its transitive request-based dependency chain.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Non-functional Requirements",

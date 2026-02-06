@@ -151,7 +151,6 @@
     "next": "^16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "next-i18next": "^15.4.2",
-    "node-quickbooks": "^2.0.45",
     "node-vault": "^0.10.2",
     "nodemailer": "^8.0.0",
     "papaparse": "^5.5.3",

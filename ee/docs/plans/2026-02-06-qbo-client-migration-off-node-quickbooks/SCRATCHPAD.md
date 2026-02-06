@@ -14,6 +14,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-06) Primary migration target is an internal REST-based QBO client inside `QboClientService`, not another community wrapper. Rationale: we only use a narrow operation set and can remove the largest dependency risk surface fastest.
 - (2026-02-06) Execute in two commits/batches: Batch 1 parity implementation + compile/typecheck validation, Batch 2 dependency removal + lockfile/audit verification.
 - (2026-02-06) Per user instruction, skip new test authoring/execution for now and validate via typechecks/compiles only.
+- (2026-02-06) Batch 2 removes `node-quickbooks` from both `packages/integrations` and `server` manifests/lockfiles because both declarations contributed risk even though runtime usage had already been removed.
 
 ## Discoveries / Constraints
 
@@ -23,6 +24,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-06) `quickbooks-node-promise` latest npm version is `3.3.14` (modified `2025-02-03`). It is a possible fallback option but not selected as primary path.
 - (2026-02-06) `intuit-oauth` latest npm version is `4.2.2` (modified `2025-11-10`) and can remain relevant for OAuth flows, but this migration targets data API calls in client service.
 - (2026-02-06) `server/package.json` also declares `node-quickbooks` even though no active imports were found in server source; batch 2 should remove this as part of dependency cleanup.
+- (2026-02-06) After lockfile cleanup, `npm ls node-quickbooks --all` returns empty at both monorepo root and server package.
 
 ## Commands / Runbooks
 
@@ -39,6 +41,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `npm -w packages/integrations run typecheck`
   - `npm -w packages/billing run typecheck`
   - `npm -w server run typecheck`
+- (2026-02-06) Remove vulnerable dependency entries and refresh lockfiles:
+  - `npm uninstall -w packages/integrations node-quickbooks --legacy-peer-deps`
+  - `npm uninstall -w server node-quickbooks --legacy-peer-deps`
+  - `npm --prefix server uninstall node-quickbooks --legacy-peer-deps`
+  - `npm install --package-lock-only --legacy-peer-deps`
+  - `npm prune --legacy-peer-deps`
+- (2026-02-06) Verify dependency removal:
+  - `npm ls node-quickbooks --all || true`
+  - `npm --prefix server ls node-quickbooks --all || true`
 
 ## Links / References
 
