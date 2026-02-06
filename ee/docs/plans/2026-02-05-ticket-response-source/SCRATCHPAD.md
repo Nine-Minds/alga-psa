@@ -230,3 +230,7 @@ Targeted surfaces:
 ### T016
 
 - Covered by \: legacy comments without metadata remain valid inputs and resolve safely without schema changes.
+
+### T017
+
+- Covered by \: google inbound provider path resolves/persists \.

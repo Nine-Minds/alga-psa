@@ -138,7 +138,7 @@
   {
     "id": "T017",
     "description": "Google inbound email flow produces comments that resolve to inbound_email source in ticket details",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
