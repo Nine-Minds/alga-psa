@@ -85,3 +85,9 @@ Targeted surfaces:
   - `normalizeInboundEmailProvider(...)`
 - `createCommentFromEmail` now always persists `metadata.responseSource = "inbound_email"` via the shared metadata builder before calling `TicketModel.createComment`.
 - Rationale: centralize inbound source tagging in one path used by Google/Microsoft/IMAP ingestion to avoid per-caller drift.
+
+### F005 — Inbound metadata carries provider type
+
+- `buildInboundEmailCommentMetadata` now normalizes provider type to `google|microsoft|imap` when present.
+- Persisted provider detail is written on `metadata.email.provider` and `metadata.email.providerType`.
+- Updated `shared/services/email/processInboundEmailInApp.ts` to pass `metadata.email.provider = emailData.provider` in all inbound comment creation branches.

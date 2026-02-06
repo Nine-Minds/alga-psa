@@ -22,7 +22,7 @@
   {
     "id": "F005",
     "description": "Inbound email metadata includes provider type (google/microsoft/imap) when available for future display",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
