@@ -48,7 +48,15 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   );
 
   // Try to get user information
-  let user: { tenantId: string; clientName: string; userId: string; userEmail: string; userName: string; userType: string } | null = null;
+  let user: {
+    tenantId: string;
+    clientName: string;
+    userId: string;
+    userEmail: string;
+    userName: string;
+    userType: string;
+    clientId?: string;
+  } | null = null;
   let userError: string | null = null;
   try {
     user = await host.user.getUser();
@@ -81,6 +89,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       userEmail: user.userEmail,
       userType: user.userType,
       clientName: user.clientName,
+      clientId: user.clientId,
     } : null,
     userError: userError,
     version: VERSION,
