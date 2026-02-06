@@ -210,3 +210,7 @@ Targeted surfaces:
 ### T011
 
 - Covered by \: MSP rendering contract contains \ for portal source.
+
+### T012
+
+- Covered by \: MSP rendering contract contains \ for inbound source.

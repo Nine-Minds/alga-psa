@@ -95,7 +95,7 @@
   {
     "id": "T012",
     "description": "MSP TicketDetails renders 'Received via Inbound Email' when derived source is inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F012"
