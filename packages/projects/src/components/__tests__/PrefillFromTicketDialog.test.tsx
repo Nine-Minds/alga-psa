@@ -1,4 +1,5 @@
 /* @vitest-environment jsdom */
+/// <reference types="@testing-library/jest-dom/vitest" />
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -69,6 +70,7 @@ describe('PrefillFromTicketDialog', () => {
           open={true}
           onOpenChange={() => undefined}
           onPrefill={() => undefined}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
@@ -84,6 +86,7 @@ describe('PrefillFromTicketDialog', () => {
           open={false}
           onOpenChange={() => undefined}
           onPrefill={() => undefined}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
@@ -96,6 +99,7 @@ describe('PrefillFromTicketDialog', () => {
           open={true}
           onOpenChange={() => undefined}
           onPrefill={() => undefined}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
@@ -110,6 +114,7 @@ describe('PrefillFromTicketDialog', () => {
           open={true}
           onOpenChange={() => undefined}
           onPrefill={() => undefined}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
@@ -140,6 +145,7 @@ describe('PrefillFromTicketDialog', () => {
           open={true}
           onOpenChange={() => undefined}
           onPrefill={onPrefill}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
@@ -178,6 +184,7 @@ describe('PrefillFromTicketDialog', () => {
           open={true}
           onOpenChange={() => undefined}
           onPrefill={() => undefined}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
@@ -216,6 +223,7 @@ describe('PrefillFromTicketDialog', () => {
           open={true}
           onOpenChange={() => undefined}
           onPrefill={onPrefill}
+          users={[]}
         />
       </TicketIntegrationProvider>
     );
