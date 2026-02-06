@@ -62,7 +62,7 @@
   {
     "id": "F013",
     "description": "Show indicator only when source can be resolved; hide cleanly when unresolved",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",

@@ -138,3 +138,9 @@ Targeted surfaces:
   - `server/public/locales/en/clientPortal.json` → `tickets.responseSource.clientPortal|inboundEmail`
   - `server/public/locales/en/common.json` → `tickets.responseSource.clientPortal|inboundEmail`
 - Both ticket detail screens now resolve labels through i18n keys with safe English fallbacks.
+
+### F013 — Hide when unresolved
+
+- Both TicketDetails screens render the response source indicator conditionally:
+  - only when `getLatestCustomerResponseSource(...)` returns a non-null source.
+- No placeholder/error UI is shown when source cannot be determined.
