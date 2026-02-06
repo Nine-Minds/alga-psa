@@ -71,6 +71,18 @@ Controls access to the delegated time-entry UI (editing/viewing time sheets for 
 - When disabled: The UI only allows working with the current user’s own time periods/time sheets (delegated sheets are shown as read-only if accessed directly).
 - When enabled: Authorized users can select a subject user and edit/view that user’s time sheets via the UI.
 
+### 5. `email-logs`
+Controls access to email log UI surfaces for outbound email auditing/debugging.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - System Monitor → Email Logs menu link
+  - Email Logs page at `/msp/email-logs`
+  - Ticket Details → Email Notifications section (per-ticket)
+
+**Behavior:**
+- When disabled: Email Logs page shows construction placeholder; navigation link and ticket section are hidden.
+
 ## Implementation Details
 
 ### User Identification
