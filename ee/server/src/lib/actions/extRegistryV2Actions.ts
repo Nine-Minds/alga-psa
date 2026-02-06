@@ -428,7 +428,14 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
     .map((cap) => normalizeCapability(cap))
     .filter((cap) => isKnownCapability(cap));
 
-  const runnerDomain = computeDomain(tenant, params.registryId);
+  const extDomainRoot = (process.env.EXT_DOMAIN_ROOT || '').trim();
+  const runnerDomain = extDomainRoot ? computeDomain(tenant, params.registryId, extDomainRoot) : null;
+  if (!runnerDomain) {
+    console.warn('[installExtensionForCurrentTenantV2] EXT_DOMAIN_ROOT not configured; install will proceed without runner_domain', {
+      tenant,
+      registryId: params.registryId,
+    });
+  }
 
   // Wrap all writes in a transaction to ensure atomicity across pods
   const installId = await knex.transaction(async (trx: Knex.Transaction) => {
@@ -441,7 +448,11 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
       config: JSON.stringify({}),
       is_enabled: true,
       runner_domain: runnerDomain,
-      runner_status: JSON.stringify({ state: 'provisioning', message: 'Enqueued domain provisioning' }),
+      runner_status: JSON.stringify(
+        runnerDomain
+          ? { state: 'provisioning', message: 'Enqueued domain provisioning' }
+          : { state: 'pending_configuration', message: 'EXT_DOMAIN_ROOT not configured; provisioning skipped' }
+      ),
       updated_at: trx.fn.now(),
     };
 
@@ -469,29 +480,31 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
     return id;
   });
 
-  // Enqueue provisioning workflow AFTER transaction commits successfully
-  // This ensures the install record exists before the workflow tries to read it
-  // Workflow ID is deterministic (tenant:extensionId), so Temporal handles deduplication
-  const { enqueued, error: enqueueError } = await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId });
+  if (runnerDomain) {
+    // Enqueue provisioning workflow AFTER transaction commits successfully
+    // This ensures the install record exists before the workflow tries to read it
+    // Workflow ID is deterministic (tenant:extensionId), so Temporal handles deduplication
+    const { enqueued, error: enqueueError } = await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId });
 
-  if (!enqueued) {
-    console.error('[installExtensionForCurrentTenantV2] failed to enqueue provisioning workflow', {
-      installId,
-      tenant,
-      registryId: params.registryId,
-      error: enqueueError,
-    });
-    // Mark install for reconciliation so a background process can retry
-    await knex('tenant_extension_install')
-      .where({ id: installId, tenant_id: tenant })
-      .update({
-        runner_status: JSON.stringify({
-          state: 'provisioning_enqueue_failed',
-          message: enqueueError ?? 'Failed to enqueue provisioning workflow; pending reconciliation',
-          failed_at: new Date().toISOString(),
-        }),
-        updated_at: knex.fn.now(),
+    if (!enqueued) {
+      console.error('[installExtensionForCurrentTenantV2] failed to enqueue provisioning workflow', {
+        installId,
+        tenant,
+        registryId: params.registryId,
+        error: enqueueError,
       });
+      // Mark install for reconciliation so a background process can retry
+      await knex('tenant_extension_install')
+        .where({ id: installId, tenant_id: tenant })
+        .update({
+          runner_status: JSON.stringify({
+            state: 'provisioning_enqueue_failed',
+            message: enqueueError ?? 'Failed to enqueue provisioning workflow; pending reconciliation',
+            failed_at: new Date().toISOString(),
+          }),
+          updated_at: knex.fn.now(),
+        });
+    }
   }
 
   return { success: true, installId };

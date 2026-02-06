@@ -158,7 +158,23 @@ export default function InstallerPanel() {
         }
 
         const fin = finalizeResponse.data;
-        try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
+        try {
+          const installResult = await installExtensionForCurrentTenantV2({
+            registryId: fin.extension.id,
+            version: fin.version.version,
+          });
+          if (!installResult?.success) {
+            throw new Error('Extension finalized, but install did not complete');
+          }
+        } catch (installErr: any) {
+          setError({
+            error: installErr?.message ?? 'Extension finalized, but install did not complete',
+            code: installErr?.code,
+            details: installErr?.details,
+          });
+          setInstalling(false);
+          return;
+        }
         setSuccess(fin);
         setInstalling(false);
       } catch (finErr: any) {
@@ -210,7 +226,22 @@ export default function InstallerPanel() {
       }
 
       const fin = finalizeResponse.data;
-      try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
+      try {
+        const installResult = await installExtensionForCurrentTenantV2({
+          registryId: fin.extension.id,
+          version: fin.version.version,
+        });
+        if (!installResult?.success) {
+          throw new Error('Extension finalized, but install did not complete');
+        }
+      } catch (installErr: any) {
+        setError({
+          error: installErr?.message ?? 'Extension finalized, but install did not complete',
+          code: installErr?.code,
+          details: installErr?.details,
+        });
+        return;
+      }
 
       setSuccess(fin);
       setNeedsManifest(false);
