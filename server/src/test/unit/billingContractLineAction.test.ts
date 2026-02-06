@@ -1,9 +1,9 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { getContractLines, createContractLine } from '@alga-psa/billing/actions';
-import ContractLine from 'server/src/lib/models/contractLine';
+import ContractLine from '@alga-psa/billing/models/contractLine';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
-vi.mock('@/lib/models/contractLine');
+vi.mock('@alga-psa/billing/models/contractLine');
 vi.mock('@/lib/db/db');
 
 describe('Contract Line Actions', () => {

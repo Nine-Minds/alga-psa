@@ -57,7 +57,7 @@ import {
   RoleFilterData,
   PermissionFilterData
 } from '../schemas/permissionRoleSchemas';
-import User from '../../models/user';
+import User from '@alga-psa/db/models/user';
 import { hasPermission, checkMultiplePermissions } from '../../auth/rbac';
 import logger from '@alga-psa/core/logger';
 

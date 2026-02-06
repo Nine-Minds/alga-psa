@@ -6,12 +6,12 @@ import { buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from '@shared/
 type InternalUserType = 'internal' | 'client';
 
 async function findUserByEmail(email: string): Promise<IUser | undefined> {
-  const User = (await import('server/src/lib/models/user')).default;
+  const User = (await import('@alga-psa/db/models/user')).default;
   return User.findUserByEmail(email);
 }
 
 async function findUserByEmailAndType(email: string, userType: InternalUserType): Promise<IUser | undefined> {
-  const User = (await import('server/src/lib/models/user')).default;
+  const User = (await import('@alga-psa/db/models/user')).default;
   return User.findUserByEmailAndType(email, userType);
 }
 
@@ -20,7 +20,7 @@ async function findUserByEmailTenantAndType(
   tenantId: string,
   userType: InternalUserType,
 ): Promise<IUser | undefined> {
-  const User = (await import('server/src/lib/models/user')).default;
+  const User = (await import('@alga-psa/db/models/user')).default;
   return User.findUserByEmailTenantAndType(email, tenantId, userType);
 }
 

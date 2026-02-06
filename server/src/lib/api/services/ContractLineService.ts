@@ -14,8 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/templateClone';
 
 // Import existing models and actions for integration
-import ContractLine from 'server/src/lib/models/contractLine';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
+import ContractLine from '@alga-psa/billing/models/contractLine';
+import ContractLineFixedConfig from '@alga-psa/billing/models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import {

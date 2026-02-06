@@ -9,7 +9,7 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';

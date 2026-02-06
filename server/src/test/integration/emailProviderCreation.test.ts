@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createEmailProvider } from '../../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider } from '@alga-psa/integrations/actions';
 import { getCurrentTenant } from '../../lib/actions/tenantActions';
 
 let testDb: Knex;

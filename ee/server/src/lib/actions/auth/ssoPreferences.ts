@@ -4,7 +4,7 @@ import { getTenantSettings, updateTenantSettings } from "@alga-psa/tenancy/actio
 import { withAuth, hasPermission } from "@alga-psa/auth";
 import { createTenantKnex } from "@/lib/db";
 import { listOAuthAccountLinksForUser } from "@ee/lib/auth/oauthAccountLinks";
-import User from "server/src/lib/models/user";
+import User from "@alga-psa/db/models/user";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 
 export interface SsoPreferences {

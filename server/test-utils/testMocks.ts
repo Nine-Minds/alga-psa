@@ -37,10 +37,7 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUserPermissions: vi.fn(() => Promise.resolve(permissionRef.value))
 }));
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user)),
-  getCurrentUserPermissions: vi.fn(() => Promise.resolve(permissionRef.value))
-}));
+// Note: '@alga-psa/users/actions' mock above covers the canonical import path
 
 vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: vi.fn(() => Promise.resolve({ user: sessionUserRef.user }))

@@ -9,11 +9,11 @@ import {
   IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import ContractLineServiceConfiguration from 'server/src/lib/models/contractLineServiceConfiguration';
-import ContractLineServiceFixedConfig from 'server/src/lib/models/contractLineServiceFixedConfig';
-import ContractLineServiceHourlyConfig from 'server/src/lib/models/contractLineServiceHourlyConfig';
-import ContractLineServiceUsageConfig from 'server/src/lib/models/contractLineServiceUsageConfig';
-import ContractLineServiceBucketConfig from 'server/src/lib/models/contractLineServiceBucketConfig';
+import ContractLineServiceConfiguration from '@alga-psa/billing/models/contractLineServiceConfiguration';
+import ContractLineServiceFixedConfig from '@alga-psa/billing/models/contractLineServiceFixedConfig';
+import ContractLineServiceHourlyConfig from '@alga-psa/billing/models/contractLineServiceHourlyConfig';
+import ContractLineServiceUsageConfig from '@alga-psa/billing/models/contractLineServiceUsageConfig';
+import ContractLineServiceBucketConfig from '@alga-psa/billing/models/contractLineServiceBucketConfig';
 
 export class ContractLineServiceConfigurationService {
   private knex: Knex;
@@ -199,7 +199,7 @@ export class ContractLineServiceConfigurationService {
           const serviceDefaultRate = service?.default_rate;
 
           // Fetch contract line to validate/set billing_period
-          const ContractLine = (await import('../models/contractLine')).default;
+          const ContractLine = (await import('@alga-psa/billing/models/contractLine')).default;
           const contractLine = await ContractLine.findById(trx, baseConfig.contract_line_id);
           if (!contractLine) {
             throw new Error(`Contract line ${baseConfig.contract_line_id} not found`);
@@ -406,7 +406,7 @@ export class ContractLineServiceConfigurationService {
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
-      const ContractLine = (await import('../models/contractLine')).default;
+      const ContractLine = (await import('@alga-psa/billing/models/contractLine')).default;
 
       // 0. Fetch contract line and validate/set bucket billing_period
       const contractLine = await ContractLine.findById(trx, contractLineId);

@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createClientContractLine, updateClientContractLine, getClientContractLine, getOverlappingBillings } from '@alga-psa/clients/actions/clientContractLineAction';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { ClientContractLine } from '@alga-psa/billing/models';
 import { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 import { parseISO } from 'date-fns';
 
-vi.mock('@/lib/models/clientContractLine');
+vi.mock('@alga-psa/clients/models/clientContractLine');
 vi.mock('@/lib/db/db');
 
 describe('Client Billing Actions', () => {

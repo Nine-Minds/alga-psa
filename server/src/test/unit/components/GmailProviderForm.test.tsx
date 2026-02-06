@@ -10,7 +10,7 @@ import { GmailProviderForm } from '../../../components/GmailProviderForm';
 import { renderWithProviders } from '../../utils/testWrapper';
 
 // Mock server actions
-vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
+vi.mock('@alga-psa/integrations/actions', () => ({
   createEmailProvider: vi.fn(),
   updateEmailProvider: vi.fn(),
   upsertEmailProvider: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('@/lib/actions/integrations/googleActions', () => ({
   getGoogleIntegrationStatus: vi.fn().mockResolvedValue({ success: true, config: { hasServiceAccountKey: true } }),
 }));
 
-import * as emailProviderActions from '../../../lib/actions/email-actions/emailProviderActions';
+import * as emailProviderActions from '@alga-psa/integrations/actions';
 
 describe('GmailProviderForm', () => {
   const mockOnSuccess = vi.fn();

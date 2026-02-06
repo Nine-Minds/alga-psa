@@ -39,7 +39,7 @@ vi.mock('server/src/lib/db', async () => {
   };
 });
 
-vi.mock('server/src/lib/models/clientContract', () => ({
+vi.mock('@alga-psa/clients/models/clientContract', () => ({
   default: {
     getById: vi.fn(async () => ({
       client_contract_id: 'cc-1',
@@ -57,7 +57,7 @@ vi.mock('server/src/lib/models/clientContract', () => ({
   },
 }));
 
-vi.mock('server/src/lib/models/contract', () => ({
+vi.mock('@alga-psa/billing/models/contract', () => ({
   default: {
     checkAndReactivateExpiredContract: vi.fn(async () => undefined),
   },
