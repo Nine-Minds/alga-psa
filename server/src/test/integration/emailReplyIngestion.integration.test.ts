@@ -178,10 +178,14 @@ describe('Email reply ingestion integration', () => {
     const storedComment = await db('comments')
       .where({ tenant: tenantId, ticket_id: ticketId })
       .first();
+    const updatedTicket = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: ticketId })
+      .first();
 
     expect(storedComment).toBeTruthy();
     expect(storedComment?.note).toBe(rawBody);
     expect(storedComment?.author_type).toBe('client');
+    expect(updatedTicket?.response_state).toBe('awaiting_internal');
 
     expect(actions.parse_email_reply).toHaveBeenCalledOnce();
     expect(actions.find_ticket_by_email_thread).toHaveBeenCalledOnce();
@@ -272,10 +276,14 @@ describe('Email reply ingestion integration', () => {
     const storedComment = await db('comments')
       .where({ tenant: tenantId, ticket_id: ticketId })
       .first();
+    const updatedTicket = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: ticketId })
+      .first();
 
     expect(storedComment).toBeTruthy();
     expect(storedComment?.note).toBe(replyTop);
     expect(storedComment?.author_type).toBe('client');
+    expect(updatedTicket?.response_state).toBe('awaiting_internal');
 
     expect(actions.parse_email_reply).toHaveBeenCalledOnce();
     expect(actions.find_ticket_by_email_thread).toHaveBeenCalledOnce();
@@ -407,6 +415,7 @@ async function insertTicket(connection: Knex, params: {
       threadId: 'thread-xyz',
       references: [params.originalMessageId],
     }),
+    response_state: 'awaiting_client',
     entered_at: connection.fn.now(),
     updated_at: connection.fn.now(),
   });

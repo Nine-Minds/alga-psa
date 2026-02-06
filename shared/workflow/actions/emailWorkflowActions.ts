@@ -650,6 +650,26 @@ export async function createCommentFromEmail(
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
 
+  const normalizedAuthorType: 'internal' | 'client' | 'unknown' = (() => {
+    switch (commentData.author_type) {
+      case 'contact':
+      case 'client':
+        return 'client';
+      case 'internal':
+      case 'system':
+        return 'internal';
+      default:
+        return 'unknown';
+    }
+  })();
+
+  const ticketModelAuthorType: 'internal' | 'contact' | 'system' =
+    normalizedAuthorType === 'client'
+      ? 'contact'
+      : normalizedAuthorType === 'internal'
+        ? 'internal'
+        : 'system';
+
   const commentId = await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
@@ -661,10 +681,20 @@ export async function createCommentFromEmail(
         content: commentData.content,
         is_internal: false,
         is_resolution: false,
-        author_type: commentData.author_type as any || 'system',
+        author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
         metadata: commentData.metadata
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
+
+      if (normalizedAuthorType === 'client') {
+        await trx('tickets')
+          .where({ ticket_id: commentData.ticket_id, tenant })
+          .update({ response_state: 'awaiting_internal' });
+      } else if (normalizedAuthorType === 'internal') {
+        await trx('tickets')
+          .where({ ticket_id: commentData.ticket_id, tenant })
+          .update({ response_state: 'awaiting_client' });
+      }
 
       return result.comment_id;
     });

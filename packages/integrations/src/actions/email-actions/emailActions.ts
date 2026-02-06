@@ -344,6 +344,18 @@ export const createCommentFromEmail = withAuth(async (
   }
 ): Promise<string> => {
   const { knex: db } = await createTenantKnex();
+  const normalizedAuthorType: 'internal' | 'client' | 'unknown' = (() => {
+    switch (commentData.author_type) {
+      case 'contact':
+      case 'client':
+        return 'client';
+      case 'internal':
+      case 'system':
+        return 'internal';
+      default:
+        return 'unknown';
+    }
+  })();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const [comment] = await trx('comments')
@@ -353,12 +365,22 @@ export const createCommentFromEmail = withAuth(async (
         note: commentData.content,
         is_internal: false,
         is_resolution: false,
-        author_type: commentData.author_type || 'system',
+        author_type: normalizedAuthorType === 'client' ? 'client' : normalizedAuthorType === 'internal' ? 'internal' : 'unknown',
         metadata: JSON.stringify(commentData.metadata),
         created_at: new Date(),
         updated_at: new Date()
       })
       .returning('comment_id');
+
+    if (normalizedAuthorType === 'client') {
+      await trx('tickets')
+        .where({ ticket_id: commentData.ticket_id, tenant })
+        .update({ response_state: 'awaiting_internal' });
+    } else if (normalizedAuthorType === 'internal') {
+      await trx('tickets')
+        .where({ ticket_id: commentData.ticket_id, tenant })
+        .update({ response_state: 'awaiting_client' });
+    }
 
     return comment.comment_id;
   });
