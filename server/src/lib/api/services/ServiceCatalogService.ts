@@ -1,7 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import type { CreateServiceRequest, UpdateServiceRequest } from '../schemas/serviceSchemas';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -185,7 +184,7 @@ export class ServiceCatalogService extends BaseService<IService> {
     return { ...service, prices } as IService;
   }
 
-  async create(data: CreateServiceRequest, context: ServiceContext): Promise<IService> {
+  async create(data: Partial<IService>, context: ServiceContext): Promise<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
@@ -217,7 +216,7 @@ export class ServiceCatalogService extends BaseService<IService> {
     return this.getById(created.service_id, context) as Promise<IService>;
   }
 
-  async update(id: string, data: UpdateServiceRequest, context: ServiceContext): Promise<IService | null> {
+  async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
@@ -229,9 +228,11 @@ export class ServiceCatalogService extends BaseService<IService> {
       .update(updateData)
       .returning('*');
 
-    if (!updated) return null;
+    if (!updated) {
+      throw new Error('Resource not found or permission denied');
+    }
 
-    return this.getById(id, context);
+    return this.getById(id, context) as Promise<IService>;
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {

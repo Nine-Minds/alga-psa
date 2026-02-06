@@ -1,7 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import type { CreateProductRequest, UpdateProductRequest } from '../schemas/productSchemas';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -184,7 +183,7 @@ export class ProductCatalogService extends BaseService<IService> {
     return { ...product, prices } as IService;
   }
 
-  async create(data: CreateProductRequest, context: ServiceContext): Promise<IService> {
+  async create(data: Partial<IService>, context: ServiceContext): Promise<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
@@ -220,7 +219,7 @@ export class ProductCatalogService extends BaseService<IService> {
     return this.getById(created.service_id, context) as Promise<IService>;
   }
 
-  async update(id: string, data: UpdateProductRequest, context: ServiceContext): Promise<IService | null> {
+  async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
@@ -230,17 +229,10 @@ export class ProductCatalogService extends BaseService<IService> {
       .select('item_kind')
       .first();
     if (!existing || existing.item_kind !== 'product') {
-      return null;
+      throw new Error('Resource not found or permission denied');
     }
 
-    const {
-      prices,
-      billing_method: _billing_method,
-      ...rest
-    } = data;
-
-    // Strip fields that shouldn't be updated
-    const { service_type_name: _, ...updateData } = rest as any;
+    const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
 
     await knex('service_catalog')
       .where({ service_id: id, tenant })
@@ -255,7 +247,7 @@ export class ProductCatalogService extends BaseService<IService> {
       await this.setServicePrices(knex, id, tenant, prices);
     }
 
-    return this.getById(id, context);
+    return this.getById(id, context) as Promise<IService>;
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
