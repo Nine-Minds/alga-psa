@@ -173,92 +173,92 @@ Targeted surfaces:
 
 ### T002
 
-- Covered by \: asserts \ passes \ to shared comment creation.
+- Covered by `shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts`: asserts `createCommentFromEmail` passes `metadata.responseSource=inbound_email` to shared comment creation.
 
 ### T003
 
-- Covered by \: asserts provider normalization writes \ when available.
+- Covered by `shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts`: asserts provider normalization writes `metadata.email.provider/providerType` when available.
 
 ### T004
 
-- Covered by \: validates \ accepts metadata + normalized source fields.
+- Covered by `packages/types/src/interfaces/comment.interface.typecheck.test.ts`: validates `IComment` accepts metadata + normalized source fields.
 
 ### T005
 
-- Covered by \: explicit inbound metadata on latest eligible comment resolves to \.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: explicit inbound metadata on latest eligible comment resolves to `inbound_email`.
 
 ### T006
 
-- Covered by \: explicit client portal metadata on latest eligible comment resolves to \.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: explicit client portal metadata on latest eligible comment resolves to `client_portal`.
 
 ### T007
 
-- Covered by \: internal comments are ignored during source selection.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: internal comments are ignored during source selection.
 
 ### T008
 
-- Covered by \: fallback infers \ from legacy \.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: fallback infers `inbound_email` from legacy `metadata.email`.
 
 ### T009
 
-- Covered by \: fallback infers \ for legacy client comment with \.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: fallback infers `client_portal` for legacy client comment with `user_id`.
 
 ### T010
 
-- Covered by \: returns \ when no eligible customer source can be resolved.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: returns `null` when no eligible customer source can be resolved.
 
 ### T011
 
-- Covered by \: MSP rendering contract contains \ for portal source.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: MSP rendering contract contains `Received via Client Portal` for portal source.
 
 ### T012
 
-- Covered by \: MSP rendering contract contains \ for inbound source.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: MSP rendering contract contains `Received via Inbound Email` for inbound source.
 
 ### T013
 
-- Covered by \: client-portal rendering contract resolves/prints portal-source label.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: client-portal rendering contract resolves/prints portal-source label.
 
 ### T014
 
-- Covered by \: client-portal rendering contract resolves/prints inbound-source label.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: client-portal rendering contract resolves/prints inbound-source label.
 
 ### T015
 
-- Covered by \: unresolved source produces no indicator markup.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: unresolved source produces no indicator markup.
 
 ### T016
 
-- Covered by \: legacy comments without metadata remain valid inputs and resolve safely without schema changes.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: legacy comments without metadata remain valid inputs and resolve safely without schema changes.
 
 ### T017
 
-- Covered by \: google inbound provider path resolves/persists \.
+- Covered by `shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts`: google inbound provider path resolves/persists `inbound_email`.
 
 ### T018
 
-- Covered by \: microsoft inbound provider path resolves/persists \.
+- Covered by `shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts`: microsoft inbound provider path resolves/persists `inbound_email`.
 
 ### T019
 
-- Covered by \: imap inbound provider path resolves/persists \.
+- Covered by `shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts`: imap inbound provider path resolves/persists `inbound_email`.
 
 ### T020
 
-- Covered by \: create-comment-from-email path remains non-internal/non-resolution and additive to response-state behavior.
+- Covered by `shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts`: create-comment-from-email path remains non-internal/non-resolution and additive to response-state behavior.
 
 ### T021
 
-- Covered by \: indicator output updates after adding a new client-portal comment (no full reload assumption).
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: indicator output updates after adding a new client-portal comment (no full reload assumption).
 
 ### T022
 
-- Covered by \: indicator output updates after adding inbound-email reply comment.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: indicator output updates after adding inbound-email reply comment.
 
 ### T023
 
-- Covered by \: English locale keys resolve and existing ticket response-state keys remain present.
+- Covered by `packages/tickets/src/lib/__tests__/responseSourceLocales.test.ts`: English locale keys resolve and existing ticket response-state keys remain present.
 
 ### T024
 
-- Covered by \: mixed legacy stream picks latest eligible customer response source correctly.
+- Covered by `packages/tickets/src/lib/__tests__/responseSource.test.ts`: mixed legacy stream picks latest eligible customer response source correctly.
