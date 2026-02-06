@@ -8,6 +8,18 @@ export const COMMENT_RESPONSE_SOURCES = {
 
 export type CommentResponseSource =
   (typeof COMMENT_RESPONSE_SOURCES)[keyof typeof COMMENT_RESPONSE_SOURCES];
+export type InboundEmailProviderType = 'google' | 'microsoft' | 'imap';
+
+export interface CommentMetadataEmail {
+  provider?: InboundEmailProviderType;
+  [key: string]: unknown;
+}
+
+export interface CommentMetadata {
+  responseSource?: CommentResponseSource;
+  email?: CommentMetadataEmail;
+  [key: string]: unknown;
+}
 
 export interface IComment extends TenantEntity {
   comment_id?: string;
@@ -21,4 +33,6 @@ export interface IComment extends TenantEntity {
   created_at?: string;
   updated_at?: string;
   markdown_content?: string;
+  metadata?: CommentMetadata | null;
+  response_source?: CommentResponseSource;
 }

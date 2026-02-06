@@ -62,3 +62,12 @@ Targeted surfaces:
   - `COMMENT_RESPONSE_SOURCES.INBOUND_EMAIL = "inbound_email"`
   - `CommentResponseSource` union derived from those constants.
 - Rationale: single source of truth for source values shared by UI/action logic and tests.
+
+### F002 — Shared comment metadata typing
+
+- Extended `packages/types/src/interfaces/comment.interface.ts`:
+  - Added `InboundEmailProviderType = "google" | "microsoft" | "imap"`.
+  - Added `CommentMetadataEmail` and `CommentMetadata` with safe loose typing.
+  - Added `IComment.metadata?: CommentMetadata | null`.
+  - Added optional normalized `IComment.response_source?: CommentResponseSource`.
+- Rationale: unblock UI/action logic from using `any` for source resolution while staying backward-compatible with existing metadata shapes.

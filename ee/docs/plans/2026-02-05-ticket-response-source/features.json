@@ -7,7 +7,7 @@
   {
     "id": "F002",
     "description": "Add/extend shared comment metadata typing in @alga-psa/types so UI and actions can read metadata safely",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
