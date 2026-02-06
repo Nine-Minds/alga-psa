@@ -98,3 +98,11 @@ Targeted surfaces:
   - `getCommentResponseSource(comment)`
   - `getLatestCustomerResponseSource(conversations)`
 - Exported utility from `packages/tickets/src/lib/index.ts` for use in both MSP and client-portal ticket detail surfaces.
+
+### F007 — Internal exclusion + explicit precedence
+
+- `getLatestCustomerResponseSource` now only evaluates customer-visible comments (`!is_internal`, `author_type in {client,contact}`).
+- `getCommentResponseSource` resolves explicit metadata first:
+  - `metadata.responseSource`
+  - `response_source` fallback field
+- Heuristics are only applied if explicit source is absent.

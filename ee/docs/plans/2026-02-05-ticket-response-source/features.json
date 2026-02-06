@@ -32,7 +32,7 @@
   {
     "id": "F007",
     "description": "Source derivation excludes internal comments and prefers explicit metadata over heuristics",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
