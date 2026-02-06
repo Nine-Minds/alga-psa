@@ -25,6 +25,8 @@
       "@alga-psa/shared/*": ["../../shared/*"],
       "@ee": ["../server/src"],
       "@ee/*": ["../server/src/*"],
+      "@enterprise": ["../server/src"],
+      "@enterprise/*": ["../server/src/*"],
       "@/*": ["../server/src/*"],
       "@/interfaces/*": ["../../server/src/interfaces/*"],
       "@alga-psa/integrations/email/domains/entry": ["../../packages/integrations/src/email/domains/ee/entry"],
