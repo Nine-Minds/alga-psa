@@ -11,7 +11,7 @@
     "@types/socket.io": "^3.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "jsondiffpatch": "^0.6.0",
+    "jsondiffpatch": "^0.7.3",
     "jsonpath-plus": "^10.2.0",
     "node-fetch": "^3.3.2",
     "puppeteer": "^23.11.1",

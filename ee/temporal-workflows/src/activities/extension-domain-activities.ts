@@ -1,7 +1,7 @@
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
-import { KubeConfig, CustomObjectsApi, PatchUtils } from '@kubernetes/client-node';
+import { KubeConfig, CustomObjectsApi, PatchStrategy } from '@kubernetes/client-node';
 
 export interface ComputeDomainInput {
   tenantId: string;
@@ -93,7 +93,13 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 
     // Preflight: Ensure target KService exists (serving.knative.dev/v1 services)
     try {
-      await co.getNamespacedCustomObject('serving.knative.dev', 'v1', namespace, 'services', kservice);
+      await co.getNamespacedCustomObject({
+        group: 'serving.knative.dev',
+        version: 'v1',
+        namespace,
+        plural: 'services',
+        name: kservice,
+      });
     } catch (e: any) {
       const { status, body } = formatHttpError(e);
       throw new Error(`runner kservice check failed: namespace=${namespace} name=${kservice}; status=${status} body=${body}`);
@@ -104,7 +110,12 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     const cdcVersion = 'v1alpha1';
     const cdcPlural = 'clusterdomainclaims';
     try {
-      await co.getClusterCustomObject(cdcGroup, cdcVersion, cdcPlural, domainName);
+      await co.getClusterCustomObject({
+        group: cdcGroup,
+        version: cdcVersion,
+        plural: cdcPlural,
+        name: domainName,
+      });
     } catch (e: any) {
       const { status, reason, message, body } = formatHttpError(e);
       const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
@@ -119,7 +130,12 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
           spec: { namespace },
         };
         try {
-          await co.createClusterCustomObject(cdcGroup, cdcVersion, cdcPlural, cdcBody as any);
+          await co.createClusterCustomObject({
+            group: cdcGroup,
+            version: cdcVersion,
+            plural: cdcPlural,
+            body: cdcBody as any,
+          });
         } catch (e2: any) {
           const { status: s2, body: b2 } = formatHttpError(e2);
           throw new Error(`failed to create ClusterDomainClaim for ${domainName}: status=${s2} body=${b2}`);
@@ -136,7 +152,12 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     let version: 'v1' | 'v1beta1' | undefined;
     for (const v of ['v1', 'v1beta1'] as const) {
       try {
-        await co.listNamespacedCustomObject(group, v, namespace, plural);
+        await co.listNamespacedCustomObject({
+          group,
+          version: v,
+          namespace,
+          plural,
+        });
         version = v;
         break;
       } catch (e: any) {
@@ -172,7 +193,13 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     // Check if exists
     let exists = false;
     try {
-      await co.getNamespacedCustomObject(group, version, namespace, plural, name);
+      await co.getNamespacedCustomObject({
+        group,
+        version,
+        namespace,
+        plural,
+        name,
+      });
       exists = true;
     } catch (e: any) {
       const { status, reason, message, body } = formatHttpError(e);
@@ -186,7 +213,13 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 
     if (!exists) {
       try {
-        await co.createNamespacedCustomObject(group, version, namespace, plural, desired);
+        await co.createNamespacedCustomObject({
+          group,
+          version,
+          namespace,
+          plural,
+          body: desired,
+        });
       } catch (e: any) {
         const { status, body } = formatHttpError(e);
         throw new Error(`domainmapping.create failed: status=${status} body=${body}`);
@@ -196,9 +229,19 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 
     // Patch spec if exists to ensure correct ref
     const body = { spec: desired.spec };
-    const options = { headers: { 'Content-Type': PatchUtils.PATCH_FORMAT_JSON_MERGE_PATCH } } as const;
+    const options = { headers: { 'Content-Type': PatchStrategy.MergePatch } } as const;
     try {
-      await co.patchNamespacedCustomObject(group, version, namespace, plural, name, body, undefined, undefined, undefined, options);
+      await co.patchNamespacedCustomObject(
+        {
+          group,
+          version,
+          namespace,
+          plural,
+          name,
+          body,
+        },
+        options as any,
+      );
     } catch (e: any) {
       const { status, body } = formatHttpError(e);
       throw new Error(`domainmapping.patch failed: status=${status} body=${body}`);

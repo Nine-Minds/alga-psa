@@ -27,9 +27,9 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/shared": "file:../../shared",
-    "@aws-sdk/client-s3": "^3.682.0",
-    "@aws-sdk/s3-request-presigner": "^3.864.0",
-    "@kubernetes/client-node": "^0.21.0",
+    "@aws-sdk/client-s3": "^3.984.0",
+    "@aws-sdk/s3-request-presigner": "^3.984.0",
+    "@kubernetes/client-node": "^1.4.0",
     "@temporalio/activity": "^1.8.0",
     "@temporalio/client": "^1.8.0",
     "@temporalio/worker": "^1.8.0",
@@ -57,10 +57,12 @@
     "@types/node": "^20.11.24",
     "@types/pg": "^8.11.6",
     "@types/uuid": "^10.0.0",
+    "@vitest/coverage-istanbul": "^4.0.18",
+    "@vitest/coverage-v8": "^4.0.18",
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.3",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.0"
+    "vitest": "^4.0.18"
   }
 }

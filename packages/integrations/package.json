@@ -38,7 +38,6 @@
     "@alga-psa/validation": "*",
     "axios": "^1.7.4",
     "knex": "^3.1.0",
-    "node-quickbooks": "^2.0.45",
     "zod": "^3.22.4"
   },
   "peerDependencies": {
@@ -46,7 +45,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "tsup": "^8.0.0"
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
   }
 }
