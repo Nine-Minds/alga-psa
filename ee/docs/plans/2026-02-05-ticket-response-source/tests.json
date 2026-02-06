@@ -113,7 +113,7 @@
   {
     "id": "T014",
     "description": "Client Portal TicketDetails renders source indicator for inbound_email responses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012"

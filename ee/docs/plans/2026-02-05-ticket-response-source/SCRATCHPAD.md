@@ -218,3 +218,7 @@ Targeted surfaces:
 ### T013
 
 - Covered by \: client-portal rendering contract resolves/prints portal-source label.
+
+### T014
+
+- Covered by \: client-portal rendering contract resolves/prints inbound-source label.
