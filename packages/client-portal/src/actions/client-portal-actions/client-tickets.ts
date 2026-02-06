@@ -423,7 +423,7 @@ export const addClientTicketComment = withAuth(async (
 
       let markdownContent = "";
       try {
-        markdownContent = convertBlockNoteToMarkdown(content);
+        markdownContent = await convertBlockNoteToMarkdown(content);
         console.log("Converted markdown content for client comment:", markdownContent);
       } catch (e) {
         console.error("Error converting client comment to markdown:", e);
@@ -443,6 +443,13 @@ export const addClientTicketComment = withAuth(async (
       }).returning('*');
 
       if (!isInternal) {
+        await trx('tickets')
+          .where({
+            ticket_id: ticketId,
+            tenant,
+          })
+          .update({ response_state: 'awaiting_internal' });
+
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id);
       }
 
@@ -530,7 +537,7 @@ export const updateClientTicketComment = withAuth(async (
       let updatesWithMarkdown = { ...updates };
       if (updates.note) {
         try {
-          const markdownContent = convertBlockNoteToMarkdown(updates.note);
+          const markdownContent = await convertBlockNoteToMarkdown(updates.note);
           console.log("Converted markdown content for updated client comment:", markdownContent);
           updatesWithMarkdown.markdown_content = markdownContent;
         } catch (e) {
