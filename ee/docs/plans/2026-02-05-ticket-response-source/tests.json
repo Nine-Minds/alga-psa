@@ -3,144 +3,205 @@
     "id": "T001",
     "description": "addClientTicketComment stores metadata.responseSource=client_portal on newly inserted comment",
     "implemented": true,
-    "featureIds": ["F003"]
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T002",
     "description": "createCommentFromEmail stores metadata.responseSource=inbound_email on newly inserted comment",
-    "implemented": false,
-    "featureIds": ["F004"]
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T003",
     "description": "Inbound email comment metadata includes provider type when inboundReplyEvent/provider is available",
     "implemented": false,
-    "featureIds": ["F005"]
+    "featureIds": [
+      "F005"
+    ]
   },
   {
     "id": "T004",
     "description": "IComment typing accepts metadata without breaking existing comment consumers",
     "implemented": false,
-    "featureIds": ["F002"]
+    "featureIds": [
+      "F002"
+    ]
   },
   {
     "id": "T005",
     "description": "Response source utility returns inbound_email when latest eligible comment has metadata.responseSource=inbound_email",
     "implemented": false,
-    "featureIds": ["F006", "F007"]
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
   },
   {
     "id": "T006",
     "description": "Response source utility returns client_portal when latest eligible comment has metadata.responseSource=client_portal",
     "implemented": false,
-    "featureIds": ["F006", "F007"]
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
   },
   {
     "id": "T007",
     "description": "Response source utility ignores internal comments when determining latest customer response source",
     "implemented": false,
-    "featureIds": ["F006", "F007"]
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
   },
   {
     "id": "T008",
     "description": "Fallback logic returns inbound_email when metadata.email exists but metadata.responseSource is absent",
     "implemented": false,
-    "featureIds": ["F008"]
+    "featureIds": [
+      "F008"
+    ]
   },
   {
     "id": "T009",
     "description": "Fallback logic returns client_portal for legacy client comment with user_id when metadata.responseSource is absent",
     "implemented": false,
-    "featureIds": ["F009"]
+    "featureIds": [
+      "F009"
+    ]
   },
   {
     "id": "T010",
     "description": "Fallback logic returns null when no eligible customer response comment exists",
     "implemented": false,
-    "featureIds": ["F006", "F013"]
+    "featureIds": [
+      "F006",
+      "F013"
+    ]
   },
   {
     "id": "T011",
     "description": "MSP TicketDetails renders 'Received via Client Portal' when derived source is client_portal",
     "implemented": false,
-    "featureIds": ["F010", "F012"]
+    "featureIds": [
+      "F010",
+      "F012"
+    ]
   },
   {
     "id": "T012",
     "description": "MSP TicketDetails renders 'Received via Inbound Email' when derived source is inbound_email",
     "implemented": false,
-    "featureIds": ["F010", "F012"]
+    "featureIds": [
+      "F010",
+      "F012"
+    ]
   },
   {
     "id": "T013",
     "description": "Client Portal TicketDetails renders source indicator for client_portal responses",
     "implemented": false,
-    "featureIds": ["F011", "F012"]
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
   },
   {
     "id": "T014",
     "description": "Client Portal TicketDetails renders source indicator for inbound_email responses",
     "implemented": false,
-    "featureIds": ["F011", "F012"]
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
   },
   {
     "id": "T015",
     "description": "Both TicketDetails screens hide source indicator when source is unresolved",
     "implemented": false,
-    "featureIds": ["F013"]
+    "featureIds": [
+      "F013"
+    ]
   },
   {
     "id": "T016",
     "description": "No database migration is required and existing comment rows remain valid",
     "implemented": false,
-    "featureIds": ["F014"]
+    "featureIds": [
+      "F014"
+    ]
   },
   {
     "id": "T017",
     "description": "Google inbound email flow produces comments that resolve to inbound_email source in ticket details",
     "implemented": false,
-    "featureIds": ["F015"]
+    "featureIds": [
+      "F015"
+    ]
   },
   {
     "id": "T018",
     "description": "Microsoft inbound email flow produces comments that resolve to inbound_email source in ticket details",
     "implemented": false,
-    "featureIds": ["F015"]
+    "featureIds": [
+      "F015"
+    ]
   },
   {
     "id": "T019",
     "description": "IMAP inbound email flow (shared email processing path) produces comments that resolve to inbound_email source",
     "implemented": false,
-    "featureIds": ["F015"]
+    "featureIds": [
+      "F015"
+    ]
   },
   {
     "id": "T020",
     "description": "Response state transitions remain unchanged after adding source metadata (client-visible response still sets awaiting_internal)",
     "implemented": false,
-    "featureIds": ["F016"]
+    "featureIds": [
+      "F016"
+    ]
   },
   {
     "id": "T021",
     "description": "Response source indicator updates after posting a new client portal comment without requiring full page reload",
     "implemented": false,
-    "featureIds": ["F010", "F011"]
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
   },
   {
     "id": "T022",
     "description": "Response source indicator updates after inbound email reply is ingested and comments are refreshed",
     "implemented": false,
-    "featureIds": ["F010", "F011"]
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
   },
   {
     "id": "T023",
     "description": "Locale keys for response source labels resolve correctly in English and do not break existing ticket detail translations",
     "implemented": false,
-    "featureIds": ["F012"]
+    "featureIds": [
+      "F012"
+    ]
   },
   {
     "id": "T024",
     "description": "Legacy ticket with mixed comments chooses latest eligible customer response source correctly",
     "implemented": false,
-    "featureIds": ["F006", "F007", "F008", "F009"]
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
   }
 ]

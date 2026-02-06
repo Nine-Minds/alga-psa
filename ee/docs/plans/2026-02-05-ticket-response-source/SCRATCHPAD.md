@@ -170,3 +170,7 @@ Targeted surfaces:
 - Also introduced `server/vitest.config.ts` alias for `@alga-psa/analytics` to support importing client-portal action modules in Vitest.
 - Validation command:
   - `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts packages/tickets/src/lib/__tests__/responseSource.test.ts packages/tickets/src/components/ResponseSourceBadge.render.test.tsx packages/tickets/src/lib/__tests__/responseSourceLocales.test.ts packages/types/src/interfaces/comment.interface.typecheck.test.ts --config server/vitest.config.ts --coverage.enabled false`
+
+### T002
+
+- Covered by \: asserts \ passes \ to shared comment creation.
