@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "Source derivation fallback marks comment as client_portal for legacy client-authored comments with user_id",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",

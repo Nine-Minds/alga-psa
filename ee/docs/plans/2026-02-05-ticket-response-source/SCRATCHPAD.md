@@ -112,3 +112,9 @@ Targeted surfaces:
 - Added fallback in `getCommentResponseSource`:
   - if `comment.metadata.email` exists and explicit source is absent, infer `inbound_email`.
 - This supports historical comments that predate `metadata.responseSource`.
+
+### F009 — Legacy client-portal fallback
+
+- Added fallback in `getCommentResponseSource`:
+  - if explicit source is absent and comment is `author_type=client` with `user_id`, infer `client_portal`.
+- This keeps older client-authored comments source-identifiable without backfill migration.
