@@ -246,3 +246,7 @@ Targeted surfaces:
 ### T020
 
 - Covered by \: create-comment-from-email path remains non-internal/non-resolution and additive to response-state behavior.
+
+### T021
+
+- Covered by \: indicator output updates after adding a new client-portal comment (no full reload assumption).

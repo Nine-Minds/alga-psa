@@ -170,7 +170,7 @@
   {
     "id": "T021",
     "description": "Response source indicator updates after posting a new client portal comment without requiring full page reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011"
