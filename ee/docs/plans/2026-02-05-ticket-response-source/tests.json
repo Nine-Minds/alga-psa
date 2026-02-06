@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "Response source utility returns client_portal when latest eligible comment has metadata.responseSource=client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"

@@ -186,3 +186,7 @@ Targeted surfaces:
 ### T005
 
 - Covered by \: explicit inbound metadata on latest eligible comment resolves to \.
+
+### T006
+
+- Covered by \: explicit client portal metadata on latest eligible comment resolves to \.
