@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "Refactor QboClientService to use an internal REST transport abstraction instead of node-quickbooks instance methods.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement QBO base URL/environment resolution for sandbox vs production requests in the REST path.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement REST query execution for SELECT statements and preserve current entity-array extraction behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement CompanyInfo retrieval via REST endpoint and keep query(\"...CompanyInfo...\") behavior equivalent.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement generic create(entityType, data) over REST while preserving current return shape expectations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Implement generic update(entityType, data) over REST with Id/SyncToken validation and update operation semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement generic read(entityType, id) over REST and preserve not-found to null behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Preserve one-time token refresh and retry behavior for 401 responses in the REST request path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Preserve mapQboError output compatibility and AppError code mappings used by existing consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Keep findCustomerByDisplayName query escaping behavior equivalent to current implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Keep createOrUpdateCustomer flow behavior equivalent, including SyncToken fetch fallback before updates.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Keep tenant secret storage contract unchanged for refreshed tokens and multi-realm credential map updates.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Ensure qboActions usage continues to compile and run without call-site signature changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Ensure QuickBooksOnlineCompanyAdapter customer sync flow remains compatible with QboClientService changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Remove dynamic import and runtime construction of node-quickbooks client from qboClientService.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Remove node-quickbooks from packages/integrations/package.json dependencies.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Refresh lockfile to remove node-quickbooks and its transitive request-based dependency chain.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Non-functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add focused unit coverage for query and CompanyInfo REST paths in qboClientService.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Add focused unit coverage for create/update/read REST paths and error mapping behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add focused unit coverage for token refresh retry behavior on 401 responses.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Add focused unit coverage for customer lookup/create/update upsert behavior including SyncToken fallback.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Run targeted integration package tests for QBO-related flows after migration changes.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Run dependency audit checks and confirm security warning reduction tied to node-quickbooks removal.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Document migration assumptions, commands, and package evidence in SCRATCHPAD.md for implementation handoff.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]
