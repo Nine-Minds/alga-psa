@@ -250,3 +250,7 @@ Targeted surfaces:
 ### T021
 
 - Covered by \: indicator output updates after adding a new client-portal comment (no full reload assumption).
+
+### T022
+
+- Covered by \: indicator output updates after adding inbound-email reply comment.

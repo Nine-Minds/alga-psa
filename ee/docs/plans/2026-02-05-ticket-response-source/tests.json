@@ -179,7 +179,7 @@
   {
     "id": "T022",
     "description": "Response source indicator updates after inbound email reply is ingested and comments are refreshed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011"
