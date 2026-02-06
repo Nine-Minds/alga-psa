@@ -125,3 +125,9 @@ Targeted surfaces:
 - Updated `packages/tickets/src/components/ticket/TicketDetails.tsx`:
   - derives latest source with `getLatestCustomerResponseSource(conversations)`.
   - renders source indicator next to response-state badge in header/status area.
+
+### F011 — Client portal TicketDetails indicator
+
+- Updated `packages/client-portal/src/components/tickets/TicketDetails.tsx`:
+  - derives latest source from `ticket.conversations`.
+  - renders shared `ResponseSourceBadge` alongside existing response-state badge.

@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "Render response source indicator in Client Portal TicketDetails header/status area",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
