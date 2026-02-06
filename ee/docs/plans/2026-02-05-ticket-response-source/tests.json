@@ -104,7 +104,7 @@
   {
     "id": "T013",
     "description": "Client Portal TicketDetails renders source indicator for client_portal responses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012"

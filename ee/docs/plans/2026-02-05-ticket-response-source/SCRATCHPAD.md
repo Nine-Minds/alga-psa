@@ -214,3 +214,7 @@ Targeted surfaces:
 ### T012
 
 - Covered by \: MSP rendering contract contains \ for inbound source.
+
+### T013
+
+- Covered by \: client-portal rendering contract resolves/prints portal-source label.
