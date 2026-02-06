@@ -2,5 +2,4 @@
  * @alga-psa/documents - Models
  */
 
-// Placeholder - models will be migrated
-export {};
+export { default as Document } from './document';

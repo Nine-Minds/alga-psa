@@ -10,8 +10,8 @@ import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import tag models and interfaces
-import TagDefinition, { ITagDefinition } from '../../models/tagDefinition';
-import TagMapping, { ITagMapping, ITagWithDefinition } from '../../models/tagMapping';
+import TagDefinition, { ITagDefinition } from '@alga-psa/tags/models/tagDefinition';
+import TagMapping, { ITagMapping, ITagWithDefinition } from '@alga-psa/tags/models/tagMapping';
 import { ITag, TaggedEntityType } from '../../../interfaces/tag.interfaces';
 
 // Import schemas for validation
@@ -120,8 +120,8 @@ export class TagService extends BaseService {
         data: CreateTagData,
         context: ServiceContext
       ): Promise<TagResponse> {
-        const { knex } = await this.getKnex();
-        
+        const { knex, tenant } = await this.getKnex();
+
         return withTransaction(knex, async (trx) => {
           const tagData: Omit<ITag, 'tenant' | 'tag_id'> = {
             tag_text: data.tag_text,
@@ -131,10 +131,11 @@ export class TagService extends BaseService {
             background_color: data.background_color || undefined,
             text_color: data.text_color || undefined
           };
-    
+
           // Get or create tag definition
           const definition = await TagDefinition.getOrCreate(
             trx,
+            tenant,
             tagData.tag_text,
             tagData.tagged_type,
             {
@@ -143,16 +144,15 @@ export class TagService extends BaseService {
               text_color: tagData.text_color
             }
           );
-          
+
           // Create mapping with user ID
-          const mapping = await TagMapping.insert(trx, {
+          const mapping = await TagMapping.insert(trx, tenant, {
             tag_id: definition.tag_id,
             tagged_id: tagData.tagged_id,
             tagged_type: tagData.tagged_type
           }, context.userId);
           
           // Get the created tag for return
-          const { tenant } = await this.getKnex();
           const created = await trx('tag_mappings as tm')
             .join('tag_definitions as td', function() {
               this.on('tm.tenant', '=', 'td.tenant')
@@ -172,7 +172,7 @@ export class TagService extends BaseService {
               'tm.created_by'
             )
             .first();
-    
+
           return created as TagResponse;
         });
       }
@@ -185,7 +185,7 @@ export class TagService extends BaseService {
     data: UpdateTagData,
     context: ServiceContext
   ): Promise<TagResponse> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       const updateData = { ...data };
@@ -194,7 +194,6 @@ export class TagService extends BaseService {
       }
 
       // Get the mapping to find the definition (id is mapping_id)
-      const { tenant } = await this.getKnex();
       const mapping = await trx('tag_mappings')
         .where('mapping_id', id)
         .where('tenant', tenant)
@@ -205,7 +204,7 @@ export class TagService extends BaseService {
       }
       
       // Update the definition (only certain fields can be updated)
-      await TagDefinition.update(trx, mapping.tag_id, {
+      await TagDefinition.update(trx, tenant, mapping.tag_id, {
         tag_text: updateData.tag_text,
         background_color: updateData.background_color,
         text_color: updateData.text_color,
@@ -245,9 +244,9 @@ export class TagService extends BaseService {
    * Delete tag
    */
   async deleteTag(id: string, context: ServiceContext): Promise<void> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
     // id is actually mapping_id - just delete the mapping
-    await TagMapping.delete(knex, id);
+    await TagMapping.delete(knex, tenant, id);
   }
 
   /**
@@ -258,9 +257,8 @@ export class TagService extends BaseService {
     entityType: TaggedEntityType,
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex } = await this.getKnex();
-    const tagsWithDefinitions = await TagMapping.getByEntity(knex, entityId, entityType);
-    const { tenant } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
+    const tagsWithDefinitions = await TagMapping.getByEntity(knex, tenant, entityId, entityType);
     return tagsWithDefinitions.map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
@@ -282,9 +280,8 @@ export class TagService extends BaseService {
     entityType: TaggedEntityType,
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex } = await this.getKnex();
-    const tagsWithDefinitions = await TagMapping.getByEntities(knex, entityIds, entityType);
-    const { tenant } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
+    const tagsWithDefinitions = await TagMapping.getByEntities(knex, tenant, entityIds, entityType);
     return tagsWithDefinitions.map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
@@ -305,9 +302,8 @@ export class TagService extends BaseService {
     entityType: TaggedEntityType,
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex } = await this.getKnex();
-    const definitions = await TagDefinition.getAllByType(knex, entityType);
-    const { tenant } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
+    const definitions = await TagDefinition.getAllByType(knex, tenant, entityType);
     return definitions.map(def => ({
       tag_id: def.tag_id,
       tenant,
@@ -340,7 +336,7 @@ export class TagService extends BaseService {
     } = {},
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       const createdTags: TagResponse[] = [];
@@ -361,6 +357,7 @@ export class TagService extends BaseService {
         // Get or create tag definition
         const definition = await TagDefinition.getOrCreate(
           trx,
+          tenant,
           tagData.tag_text,
           tagData.tagged_type,
           {
@@ -369,16 +366,13 @@ export class TagService extends BaseService {
             text_color: tagData.text_color
           }
         );
-        
+
         // Create mapping with user ID
-        const mapping = await TagMapping.insert(trx, {
+        const mapping = await TagMapping.insert(trx, tenant, {
           tag_id: definition.tag_id,
           tagged_id: tagData.tagged_id,
           tagged_type: tagData.tagged_type
         }, context.userId);
-        
-        // Get the created tag for return
-        const { tenant } = await this.getKnex();
         const created = await trx('tag_mappings as tm')
           .join('tag_definitions as td', function() {
             this.on('tm.tenant', '=', 'td.tenant')
@@ -417,11 +411,11 @@ export class TagService extends BaseService {
     tagIds: string[],
     context: ServiceContext
   ): Promise<void> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       for (const tagId of tagIds) {
-        await TagMapping.delete(trx, tagId);
+        await TagMapping.delete(trx, tenant, tagId);
       }
     });
   }
@@ -442,14 +436,14 @@ export class TagService extends BaseService {
     } = {},
     context: ServiceContext
   ): Promise<TagResponse[]> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       // Get existing tags
-      const existingTags = await TagMapping.getByEntity(trx, entityId, entityType);
+      const existingTags = await TagMapping.getByEntity(trx, tenant, entityId, entityType);
       // Remove existing tags
       for (const tag of existingTags) {
-        await TagMapping.delete(trx, tag.mapping_id); // Use mapping_id instead of tag_id
+        await TagMapping.delete(trx, tenant, tag.mapping_id); // Use mapping_id instead of tag_id
       }
 
       // Add new tags
@@ -468,12 +462,12 @@ export class TagService extends BaseService {
     tagIds: string[],
     context: ServiceContext
   ): Promise<{ deleted: number }> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       let deleted = 0;
       for (const tagId of tagIds) {
-        await TagMapping.delete(trx, tagId);
+        await TagMapping.delete(trx, tenant, tagId);
         deleted++;
       }
       return { deleted };
@@ -492,11 +486,10 @@ export class TagService extends BaseService {
     } = {},
     context: ServiceContext
   ): Promise<{ merged: number; created: number }> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       const sourceTags: any[] = [];
-      const { tenant } = await this.getKnex();
       for (const tagId of sourceTagIds) {
         const tag = await trx('tag_mappings as tm')
           .join('tag_definitions as td', function() {
@@ -553,6 +546,7 @@ export class TagService extends BaseService {
         // Get or create tag definition
         const definition = await TagDefinition.getOrCreate(
           trx,
+          tenant,
           tagData.tag_text,
           tagData.tagged_type,
           {
@@ -561,9 +555,9 @@ export class TagService extends BaseService {
             text_color: tagData.text_color
           }
         );
-        
+
         // Create mapping with user ID
-        await TagMapping.insert(trx, {
+        await TagMapping.insert(trx, tenant, {
           tag_id: definition.tag_id,
           tagged_id: tagData.tagged_id,
           tagged_type: tagData.tagged_type
@@ -573,7 +567,7 @@ export class TagService extends BaseService {
       }
 
       for (const tagId of sourceTagIds) {
-        await TagMapping.delete(trx, tagId);
+        await TagMapping.delete(trx, tenant, tagId);
       }
 
       return { merged, created };
@@ -589,12 +583,12 @@ export class TagService extends BaseService {
     tagIds: string[],
     context: ServiceContext
   ): Promise<{ removed: number }> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       let removed = 0;
       for (const tagId of tagIds) {
-        await TagMapping.delete(trx, tagId);
+        await TagMapping.delete(trx, tenant, tagId);
         removed++;
       }
       return { removed };
@@ -615,7 +609,7 @@ export class TagService extends BaseService {
     textColor: string | null,
     context: ServiceContext
   ): Promise<{ updated: number }> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       // Validate hex color codes if provided
@@ -628,19 +622,19 @@ export class TagService extends BaseService {
       }
 
       // Find the definition and update it
-      const definition = await TagDefinition.findByTextAndType(trx, tagText, entityType);
-      
+      const definition = await TagDefinition.findByTextAndType(trx, tenant, tagText, entityType);
+
       if (!definition) {
         return { updated: 0 };
       }
 
-      await TagDefinition.update(trx, definition.tag_id, {
+      await TagDefinition.update(trx, tenant, definition.tag_id, {
         background_color: backgroundColor,
         text_color: textColor
       });
 
       // Get count of affected mappings
-      const updated = await TagMapping.getUsageCount(trx, definition.tag_id);
+      const updated = await TagMapping.getUsageCount(trx, tenant, definition.tag_id);
 
       return { updated };
     });
@@ -654,7 +648,7 @@ export class TagService extends BaseService {
     newTagText: string,
     context: ServiceContext
   ): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; }> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       // Validate tag text
@@ -665,7 +659,6 @@ export class TagService extends BaseService {
       const trimmedNewText = newTagText.trim();
 
       // Get the original tag (tagId is actually mapping_id)
-      const { tenant } = await this.getKnex();
       const tag = await trx('tag_mappings as tm')
         .join('tag_definitions as td', function() {
           this.on('tm.tenant', '=', 'td.tenant')
@@ -700,8 +693,8 @@ export class TagService extends BaseService {
       }
 
       // Find the old definition
-      const oldDefinition = await TagDefinition.findByTextAndType(trx, tag.tag_text, tag.tagged_type);
-      
+      const oldDefinition = await TagDefinition.findByTextAndType(trx, tenant, tag.tag_text, tag.tagged_type);
+
       if (!oldDefinition) {
         return {
           old_tag_text: tag.tag_text,
@@ -710,21 +703,21 @@ export class TagService extends BaseService {
           updated_count: 0,
         };
       }
-      
+
       // Check if new tag text already exists
-      const newDefinition = await TagDefinition.findByTextAndType(trx, trimmedNewText, tag.tagged_type);
-      
+      const newDefinition = await TagDefinition.findByTextAndType(trx, tenant, trimmedNewText, tag.tagged_type);
+
       if (newDefinition) {
         throw new Error(`Tag "${trimmedNewText}" already exists for ${tag.tagged_type} entities`);
       }
-      
+
       // Update the definition
-      await TagDefinition.update(trx, oldDefinition.tag_id, {
+      await TagDefinition.update(trx, tenant, oldDefinition.tag_id, {
         tag_text: trimmedNewText
       });
-      
+
       // Return count of affected mappings
-      const updatedCount = await TagMapping.getUsageCount(trx, oldDefinition.tag_id);
+      const updatedCount = await TagMapping.getUsageCount(trx, tenant, oldDefinition.tag_id);
 
       return {
         old_tag_text: tag.tag_text,
@@ -743,7 +736,7 @@ export class TagService extends BaseService {
     taggedType: TaggedEntityType,
     context: ServiceContext
   ): Promise<{ deleted_count: number }> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
       // Validate tag text
@@ -754,15 +747,15 @@ export class TagService extends BaseService {
       const trimmedText = tagText.trim();
 
       // Find the definition and delete it (mappings will cascade delete)
-      const definition = await TagDefinition.findByTextAndType(trx, trimmedText, taggedType);
+      const definition = await TagDefinition.findByTextAndType(trx, tenant, trimmedText, taggedType);
       let deletedCount = 0;
-      
+
       if (definition) {
         // Get count before deletion
-        deletedCount = await TagMapping.getUsageCount(trx, definition.tag_id);
-        
+        deletedCount = await TagMapping.getUsageCount(trx, tenant, definition.tag_id);
+
         // Delete the definition (mappings will cascade delete)
-        await TagDefinition.delete(trx, definition.tag_id);
+        await TagDefinition.delete(trx, tenant, definition.tag_id);
       }
       
       return {

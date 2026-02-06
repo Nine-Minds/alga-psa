@@ -38,10 +38,10 @@ import { get } from 'http';
 // Import necessary functions from invoiceService
 import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getClientDetails } from 'server/src/lib/services/invoiceService';
 import { v4 as uuidv4 } from 'uuid';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
+import ContractLineFixedConfig from '@alga-psa/billing/models/contractLineFixedConfig'; // Added import for new model
 import { string, number } from 'zod';
-import contractLine from '../models/contractLine';
-import service from '../models/service';
+import contractLine from '@alga-psa/billing/models/contractLine';
+import service from '@alga-psa/billing/models/service';
 import { TaxService } from '../services/taxService';
 import { ClientContractServiceConfigurationService } from '../services/clientContractServiceConfigurationService';
 import { getCurrencySymbol } from 'server/src/constants/currency';

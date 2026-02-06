@@ -28,8 +28,7 @@ import {
   ProjectExportQuery
 } from '../schemas/project';
 import { NotFoundError } from '../middleware/apiMiddleware';
-import ProjectModel from 'server/src/lib/models/project';
-import ProjectTaskModel from 'server/src/lib/models/projectTask';
+import { ProjectModel } from '@alga-psa/projects/models';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
@@ -251,7 +250,7 @@ export class ProjectService extends BaseService<IProject> {
       const projectNumber = data.project_number ?? await SharedNumberingService.getNextNumber('PROJECT', { knex: trx, tenant: context.tenant });
 
       // Generate WBS code
-      const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
+      const wbsCode = await ProjectModel.generateNextWbsCode(trx, context.tenant, '');
       
       // Get default status if not provided
       let status = data.status;
@@ -286,7 +285,7 @@ export class ProjectService extends BaseService<IProject> {
 
       // Create initial phase if needed
       if (data.create_default_phase) {
-        const phaseWbsCode = await ProjectModel.generateNextWbsCode(trx, project.wbs_code);
+        const phaseWbsCode = await ProjectModel.generateNextWbsCode(trx, context.tenant, project.wbs_code);
         await trx('project_phases').insert({
           phase_id: trx.raw('gen_random_uuid()'),
           project_id: project.project_id,

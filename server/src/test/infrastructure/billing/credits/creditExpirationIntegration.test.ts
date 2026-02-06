@@ -13,7 +13,7 @@ import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';

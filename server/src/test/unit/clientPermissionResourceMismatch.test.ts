@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { IPermission, IRoleWithPermissions, IUser } from '../../interfaces/auth.interfaces';
 
-vi.mock('../../lib/models/user', () => ({
+vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     getUserRolesWithPermissions: vi.fn(),
   },
 }));
 
 // Import after mocking
-import UserModel from '../../lib/models/user';
+import UserModel from '@alga-psa/db/models/user';
 import { hasPermission } from '../../lib/auth/rbac';
 
 describe('Client permission resource mapping', () => {

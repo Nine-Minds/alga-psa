@@ -5,7 +5,7 @@ import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoic
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { ClientContractLine } from '@alga-psa/billing/models';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDate, dateHelpers } from '../../../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';

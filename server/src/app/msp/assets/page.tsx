@@ -1,5 +1,5 @@
 import { listAssets } from '@alga-psa/assets/actions/assetActions';
-import User from 'server/src/lib/models/user';
+import User from '@alga-psa/db/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import type { AssetListResponse } from '@alga-psa/types';
