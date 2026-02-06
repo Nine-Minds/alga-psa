@@ -885,7 +885,7 @@ export class TimeSheetService extends BaseService<any> {
         }
 
         // Use ScheduleEntry.create() which handles ticket/task assignment notifications
-        const entry = await ScheduleEntry.create(trx, {
+        const entry = await ScheduleEntry.create(trx, context.tenant, {
           title: data.title,
           scheduled_start: new Date(data.scheduled_start),
           scheduled_end: new Date(data.scheduled_end),
