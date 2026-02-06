@@ -174,3 +174,7 @@ Targeted surfaces:
 ### T002
 
 - Covered by \: asserts \ passes \ to shared comment creation.
+
+### T003
+
+- Covered by \: asserts provider normalization writes \ when available.
