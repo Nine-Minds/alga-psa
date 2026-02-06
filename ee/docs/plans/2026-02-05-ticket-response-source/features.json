@@ -77,6 +77,6 @@
   {
     "id": "F016",
     "description": "Preserve existing response state behavior; feature is additive and does not alter response_state transitions",
-    "implemented": false
+    "implemented": true
   }
 ]

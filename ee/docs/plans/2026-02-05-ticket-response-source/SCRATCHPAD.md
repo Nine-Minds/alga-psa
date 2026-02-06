@@ -155,3 +155,8 @@ Targeted surfaces:
 - Google/Microsoft/IMAP inbound flows all route through `createCommentFromEmail` in:
   - `shared/services/email/processInboundEmailInApp.ts`
 - Since source/provider tagging is centralized in `shared/workflow/actions/emailWorkflowActions.ts#createCommentFromEmail`, all three providers now share the same metadata behavior.
+
+### F016 — Response-state behavior remains unchanged
+
+- This implementation only adds metadata writes and UI read/display logic.
+- No updates were made to response-state transition logic (`awaiting_client` / `awaiting_internal`) or ticket state machine code.
