@@ -190,3 +190,7 @@ Targeted surfaces:
 ### T006
 
 - Covered by \: explicit client portal metadata on latest eligible comment resolves to \.
+
+### T007
+
+- Covered by \: internal comments are ignored during source selection.

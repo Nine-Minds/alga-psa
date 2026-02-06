@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "Response source utility ignores internal comments when determining latest customer response source",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
