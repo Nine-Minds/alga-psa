@@ -96,7 +96,7 @@ export function registerEmailActions(): void {
       // From domain constraints: allow tenant custom domains or the defaultFromDomain.
       const fromDomain = String(from.email).split('@')[1]?.toLowerCase() ?? '';
       const allowedDomains = new Set<string>([
-        ...(settings.customDomains ?? []).map((d) => String(d).toLowerCase()),
+        ...(settings.customDomains ?? []).map((d: string) => String(d).toLowerCase()),
         ...(settings.defaultFromDomain ? [String(settings.defaultFromDomain).toLowerCase()] : [])
       ]);
       if (fromDomain && allowedDomains.size > 0 && !allowedDomains.has(fromDomain)) {
