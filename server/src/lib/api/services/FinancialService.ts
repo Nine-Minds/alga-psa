@@ -17,12 +17,12 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { TaxService } from '../../services/taxService';
-import { BillingEngine } from '../../billing/billingEngine';
 import { v4 as uuidv4 } from 'uuid';
+import { SharedNumberingService } from '@shared/services/numberingService';
+import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';
 
 // Import types from schemas and interfaces
 import {
@@ -98,10 +98,6 @@ import {
   IClientContractLineSettings
 } from '../../../interfaces/billing.interfaces';
 
-// Import existing actions to integrate with
-import * as creditActions from '@alga-psa/billing/actions/creditActions';
-import * as creditReconciliationActions from '@alga-psa/billing/actions/creditReconciliationActions';
-import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import { BillingEngine as BillingEngineClass } from '../../billing/billingEngine';
 
 /**
@@ -264,12 +260,11 @@ export class FinancialService extends BaseService<ITransaction> {
     resource: string,
     context: ServiceContext
   ): Promise<void> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
+    if (!context.user) {
       throw new Error('Authentication required');
     }
 
-    if (!await hasPermission(currentUser, resource, operation)) {
+    if (!await hasPermission(context.user, resource, operation)) {
       throw new Error(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
@@ -483,33 +478,144 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<FinancialResponse<{ success: boolean; appliedAmount: number }>> {
     await this.validatePermissions('update', 'credit', context);
-    
-    await creditActions.applyCreditToInvoice(
-      request.client_id,
-      request.invoice_id,
-      request.requested_amount
-    );
 
-    return {
-      data: {
-        success: true,
-        appliedAmount: request.requested_amount
-      },
-      links: [
-        {
-          rel: 'invoice',
-          href: `/api/v1/financial/invoices/${request.invoice_id}`,
-          method: 'GET',
-          description: 'View updated invoice'
-        },
-        {
-          rel: 'client-credits',
-          href: `/api/v1/financial/credits?client_id=${request.client_id}`,
-          method: 'GET',
-          description: 'View client credits'
-        }
-      ]
-    };
+    const { knex } = await this.getKnex();
+    const tenant = context.tenant;
+
+    return withTransaction(knex, async (trx) => {
+      // Get the invoice and its currency
+      const invoice = await trx('invoices')
+        .where({ invoice_id: request.invoice_id, tenant })
+        .select('credit_applied', 'currency_code', 'subtotal', 'tax', 'total_amount')
+        .first();
+
+      if (!invoice) {
+        throw new Error(`Invoice ${request.invoice_id} not found`);
+      }
+
+      const invoiceCurrency = invoice.currency_code || 'USD';
+
+      // Check already-applied credit
+      const existingAllocations = await trx('credit_allocations')
+        .where({ invoice_id: request.invoice_id, tenant })
+        .sum('amount as total_applied')
+        .first();
+      const alreadyApplied = Number(existingAllocations?.total_applied || 0);
+
+      const invoiceFullAmount = Number(invoice.subtotal) + Number(invoice.tax);
+      const maxAdditional = Math.max(0, invoiceFullAmount - alreadyApplied);
+      let requestedAmount = Math.min(request.requested_amount, maxAdditional);
+
+      if (requestedAmount <= 0) {
+        return {
+          data: { success: true, appliedAmount: 0 },
+          links: []
+        };
+      }
+
+      // Get client credit balance
+      const [client] = await trx('clients')
+        .where({ client_id: request.client_id, tenant })
+        .select('credit_balance');
+      const availableCredit = client.credit_balance || 0;
+
+      if (availableCredit <= 0) {
+        return { data: { success: true, appliedAmount: 0 }, links: [] };
+      }
+
+      // Get active credit entries in the same currency (FIFO by expiration)
+      const now = new Date().toISOString();
+      const creditEntries = await trx('credit_tracking')
+        .where({ client_id: request.client_id, tenant, is_expired: false, currency_code: invoiceCurrency })
+        .where(function() {
+          this.whereNull('expiration_date').orWhere('expiration_date', '>', now);
+        })
+        .where('remaining_amount', '>', 0)
+        .orderBy([
+          { column: 'expiration_date', order: 'asc', nulls: 'last' },
+          { column: 'created_at', order: 'asc' }
+        ]);
+
+      if (creditEntries.length === 0) {
+        return { data: { success: true, appliedAmount: 0 }, links: [] };
+      }
+
+      let remainingRequested = requestedAmount;
+      let totalApplied = 0;
+
+      for (const credit of creditEntries) {
+        if (remainingRequested <= 0) break;
+        const applyAmount = Math.min(remainingRequested, Number(credit.remaining_amount));
+        if (applyAmount <= 0) continue;
+
+        await trx('credit_tracking')
+          .where({ credit_id: credit.credit_id, tenant })
+          .update({ remaining_amount: Number(credit.remaining_amount) - applyAmount, updated_at: now });
+
+        totalApplied += applyAmount;
+        remainingRequested -= applyAmount;
+      }
+
+      if (totalApplied <= 0) {
+        return { data: { success: true, appliedAmount: 0 }, links: [] };
+      }
+
+      const newBalance = availableCredit - totalApplied;
+
+      // Create credit application transaction
+      const [creditTransaction] = await trx('transactions').insert({
+        transaction_id: uuidv4(),
+        client_id: request.client_id,
+        invoice_id: request.invoice_id,
+        amount: -totalApplied,
+        type: 'credit_application',
+        status: 'completed',
+        description: `Applied credit to invoice ${request.invoice_id}`,
+        created_at: now,
+        balance_after: newBalance,
+        tenant,
+        currency_code: invoiceCurrency
+      }).returning('*');
+
+      // Create credit allocation record
+      await trx('credit_allocations').insert({
+        allocation_id: uuidv4(),
+        transaction_id: creditTransaction.transaction_id,
+        invoice_id: request.invoice_id,
+        amount: totalApplied,
+        created_at: now,
+        tenant
+      });
+
+      // Update invoice and client
+      await Promise.all([
+        trx('invoices')
+          .where({ invoice_id: request.invoice_id, tenant })
+          .increment('credit_applied', totalApplied)
+          .decrement('total_amount', totalApplied),
+        trx('clients')
+          .where({ client_id: request.client_id, tenant })
+          .update({ credit_balance: newBalance, updated_at: now })
+      ]);
+
+      return {
+        data: { success: true, appliedAmount: totalApplied },
+        links: [
+          {
+            rel: 'invoice',
+            href: `/api/v1/financial/invoices/${request.invoice_id}`,
+            method: 'GET',
+            description: 'View updated invoice'
+          },
+          {
+            rel: 'client-credits',
+            href: `/api/v1/financial/credits?client_id=${request.client_id}`,
+            method: 'GET',
+            description: 'View client credits'
+          }
+        ]
+      };
+    });
   }
 
   /**
@@ -520,16 +626,122 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<FinancialResponse<any>> {
     await this.validatePermissions('create', 'credit', context);
-    
-    const invoice = await creditActions.createPrepaymentInvoice(
-      request.client_id,
-      request.amount,
-      request.manual_expiration_date
-    );
+
+    const { knex } = await this.getKnex();
+    const tenant = context.tenant;
+
+    // Verify client exists
+    const client = await knex('clients')
+      .where({ client_id: request.client_id, tenant })
+      .first();
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    const createdInvoice = await withTransaction(knex, async (trx) => {
+      const now = new Date().toISOString();
+      const clientCurrency = client.default_currency_code || 'USD';
+
+      // Determine credit expiration settings
+      const clientSettings = await trx('client_billing_settings')
+        .where({ client_id: request.client_id, tenant })
+        .first();
+      const defaultSettings = await trx('default_billing_settings')
+        .where({ tenant })
+        .first();
+
+      let isCreditExpirationEnabled = true;
+      if (clientSettings?.enable_credit_expiration !== undefined) {
+        isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
+      } else if (defaultSettings?.enable_credit_expiration !== undefined) {
+        isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
+      }
+
+      let expirationDays: number | undefined;
+      if (clientSettings?.credit_expiration_days !== undefined) {
+        expirationDays = clientSettings.credit_expiration_days;
+      } else if (defaultSettings?.credit_expiration_days !== undefined) {
+        expirationDays = defaultSettings.credit_expiration_days;
+      }
+
+      let expirationDate: string | undefined = request.manual_expiration_date;
+      if (isCreditExpirationEnabled && !expirationDate && expirationDays && expirationDays > 0) {
+        const expDate = new Date();
+        expDate.setDate(expDate.getDate() + expirationDays);
+        expirationDate = expDate.toISOString();
+      } else if (!isCreditExpirationEnabled) {
+        expirationDate = undefined;
+      }
+
+      // Generate invoice number
+      const invoiceNumber = await SharedNumberingService.getNextNumber('INVOICE', { knex: trx, tenant });
+
+      // Create prepayment invoice
+      const [invoice] = await trx('invoices')
+        .insert({
+          client_id: request.client_id,
+          tenant,
+          invoice_date: now,
+          due_date: now,
+          subtotal: request.amount,
+          tax: 0,
+          total_amount: request.amount,
+          status: 'draft',
+          invoice_number: invoiceNumber,
+          billing_period_start: now,
+          billing_period_end: now,
+          credit_applied: 0,
+          currency_code: clientCurrency
+        })
+        .returning('*');
+
+      // Get current balance
+      const lastTx = await trx('transactions')
+        .where({ client_id: request.client_id, tenant })
+        .orderBy('created_at', 'desc')
+        .first();
+      const currentBalance = lastTx?.balance_after || 0;
+      const newBalance = currentBalance + request.amount;
+
+      // Create credit issuance transaction
+      const transactionId = uuidv4();
+      await trx('transactions').insert({
+        transaction_id: transactionId,
+        client_id: request.client_id,
+        invoice_id: invoice.invoice_id,
+        amount: request.amount,
+        type: 'credit_issuance',
+        status: 'completed',
+        description: 'Credit issued from prepayment',
+        created_at: now,
+        balance_after: newBalance,
+        tenant,
+        expiration_date: expirationDate,
+        currency_code: clientCurrency
+      });
+
+      // Create credit tracking entry
+      const creditId = uuidv4();
+      await trx('credit_tracking').insert({
+        credit_id: creditId,
+        tenant,
+        client_id: request.client_id,
+        transaction_id: transactionId,
+        amount: request.amount,
+        remaining_amount: request.amount,
+        created_at: now,
+        expiration_date: expirationDate,
+        is_expired: false,
+        updated_at: now,
+        currency_code: clientCurrency
+      });
+
+      return invoice;
+    });
 
     return {
-      data: invoice,
-      links: this.generateHATEOASLinks('invoices', invoice.invoice_id, context)
+      data: createdInvoice,
+      links: this.generateHATEOASLinks('invoices', createdInvoice.invoice_id, context)
     };
   }
 
@@ -541,19 +753,109 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<FinancialResponse<ICreditTracking>> {
     await this.validatePermissions('transfer', 'credit', context);
-    
-    const newCredit = await creditActions.transferCredit(
-      request.source_credit_id,
-      request.target_client_id,
-      request.amount,
-      request.user_id,
-      request.reason
-    );
 
-    return {
-      data: newCredit,
-      links: this.generateHATEOASLinks('credits', newCredit.credit_id, context)
-    };
+    const { knex } = await this.getKnex();
+    const tenant = context.tenant;
+
+    if (request.amount <= 0) {
+      throw new Error('Transfer amount must be greater than zero');
+    }
+
+    return withTransaction(knex, async (trx) => {
+      // Get source credit
+      const sourceCredit = await trx('credit_tracking')
+        .where({ credit_id: request.source_credit_id, tenant })
+        .first();
+
+      if (!sourceCredit) {
+        throw new Error(`Source credit with ID ${request.source_credit_id} not found`);
+      }
+      if (sourceCredit.is_expired) {
+        throw new Error('Cannot transfer from an expired credit');
+      }
+      if (Number(sourceCredit.remaining_amount) < request.amount) {
+        throw new Error(`Insufficient remaining amount (${sourceCredit.remaining_amount}) for transfer of ${request.amount}`);
+      }
+
+      // Verify target client
+      const targetClient = await trx('clients')
+        .where({ client_id: request.target_client_id, tenant })
+        .first();
+      if (!targetClient) {
+        throw new Error(`Target client with ID ${request.target_client_id} not found`);
+      }
+
+      const now = new Date().toISOString();
+
+      // 1. Reduce source credit remaining amount
+      const newSourceRemaining = Number(sourceCredit.remaining_amount) - request.amount;
+      await trx('credit_tracking')
+        .where({ credit_id: request.source_credit_id, tenant })
+        .update({ remaining_amount: newSourceRemaining, updated_at: now });
+
+      // 2. Create transfer-out transaction for source
+      await trx('transactions').insert({
+        transaction_id: uuidv4(),
+        client_id: sourceCredit.client_id,
+        amount: -request.amount,
+        type: 'credit_transfer',
+        status: 'completed',
+        description: request.reason || `Credit transferred to client ${request.target_client_id}`,
+        created_at: now,
+        tenant,
+        related_transaction_id: sourceCredit.transaction_id,
+        metadata: { transfer_to: request.target_client_id, transfer_reason: request.reason || 'Administrative transfer' }
+      });
+
+      // 3. Update source client balance
+      const [sourceClient] = await trx('clients')
+        .where({ client_id: sourceCredit.client_id, tenant })
+        .select('credit_balance');
+      const newSourceBalance = Number(sourceClient.credit_balance) - request.amount;
+      await trx('clients')
+        .where({ client_id: sourceCredit.client_id, tenant })
+        .update({ credit_balance: newSourceBalance, updated_at: now });
+
+      // 4. Create transfer-in transaction for target
+      const targetTransactionId = uuidv4();
+      await trx('transactions').insert({
+        transaction_id: targetTransactionId,
+        client_id: request.target_client_id,
+        amount: request.amount,
+        type: 'credit_transfer',
+        status: 'completed',
+        description: request.reason || `Credit transferred from client ${sourceCredit.client_id}`,
+        created_at: now,
+        tenant,
+        metadata: { transfer_from: sourceCredit.client_id, transfer_reason: request.reason || 'Administrative transfer', source_credit_id: request.source_credit_id }
+      });
+
+      // 5. Update target client balance
+      const newTargetBalance = Number(targetClient.credit_balance) + request.amount;
+      await trx('clients')
+        .where({ client_id: request.target_client_id, tenant })
+        .update({ credit_balance: newTargetBalance, updated_at: now });
+
+      // 6. Create new credit tracking for target
+      const newCreditId = uuidv4();
+      const [newCredit] = await trx('credit_tracking').insert({
+        credit_id: newCreditId,
+        tenant,
+        client_id: request.target_client_id,
+        transaction_id: targetTransactionId,
+        amount: request.amount,
+        remaining_amount: request.amount,
+        created_at: now,
+        expiration_date: sourceCredit.expiration_date,
+        is_expired: false,
+        updated_at: now
+      }).returning('*');
+
+      return {
+        data: newCredit,
+        links: this.generateHATEOASLinks('credits', newCredit.credit_id, context)
+      };
+    });
   }
 
   /**
@@ -564,35 +866,64 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<ListResult<FinancialResponse<CreditTrackingResponse>>> {
     await this.validatePermissions('read', 'credit', context);
-    
+
     const {
       page = 1,
       limit = 25,
       client_id,
       include_expired = false,
-      expiring_soon,
-      has_remaining
     } = query;
 
     if (!client_id) {
       throw new Error('Client ID is required for credit listing');
     }
 
-    const result = await creditActions.listClientCredits(
-      client_id,
-      include_expired,
-      page,
-      limit
-    );
+    const { knex } = await this.getKnex();
+    const tenant = context.tenant;
+    const offset = (page - 1) * limit;
 
-    const creditsWithLinks = result.credits.map(credit => ({
+    // Build base query
+    let baseQuery = knex('credit_tracking')
+      .where({ 'credit_tracking.client_id': client_id, 'credit_tracking.tenant': tenant });
+
+    if (!include_expired) {
+      baseQuery = baseQuery.where('credit_tracking.is_expired', false);
+    }
+
+    // Count
+    const [{ count }] = await baseQuery.clone().count('credit_id as count');
+    const total = parseInt(count as string);
+
+    // Fetch credits with transaction details
+    const credits = await baseQuery
+      .clone()
+      .select('credit_tracking.*')
+      .leftJoin('transactions', function() {
+        this.on('credit_tracking.transaction_id', '=', 'transactions.transaction_id')
+          .andOn('credit_tracking.tenant', '=', 'transactions.tenant');
+      })
+      .select(
+        'transactions.description as transaction_description',
+        'transactions.type as transaction_type',
+        'transactions.invoice_id',
+        'transactions.created_at as transaction_date'
+      )
+      .orderBy([
+        { column: 'is_expired', order: 'asc' },
+        { column: 'expiration_date', order: 'asc', nulls: 'last' },
+        { column: 'credit_tracking.created_at', order: 'desc' }
+      ])
+      .limit(limit)
+      .offset(offset);
+
+    const creditsWithLinks = credits.map((credit: any) => ({
       data: credit,
       links: this.generateHATEOASLinks('credits', credit.credit_id, context)
     }));
 
     return {
       data: creditsWithLinks,
-      total: result.total
+      total
     };
   }
 
@@ -604,19 +935,47 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<FinancialResponse<CreditValidationResult>> {
     await this.validatePermissions('read', 'credit', context);
-    
-    const result = await creditActions.validateCreditBalance(clientId);
-    
+
+    const { knex } = await this.getKnex();
+    const tenant = context.tenant;
+
+    // Sum credit-related transactions
+    const transactions = await knex('transactions')
+      .where({ client_id: clientId, tenant })
+      .whereIn('type', [
+        'credit_issuance', 'credit_application', 'credit_adjustment',
+        'credit_expiration', 'credit_transfer', 'credit_issuance_from_negative_invoice'
+      ])
+      .orderBy('created_at', 'asc');
+
+    let calculatedBalance = 0;
+    for (const tx of transactions) {
+      calculatedBalance += Number(tx.amount);
+    }
+
+    // Get client's actual balance
+    const client = await knex('clients')
+      .where({ client_id: clientId, tenant })
+      .select('credit_balance')
+      .first();
+
+    const actualBalance = Number(client?.credit_balance || 0);
+    const expectedBalance = calculatedBalance;
+    const difference = expectedBalance - actualBalance;
+    const isValid = Math.abs(difference) < 0.01;
+
+    const lastTransaction = transactions.length > 0 ? transactions[transactions.length - 1] : undefined;
+
     return {
       data: {
-        is_valid: result.isValid,
-        actual_balance: result.actualBalance,
-        expected_balance: result.actualBalance, // Same for this context
-        difference: 0,
-        last_transaction: result.lastTransaction ? {
-          ...result.lastTransaction,
-          status: result.lastTransaction.status || 'pending',
-          tenant: result.lastTransaction.tenant || ''
+        is_valid: isValid,
+        actual_balance: actualBalance,
+        expected_balance: expectedBalance,
+        difference,
+        last_transaction: lastTransaction ? {
+          ...lastTransaction,
+          status: lastTransaction.status || 'pending',
+          tenant: lastTransaction.tenant || ''
         } as unknown as any : undefined
       },
       links: [
@@ -1168,7 +1527,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
     
     const userId = context?.userId || 'system';
-    const result = await creditReconciliationActions.runScheduledCreditBalanceValidation(clientId, userId);
+    const result = await runScheduledCreditBalanceValidation(clientId, userId);
 
     return {
       data: result,
@@ -1194,13 +1553,78 @@ export class FinancialService extends BaseService<ITransaction> {
     if (context) {
       await this.validatePermissions('update', 'credit', context);
     }
-    
+
+    const { knex } = await this.getKnex();
+    const tenant = context?.tenant || (await this.getKnex()).tenant;
     const userId = context?.userId || 'system';
-    const resolvedReport = await creditReconciliationActions.resolveReconciliationReport(
-      reportId,
-      userId,
-      notes
-    );
+
+    const resolvedReport = await withTransaction(knex, async (trx) => {
+      // Get the report
+      const report = await trx('credit_reconciliation_reports')
+        .where({ report_id: reportId, tenant })
+        .first();
+
+      if (!report) {
+        throw new Error(`Reconciliation report ${reportId} not found`);
+      }
+      if (report.status === 'resolved') {
+        throw new Error(`Reconciliation report ${reportId} is already resolved`);
+      }
+
+      const now = new Date().toISOString();
+
+      // Create adjustment transaction
+      const transactionId = uuidv4();
+      await trx('transactions').insert({
+        transaction_id: transactionId,
+        client_id: report.client_id,
+        amount: report.difference,
+        type: 'credit_adjustment',
+        status: 'completed',
+        description: `Credit balance correction from reconciliation report ${reportId}`,
+        created_at: now,
+        balance_after: report.expected_balance,
+        tenant
+      });
+
+      // Update client balance
+      await trx('clients')
+        .where({ client_id: report.client_id, tenant })
+        .update({ credit_balance: report.expected_balance, updated_at: now });
+
+      // Resolve the report
+      const [resolved] = await trx('credit_reconciliation_reports')
+        .where({ report_id: reportId, tenant })
+        .update({
+          status: 'resolved',
+          resolution_date: now,
+          resolution_user: userId,
+          resolution_notes: notes,
+          resolution_transaction_id: transactionId,
+          updated_at: now
+        })
+        .returning('*');
+
+      // Audit log
+      await auditLog(trx, {
+        userId,
+        operation: 'credit_balance_correction',
+        tableName: 'clients',
+        recordId: report.client_id,
+        changedData: {
+          previous_balance: report.actual_balance,
+          corrected_balance: report.expected_balance
+        },
+        details: {
+          action: 'Credit balance corrected from reconciliation report',
+          report_id: reportId,
+          difference: report.difference,
+          notes: notes || 'No notes provided'
+        }
+      });
+
+      return resolved;
+    });
 
     return {
       data: resolvedReport,
@@ -1353,8 +1777,13 @@ export class FinancialService extends BaseService<ITransaction> {
    * Get payment terms list
    */
   async getPaymentTerms(context?: ServiceContext): Promise<FinancialResponse<Array<{ id: string; name: string }>>> {
-    const terms = await billingAndTaxActions.getPaymentTermsList();
-    
+    const { knex } = await this.getKnex();
+
+    const terms = await knex('payment_terms')
+      .select('term_code as id', 'term_name as name')
+      .where({ is_active: true })
+      .orderBy('sort_order', 'asc');
+
     return {
       data: terms,
       links: []
