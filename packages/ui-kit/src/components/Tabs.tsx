@@ -61,6 +61,7 @@ const baseTabStyle: React.CSSProperties = {
   color: 'var(--alga-muted-fg, #6b7280)',
   backgroundColor: 'transparent',
   border: 'none',
+  borderBottom: '2px solid transparent',
   cursor: 'pointer',
   transition: 'all 0.15s ease',
   position: 'relative',
@@ -70,6 +71,7 @@ const baseTabStyle: React.CSSProperties = {
 const activeTabStyle: React.CSSProperties = {
   ...baseTabStyle,
   color: 'var(--alga-primary, #9855ee)',
+  fontWeight: 500,
   borderBottom: '2px solid var(--alga-primary, #9855ee)',
 };
 
@@ -99,6 +101,7 @@ const underlineTabStyle: React.CSSProperties = {
   color: 'var(--alga-muted-fg, #6b7280)',
   backgroundColor: 'transparent',
   border: 'none',
+  borderBottom: '2px solid transparent',
   cursor: 'pointer',
   transition: 'all 0.15s ease',
   marginBottom: '-2px',
@@ -107,6 +110,7 @@ const underlineTabStyle: React.CSSProperties = {
 const activeUnderlineTabStyle: React.CSSProperties = {
   ...underlineTabStyle,
   color: 'var(--alga-primary, #9855ee)',
+  fontWeight: 500,
   borderBottom: '2px solid var(--alga-primary, #9855ee)',
 };
 

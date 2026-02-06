@@ -304,7 +304,6 @@ export function DataTable<Row extends Record<string, any>>({
     fontSize: '12px',
     fontWeight: 500,
     color: 'var(--alga-muted-fg, #6b7280)',
-    textTransform: 'uppercase',
     letterSpacing: '0.05em',
     backgroundColor: 'var(--alga-bg, #fff)',
     borderBottom: '1px solid var(--alga-border, #e5e7eb)',

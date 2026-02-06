@@ -1,4 +1,22 @@
-import React, { useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useLayoutEffect, useCallback, useEffect } from 'react';
+
+const focusStyleId = 'alga-textarea-focus-styles';
+
+function ensureFocusStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(focusStyleId)) return;
+
+  const style = document.createElement('style');
+  style.id = focusStyleId;
+  style.textContent = `
+    .alga-textarea:focus {
+      outline: none;
+      border-color: var(--alga-primary, #9855ee);
+      box-shadow: 0 0 0 2px var(--alga-primary-light, #ede2fd);
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export type TextAreaProps = Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'style'> & {
   /** Label text */
@@ -43,9 +61,14 @@ export function TextArea({
   value,
   onChange,
   disabled,
+  className,
   ...props
 }: TextAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    ensureFocusStyles();
+  }, []);
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -80,6 +103,7 @@ export function TextArea({
       {label && <label style={labelStyle}>{label}</label>}
       <textarea
         ref={textareaRef}
+        className={`alga-textarea${className ? ` ${className}` : ''}`}
         value={value}
         onChange={handleChange}
         disabled={disabled}

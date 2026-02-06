@@ -189,15 +189,9 @@ describe('Tabs demo', () => {
     expect(active.style.borderBottom).toContain('var(--alga-primary');
   });
 
-  test('pills variant shows pill-shaped active state', () => {
-    render(<TabsDemo />);
-    const active = screen.getAllByRole('button', { name: 'Details' })[0];
-    expect(active.style.borderRadius).toBe('6px');
-  });
-
   test('underline variant shows underline indicator', () => {
     render(<TabsDemo />);
-    const active = screen.getAllByRole('button', { name: 'Overview' })[2];
+    const active = screen.getAllByRole('button', { name: 'Overview' })[1];
     expect(active.style.borderBottom).toContain('var(--alga-primary');
   });
 
@@ -217,53 +211,34 @@ describe('Tabs demo', () => {
 });
 
 describe('Drawer demo', () => {
-  test('right drawer slides in from right edge', async () => {
+  test('drawer opens from right side', async () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open right' }));
+    await user.click(screen.getByRole('button', { name: 'Default (400px)' }));
     const drawer = screen.getByRole('dialog');
     expect(drawer.style.right).toBe('0px');
+    expect(drawer.style.width).toBe('400px');
   });
 
-  test('left drawer slides in from left edge', async () => {
+  test('different widths change drawer width', async () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open left' }));
+    await user.click(screen.getByRole('button', { name: 'Narrow (300px)' }));
     const drawer = screen.getByRole('dialog');
-    expect(drawer.style.left).toBe('0px');
-  });
-
-  test('bottom drawer slides up from bottom', async () => {
-    const user = userEvent.setup();
-    render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open bottom' }));
-    const drawer = screen.getByRole('dialog');
-    expect(drawer.style.bottom).toBe('0px');
-  });
-
-  test('different sizes change drawer width/height', async () => {
-    const user = userEvent.setup();
-    render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'SM' }));
-    const smDrawer = screen.getByRole('dialog');
-    const smWidth = Number(smDrawer.style.width.replace('px', ''));
-    await user.click(screen.getByRole('button', { name: 'LG' }));
-    const lgDrawer = screen.getByRole('dialog');
-    const lgWidth = Number(lgDrawer.style.width.replace('px', ''));
-    expect(smWidth).toBeLessThan(lgWidth);
+    expect(drawer.style.width).toBe('300px');
   });
 
   test('title is displayed in drawer header', async () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open right' }));
-    expect(screen.getByText(/Drawer right/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Default (400px)' }));
+    expect(screen.getByText(/Drawer \(400px\)/)).toBeInTheDocument();
   });
 
   test('close button closes drawer', async () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open right' }));
+    await user.click(screen.getByRole('button', { name: 'Default (400px)' }));
     await user.click(screen.getByRole('button', { name: 'Close drawer' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -271,7 +246,7 @@ describe('Drawer demo', () => {
   test('escape key closes drawer', async () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open right' }));
+    await user.click(screen.getByRole('button', { name: 'Default (400px)' }));
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -279,7 +254,7 @@ describe('Drawer demo', () => {
   test('overlay click closes drawer', async () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
-    await user.click(screen.getByRole('button', { name: 'Open right' }));
+    await user.click(screen.getByRole('button', { name: 'Default (400px)' }));
     const overlay = document.querySelector('[aria-hidden="true"]') as HTMLElement;
     await user.click(overlay);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

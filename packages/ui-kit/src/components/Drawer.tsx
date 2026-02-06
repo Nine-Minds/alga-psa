@@ -5,10 +5,8 @@ export type DrawerProps = {
   open: boolean;
   /** Callback when the drawer should close */
   onClose: () => void;
-  /** Drawer position */
-  position?: 'left' | 'right' | 'top' | 'bottom';
-  /** Drawer size */
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  /** Drawer width — CSS value like '400px', '50vw', '40%' */
+  width?: string;
   /** Drawer title */
   title?: React.ReactNode;
   /** Drawer content */
@@ -23,12 +21,7 @@ export type DrawerProps = {
   style?: React.CSSProperties;
 };
 
-const sizes = {
-  sm: 280,
-  md: 400,
-  lg: 560,
-  full: '100%',
-};
+const DEFAULT_WIDTH = '400px';
 
 const overlayStyle: React.CSSProperties = {
   position: 'fixed',
@@ -93,8 +86,7 @@ const contentStyle: React.CSSProperties = {
 export function Drawer({
   open,
   onClose,
-  position = 'right',
-  size = 'md',
+  width = DEFAULT_WIDTH,
   title,
   children,
   overlay = true,
@@ -134,43 +126,13 @@ export function Drawer({
   }, [closeOnOverlayClick, onClose]);
 
   const getDrawerStyle = (): React.CSSProperties => {
-    const sizeValue = typeof sizes[size] === 'number' ? `${sizes[size]}px` : sizes[size];
-    const isHorizontal = position === 'left' || position === 'right';
-
-    const positionStyles: Record<string, React.CSSProperties> = {
-      right: {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: sizeValue,
-        transform: open ? 'translateX(0)' : 'translateX(100%)',
-      },
-      left: {
-        top: 0,
-        left: 0,
-        bottom: 0,
-        width: sizeValue,
-        transform: open ? 'translateX(0)' : 'translateX(-100%)',
-      },
-      top: {
-        top: 0,
-        left: 0,
-        right: 0,
-        height: sizeValue,
-        transform: open ? 'translateY(0)' : 'translateY(-100%)',
-      },
-      bottom: {
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: sizeValue,
-        transform: open ? 'translateY(0)' : 'translateY(100%)',
-      },
-    };
-
     return {
       ...baseDrawerStyle,
-      ...positionStyles[position],
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: width,
+      transform: open ? 'translateX(0)' : 'translateX(100%)',
       ...style,
     };
   };

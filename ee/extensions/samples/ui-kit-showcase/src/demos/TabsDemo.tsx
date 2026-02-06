@@ -10,15 +10,11 @@ const baseTabs = [
 
 export function TabsDemo() {
   return (
-    <DemoSection title="Tabs" description="Tabbed navigation with default, pills, and underline variants.">
+    <DemoSection title="Tabs" description="Tabbed navigation with default and underline variants.">
       <div style={{ display: 'grid', gap: 16 }}>
         <div>
           <Text weight={600}>Default</Text>
           <Tabs tabs={baseTabs} defaultActiveKey="overview" />
-        </div>
-        <div>
-          <Text weight={600}>Pills</Text>
-          <Tabs tabs={baseTabs} variant="pills" defaultActiveKey="details" />
         </div>
         <div>
           <Text weight={600}>Underline</Text>
