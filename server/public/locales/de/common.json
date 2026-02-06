@@ -464,6 +464,12 @@
   "fields": {
     "notes": "Notizen"
   },
+  "tickets": {
+    "responseSource": {
+      "clientPortal": "Empfangen über Kundenportal",
+      "inboundEmail": "Empfangen über E-Mail"
+    }
+  },
   "surveys": {
     "common": {
       "loading": "Wird geladen..."

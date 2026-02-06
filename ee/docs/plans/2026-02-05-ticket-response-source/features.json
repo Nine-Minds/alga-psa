@@ -1,0 +1,82 @@
+[
+  {
+    "id": "F001",
+    "description": "Define canonical response source values for this feature: client_portal and inbound_email",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Add/extend shared comment metadata typing in @alga-psa/types so UI and actions can read metadata safely",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Client portal comment creation writes metadata.responseSource=client_portal in addClientTicketComment",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Inbound email comment creation writes metadata.responseSource=inbound_email in createCommentFromEmail",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Inbound email metadata includes provider type (google/microsoft/imap) when available for future display",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Add shared utility to derive latest customer response source from ticket conversations",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Source derivation excludes internal comments and prefers explicit metadata over heuristics",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Source derivation fallback marks comment as inbound_email when metadata.email is present",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Source derivation fallback marks comment as client_portal for legacy client-authored comments with user_id",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Render per-comment response source badge in shared CommentItem component (visible in MSP ticket details)",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Render per-comment response source badge in shared CommentItem component (visible in Client Portal ticket details)",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Add i18n labels for response source indicator in shared/client portal locale files",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Show indicator only when source can be resolved; hide cleanly when unresolved",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Keep implementation schema-light by reusing comments.metadata JSONB (no new table/column migration in MVP)",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Ensure inbound email path coverage includes Google/Microsoft webhook and IMAP-driven processing by using shared createCommentFromEmail metadata handling",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Preserve existing response state behavior; feature is additive and does not alter response_state transitions",
+    "implemented": true
+  }
+]

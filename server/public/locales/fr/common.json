@@ -464,6 +464,12 @@
   "fields": {
     "notes": "Notes"
   },
+  "tickets": {
+    "responseSource": {
+      "clientPortal": "Reçu via le Portail Client",
+      "inboundEmail": "Reçu via e-mail"
+    }
+  },
   "surveys": {
     "common": {
       "loading": "Chargement..."

@@ -1,8 +1,7 @@
 'use server'
 
 import { validateData } from '@alga-psa/validation';
-import { ITicket, ITicketListItem, ITicketWithDetails } from '@alga-psa/types';
-import { IComment } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -437,6 +436,9 @@ export const addClientTicketComment = withAuth(async (
       note: content,
       is_internal: isInternal,
       is_resolution: isResolution,
+        metadata: JSON.stringify({
+          responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
+        }),
         created_at: new Date().toISOString(),
         user_id: user.user_id,
         markdown_content: markdownContent

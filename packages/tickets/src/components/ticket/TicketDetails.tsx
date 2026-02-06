@@ -56,6 +56,7 @@ import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import {
@@ -174,6 +175,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderClientDetails
 }) => {
+    const { t } = useTranslation('clientPortal');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -257,7 +259,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [team, setTeam] = useState<ITeam | null>(null);
-
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');

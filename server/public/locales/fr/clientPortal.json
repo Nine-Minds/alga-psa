@@ -182,6 +182,10 @@
       "awaitingYourResponseTooltip": "Le support attend votre réponse",
       "awaitingSupportResponseTooltip": "Votre réponse a été reçue. Le support répondra bientôt."
     },
+    "responseSource": {
+      "clientPortal": "Reçu via le Portail Client",
+      "inboundEmail": "Reçu via e-mail"
+    },
     "documents": {
       "title": "Documents",
       "noDocuments": "Aucun document joint",

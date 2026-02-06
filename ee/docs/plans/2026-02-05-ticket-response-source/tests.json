@@ -1,0 +1,207 @@
+[
+  {
+    "id": "T001",
+    "description": "addClientTicketComment stores metadata.responseSource=client_portal on newly inserted comment",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "createCommentFromEmail stores metadata.responseSource=inbound_email on newly inserted comment",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Inbound email comment metadata includes provider type when inboundReplyEvent/provider is available",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "IComment typing accepts metadata without breaking existing comment consumers",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Response source utility returns inbound_email when latest eligible comment has metadata.responseSource=inbound_email",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Response source utility returns client_portal when latest eligible comment has metadata.responseSource=client_portal",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Response source utility ignores internal comments when determining latest customer response source",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Fallback logic returns inbound_email when metadata.email exists but metadata.responseSource is absent",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Fallback logic returns client_portal for legacy client comment with user_id when metadata.responseSource is absent",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Fallback logic returns null when no eligible customer response comment exists",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F013"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Per-comment badge renders 'Received via Client Portal' on a portal-sourced comment",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F012"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Per-comment badge renders 'Received via Inbound Email' on an email-sourced comment",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F012"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Per-comment badge renders client_portal via legacy fallback (client with user_id)",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Per-comment badge renders inbound_email via legacy fallback (metadata.email present)",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Per-comment badge is hidden when source is unresolved (internal comment)",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "No database migration is required and existing comment rows remain valid",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Google inbound email flow produces comments that resolve to inbound_email source in ticket details",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Microsoft inbound email flow produces comments that resolve to inbound_email source in ticket details",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "IMAP inbound email flow (shared email processing path) produces comments that resolve to inbound_email source",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Response state transitions remain unchanged after adding source metadata (client-visible response still sets awaiting_internal)",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "New portal comment renders client_portal badge immediately",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "New inbound email comment renders inbound_email badge immediately",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Locale keys for response source labels resolve correctly in English and do not break existing ticket detail translations",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Legacy ticket with mixed comments chooses latest eligible customer response source correctly",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  }
+]

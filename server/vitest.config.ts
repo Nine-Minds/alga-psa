@@ -71,6 +71,8 @@ export default defineConfig({
       { find: /^@alga-psa\/auth\/twoFactorHelpers$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/twoFactorHelpers.ts') },
       { find: /^@alga-psa\/auth\/nextAuthOptions$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/nextAuthOptions.ts') },
       { find: /^@alga-psa\/auth\/getCurrentUser$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/getCurrentUser.ts') },
+      { find: /^@alga-psa\/analytics$/, replacement: path.resolve(__dirname, '../packages/analytics/src/index.ts') },
+      { find: /^@alga-psa\/analytics\/(.*)$/, replacement: path.resolve(__dirname, '../packages/analytics/src/$1') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../packages/ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ui/src/$1') },
       { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../packages/billing/src/index.ts') },
