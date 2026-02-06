@@ -46,6 +46,7 @@ import WorkflowEventList from './WorkflowEventList';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
+import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
@@ -1704,6 +1705,7 @@ const WorkflowDesigner: React.FC = () => {
     if (raw === 'designer') return 'Designer';
     if (raw === 'runs') return 'Runs';
     if (raw === 'events') return 'Events';
+    if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'Event Catalog';
     if (raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') return 'Dead Letter';
     return null;
   }, [tabFromQuery]);
@@ -1730,6 +1732,7 @@ const WorkflowDesigner: React.FC = () => {
         : nextTabLabel === 'Designer' ? 'designer'
           : nextTabLabel === 'Runs' ? 'runs'
             : nextTabLabel === 'Events' ? 'events'
+              : nextTabLabel === 'Event Catalog' ? 'event-catalog'
               : nextTabLabel === 'Dead Letter' ? 'dead-letter'
                 : null;
 
@@ -4327,6 +4330,13 @@ const WorkflowDesigner: React.FC = () => {
         params.set('tab', 'designer');
         router.push(`/msp/workflows?${params.toString()}`);
       }}
+      onOpenEventCatalog={() => {
+        const params = new URLSearchParams(searchParamsString);
+        params.delete('workflowId');
+        params.delete('new');
+        params.set('tab', 'event-catalog');
+        router.push(`/msp/workflows?${params.toString()}`);
+      }}
       onCreateNew={() => {
         const params = new URLSearchParams(searchParamsString);
         params.delete('search');
@@ -4339,6 +4349,8 @@ const WorkflowDesigner: React.FC = () => {
       }}
     />
   );
+
+  const eventCatalogContent = <EventsCatalogV2 />;
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -4439,6 +4451,7 @@ const WorkflowDesigner: React.FC = () => {
             { label: 'Designer', content: designerContent },
             { label: 'Runs', content: runListContent },
             { label: 'Events', content: eventListContent },
+            { label: 'Event Catalog', content: eventCatalogContent },
             ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : []),
           ]}
           tabStyles={{
