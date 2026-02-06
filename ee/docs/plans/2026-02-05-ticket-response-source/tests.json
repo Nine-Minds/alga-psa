@@ -154,7 +154,7 @@
   {
     "id": "T019",
     "description": "IMAP inbound email flow (shared email processing path) produces comments that resolve to inbound_email source",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

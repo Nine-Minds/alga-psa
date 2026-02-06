@@ -238,3 +238,7 @@ Targeted surfaces:
 ### T018
 
 - Covered by \: microsoft inbound provider path resolves/persists \.
+
+### T019
+
+- Covered by \: imap inbound provider path resolves/persists \.
