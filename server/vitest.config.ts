@@ -108,6 +108,7 @@ export default defineConfig({
 
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/index.ts') },
       { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../packages/email/src/index.ts') },
+      { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
 
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },

@@ -375,6 +375,7 @@ const nextConfig = {
 	    '@alga-psa/scheduling',
 	    '@alga-psa/users',
 	    '@alga-psa/notifications',
+	    '@alga-psa/email',
 	    '@alga-psa/teams',
 	    '@alga-psa/tenancy',
 	    '@alga-psa/integrations',

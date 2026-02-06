@@ -31,6 +31,19 @@ export interface SendEmailParams {
   subject: string;
   template: string;
   context: Record<string, unknown>;
+  /**
+   * Optional entity context for downstream logging (e.g. ticket/project association).
+   */
+  entityType?: string;
+  entityId?: string;
+  /**
+   * Optional contact association for outbound emails (when recipient is a contact).
+   */
+  contactId?: string;
+  /**
+   * Optional notification subtype association (links to notification_subtypes.id).
+   */
+  notificationSubtypeId?: number;
   replyContext?: {
     ticketId?: string;
     projectId?: string;
@@ -397,6 +410,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const result = await service.sendEmail({
       to: params.to,
       tenantId: params.tenantId,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      contactId: params.contactId,
+      notificationSubtypeId: params.notificationSubtypeId,
       templateProcessor: processor,
       headers: params.headers,
       providerId: params.providerId,

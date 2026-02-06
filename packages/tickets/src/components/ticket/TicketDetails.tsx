@@ -29,6 +29,7 @@ import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
+import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -51,7 +52,7 @@ import { ExternalLink } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
+import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -178,6 +179,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { t } = useTranslation('clientPortal');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
+    const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
 
     useEffect(() => {
         setHasHydrated(true);
@@ -1776,6 +1778,15 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                         
+                        {emailLogsEnabled ? (
+                            <Suspense fallback={<div id="ticket-email-notifications-skeleton" className="animate-pulse bg-gray-200 h-40 rounded-lg mb-6"></div>}>
+                                <TicketEmailNotifications
+                                    id={`${id}-email-notifications`}
+                                    ticketId={ticket.ticket_id || ''}
+                                />
+                            </Suspense>
+                        ) : null}
+
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}

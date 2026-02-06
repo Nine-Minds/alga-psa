@@ -150,7 +150,11 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'System Monitor',
         icon: LayoutDashboard,
-        href: '/msp/jobs'
+        href: '/msp/jobs',
+        subItems: [
+          { name: 'Jobs', icon: LayoutDashboard, href: '/msp/jobs' },
+          { name: 'Email Logs', icon: Mail, href: '/msp/email-logs' },
+        ]
       }
     ]
   }
