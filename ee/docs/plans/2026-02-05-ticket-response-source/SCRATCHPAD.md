@@ -144,3 +144,8 @@ Targeted surfaces:
 - Both TicketDetails screens render the response source indicator conditionally:
   - only when `getLatestCustomerResponseSource(...)` returns a non-null source.
 - No placeholder/error UI is shown when source cannot be determined.
+
+### F014 — Schema-light implementation
+
+- Confirmed implementation uses existing `comments.metadata` JSONB only.
+- No migration files were added/modified for this workstream.

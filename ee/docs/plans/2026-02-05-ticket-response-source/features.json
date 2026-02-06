@@ -67,7 +67,7 @@
   {
     "id": "F014",
     "description": "Keep implementation schema-light by reusing comments.metadata JSONB (no new table/column migration in MVP)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",
