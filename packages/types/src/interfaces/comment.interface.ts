@@ -1,6 +1,13 @@
 import { TenantEntity } from './index';
 
 export type CommentAuthorType = 'internal' | 'client' | 'unknown';
+export const COMMENT_RESPONSE_SOURCES = {
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+} as const;
+
+export type CommentResponseSource =
+  (typeof COMMENT_RESPONSE_SOURCES)[keyof typeof COMMENT_RESPONSE_SOURCES];
 
 export interface IComment extends TenantEntity {
   comment_id?: string;
