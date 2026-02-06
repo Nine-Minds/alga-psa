@@ -17,11 +17,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "axios": "^1.13.2",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "nodemailer": "^6.9.14"
+    "axios": "^1.13.2",
+    "nodemailer": "^8.0.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
