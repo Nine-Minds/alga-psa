@@ -1,5 +1,4 @@
 // @ts-nocheck
-// TODO: Invoice model missing getFullInvoiceById method
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
@@ -742,7 +741,7 @@ export const generateInvoice = withAuth(async (
     }
 
 console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-    return await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
+    return await Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
   }
 
   if (billingResult.charges.length === 0) {
@@ -775,7 +774,7 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
   await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
 
 console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-  let invoiceView = await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
+  let invoiceView = await Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
 
   return invoiceView;
 });

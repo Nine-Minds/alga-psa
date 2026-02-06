@@ -18,7 +18,9 @@ import type {
   ICustomField,
   IConditionalRule,
   IInvoiceAnnotation,
+  InvoiceViewModel,
 } from '@alga-psa/types';
+import { getClientLogoUrlAsync } from '../lib/documentsHelpers';
 
 /**
  * Invoice model with tenant-explicit methods.
@@ -172,6 +174,150 @@ const Invoice = {
       console.error(`Error getting all invoices in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  },
+
+  /**
+   * Get a fully hydrated invoice view model for rendering.
+   */
+  getFullInvoiceById: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    invoiceId: string
+  ): Promise<InvoiceViewModel> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting full invoice details');
+    }
+
+    const parseMinorUnit = (value: unknown): number => {
+      if (typeof value === 'number') {
+        return Math.trunc(value);
+      }
+      if (typeof value === 'string') {
+        const parsed = Number.parseInt(value, 10);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      if (typeof value === 'bigint') {
+        return Number(value);
+      }
+      return 0;
+    };
+
+    const invoice = await knexOrTrx('invoices')
+      .select(
+        '*',
+        knexOrTrx.raw('CAST(subtotal AS BIGINT) as subtotal'),
+        knexOrTrx.raw('CAST(tax AS BIGINT) as tax'),
+        knexOrTrx.raw('CAST(total_amount AS BIGINT) as total_amount'),
+        knexOrTrx.raw('CAST(credit_applied AS BIGINT) as credit_applied')
+      )
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    const [invoiceChargesRaw, client, contact, logoUrl] = await Promise.all([
+      Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
+      knexOrTrx('clients as c')
+        .leftJoin('client_locations as cl', function () {
+          this.on('c.client_id', '=', 'cl.client_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn(function () {
+              this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+                .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+            });
+        })
+        .select(
+          'c.client_name',
+          'c.properties',
+          knexOrTrx.raw(`CONCAT_WS(', ',
+            cl.address_line1,
+            cl.address_line2,
+            cl.city,
+            cl.state_province,
+            cl.postal_code,
+            cl.country_name
+          ) as location_address`)
+        )
+        .where({
+          'c.client_id': invoice.client_id,
+          'c.tenant': tenant
+        })
+        .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
+        .first(),
+      knexOrTrx('contacts')
+        .select('full_name')
+        .where({ client_id: invoice.client_id, tenant })
+        .first(),
+      getClientLogoUrlAsync(invoice.client_id, tenant).catch(() => null),
+    ]);
+
+    if (!client) {
+      throw new Error(`Customer client details not found for invoice ${invoiceId}`);
+    }
+
+    let clientProperties: { logo?: string } = {};
+    if (typeof client.properties === 'string') {
+      try {
+        clientProperties = JSON.parse(client.properties) as { logo?: string };
+      } catch {
+        clientProperties = {};
+      }
+    } else if (client.properties && typeof client.properties === 'object') {
+      clientProperties = client.properties as { logo?: string };
+    }
+
+    const invoiceCharges: IInvoiceCharge[] = invoiceChargesRaw.map((item) => ({
+      ...item,
+      quantity: parseMinorUnit(item.quantity),
+      unit_price: parseMinorUnit(item.unit_price),
+      total_price: parseMinorUnit(item.total_price),
+      tax_amount: parseMinorUnit(item.tax_amount),
+      net_amount: parseMinorUnit(item.net_amount),
+      tenant,
+      is_manual: Boolean(item.is_manual),
+      rate: parseMinorUnit(item.unit_price),
+    }));
+
+    const subtotal = parseMinorUnit(invoice.subtotal);
+    const tax = parseMinorUnit(invoice.tax);
+    const totalAmount = parseMinorUnit(invoice.total_amount);
+    const creditApplied = parseMinorUnit(invoice.credit_applied);
+
+    return {
+      invoice_id: invoice.invoice_id,
+      invoice_number: invoice.invoice_number,
+      client_id: invoice.client_id,
+      po_number: invoice.po_number ?? null,
+      client_contract_id: invoice.client_contract_id ?? null,
+      client: {
+        name: client.client_name || '',
+        logo: logoUrl || clientProperties.logo || '',
+        address: client.location_address || ''
+      },
+      contact: {
+        name: contact?.full_name || '',
+        address: ''
+      },
+      invoice_date: invoice.invoice_date,
+      due_date: invoice.due_date,
+      status: invoice.status,
+      currencyCode: invoice.currency_code || 'USD',
+      subtotal,
+      tax,
+      total: totalAmount,
+      total_amount: totalAmount,
+      invoice_charges: invoiceCharges,
+      finalized_at: invoice.finalized_at,
+      credit_applied: creditApplied,
+      billing_cycle_id: invoice.billing_cycle_id,
+      is_manual: Boolean(invoice.is_manual),
+      tax_source: invoice.tax_source || 'internal'
+    };
   },
 
   /**

@@ -1,5 +1,4 @@
 // @ts-nocheck
-// TODO: Invoice model missing getFullInvoiceById method
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
@@ -14,7 +13,7 @@ import { applyCreditToInvoice } from './creditActions';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
-import Invoice from '@alga-psa/billing/models/invoice'; // Needed for getFullInvoiceById
+import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
@@ -409,7 +408,7 @@ export const updateInvoiceManualItems = withAuth(async (
   const currentDate = Temporal.Now.plainDateISO().toString();
 
   await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
-  return await Invoice.getFullInvoiceById(knex, invoiceId);
+  return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
 });
 
 // Internal helper function to avoid recursive export/import loop
@@ -643,7 +642,7 @@ export const addManualItemsToInvoice = withAuth(async (
   }
 
   await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant); // Renamed internal call
-  return await Invoice.getFullInvoiceById(knex, invoiceId);
+  return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
 });
 
 // Internal helper function

@@ -273,7 +273,7 @@ export const saveInvoiceTemplate = withAuth(async (
         console.log('No compilation needed, saving template metadata directly...');
         try {
             // Pass the template to saveTemplate
-            const savedTemplate = await Invoice.saveTemplate(knex, templateToSaveWithoutFlags);
+            const savedTemplate = await Invoice.saveTemplate(knex, tenant, templateToSaveWithoutFlags);
 
             console.log('Template metadata saved successfully (no compilation):', {
                 id: savedTemplate.template_id,
