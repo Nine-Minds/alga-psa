@@ -1,36 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
   getTaskTicketLinksAction
 } from '../actions/projectTaskActions';
-import { getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
-import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ITicketListFilters } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { ITicketListItem, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { IBoard } from '@alga-psa/types';
-import { getTicketCategories } from '@alga-psa/tickets/actions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
+import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import TicketSelect from './TicketSelect';
+import { getProject } from '../actions/projectActions';
+import { mapTaskToTicketPrefill } from '../lib/taskTicketMapping';
 
 interface TaskTicketLinksProps {
   taskId?: string;
@@ -39,6 +36,14 @@ interface TaskTicketLinksProps {
   initialLinks?: IProjectTicketLinkWithDetails[];
   users: IUser[];
   onLinksChange?: (links: IProjectTicketLinkWithDetails[]) => void;
+  onTicketCreated?: (ticket: { ticket_id: string; ticket_number: string; title: string }) => void;
+  taskData?: {
+    task_name: string;
+    description: string;
+    assigned_to: string | null;
+    due_date: Date | null;
+    additional_agents?: { user_id: string; name?: string }[];
+  };
 }
 
 interface SelectOption {
@@ -61,14 +66,20 @@ interface TicketDetails {
   closed_at?: Date | null;
 }
 
-export default function TaskTicketLinks({
+export interface TaskTicketLinksRef {
+  addExternalLink: (link: IProjectTicketLinkWithDetails) => void;
+}
+
+const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(function TaskTicketLinks({
   taskId,
   phaseId,
   projectId,
   initialLinks = undefined,
   users,
-  onLinksChange
-}: TaskTicketLinksProps) {
+  onLinksChange,
+  onTicketCreated,
+  taskData
+}, ref) {
 
   const [taskTicketLinks, setTaskTicketLinks] = useState<IProjectTicketLinkWithDetails[] | undefined>(initialLinks);
   const [availableTickets, setAvailableTickets] = useState<ITicketListItem[]>([]);
@@ -76,8 +87,17 @@ export default function TaskTicketLinks({
   const [ticketsLoaded, setTicketsLoaded] = useState(false);
   const [filterOptionsLoaded, setFilterOptionsLoaded] = useState(false);
   const { openDrawer } = useDrawer();
+  const {
+    getTicketsForList,
+    getTicketCategories,
+    getAllBoards,
+    openTicketInDrawer,
+    renderQuickAddTicket,
+    renderCategoryPicker,
+  } = useTicketIntegration();
   const [showLinkTicketDialog, setShowLinkTicketDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [shouldLinkNewTicket, setShouldLinkNewTicket] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -97,6 +117,23 @@ export default function TaskTicketLinks({
   const [clientOptions, setClientOptions] = useState<SelectOption[]>([]);
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
   const [selectedTicketId, setSelectedTicketId] = useState('');
+  const [prefilledClient, setPrefilledClient] = useState<{ id: string; name: string } | undefined>(undefined);
+  const ticketPrefill = taskData
+    ? mapTaskToTicketPrefill(taskData, {
+        client_id: prefilledClient?.id ?? null,
+        client_name: prefilledClient?.name ?? null
+      })
+    : null;
+
+  useImperativeHandle(ref, () => ({
+    addExternalLink: (link: IProjectTicketLinkWithDetails) => {
+      const isAlreadyLinked = (taskTicketLinks || []).some(l => l.ticket_id === link.ticket_id);
+      if (isAlreadyLinked) return;
+      const newLinks = [...(taskTicketLinks || []), link];
+      setTaskTicketLinks(newLinks);
+      onLinksChange?.(newLinks);
+    }
+  }), [taskTicketLinks, onLinksChange]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -368,48 +405,28 @@ export default function TaskTicketLinks({
     }
   };
 
-  const onViewTicket = async (ticketId: string) => {
+  const handleCreateTicket = async () => {
+    setShouldLinkNewTicket(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
-        toast.error('No user session found');
-        return;
+      const project = await getProject(projectId);
+      if (project?.client_id) {
+        setPrefilledClient({
+          id: project.client_id,
+          name: project.client_name || 'Client'
+        });
+      } else {
+        setPrefilledClient(undefined);
       }
-      
-      const ticketData = await getConsolidatedTicketData(ticketId);
-      if (!ticketData) {
-        toast.error('Failed to load ticket');
-        return;
-      }
-
-      openDrawer(
-        <TicketDetails
-          isInDrawer={true}
-          initialTicket={ticketData.ticket}
-          initialComments={ticketData.comments}
-          initialBoard={ticketData.board}
-          initialClient={ticketData.client}
-          initialContacts={ticketData.contacts}
-          initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
-          initialAdditionalAgents={ticketData.additionalAgents}
-          statusOptions={ticketData.options.status}
-          agentOptions={ticketData.options.agent}
-          boardOptions={ticketData.options.board}
-          priorityOptions={ticketData.options.priority}
-          initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
-          initialLocations={ticketData.locations}
-          initialAgentSchedules={ticketData.agentSchedules}
-          initialUserMap={ticketData.userMap}
-          initialAvailableAgents={ticketData.availableAgents}
-          currentUser={user}
-        />
-      );
     } catch (error) {
-      console.error('Error loading ticket:', error);
-      toast.error('Failed to load ticket');
+      console.error('Error fetching project for ticket prefill:', error);
+      setPrefilledClient(undefined);
+    } finally {
+      setShowCreateDialog(true);
     }
+  };
+
+  const onViewTicket = async (ticketId: string) => {
+    await openTicketInDrawer(ticketId);
   };
 
   const onDeleteLink = async (linkId: string) => {
@@ -445,9 +462,9 @@ export default function TaskTicketLinks({
       return;
     }
     try {
-      if (taskId) {
+      if (shouldLinkNewTicket && taskId) {
         await addTicketLinkAction(projectId, taskId, ticket.ticket_id, phaseId);
-        
+
         // Create a new link object instead of fetching all links again
         const newLink: IProjectTicketLinkWithDetails = {
           link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
@@ -461,18 +478,27 @@ export default function TaskTicketLinks({
           status_name: defaultStatus?.name || 'New',
           is_closed: false
         };
-        
+
         const updatedLinks = [...(taskTicketLinks || []), newLink];
         setTaskTicketLinks(updatedLinks);
         onLinksChange?.(updatedLinks);
-      } else {
+      } else if (shouldLinkNewTicket) {
         // For new tasks, add to temporary list
         const link = addTempTicketLink(ticket);
         if (link) {
           toast.success('Ticket created and linked successfully');
         }
+      } else {
+        toast.success('Ticket created successfully');
       }
       
+      // Notify parent that a new ticket was created (for cleanup tracking)
+      onTicketCreated?.({
+        ticket_id: ticket.ticket_id,
+        ticket_number: ticket.ticket_number || `#${Date.now()}`,
+        title: ticket.title,
+      });
+
       // Add the new ticket to available tickets instead of fetching all again
       if (ticketsLoaded) {
         setAvailableTickets(prev => [
@@ -523,7 +549,7 @@ export default function TaskTicketLinks({
             id="show-create-dialog-button"
             type="button"
             variant="soft"
-            onClick={() => setShowCreateDialog(true)}
+            onClick={handleCreateTicket}
             className="flex items-center"
           >
             <Plus className="h-4 w-4 mr-1" />
@@ -531,6 +557,7 @@ export default function TaskTicketLinks({
           </Button>
         </div>
       </div>
+
 
       <div className="space-y-2">
         {(taskTicketLinks || []).map((link): React.JSX.Element => (
@@ -589,14 +616,14 @@ export default function TaskTicketLinks({
                         />
                       </div>
                       <div className="flex-1">
-                        <CategoryPicker
-                          id='category-picker'
-                          categories={categories}
-                          selectedCategories={selectedCategories}
-                          onSelect={setSelectedCategories}
-                          placeholder="Category"
-                          multiSelect={false}
-                        />
+                        {renderCategoryPicker({
+                          id: 'category-picker',
+                          categories,
+                          selectedCategories,
+                          onSelect: setSelectedCategories,
+                          placeholder: 'Category',
+                          multiSelect: false,
+                        })}
                       </div>
                     </div>
 
@@ -754,21 +781,33 @@ export default function TaskTicketLinks({
         </Dialog>
       )}
 
-      {showCreateDialog && (
-        <div className="relative z-[80]">
-          <QuickAddTicket
-            id='quick-add-ticket'
-            open={showCreateDialog}
-            onOpenChange={(open) => {
-              if (!open) {
-                setShowCreateDialog(false);
-              }
-            }}
-            onTicketAdded={onNewTicketCreated}
-            isEmbedded={true}
+      {showCreateDialog && renderQuickAddTicket({
+        open: showCreateDialog,
+        onOpenChange: (open) => {
+          if (!open) {
+            setShowCreateDialog(false);
+          }
+        },
+        onTicketAdded: onNewTicketCreated,
+        prefilledClient: prefilledClient,
+        prefilledTitle: ticketPrefill?.title,
+        prefilledDescription: ticketPrefill?.description,
+        prefilledAssignedTo: ticketPrefill?.assigned_to ?? undefined,
+        prefilledDueDate: ticketPrefill?.due_date ?? undefined,
+        prefilledAdditionalAgents: ticketPrefill?.additional_agents,
+        isEmbedded: true,
+        renderBeforeFooter: () => (
+          <Checkbox
+            id="link-new-ticket-checkbox"
+            checked={shouldLinkNewTicket}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLinkNewTicket(e.target.checked)}
+            label="Link this ticket to the task"
+            containerClassName="mb-0 mt-2"
           />
-        </div>
-      )}
+        ),
+      })}
     </div>
   );
-}
+});
+
+export default TaskTicketLinks;

@@ -691,6 +691,21 @@ const ProjectTaskModel = {
     }
   },
 
+  deleteTaskTicketLinksByTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticketId: string): Promise<void> => {
+    try {
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+      await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+        .where('ticket_id', ticketId)
+        .andWhere('tenant', tenant)
+        .del();
+    } catch (error) {
+      console.error('Error deleting ticket links by ticket_id:', error);
+      throw error;
+    }
+  },
+
   updateTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, linkId: string, updateData: { project_id: string; phase_id: string }): Promise<void> => {
     try {
       if (!tenant) {

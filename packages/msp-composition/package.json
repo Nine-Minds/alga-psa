@@ -25,12 +25,23 @@
     "./tickets/*": {
       "import": "./src/tickets/*.tsx",
       "types": "./src/tickets/*.tsx"
+    },
+    "./projects": {
+      "import": "./src/projects/index.ts",
+      "types": "./src/projects/index.ts"
+    },
+    "./projects/*": {
+      "import": "./src/projects/*.tsx",
+      "types": "./src/projects/*.tsx"
     }
   },
   "dependencies": {
     "@alga-psa/clients": "*",
+    "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/tickets": "*",
-    "@alga-psa/types": "*"
+    "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
+    "@alga-psa/users": "*"
   }
 }
