@@ -50,7 +50,7 @@ Targeted surfaces:
 
 1. Show source only when `response_state=awaiting_internal`, or whenever latest customer response source is known?
 2. Generic inbound label vs provider-specific label in UI.
-3. Ticket-level indicator only vs ticket-level + per-comment badges.
+3. ~~Ticket-level indicator only vs ticket-level + per-comment badges.~~ **Resolved:** per-comment badges only (no ticket-level indicator).
 4. Do we need backfill for older comments in this phase?
 
 ## Implementation Log
@@ -119,18 +119,17 @@ Targeted surfaces:
   - if explicit source is absent and comment is `author_type=client` with `user_id`, infer `client_portal`.
 - This keeps older client-authored comments source-identifiable without backfill migration.
 
-### F010 — MSP TicketDetails indicator
+### F010 / F011 — Per-comment response source badge
 
-- Added reusable UI component `packages/tickets/src/components/ResponseSourceBadge.tsx`.
-- Updated `packages/tickets/src/components/ticket/TicketDetails.tsx`:
-  - derives latest source with `getLatestCustomerResponseSource(conversations)`.
-  - renders source indicator next to response-state badge in header/status area.
-
-### F011 — Client portal TicketDetails indicator
-
-- Updated `packages/client-portal/src/components/tickets/TicketDetails.tsx`:
-  - derives latest source from `ticket.conversations`.
-  - renders shared `ResponseSourceBadge` alongside existing response-state badge.
+- Moved from ticket-level indicator to per-comment badge.
+- Reusable UI component `packages/tickets/src/components/ResponseSourceBadge.tsx` is unchanged.
+- Updated `packages/tickets/src/components/ticket/CommentItem.tsx`:
+  - derives source per-comment with `getCommentResponseSource(conversation)`.
+  - renders `ResponseSourceBadge` inline with internal/resolution badges next to author name.
+- Removed ticket-level badge from both:
+  - `packages/tickets/src/components/ticket/TicketDetails.tsx` (MSP)
+  - `packages/client-portal/src/components/tickets/TicketDetails.tsx` (client portal)
+- Since CommentItem is shared, badge automatically appears in both MSP and client portal views.
 
 ### F012 — i18n labels
 
@@ -209,23 +208,23 @@ Targeted surfaces:
 
 ### T011
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: MSP rendering contract contains `Received via Client Portal` for portal source.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: per-comment badge renders `Received via Client Portal` for portal-sourced comment.
 
 ### T012
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: MSP rendering contract contains `Received via Inbound Email` for inbound source.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: per-comment badge renders `Received via Inbound Email` for email-sourced comment.
 
 ### T013
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: client-portal rendering contract resolves/prints portal-source label.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: per-comment badge renders client_portal via legacy fallback (client with user_id).
 
 ### T014
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: client-portal rendering contract resolves/prints inbound-source label.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: per-comment badge renders inbound_email via legacy fallback (metadata.email present).
 
 ### T015
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: unresolved source produces no indicator markup.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: unresolved source (internal comment) produces no badge markup.
 
 ### T016
 
@@ -249,11 +248,11 @@ Targeted surfaces:
 
 ### T021
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: indicator output updates after adding a new client-portal comment (no full reload assumption).
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: new portal comment renders client_portal badge immediately.
 
 ### T022
 
-- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: indicator output updates after adding inbound-email reply comment.
+- Covered by `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`: new inbound email comment renders inbound_email badge immediately.
 
 ### T023
 

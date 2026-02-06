@@ -46,12 +46,12 @@
   },
   {
     "id": "F010",
-    "description": "Render response source indicator in MSP TicketDetails header/status area",
+    "description": "Render per-comment response source badge in shared CommentItem component (visible in MSP ticket details)",
     "implemented": true
   },
   {
     "id": "F011",
-    "description": "Render response source indicator in Client Portal TicketDetails header/status area",
+    "description": "Render per-comment response source badge in shared CommentItem component (visible in Client Portal ticket details)",
     "implemented": true
   },
   {

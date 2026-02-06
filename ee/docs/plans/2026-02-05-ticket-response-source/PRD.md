@@ -58,12 +58,13 @@ This should work for inbound email replies processed from Google, Microsoft, and
 
 ## UX / UI Notes
 
-- Place source indicator adjacent to existing response-state indicator in ticket details header/status area.
+- Place source indicator as a per-comment badge on each individual comment in the conversation thread (in `CommentItem`), not as a single ticket-level indicator.
+- Badge appears inline with other comment badges (internal, resolution) next to the author name.
 - Wording:
   - MSP: `Received via Client Portal` / `Received via Inbound Email`
-  - Client portal: client-friendly wording can reuse same label unless product wants alternate phrasing.
-- Display only when there is a detectable latest customer response source.
-- If source cannot be determined, hide source indicator (no error/placeholder).
+  - Client portal: same labels (shared via `CommentItem`).
+- Display only on comments where source can be resolved; internal/agent comments with no detectable source show no badge.
+- If source cannot be determined for a given comment, hide source badge (no error/placeholder).
 
 ## Current System Notes (Code Pointers)
 
@@ -94,8 +95,8 @@ This should work for inbound email replies processed from Google, Microsoft, and
   - Fallback for legacy records:
     - `metadata.email` present => `inbound_email`
     - `author_type=client` and `user_id` present => `client_portal`
-- Render source badge/text in both ticket details screens.
-- Only consider public customer responses (exclude internal notes).
+- Render per-comment source badge in the shared `CommentItem` component (visible in both MSP and client portal ticket details).
+- Badge derives source per-comment using `getCommentResponseSource()`, not a ticket-level aggregate.
 
 ### Type Requirements
 

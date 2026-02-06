@@ -85,7 +85,7 @@
   },
   {
     "id": "T011",
-    "description": "MSP TicketDetails renders 'Received via Client Portal' when derived source is client_portal",
+    "description": "Per-comment badge renders 'Received via Client Portal' on a portal-sourced comment",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -94,7 +94,7 @@
   },
   {
     "id": "T012",
-    "description": "MSP TicketDetails renders 'Received via Inbound Email' when derived source is inbound_email",
+    "description": "Per-comment badge renders 'Received via Inbound Email' on an email-sourced comment",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -103,7 +103,7 @@
   },
   {
     "id": "T013",
-    "description": "Client Portal TicketDetails renders source indicator for client_portal responses",
+    "description": "Per-comment badge renders client_portal via legacy fallback (client with user_id)",
     "implemented": true,
     "featureIds": [
       "F011",
@@ -112,7 +112,7 @@
   },
   {
     "id": "T014",
-    "description": "Client Portal TicketDetails renders source indicator for inbound_email responses",
+    "description": "Per-comment badge renders inbound_email via legacy fallback (metadata.email present)",
     "implemented": true,
     "featureIds": [
       "F011",
@@ -121,7 +121,7 @@
   },
   {
     "id": "T015",
-    "description": "Both TicketDetails screens hide source indicator when source is unresolved",
+    "description": "Per-comment badge is hidden when source is unresolved (internal comment)",
     "implemented": true,
     "featureIds": [
       "F013"
@@ -169,7 +169,7 @@
   },
   {
     "id": "T021",
-    "description": "Response source indicator updates after posting a new client portal comment without requiring full page reload",
+    "description": "New portal comment renders client_portal badge immediately",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -178,7 +178,7 @@
   },
   {
     "id": "T022",
-    "description": "Response source indicator updates after inbound email reply is ingested and comments are refreshed",
+    "description": "New inbound email comment renders inbound_email badge immediately",
     "implemented": true,
     "featureIds": [
       "F010",
