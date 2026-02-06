@@ -87,3 +87,7 @@ export * from './actions';
 
 // SSO/OAuth registration system (for EE to register implementations)
 export * from './lib/sso';
+
+// Email provider registration system (decouples auth from email package)
+export { registerAuthEmailProvider, getAuthEmailRegistry, resetAuthEmailRegistry } from './lib/emailRegistry';
+export type { AuthEmailProvider } from './lib/emailRegistry';

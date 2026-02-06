@@ -44,7 +44,6 @@
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
-    "@alga-psa/email": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
     "@alga-psa/types": "*",
