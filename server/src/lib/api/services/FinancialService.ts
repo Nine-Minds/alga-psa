@@ -13,7 +13,6 @@
  * - Bulk financial operations
  */
 
-import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
@@ -513,17 +512,18 @@ export class FinancialService extends BaseService<ITransaction> {
         };
       }
 
-      // Get client credit balance
+      // Get client credit balance (lock row to prevent concurrent over-application)
       const [client] = await trx('clients')
         .where({ client_id: request.client_id, tenant })
-        .select('credit_balance');
+        .select('credit_balance')
+        .forUpdate();
       const availableCredit = client.credit_balance || 0;
 
       if (availableCredit <= 0) {
         return { data: { success: true, appliedAmount: 0 }, links: [] };
       }
 
-      // Get active credit entries in the same currency (FIFO by expiration)
+      // Get active credit entries in the same currency (FIFO by expiration, locked for update)
       const now = new Date().toISOString();
       const creditEntries = await trx('credit_tracking')
         .where({ client_id: request.client_id, tenant, is_expired: false, currency_code: invoiceCurrency })
@@ -534,7 +534,8 @@ export class FinancialService extends BaseService<ITransaction> {
         .orderBy([
           { column: 'expiration_date', order: 'asc', nulls: 'last' },
           { column: 'created_at', order: 'asc' }
-        ]);
+        ])
+        .forUpdate();
 
       if (creditEntries.length === 0) {
         return { data: { success: true, appliedAmount: 0 }, links: [] };
@@ -587,16 +588,23 @@ export class FinancialService extends BaseService<ITransaction> {
         tenant
       });
 
-      // Update invoice and client
-      await Promise.all([
-        trx('invoices')
-          .where({ invoice_id: request.invoice_id, tenant })
-          .increment('credit_applied', totalApplied)
-          .decrement('total_amount', totalApplied),
-        trx('clients')
-          .where({ client_id: request.client_id, tenant })
-          .update({ credit_balance: newBalance, updated_at: now })
-      ]);
+      // Update invoice (read-then-update to avoid Citus-unsafe SET col = col +/- val)
+      const currentInvoice = await trx('invoices')
+        .where({ invoice_id: request.invoice_id, tenant })
+        .select('credit_applied', 'total_amount')
+        .forUpdate()
+        .first();
+      await trx('invoices')
+        .where({ invoice_id: request.invoice_id, tenant })
+        .update({
+          credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
+          total_amount: Number(currentInvoice.total_amount) - totalApplied
+        });
+
+      // Update client balance
+      await trx('clients')
+        .where({ client_id: request.client_id, tenant })
+        .update({ credit_balance: newBalance, updated_at: now });
 
       return {
         data: { success: true, appliedAmount: totalApplied },
