@@ -202,3 +202,7 @@ Targeted surfaces:
 ### T009
 
 - Covered by \: fallback infers \ for legacy client comment with \.
+
+### T010
+
+- Covered by \: returns \ when no eligible customer source can be resolved.

@@ -77,7 +77,7 @@
   {
     "id": "T010",
     "description": "Fallback logic returns null when no eligible customer response comment exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F013"
