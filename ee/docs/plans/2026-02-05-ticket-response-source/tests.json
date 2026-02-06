@@ -196,7 +196,7 @@
   {
     "id": "T024",
     "description": "Legacy ticket with mixed comments chooses latest eligible customer response source correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",

@@ -258,3 +258,7 @@ Targeted surfaces:
 ### T023
 
 - Covered by \: English locale keys resolve and existing ticket response-state keys remain present.
+
+### T024
+
+- Covered by \: mixed legacy stream picks latest eligible customer response source correctly.
