@@ -104,12 +104,12 @@ describe('ConfirmDialog demo', () => {
     expect(screen.getByText(/Last action: Canceled/)).toBeInTheDocument();
   });
 
-  test('danger variant shows red confirm button', async () => {
+  test('danger variant shows destructive confirm button', async () => {
     const user = userEvent.setup();
     render(<ConfirmDialogDemo />);
     await user.click(screen.getByRole('button', { name: 'Open Danger Confirm' }));
     const deleteButton = screen.getByRole('button', { name: 'Delete' });
-    expect(deleteButton.style.background).toContain('var(--alga-danger)');
+    expect(deleteButton.style.background).toContain('var(--alga-accent)');
   });
 });
 

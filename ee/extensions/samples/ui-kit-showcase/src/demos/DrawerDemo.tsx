@@ -2,39 +2,31 @@ import React from 'react';
 import { Button, Drawer, Stack, Text } from '@alga/ui-kit';
 import { DemoSection } from '../components/DemoSection';
 
-const sizes: Array<'sm' | 'md' | 'lg' | 'full'> = ['sm', 'md', 'lg', 'full'];
-const positions: Array<'right' | 'left' | 'bottom'> = ['right', 'left', 'bottom'];
+const widths = [
+  { label: 'Narrow (300px)', value: '300px' },
+  { label: 'Default (400px)', value: '400px' },
+  { label: 'Wide (600px)', value: '600px' },
+  { label: 'Half (50vw)', value: '50vw' },
+];
 
 export function DrawerDemo() {
   const [open, setOpen] = React.useState(false);
-  const [position, setPosition] = React.useState<'right' | 'left' | 'bottom'>('right');
-  const [size, setSize] = React.useState<'sm' | 'md' | 'lg' | 'full'>('md');
+  const [width, setWidth] = React.useState('400px');
 
-  const openDrawer = (nextPosition: typeof position, nextSize: typeof size) => {
-    setPosition(nextPosition);
-    setSize(nextSize);
+  const openDrawer = (nextWidth: string) => {
+    setWidth(nextWidth);
     setOpen(true);
   };
 
   return (
-    <DemoSection title="Drawer" description="Slide-over panel with positions, sizes, and header content.">
+    <DemoSection title="Drawer" description="Right-side slide-over panel with custom widths.">
       <Stack gap={16}>
         <div>
-          <Text weight={600}>Positions</Text>
+          <Text weight={600}>Widths</Text>
           <Stack direction="row" gap={8} style={{ marginTop: 8, flexWrap: 'wrap' }}>
-            {positions.map((pos) => (
-              <Button key={pos} variant="secondary" onClick={() => openDrawer(pos, size)}>
-                Open {pos}
-              </Button>
-            ))}
-          </Stack>
-        </div>
-        <div>
-          <Text weight={600}>Sizes</Text>
-          <Stack direction="row" gap={8} style={{ marginTop: 8, flexWrap: 'wrap' }}>
-            {sizes.map((s) => (
-              <Button key={s} variant="ghost" onClick={() => openDrawer(position, s)}>
-                {s.toUpperCase()}
+            {widths.map((w) => (
+              <Button key={w.value} variant="outline" onClick={() => openDrawer(w.value)}>
+                {w.label}
               </Button>
             ))}
           </Stack>
@@ -44,9 +36,8 @@ export function DrawerDemo() {
       <Drawer
         open={open}
         onClose={() => setOpen(false)}
-        position={position}
-        size={size}
-        title={`Drawer ${position} (${size})`}
+        width={width}
+        title={`Drawer (${width})`}
       >
         <Stack gap={12}>
           <Text>This drawer can contain navigation or forms.</Text>

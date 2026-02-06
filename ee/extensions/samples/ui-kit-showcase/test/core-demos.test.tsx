@@ -19,9 +19,21 @@ describe('Button demo', () => {
     expect(findButton('Primary').style.background).toContain('var(--alga-primary)');
   });
 
-  test('secondary variant uses alga muted background', () => {
+  test('secondary variant uses alga secondary background', () => {
     render(<ButtonDemo />);
-    expect(findButton('Secondary').style.background).toContain('var(--alga-muted)');
+    expect(findButton('Secondary').style.background).toContain('var(--alga-secondary)');
+  });
+
+  test('destructive variant uses alga accent background', () => {
+    render(<ButtonDemo />);
+    expect(findButton('Destructive').style.background).toContain('var(--alga-accent)');
+  });
+
+  test('outline variant uses transparent background with border', () => {
+    render(<ButtonDemo />);
+    const btn = findButton('Outline');
+    expect(btn.style.background).toBe('transparent');
+    expect(btn.style.borderColor).toContain('var(--alga-border)');
   });
 
   test('ghost variant uses transparent background', () => {
@@ -29,30 +41,33 @@ describe('Button demo', () => {
     expect(findButton('Ghost').style.background).toBe('transparent');
   });
 
-  test('danger variant uses alga danger background', () => {
+  test('link variant uses transparent background with underline', () => {
     render(<ButtonDemo />);
-    expect(findButton('Danger').style.background).toContain('var(--alga-danger)');
+    const btn = findButton('Link');
+    expect(btn.style.background).toBe('transparent');
+    expect(btn.style.textDecoration).toBe('underline');
   });
 
-  test('small size button is smaller than medium', () => {
+  test('soft variant uses alga primary-soft background', () => {
     render(<ButtonDemo />);
-    const sm = findButton('Small');
-    const md = findButton('Medium');
-    expect(Number(sm.style.fontSize.replace('px', ''))).toBeLessThan(Number(md.style.fontSize.replace('px', '')));
+    expect(findButton('Soft').style.background).toContain('var(--alga-primary-soft)');
   });
 
-  test('large size button is larger than medium', () => {
+  test('dashed variant uses dashed border style', () => {
     render(<ButtonDemo />);
-    const lg = findButton('Large');
-    const md = findButton('Medium');
-    expect(Number(lg.style.fontSize.replace('px', ''))).toBeGreaterThan(Number(md.style.fontSize.replace('px', '')));
+    const btn = findButton('Dashed');
+    expect(btn.style.background).toContain('var(--alga-primary-soft)');
+    expect(btn.style.borderStyle).toBe('dashed');
   });
 
-  test('disabled button has reduced opacity and is non-interactive', () => {
+  test('disabled buttons have reduced opacity and are non-interactive', () => {
     render(<ButtonDemo />);
-    const disabled = findButton('Disabled') as HTMLButtonElement;
-    expect(disabled.disabled).toBe(true);
-    expect(disabled.style.opacity).toBe('0.5');
+    const buttons = screen.getAllByRole('button');
+    const disabledButtons = buttons.filter((b) => (b as HTMLButtonElement).disabled);
+    expect(disabledButtons.length).toBeGreaterThanOrEqual(1);
+    disabledButtons.forEach((btn) => {
+      expect((btn as HTMLElement).style.opacity).toBe('0.5');
+    });
   });
 });
 
@@ -124,28 +139,29 @@ describe('Card demo', () => {
 });
 
 describe('Alert demo', () => {
-  test('info tone has correct styling', () => {
+  test('info tone has left border and primary-soft background', () => {
     render(<AlertDemo />);
     const info = screen.getByText('Info').closest('[role="alert"]') as HTMLElement;
-    expect(info.style.background).toContain('var(--alga-muted)');
+    expect(info.style.background).toContain('var(--alga-primary-soft');
+    expect(info.style.borderLeft).toContain('var(--alga-primary');
   });
 
-  test('success tone has green styling', () => {
+  test('success tone has green left border', () => {
     render(<AlertDemo />);
     const success = screen.getByText('Success').closest('[role="alert"]') as HTMLElement;
-    expect(success.style.background).toContain('var(--alga-success)');
+    expect(success.style.borderLeft).toContain('var(--alga-success');
   });
 
-  test('warning tone has amber/orange styling', () => {
+  test('warning tone has amber/orange left border', () => {
     render(<AlertDemo />);
     const warning = screen.getByText('Warning').closest('[role="alert"]') as HTMLElement;
-    expect(warning.style.background).toContain('var(--alga-warning)');
+    expect(warning.style.borderLeft).toContain('var(--alga-warning');
   });
 
-  test('danger tone has red styling', () => {
+  test('danger tone has red left border', () => {
     render(<AlertDemo />);
     const danger = screen.getByText('Danger').closest('[role="alert"]') as HTMLElement;
-    expect(danger.style.background).toContain('var(--alga-danger)');
+    expect(danger.style.borderLeft).toContain('var(--alga-danger');
   });
 });
 

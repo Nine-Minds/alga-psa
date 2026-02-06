@@ -6,7 +6,7 @@ export function ButtonDemo() {
   return (
     <DemoSection
       title="Button"
-      description="Primary actions, alternatives, and destructive actions with size and state variations."
+      description="All button variants available in the design system."
     >
       <Stack gap={16}>
         <div>
@@ -14,22 +14,20 @@ export function ButtonDemo() {
           <Stack direction="row" gap={8} style={{ flexWrap: 'wrap', marginTop: 8 }}>
             <Button variant="primary">Primary</Button>
             <Button variant="secondary">Secondary</Button>
+            <Button variant="destructive">Destructive</Button>
+            <Button variant="outline">Outline</Button>
             <Button variant="ghost">Ghost</Button>
-            <Button variant="danger">Danger</Button>
+            <Button variant="link">Link</Button>
+            <Button variant="soft">Soft</Button>
+            <Button variant="dashed">Dashed</Button>
           </Stack>
         </div>
         <div>
-          <Text weight={600}>Sizes</Text>
+          <Text weight={600}>Disabled</Text>
           <Stack direction="row" gap={8} style={{ flexWrap: 'wrap', marginTop: 8 }}>
-            <Button size="sm">Small</Button>
-            <Button size="md">Medium</Button>
-            <Button size="lg">Large</Button>
-          </Stack>
-        </div>
-        <div>
-          <Text weight={600}>States</Text>
-          <Stack direction="row" gap={8} style={{ flexWrap: 'wrap', marginTop: 8 }}>
-            <Button disabled style={{ opacity: 0.5 }}>Disabled</Button>
+            <Button variant="primary" disabled style={{ opacity: 0.5 }}>Disabled Primary</Button>
+            <Button variant="secondary" disabled style={{ opacity: 0.5 }}>Disabled Secondary</Button>
+            <Button variant="outline" disabled style={{ opacity: 0.5 }}>Disabled Outline</Button>
           </Stack>
         </div>
       </Stack>

@@ -3,26 +3,37 @@ import React from 'react';
 type Tone = 'info' | 'success' | 'warning' | 'danger';
 export type AlertProps = React.HTMLAttributes<HTMLDivElement> & { tone?: Tone };
 
-const toneBg: Record<Tone, string> = {
-  info: 'var(--alga-muted)',
-  success: 'color-mix(in oklab, var(--alga-success) 15%, white)',
-  warning: 'color-mix(in oklab, var(--alga-warning) 15%, white)',
-  danger: 'color-mix(in oklab, var(--alga-danger) 15%, white)',
+const toneBorder: Record<Tone, string> = {
+  info: 'var(--alga-primary, #9855ee)',
+  success: 'var(--alga-success, #16a34a)',
+  warning: 'var(--alga-warning, #d97706)',
+  danger: 'var(--alga-danger, #dc2626)',
 };
+
+const toneBg: Record<Tone, string> = {
+  info: 'var(--alga-primary-soft, #f6f0fe)',
+  success: '#f0fdf4',
+  warning: '#fffbeb',
+  danger: '#fef2f2',
+};
+
 const toneFg: Record<Tone, string> = {
-  info: 'var(--alga-fg)',
-  success: 'var(--alga-fg)',
-  warning: 'var(--alga-fg)',
-  danger: 'var(--alga-fg)',
+  info: 'var(--alga-primary-soft-fg, #6e3dbb)',
+  success: '#166534',
+  warning: '#92400e',
+  danger: '#991b1b',
 };
 
 export function Alert({ tone = 'info', style, ...rest }: AlertProps) {
   const merged: React.CSSProperties = {
     background: toneBg[tone],
     color: toneFg[tone],
-    border: '1px solid var(--alga-border)',
+    border: 'none',
+    borderLeft: `4px solid ${toneBorder[tone]}`,
     borderRadius: 'var(--alga-radius)',
-    padding: 12,
+    padding: '12px 16px',
+    fontSize: '14px',
+    lineHeight: '1.5',
     ...style,
   };
   return <div role="alert" style={merged} {...rest} />;

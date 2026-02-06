@@ -18,7 +18,7 @@ export type SkeletonProps = {
 };
 
 const baseStyle: React.CSSProperties = {
-  backgroundColor: 'var(--alga-muted, #e5e7eb)',
+  backgroundColor: 'var(--alga-border, #e5e7eb)',
   display: 'block',
 };
 

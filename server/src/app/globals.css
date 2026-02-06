@@ -79,8 +79,8 @@
     justify-content: center;
     border-style: solid;
     border-radius: 9999px;
-    border-color: rgba(var(--color-primary-500));
-    border-top-color: rgb(var(--color-secondary-500));
+    border-color: rgb(var(--color-primary-500));
+    border-top-color: rgb(var(--color-primary-100));
     animation: spinner-spin 0.9s linear infinite;
     background-color: transparent;
   }

@@ -116,13 +116,20 @@ const SpinnerIcon = ({ size }: { size: number }) => (
   </svg>
 );
 
-// Inject spin keyframe
+// Inject spin keyframe + focus styles
 if (typeof document !== 'undefined') {
   const styleId = 'alga-search-keyframes';
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
-    style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+    style.textContent = `
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      .alga-search-input:focus {
+        outline: none;
+        border-color: var(--alga-primary, #9855ee);
+        box-shadow: 0 0 0 2px var(--alga-primary-light, #ede2fd);
+      }
+    `;
     document.head.appendChild(style);
   }
 }
@@ -226,6 +233,7 @@ export function SearchInput({
       <input
         ref={inputRef}
         type="text"
+        className="alga-search-input"
         value={value}
         onChange={handleChange}
         placeholder={placeholder}

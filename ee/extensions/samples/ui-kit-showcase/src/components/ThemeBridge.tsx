@@ -6,43 +6,50 @@ const STYLE_ID = 'alga-ui-kit-theme-bridge';
 
 const themeCss = `
 :root {
-  --color-background: #ffffff;
-  --color-text-900: #111827;
-  --color-text-500: #6b7280;
-  --color-border-200: #e5e7eb;
-  --color-border-100: #f3f4f6;
-  --color-primary-500: #7c3aed;
-  --color-primary-300: #a78bfa;
-  --color-accent-red: #dc2626;
-  --color-accent-orange: #d97706;
-  --color-accent-green: #16a34a;
-
-  --alga-bg: var(--color-background);
-  --alga-fg: var(--color-text-900);
-  --alga-muted-fg: var(--color-text-500);
-  --alga-border: var(--color-border-200);
-  --alga-muted: var(--color-border-100);
-  --alga-primary: var(--color-primary-500);
+  --alga-bg: #ffffff;
+  --alga-fg: #111111;
+  --alga-muted: #f5f5f7;
+  --alga-muted-fg: #4b5563;
+  --alga-primary: #9855ee;
   --alga-primary-foreground: #ffffff;
-  --alga-secondary: var(--color-primary-300);
-  --alga-secondary-foreground: var(--color-text-900);
-  --alga-danger: var(--color-accent-red);
-  --alga-warning: var(--color-accent-orange);
-  --alga-success: var(--color-accent-green);
+  --alga-primary-light: #ede2fd;
+  --alga-secondary: #53d7fa;
+  --alga-secondary-foreground: #ffffff;
+  --alga-border: #e5e7eb;
+  --alga-ring: 0 0% 0%;
   --alga-radius: 6px;
+  --alga-accent: #ff9c30;
+  --alga-accent-foreground: #ffffff;
+  --alga-primary-soft: #f6f0fe;
+  --alga-primary-soft-fg: #6e3dbb;
+  --alga-primary-soft-hover: #ede2fd;
+  --alga-primary-border: #caa8f9;
+  --alga-danger: #dc2626;
+  --alga-warning: #d97706;
+  --alga-success: #16a34a;
 }
 
 :root[data-alga-theme="dark"] {
-  --color-background: #0f172a;
-  --color-text-900: #f8fafc;
-  --color-text-500: #94a3b8;
-  --color-border-200: #334155;
-  --color-border-100: #1f2937;
-  --color-primary-500: #8b5cf6;
-  --color-primary-300: #c4b5fd;
-  --color-accent-red: #f87171;
-  --color-accent-orange: #fbbf24;
-  --color-accent-green: #4ade80;
+  --alga-bg: #0b0f14;
+  --alga-fg: #e5e7eb;
+  --alga-muted: #0f1720;
+  --alga-muted-fg: #9ca3af;
+  --alga-primary: #8a4dea;
+  --alga-primary-foreground: #ffffff;
+  --alga-primary-light: #6036a4;
+  --alga-secondary: #40cff9;
+  --alga-secondary-foreground: #ffffff;
+  --alga-border: #1f2937;
+  --alga-ring: 0 0% 98%;
+  --alga-accent: #ffa645;
+  --alga-accent-foreground: #ffffff;
+  --alga-primary-soft: #522e8c;
+  --alga-primary-soft-fg: #b891f5;
+  --alga-primary-soft-hover: #6036a4;
+  --alga-primary-border: #7c45d3;
+  --alga-danger: #ef4444;
+  --alga-warning: #f59e0b;
+  --alga-success: #22c55e;
 }
 `;
 

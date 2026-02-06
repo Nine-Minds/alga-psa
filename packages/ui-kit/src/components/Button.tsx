@@ -1,7 +1,7 @@
 import React from 'react';
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' | 'soft' | 'dashed';
   size?: 'sm' | 'md' | 'lg';
 };
 
@@ -9,7 +9,7 @@ const baseStyle: React.CSSProperties = {
   borderRadius: 'var(--alga-radius, 8px)',
   border: '1px solid transparent',
   cursor: 'pointer',
-  fontWeight: 500,
+  fontWeight: 400,
   fontFamily: 'inherit',
   transition: 'all 0.15s ease',
 };
@@ -27,7 +27,17 @@ const variants: Record<NonNullable<ButtonProps['variant']>, React.CSSProperties>
     borderColor: 'transparent',
   },
   secondary: {
-    background: 'var(--alga-muted)',
+    background: 'var(--alga-secondary)',
+    color: 'var(--alga-secondary-foreground)',
+    borderColor: 'transparent',
+  },
+  destructive: {
+    background: 'var(--alga-accent)',
+    color: 'var(--alga-accent-foreground)',
+    borderColor: 'transparent',
+  },
+  outline: {
+    background: 'transparent',
     color: 'var(--alga-fg)',
     borderColor: 'var(--alga-border)',
   },
@@ -36,10 +46,22 @@ const variants: Record<NonNullable<ButtonProps['variant']>, React.CSSProperties>
     color: 'var(--alga-muted-fg)',
     borderColor: 'transparent',
   },
-  danger: {
-    background: 'var(--alga-danger)',
-    color: '#fff',
+  link: {
+    background: 'transparent',
+    color: 'var(--alga-primary)',
     borderColor: 'transparent',
+    textDecoration: 'underline',
+  },
+  soft: {
+    background: 'var(--alga-primary-soft)',
+    color: 'var(--alga-primary-soft-fg)',
+    borderColor: 'transparent',
+  },
+  dashed: {
+    background: 'var(--alga-primary-soft)',
+    color: 'var(--alga-primary-soft-fg)',
+    borderColor: 'var(--alga-primary-border)',
+    borderStyle: 'dashed',
   },
 };
 

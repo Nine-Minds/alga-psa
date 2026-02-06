@@ -10,34 +10,34 @@ const getThemeStyle = () => document.getElementById('alga-ui-kit-theme-bridge')?
 describe('theme bridge', () => {
   test('alga background maps to host background', () => {
     render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-bg: var(--color-background)');
+    expect(getThemeStyle()).toContain('--alga-bg: #ffffff');
   });
 
   test('alga foreground maps to host text color', () => {
     render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-fg: var(--color-text-900)');
+    expect(getThemeStyle()).toContain('--alga-fg: #111111');
   });
 
   test('alga primary maps to host primary', () => {
     render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-primary: var(--color-primary-500)');
+    expect(getThemeStyle()).toContain('--alga-primary: #9855ee');
   });
 
   test('alga border maps to host border color', () => {
     render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-border: var(--color-border-200)');
+    expect(getThemeStyle()).toContain('--alga-border: #e5e7eb');
   });
 
   test('alga danger maps to host accent red', () => {
     render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-danger: var(--color-accent-red)');
+    expect(getThemeStyle()).toContain('--alga-danger: #dc2626');
   });
 
   test('dark mode declares different token values', () => {
     render(<ThemeBridge mode="dark" />);
     const style = getThemeStyle();
     expect(style).toContain(':root[data-alga-theme="dark"]');
-    expect(style).toContain('--color-background: #0f172a');
+    expect(style).toContain('--alga-bg: #0b0f14');
   });
 
   test('theme toggle switches between light and dark', async () => {
