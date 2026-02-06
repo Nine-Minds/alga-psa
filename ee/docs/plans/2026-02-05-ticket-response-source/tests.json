@@ -130,7 +130,7 @@
   {
     "id": "T016",
     "description": "No database migration is required and existing comment rows remain valid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

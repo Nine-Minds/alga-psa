@@ -226,3 +226,7 @@ Targeted surfaces:
 ### T015
 
 - Covered by \: unresolved source produces no indicator markup.
+
+### T016
+
+- Covered by \: legacy comments without metadata remain valid inputs and resolve safely without schema changes.
