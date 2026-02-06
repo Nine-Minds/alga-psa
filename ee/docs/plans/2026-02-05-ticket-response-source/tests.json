@@ -86,7 +86,7 @@
   {
     "id": "T011",
     "description": "MSP TicketDetails renders 'Received via Client Portal' when derived source is client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F012"

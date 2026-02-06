@@ -206,3 +206,7 @@ Targeted surfaces:
 ### T010
 
 - Covered by \: returns \ when no eligible customer source can be resolved.
+
+### T011
+
+- Covered by \: MSP rendering contract contains \ for portal source.
