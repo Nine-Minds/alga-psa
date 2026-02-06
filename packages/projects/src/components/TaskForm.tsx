@@ -20,6 +20,7 @@ import {
   removeTaskResourceAction,
   getTaskResourcesAction,
   addTicketLinkAction,
+  deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
   getTaskDependencies,
   addTaskDependency
@@ -43,7 +44,7 @@ import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import TaskTicketLinks from './TaskTicketLinks';
+import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
@@ -98,6 +99,7 @@ export default function TaskForm({
   prefillData
 }: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
+  const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || prefillData?.task_name || '');
   const [description, setDescription] = useState(task?.description || prefillData?.description || '');
@@ -112,6 +114,9 @@ export default function TaskForm({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDocumentCleanupConfirm, setShowDocumentCleanupConfirm] = useState(false);
   const [isDeletingDocuments, setIsDeletingDocuments] = useState(false);
+  const [showTicketCleanupConfirm, setShowTicketCleanupConfirm] = useState(false);
+  const [isDeletingTickets, setIsDeletingTickets] = useState(false);
+  const [sessionCreatedTickets, setSessionCreatedTickets] = useState<{ ticket_id: string; ticket_number: string; title: string }[]>([]);
   const [tempTaskId] = useState<string>(`temp-${Date.now()}`);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { launchTimeEntry } = useSchedulingCallbacks();
@@ -189,7 +194,7 @@ export default function TaskForm({
   }>({ predecessors: [], successors: [] });
 
   const { openDrawer, closeDrawer } = useDrawer();
-  const { renderPrioritySelect } = useTicketIntegration();
+  const { renderPrioritySelect, deleteTicket } = useTicketIntegration();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -231,23 +236,29 @@ export default function TaskForm({
     }
 
     if (shouldLink) {
-      setPendingTicketLinks((prev) => {
-        const exists = prev.some(link => link.ticket_id === ticket.ticket_id);
-        if (exists) return prev;
-        const newLink: IProjectTicketLinkWithDetails = {
-          link_id: `temp-${Date.now()}`,
-          task_id: 'temp',
-          ticket_id: ticket.ticket_id,
-          ticket_number: ticket.ticket_number,
-          title: ticket.title,
-          created_at: new Date(),
-          project_id: phase.project_id,
-          phase_id: phase.phase_id,
-          status_name: ticket.status_name || 'New',
-          is_closed: ticket.is_closed ?? ticket.closed_at != null
-        };
-        return [...prev, newLink];
-      });
+      const newLink: IProjectTicketLinkWithDetails = {
+        link_id: `temp-${Date.now()}`,
+        task_id: 'temp',
+        ticket_id: ticket.ticket_id,
+        ticket_number: ticket.ticket_number,
+        title: ticket.title,
+        created_at: new Date(),
+        project_id: phase.project_id,
+        phase_id: phase.phase_id,
+        status_name: ticket.status_name || 'New',
+        is_closed: ticket.is_closed ?? ticket.closed_at != null
+      };
+      // Use the ref to inject the link into TaskTicketLinks' internal state,
+      // which also calls onLinksChange to keep pendingTicketLinks in sync
+      if (ticketLinksRef.current) {
+        ticketLinksRef.current.addExternalLink(newLink);
+      } else {
+        // Fallback: directly update pendingTicketLinks
+        setPendingTicketLinks((prev) => {
+          if (prev.some(link => link.ticket_id === ticket.ticket_id)) return prev;
+          return [...prev, newLink];
+        });
+      }
     }
   };
 
@@ -779,6 +790,15 @@ export default function TaskForm({
     }
   };
 
+  const proceedAfterDocumentCleanup = () => {
+    // After documents are handled, check for tickets that need cleanup
+    if (sessionCreatedTickets.length > 0) {
+      setShowTicketCleanupConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
   const handleCancelConfirm = () => {
     setShowCancelConfirm(false);
     // Check for NEW documents (uploaded or created) that need cleanup prompt
@@ -788,7 +808,7 @@ export default function TaskForm({
     if (newDocsToCleanup.length > 0) {
       setShowDocumentCleanupConfirm(true);
     } else {
-      onClose();
+      proceedAfterDocumentCleanup();
     }
   };
 
@@ -797,9 +817,9 @@ export default function TaskForm({
   };
 
   const handleDocumentCleanupKeep = () => {
-    // Keep documents in the system, just close the form
+    // Keep documents in the system, proceed to ticket cleanup check
     setShowDocumentCleanupConfirm(false);
-    onClose();
+    proceedAfterDocumentCleanup();
   };
 
   const handleDocumentCleanupDelete = async () => {
@@ -831,6 +851,37 @@ export default function TaskForm({
     } finally {
       setIsDeletingDocuments(false);
       setShowDocumentCleanupConfirm(false);
+      proceedAfterDocumentCleanup();
+    }
+  };
+
+  const handleTicketCleanupKeep = () => {
+    // Keep tickets in the system, just close the form
+    setShowTicketCleanupConfirm(false);
+    onClose();
+  };
+
+  const handleTicketCleanupDelete = async () => {
+    setIsDeletingTickets(true);
+    try {
+      let failureCount = 0;
+      for (const ticket of sessionCreatedTickets) {
+        try {
+          // Remove any ticket links first to avoid FK constraint violations
+          await deleteTaskTicketLinksByTicketIdAction(ticket.ticket_id);
+          await deleteTicket(ticket.ticket_id);
+        } catch (error) {
+          console.error(`Failed to delete ticket ${ticket.ticket_id}:`, error);
+          failureCount++;
+        }
+      }
+
+      if (failureCount > 0) {
+        toast.error(`${failureCount} ticket${failureCount !== 1 ? 's' : ''} could not be deleted`);
+      }
+    } finally {
+      setIsDeletingTickets(false);
+      setShowTicketCleanupConfirm(false);
       onClose();
     }
   };
@@ -1503,12 +1554,14 @@ export default function TaskForm({
 
           {/* Full width Associated Tickets section */}
           <TaskTicketLinks
+            ref={ticketLinksRef}
             taskId={task?.task_id || undefined}
             phaseId={phase.phase_id}
             projectId={phase.project_id}
             initialLinks={task?.ticket_links}
             users={users}
             onLinksChange={setPendingTicketLinks}
+            onTicketCreated={(ticket) => setSessionCreatedTickets(prev => [...prev, ticket])}
             taskData={
               mode === 'edit'
                 ? {
@@ -1659,6 +1712,37 @@ export default function TaskForm({
         cancelLabel="Continue editing"
         thirdButtonLabel="Keep documents"
         isConfirming={isDeletingDocuments}
+      />
+
+      {/* Ticket cleanup confirmation - shown when canceling with newly created tickets */}
+      <ConfirmationDialog
+        isOpen={showTicketCleanupConfirm}
+        onClose={() => setShowTicketCleanupConfirm(false)}
+        onConfirm={handleTicketCleanupDelete}
+        onCancel={handleTicketCleanupKeep}
+        title="Keep Created Tickets?"
+        message={(() => {
+          return (
+            <div>
+              <p>You created {sessionCreatedTickets.length} ticket{sessionCreatedTickets.length !== 1 ? 's' : ''} during this session:</p>
+              <ul className="list-disc list-inside mt-2 text-sm">
+                {sessionCreatedTickets.slice(0, 5).map(ticket => (
+                  <li key={ticket.ticket_id} className="truncate">
+                    {ticket.ticket_number} - {ticket.title}
+                  </li>
+                ))}
+                {sessionCreatedTickets.length > 5 && (
+                  <li className="text-gray-500">...and {sessionCreatedTickets.length - 5} more</li>
+                )}
+              </ul>
+              <p className="mt-3">Would you like to keep these tickets or delete them?</p>
+            </div>
+          );
+        })()}
+        confirmLabel={isDeletingTickets ? "Deleting..." : "Delete tickets"}
+        cancelLabel="Continue editing"
+        thirdButtonLabel="Keep tickets"
+        isConfirming={isDeletingTickets}
       />
 
       <ConfirmationDialog

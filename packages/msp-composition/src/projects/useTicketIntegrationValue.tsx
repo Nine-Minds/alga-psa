@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import type { TicketIntegrationContextType } from '@alga-psa/projects/context/TicketIntegrationContext';
-import { getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
+import { getTicketsForList, deleteTicket } from '@alga-psa/tickets/actions/ticketActions';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTicketCategories, getAllBoards } from '@alga-psa/tickets/actions';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
@@ -113,6 +113,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
       getConsolidatedTicketData,
       getTicketCategories,
       getAllBoards,
+      deleteTicket,
       openTicketInDrawer,
       renderQuickAddTicket,
       renderCategoryPicker,

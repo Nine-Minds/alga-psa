@@ -47,6 +47,9 @@ export interface TicketIntegrationContextType {
   getTicketCategories: () => Promise<ITicketCategory[]>;
   getAllBoards: () => Promise<IBoard[]>;
 
+  // Actions
+  deleteTicket: (ticketId: string) => Promise<void>;
+
   // Component renderers
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   openTicketInDrawer: (ticketId: string) => Promise<void>;

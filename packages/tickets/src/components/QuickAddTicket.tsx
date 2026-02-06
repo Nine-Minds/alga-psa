@@ -36,6 +36,14 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
 
+/** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
+function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
+  if (isEmbedded) {
+    return <div className="space-y-4">{children}</div>;
+  }
+  return <form onSubmit={onSubmit} className="space-y-4" noValidate>{children}</form>;
+}
+
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation): string => {
   const parts: string[] = [];
@@ -645,7 +653,9 @@ export function QuickAddTicket({
               )}
 
               <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
-                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                {/* Use a div instead of form when embedded to avoid nested <form> tags */}
+                <FormOrDiv isEmbedded={isEmbedded} onSubmit={handleSubmit}>
+
                   <Input
                     id={`${id}-title`}
                     value={title}
@@ -1001,9 +1011,10 @@ export function QuickAddTicket({
                     </Button>
                     <Button
                       id={`${id}-submit-btn`}
-                      type="submit"
+                      type={isEmbedded ? "button" : "submit"}
                       variant="default"
                       disabled={isSubmitting}
+                      onClick={isEmbedded ? () => handleSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent) : undefined}
                       className={!title.trim() || !description.trim() || !assignedTo || !boardId || !statusId ||
                         (boardConfig.priority_type === 'custom' && !priorityId) ||
                         (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
@@ -1013,7 +1024,7 @@ export function QuickAddTicket({
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>
                   </DialogFooter>
-                </form>
+                </FormOrDiv>
               </ReflectionContainer>
             </>
           )}

@@ -69,12 +69,7 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
           `}
           aria-label={placeholder}
         >
-          <RadixSelect.Value 
-            placeholder={placeholder}
-            className="flex-1 text-left"
-          >
-            {selectedOption?.label}
-          </RadixSelect.Value>
+          <RadixSelect.Value placeholder={placeholder} className="flex-1 text-left" />
           <RadixSelect.Icon>
             <ChevronDown className="w-4 h-4 text-gray-500" />
           </RadixSelect.Icon>

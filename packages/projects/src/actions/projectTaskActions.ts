@@ -787,6 +787,23 @@ export const deleteTaskTicketLinkAction = withAuth(async (
     }
 });
 
+export const deleteTaskTicketLinksByTicketIdAction = withAuth(async (
+    user,
+    { tenant },
+    ticketId: string
+): Promise<void> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            await ProjectTaskModel.deleteTaskTicketLinksByTicketId(trx, tenant, ticketId);
+        });
+    } catch (error) {
+        console.error('Error deleting ticket links by ticket_id:', error);
+        throw error;
+    }
+});
+
 export const moveTaskToPhase = withAuth(async (
     user,
     { tenant },

@@ -17,6 +17,7 @@ function createMockTicketIntegration(
     renderQuickAddTicket: vi.fn().mockReturnValue(null),
     renderCategoryPicker: vi.fn().mockReturnValue(null),
     renderPrioritySelect: vi.fn().mockReturnValue(null),
+    deleteTicket: vi.fn(),
     ...overrides,
   };
 }

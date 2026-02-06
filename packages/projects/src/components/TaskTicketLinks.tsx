@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { 
   addTicketLinkAction,
@@ -36,6 +36,7 @@ interface TaskTicketLinksProps {
   initialLinks?: IProjectTicketLinkWithDetails[];
   users: IUser[];
   onLinksChange?: (links: IProjectTicketLinkWithDetails[]) => void;
+  onTicketCreated?: (ticket: { ticket_id: string; ticket_number: string; title: string }) => void;
   taskData?: {
     task_name: string;
     description: string;
@@ -65,15 +66,20 @@ interface TicketDetails {
   closed_at?: Date | null;
 }
 
-export default function TaskTicketLinks({
+export interface TaskTicketLinksRef {
+  addExternalLink: (link: IProjectTicketLinkWithDetails) => void;
+}
+
+const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(function TaskTicketLinks({
   taskId,
   phaseId,
   projectId,
   initialLinks = undefined,
   users,
   onLinksChange,
+  onTicketCreated,
   taskData
-}: TaskTicketLinksProps) {
+}, ref) {
 
   const [taskTicketLinks, setTaskTicketLinks] = useState<IProjectTicketLinkWithDetails[] | undefined>(initialLinks);
   const [availableTickets, setAvailableTickets] = useState<ITicketListItem[]>([]);
@@ -118,6 +124,16 @@ export default function TaskTicketLinks({
         client_name: prefilledClient?.name ?? null
       })
     : null;
+
+  useImperativeHandle(ref, () => ({
+    addExternalLink: (link: IProjectTicketLinkWithDetails) => {
+      const isAlreadyLinked = (taskTicketLinks || []).some(l => l.ticket_id === link.ticket_id);
+      if (isAlreadyLinked) return;
+      const newLinks = [...(taskTicketLinks || []), link];
+      setTaskTicketLinks(newLinks);
+      onLinksChange?.(newLinks);
+    }
+  }), [taskTicketLinks, onLinksChange]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -476,6 +492,13 @@ export default function TaskTicketLinks({
         toast.success('Ticket created successfully');
       }
       
+      // Notify parent that a new ticket was created (for cleanup tracking)
+      onTicketCreated?.({
+        ticket_id: ticket.ticket_id,
+        ticket_number: ticket.ticket_number || `#${Date.now()}`,
+        title: ticket.title,
+      });
+
       // Add the new ticket to available tickets instead of fetching all again
       if (ticketsLoaded) {
         setAvailableTickets(prev => [
@@ -785,4 +808,6 @@ export default function TaskTicketLinks({
       })}
     </div>
   );
-}
+});
+
+export default TaskTicketLinks;

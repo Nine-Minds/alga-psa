@@ -200,12 +200,17 @@ export default function PrefillFromTicketDialog({
       const consolidated = await getConsolidatedTicketData(selectedTicketId);
       const ticket = consolidated.ticket;
       const additionalAgents = consolidated.additionalAgents;
+      const availableAgents = consolidated.availableAgents;
       const ticketWithAgents = {
         ...ticket,
-        additional_agents: additionalAgents?.map((a: any) => ({
-          user_id: a.user_id,
-          name: a.first_name ? `${a.first_name} ${a.last_name || ''}`.trim() : undefined
-        }))
+        additional_agents: additionalAgents?.map((a: any) => {
+          const userId = a.additional_user_id || a.assigned_to;
+          const agentUser = availableAgents?.find((u: any) => u.user_id === userId);
+          return {
+            user_id: userId,
+            name: agentUser ? `${agentUser.first_name} ${agentUser.last_name || ''}`.trim() : undefined
+          };
+        })
       };
       const prefillData = mapTicketToTaskFields(ticketWithAgents);
       onPrefill({
