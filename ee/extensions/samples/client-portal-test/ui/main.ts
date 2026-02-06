@@ -132,6 +132,7 @@ interface HandlerResponse {
     userName: string;
     userEmail: string;
     userType: string;
+    clientId?: string;
   };
   userError?: string;
   portalType?: string;
@@ -170,6 +171,7 @@ async function callHandler(): Promise<void> {
         ? `Error: ${data.userError}`
         : 'N/A';
     const userTypeDisplay = data.user?.userType || 'N/A';
+    const clientIdDisplay = data.user?.clientId || 'N/A';
 
     if (handlerEl) {
       handlerEl.innerHTML = `
@@ -191,6 +193,10 @@ async function callHandler(): Promise<void> {
           <div class="result-row">
             <span class="result-label">User Type</span>
             <span class="result-value"><code>${userTypeDisplay}</code></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Client ID</span>
+            <span class="result-value"><code>${clientIdDisplay}</code></span>
           </div>
           <div class="result-row">
             <span class="result-label">Portal Type</span>
