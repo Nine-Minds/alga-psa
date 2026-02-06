@@ -18,6 +18,7 @@ export interface QuickAddTicketRenderProps {
   prefilledDescription?: string;
   prefilledAssignedTo?: string;
   prefilledDueDate?: Date | string | null;
+  prefilledAdditionalAgents?: { user_id: string; name?: string }[];
   isEmbedded?: boolean;
   renderBeforeFooter?: () => React.ReactNode;
 }

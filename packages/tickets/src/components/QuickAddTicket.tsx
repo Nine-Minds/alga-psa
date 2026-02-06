@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { addTicket } from '../actions/ticketActions';
+import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
@@ -79,6 +80,7 @@ interface QuickAddTicketProps {
   prefilledTitle?: string;
   prefilledAssignedTo?: string;
   prefilledDueDate?: Date | string | null;
+  prefilledAdditionalAgents?: { user_id: string; name?: string }[];
   isEmbedded?: boolean;
   assetId?: string;
   renderBeforeFooter?: () => React.ReactNode;
@@ -95,6 +97,7 @@ export function QuickAddTicket({
   prefilledTitle,
   prefilledAssignedTo,
   prefilledDueDate,
+  prefilledAdditionalAgents,
   isEmbedded = false,
   assetId,
   renderBeforeFooter
@@ -539,6 +542,17 @@ export function QuickAddTicket({
       const newTicket = await addTicket(formData);
       if (!newTicket) {
         throw new Error('Failed to create ticket');
+      }
+
+      // Add additional agents as ticket resources
+      if (prefilledAdditionalAgents?.length && newTicket.ticket_id) {
+        for (const agent of prefilledAdditionalAgents) {
+          try {
+            await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
+          } catch (agentError) {
+            console.error(`Failed to add additional agent ${agent.user_id}:`, agentError);
+          }
+        }
       }
 
       // Create tags for the new ticket

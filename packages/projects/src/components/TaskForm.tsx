@@ -130,7 +130,20 @@ export default function TaskForm({
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
-  const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
+  const [tempTaskResources, setTempTaskResources] = useState<any[]>(() => {
+    if (prefillData?.additional_agents?.length) {
+      return prefillData.additional_agents.map(agent => {
+        const nameParts = agent.name?.split(' ') ?? [];
+        return {
+          additional_user_id: agent.user_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          assignment_id: `temp-${Date.now()}-${agent.user_id}`
+        };
+      });
+    }
+    return [];
+  });
   const [pendingDocuments, setPendingDocuments] = useState<PendingTaskDocument[]>([]);
   // Track documents added during edit session (for cleanup on cancel)
   const [sessionAddedDocuments, setSessionAddedDocuments] = useState<PendingTaskDocument[]>([]);
@@ -204,6 +217,18 @@ export default function TaskForm({
     setAssignedUser(prefillData.assigned_to);
     setDueDate(prefillData.due_date ?? undefined);
     setEstimatedHours(prefillData.estimated_hours);
+
+    if (prefillData.additional_agents?.length) {
+      setTempTaskResources(prefillData.additional_agents.map(agent => {
+        const nameParts = agent.name?.split(' ') ?? [];
+        return {
+          additional_user_id: agent.user_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          assignment_id: `temp-${Date.now()}-${agent.user_id}`
+        };
+      }));
+    }
 
     if (shouldLink) {
       setPendingTicketLinks((prev) => {
@@ -1490,7 +1515,11 @@ export default function TaskForm({
                     task_name: taskName,
                     description,
                     assigned_to: assignedUser,
-                    due_date: dueDate ?? null
+                    due_date: dueDate ?? null,
+                    additional_agents: (task?.task_id ? taskResources : tempTaskResources).map(r => ({
+                      user_id: r.additional_user_id,
+                      name: r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : undefined
+                    }))
                   }
                 : undefined
             }

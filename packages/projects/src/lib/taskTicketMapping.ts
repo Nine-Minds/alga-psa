@@ -30,6 +30,7 @@ export interface TaskPrefillFields {
   assigned_to: string | null;
   due_date: Date | null;
   estimated_hours: number;
+  additional_agents?: { user_id: string; name?: string }[];
 }
 
 interface TicketLike {
@@ -39,6 +40,7 @@ interface TicketLike {
   due_date?: string | null;
   priority_id?: string | null;
   attributes?: Record<string, unknown> | null;
+  additional_agents?: { user_id: string; name?: string }[];
 }
 
 export interface TicketPrefillFields {
@@ -48,6 +50,7 @@ export interface TicketPrefillFields {
   due_date: Date | null;
   client_id: string | null;
   client_name?: string | null;
+  additional_agents?: { user_id: string; name?: string }[];
 }
 
 interface ProjectLike {
@@ -65,7 +68,8 @@ export const mapTicketToTaskFields = (ticket: TicketLike | null | undefined): Ta
     description,
     assigned_to: ticket?.assigned_to ?? null,
     due_date: dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : null,
-    estimated_hours: 0
+    estimated_hours: 0,
+    additional_agents: ticket?.additional_agents
   };
 };
 
@@ -76,6 +80,7 @@ export const mapTaskToTicketPrefill = (
     assigned_to?: string | null;
     due_date?: Date | null;
     priority_id?: string | null;
+    additional_agents?: { user_id: string; name?: string }[];
   } | null | undefined,
   project: ProjectLike | null | undefined
 ): TicketPrefillFields => {
@@ -85,6 +90,7 @@ export const mapTaskToTicketPrefill = (
     assigned_to: task?.assigned_to ?? null,
     due_date: task?.due_date ?? null,
     client_id: project?.client_id ?? null,
-    client_name: project?.client_name ?? null
+    client_name: project?.client_name ?? null,
+    additional_agents: task?.additional_agents
   };
 };

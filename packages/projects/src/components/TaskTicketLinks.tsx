@@ -41,6 +41,7 @@ interface TaskTicketLinksProps {
     description: string;
     assigned_to: string | null;
     due_date: Date | null;
+    additional_agents?: { user_id: string; name?: string }[];
   };
 }
 
@@ -770,6 +771,7 @@ export default function TaskTicketLinks({
         prefilledDescription: ticketPrefill?.description,
         prefilledAssignedTo: ticketPrefill?.assigned_to ?? undefined,
         prefilledDueDate: ticketPrefill?.due_date ?? undefined,
+        prefilledAdditionalAgents: ticketPrefill?.additional_agents,
         isEmbedded: true,
         renderBeforeFooter: () => (
           <Checkbox

@@ -130,7 +130,7 @@ interface TicketDetailsProps {
     /**
      * Optional injected UI for creating project tasks from tickets.
      */
-    renderCreateProjectTask?: (args: { ticket: ITicket }) => React.ReactNode;
+    renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
 
     /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
@@ -1751,6 +1751,12 @@ const handleClose = () => {
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    additionalAgents={additionalAgents.map(a => ({
+                                        user_id: a.additional_user_id || a.assigned_to,
+                                        name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
+                                            ? `${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.first_name} ${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.last_name || ''}`.trim()
+                                            : ''
+                                    }))}
                                 />
                             </div>
                         </Suspense>

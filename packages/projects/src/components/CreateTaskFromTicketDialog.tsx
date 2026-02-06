@@ -25,6 +25,7 @@ interface CreateTaskFromTicketDialogProps {
     assigned_to?: string | null;
     due_date?: string | null;
     client_id?: string | null;
+    additional_agents?: { user_id: string; name: string }[];
   };
 }
 
@@ -135,7 +136,8 @@ export default function CreateTaskFromTicketDialog({
       title: ticket.title,
       description: resolvedDescription,
       assigned_to: ticket.assigned_to ?? null,
-      due_date: ticket.due_date ?? undefined
+      due_date: ticket.due_date ?? undefined,
+      additional_agents: ticket.additional_agents
     });
 
     openDrawer(

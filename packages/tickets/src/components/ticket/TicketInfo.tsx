@@ -57,7 +57,8 @@ interface TicketInfoProps {
   itilUrgency?: number;
   itilCategory?: string;
   itilSubcategory?: string;
-  renderProjectTaskActions?: (args: { ticket: ITicket }) => React.ReactNode;
+  renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  additionalAgents?: { user_id: string; name: string }[];
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -84,6 +85,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilCategory,
   itilSubcategory,
   renderProjectTaskActions,
+  additionalAgents,
 }) => {
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -1140,7 +1142,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
-            {renderProjectTaskActions?.({ ticket })}
+            {renderProjectTaskActions?.({ ticket, additionalAgents })}
             <div className="flex-1" />
             <Button
               id={`${id}-cancel-btn`}

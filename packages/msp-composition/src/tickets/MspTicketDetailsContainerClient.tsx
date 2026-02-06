@@ -38,9 +38,9 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
   );
 
   const renderCreateProjectTask = useCallback(
-    ({ ticket }: { ticket: any }) => (
+    ({ ticket, additionalAgents }: { ticket: any; additionalAgents?: { user_id: string; name: string }[] }) => (
       <>
-        <CreateTaskFromTicketDialog ticket={ticket} />
+        <CreateTaskFromTicketDialog ticket={{ ...ticket, additional_agents: additionalAgents }} />
         <LinkTicketToTaskDialog ticket={ticket} />
       </>
     ),

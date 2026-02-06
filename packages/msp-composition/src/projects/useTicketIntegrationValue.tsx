@@ -71,6 +71,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
           prefilledDescription={renderProps.prefilledDescription}
           prefilledAssignedTo={renderProps.prefilledAssignedTo}
           prefilledDueDate={renderProps.prefilledDueDate}
+          prefilledAdditionalAgents={renderProps.prefilledAdditionalAgents}
           isEmbedded={renderProps.isEmbedded}
           renderBeforeFooter={renderProps.renderBeforeFooter}
         />
