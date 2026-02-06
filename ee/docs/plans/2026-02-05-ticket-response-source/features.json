@@ -12,7 +12,7 @@
   {
     "id": "F003",
     "description": "Client portal comment creation writes metadata.responseSource=client_portal in addClientTicketComment",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",

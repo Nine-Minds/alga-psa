@@ -69,5 +69,11 @@ Targeted surfaces:
   - Added `InboundEmailProviderType = "google" | "microsoft" | "imap"`.
   - Added `CommentMetadataEmail` and `CommentMetadata` with safe loose typing.
   - Added `IComment.metadata?: CommentMetadata | null`.
-  - Added optional normalized `IComment.response_source?: CommentResponseSource`.
+- Added optional normalized `IComment.response_source?: CommentResponseSource`.
 - Rationale: unblock UI/action logic from using `any` for source resolution while staying backward-compatible with existing metadata shapes.
+
+### F003 — Client portal writes response source
+
+- Updated `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts#addClientTicketComment` to persist:
+  - `metadata.responseSource = "client_portal"` on inserted comments.
+- Implementation uses canonical constants from `@alga-psa/types` (`COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL`) to avoid string drift.
