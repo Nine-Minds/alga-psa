@@ -27,7 +27,7 @@
   {
     "id": "F006",
     "description": "Add shared utility to derive latest customer response source from ticket conversations",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",

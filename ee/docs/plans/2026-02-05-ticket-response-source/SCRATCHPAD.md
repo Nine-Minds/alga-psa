@@ -91,3 +91,10 @@ Targeted surfaces:
 - `buildInboundEmailCommentMetadata` now normalizes provider type to `google|microsoft|imap` when present.
 - Persisted provider detail is written on `metadata.email.provider` and `metadata.email.providerType`.
 - Updated `shared/services/email/processInboundEmailInApp.ts` to pass `metadata.email.provider = emailData.provider` in all inbound comment creation branches.
+
+### F006 — Shared source derivation utility
+
+- Added `packages/tickets/src/lib/responseSource.ts` with:
+  - `getCommentResponseSource(comment)`
+  - `getLatestCustomerResponseSource(conversations)`
+- Exported utility from `packages/tickets/src/lib/index.ts` for use in both MSP and client-portal ticket detail surfaces.
