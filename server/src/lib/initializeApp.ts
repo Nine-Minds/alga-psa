@@ -26,7 +26,9 @@ import { validateEmailConfiguration, logEmailConfigWarnings } from './validation
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
-import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
+import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { registerAuthEmailProvider } from '@alga-psa/auth';
+import { registerWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -103,6 +105,20 @@ export async function initializeApp() {
       logger.error('Failed to initialize event bus:', error);
       throw error; // Critical failure - cannot continue without event bus
     }
+
+    // Register email provider implementations into registries
+    // This breaks circular dependencies: auth and shared no longer import from email directly
+    registerAuthEmailProvider({
+      sendPasswordResetEmail,
+      getSystemEmailService: async () => getSystemEmailService(),
+      getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
+    });
+    registerWorkflowEmailProvider({
+      TenantEmailService: TenantEmailService as any,
+      StaticTemplateProcessor: StaticTemplateProcessor as any,
+      EmailProviderManager: EmailProviderManager as any,
+    });
+    logger.info('Email provider registries initialized');
 
     // Initialize notification accumulator for batching ticket update emails
     // This is non-critical - if it fails, the system falls back to immediate sending

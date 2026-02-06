@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
 import {
   uuidSchema,
@@ -660,7 +661,7 @@ export function registerTicketActions(): void {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Requester contact has no email address' });
         }
 
-        const { TenantEmailService, StaticTemplateProcessor } = await import('@alga-psa/email');
+        const { TenantEmailService, StaticTemplateProcessor } = getWorkflowEmailProvider();
         const service = TenantEmailService.getInstance(tx.tenantId);
         const subject = input.email?.subject ?? `Ticket ${ticket.ticket_number ?? ''} closed`;
         const html = input.email?.html ?? `<p>Your ticket has been closed.</p><p>Resolution: ${input.resolution.code}</p>`;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
@@ -51,7 +52,7 @@ export function registerEmailActions(): void {
       // Use the existing email permission taxonomy (email:process).
       await requirePermission(ctx, tx, { resource: 'email', action: 'process' });
 
-      const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = await import('@alga-psa/email');
+      const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = getWorkflowEmailProvider();
       const { StorageProviderFactory } = await import('@alga-psa/documents');
 
       const settings = await TenantEmailService.getTenantEmailSettings(tx.tenantId, tx.trx);

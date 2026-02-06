@@ -16,7 +16,6 @@
       "dependsOn": [
         "@alga-psa/core:build",
         "@alga-psa/db:build",
-        "@alga-psa/email:build",
         "@alga-psa/types:build",
         "@alga-psa/event-schemas:build",
         "@alga-psa/event-bus:build"
