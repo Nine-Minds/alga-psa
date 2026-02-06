@@ -149,3 +149,9 @@ Targeted surfaces:
 
 - Confirmed implementation uses existing `comments.metadata` JSONB only.
 - No migration files were added/modified for this workstream.
+
+### F015 — Shared inbound path coverage
+
+- Google/Microsoft/IMAP inbound flows all route through `createCommentFromEmail` in:
+  - `shared/services/email/processInboundEmailInApp.ts`
+- Since source/provider tagging is centralized in `shared/workflow/actions/emailWorkflowActions.ts#createCommentFromEmail`, all three providers now share the same metadata behavior.

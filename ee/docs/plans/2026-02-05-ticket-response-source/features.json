@@ -72,7 +72,7 @@
   {
     "id": "F015",
     "description": "Ensure inbound email path coverage includes Google/Microsoft webhook and IMAP-driven processing by using shared createCommentFromEmail metadata handling",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
