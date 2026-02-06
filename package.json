@@ -95,7 +95,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/react-dropzone": "^4.2.2",
     "@types/redis": "^4.0.10",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^4.0.18",
     "archiver": "^7.0.1",
     "asc": "^2.1.5",
     "assemblyscript": "^0.27.37",
@@ -216,7 +216,7 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
-    "@vitest/coverage-istanbul": "^3.2.4",
+    "@vitest/coverage-istanbul": "^4.0.18",
     "eslint": "^8.57.0",
     "eslint-config-next": "^16.1.6",
     "eslint-plugin-custom-rules": "file:server/eslint-plugins",
@@ -234,7 +234,7 @@
     "ts-proto": "^2.6.0",
     "typescript": "^5.7.3",
     "vite": "^7.0.0",
-    "vitest": "^3.0.7"
+    "vitest": "^4.0.18"
   },
   "description": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).",
   "main": "index.js",
