@@ -222,3 +222,7 @@ Targeted surfaces:
 ### T014
 
 - Covered by \: client-portal rendering contract resolves/prints inbound-source label.
+
+### T015
+
+- Covered by \: unresolved source produces no indicator markup.
