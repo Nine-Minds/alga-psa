@@ -29,7 +29,7 @@
     "@alga-psa/shared": "file:../../shared",
     "@aws-sdk/client-s3": "^3.984.0",
     "@aws-sdk/s3-request-presigner": "^3.984.0",
-    "@kubernetes/client-node": "^0.21.0",
+    "@kubernetes/client-node": "^1.4.0",
     "@temporalio/activity": "^1.8.0",
     "@temporalio/client": "^1.8.0",
     "@temporalio/worker": "^1.8.0",
