@@ -140,7 +140,7 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "i18next-http-backend": "^3.0.2",
     "imapflow": "^1.0.174",
-    "jsondiffpatch": "^0.6.0",
+    "jsondiffpatch": "^0.7.3",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.23",
     "lucide-react": "^0.475.0",
