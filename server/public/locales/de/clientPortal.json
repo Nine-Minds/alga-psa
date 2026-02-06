@@ -182,6 +182,10 @@
       "awaitingYourResponseTooltip": "Der Support wartet auf Ihre Antwort",
       "awaitingSupportResponseTooltip": "Ihre Antwort wurde erhalten. Der Support wird in Kürze antworten."
     },
+    "responseSource": {
+      "clientPortal": "Empfangen über Kundenportal",
+      "inboundEmail": "Empfangen über E-Mail"
+    },
     "documents": {
       "title": "Dokumente",
       "noDocuments": "Keine Dokumente angehängt",
