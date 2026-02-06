@@ -234,3 +234,7 @@ Targeted surfaces:
 ### T017
 
 - Covered by \: google inbound provider path resolves/persists \.
+
+### T018
+
+- Covered by \: microsoft inbound provider path resolves/persists \.
