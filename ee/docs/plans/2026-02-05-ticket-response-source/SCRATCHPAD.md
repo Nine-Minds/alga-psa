@@ -198,3 +198,7 @@ Targeted surfaces:
 ### T008
 
 - Covered by \: fallback infers \ from legacy \.
+
+### T009
+
+- Covered by \: fallback infers \ for legacy client comment with \.

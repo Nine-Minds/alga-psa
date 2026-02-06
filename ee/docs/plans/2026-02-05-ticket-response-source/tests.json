@@ -69,7 +69,7 @@
   {
     "id": "T009",
     "description": "Fallback logic returns client_portal for legacy client comment with user_id when metadata.responseSource is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
