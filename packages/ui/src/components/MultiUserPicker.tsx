@@ -302,7 +302,7 @@ const MultiUserPicker = ({
               userId={user.user_id}
               userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
               avatarUrl={avatarUrls[user.user_id] || null}
-              size="sm"
+              size="xs"
             />
             <span className="truncate max-w-[120px]">
               {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
@@ -322,7 +322,7 @@ const MultiUserPicker = ({
               userId={firstUser.user_id}
               userName={`${firstUser.first_name || ''} ${firstUser.last_name || ''}`.trim()}
               avatarUrl={avatarUrls[firstUser.user_id] || null}
-              size="sm"
+              size="xs"
             />
           ) : (
             <UserMinus className="w-4 h-4 text-gray-500" />

@@ -113,7 +113,7 @@ export default function ProjectInfo({
   };
 
   return (
-    <div className="space-y-2 mb-4">
+    <div className="space-y-2 mb-1">
       {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
