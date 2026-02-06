@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "Source derivation fallback marks comment as inbound_email when metadata.email is present",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",

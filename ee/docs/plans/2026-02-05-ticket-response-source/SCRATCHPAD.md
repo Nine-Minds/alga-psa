@@ -106,3 +106,9 @@ Targeted surfaces:
   - `metadata.responseSource`
   - `response_source` fallback field
 - Heuristics are only applied if explicit source is absent.
+
+### F008 — Legacy inbound fallback
+
+- Added fallback in `getCommentResponseSource`:
+  - if `comment.metadata.email` exists and explicit source is absent, infer `inbound_email`.
+- This supports historical comments that predate `metadata.responseSource`.
