@@ -57,7 +57,7 @@
   {
     "id": "F012",
     "description": "Add i18n labels for response source indicator in shared/client portal locale files",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",

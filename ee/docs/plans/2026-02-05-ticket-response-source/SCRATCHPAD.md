@@ -131,3 +131,10 @@ Targeted surfaces:
 - Updated `packages/client-portal/src/components/tickets/TicketDetails.tsx`:
   - derives latest source from `ticket.conversations`.
   - renders shared `ResponseSourceBadge` alongside existing response-state badge.
+
+### F012 — i18n labels
+
+- Added English locale keys:
+  - `server/public/locales/en/clientPortal.json` → `tickets.responseSource.clientPortal|inboundEmail`
+  - `server/public/locales/en/common.json` → `tickets.responseSource.clientPortal|inboundEmail`
+- Both ticket detail screens now resolve labels through i18n keys with safe English fallbacks.
