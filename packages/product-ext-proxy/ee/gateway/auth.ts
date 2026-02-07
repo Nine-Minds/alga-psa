@@ -10,6 +10,33 @@ export interface ExtProxyUserInfo {
   client_name: string;
   /** For client portal users, the client_id they are associated with */
   client_id?: string;
+  /** Optional map of additional user attributes. */
+  additional_fields?: Record<string, string>;
+}
+
+function addScalarField(
+  target: Record<string, string>,
+  source: Record<string, unknown>,
+  key: string,
+): void {
+  const value = source[key];
+  if (value === undefined || value === null) return;
+  if (typeof value === 'string') {
+    if (value.length > 0) target[key] = value;
+    return;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    target[key] = String(value);
+  }
+}
+
+function extractAdditionalFields(user: Record<string, unknown>): Record<string, string> {
+  const fields: Record<string, string> = {};
+  addScalarField(fields, user, 'contact_id');
+  addScalarField(fields, user, 'username');
+  addScalarField(fields, user, 'locale');
+  addScalarField(fields, user, 'timezone');
+  return fields;
 }
 
 /**
@@ -105,6 +132,7 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     user_type: userType,
     client_name: clientName,
     client_id: clientId,
+    additional_fields: extractAdditionalFields(user as Record<string, unknown>),
   };
 
   console.log('[ext-proxy auth] Returning user info', {

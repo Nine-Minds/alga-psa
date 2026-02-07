@@ -54,7 +54,7 @@ Create `src/index.ts`:
 
 ```typescript
 import { handler as userHandler } from './handler-impl.js';
-import { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/extension-runtime';
+import { ExecuteRequest, ExecuteResponse, HostBindings, normalizeUserData } from '@alga-psa/extension-runtime';
 
 // @ts-ignore - WIT imports resolved at runtime
 import { getUser } from 'alga:extension/user-v2';
@@ -70,7 +70,7 @@ const host: HostBindings = {
     warn: async (msg) => logWarn(msg),
     error: async (msg) => logError(msg),
   },
-  user: { getUser: async () => getUser() },
+  user: { getUser: async () => normalizeUserData(await getUser()) },
   // Add other bindings as needed
 };
 

@@ -47,6 +47,10 @@ interface UserData {
   userName: string;
   /** User type: "internal" (MSP staff) or "client" (client portal user) */
   userType: string;
+  /** For client portal users, the client_id they are associated with */
+  clientId?: string;
+  /** Optional additional attributes provided by the host */
+  additionalFields?: Record<string, string>;
 }
 
 type UserError = 'not-available' | 'not-allowed';
@@ -117,7 +121,7 @@ To use the User API (or any host capability), your extension needs a wrapper tha
 ```typescript
 // src/index.ts
 import { handler as userHandler } from './handler-impl.js';
-import { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/extension-runtime';
+import { ExecuteRequest, ExecuteResponse, HostBindings, normalizeUserData } from '@alga-psa/extension-runtime';
 
 // Import WIT functions (these are resolved at runtime by jco)
 // @ts-ignore
@@ -139,7 +143,7 @@ const host: HostBindings = {
     error: async (msg: string) => logError(msg),
   },
   user: {
-    getUser: async () => getUser(),
+    getUser: async () => normalizeUserData(await getUser()),
   },
   // ... other bindings
 };
@@ -181,6 +185,7 @@ record user-data-v2 {
     user-name: string,
     user-type: string,
     client-id: option<string>,
+    additional-fields: list<tuple<string, string>>,
 }
 
 enum user-error {

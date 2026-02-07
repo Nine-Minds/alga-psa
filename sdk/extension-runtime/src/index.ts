@@ -205,6 +205,38 @@ export interface UserData {
   userType: string;
   /** For client portal users, the client_id they are associated with */
   clientId?: string;
+  /** Optional additional user attributes forwarded by the host */
+  additionalFields?: Record<string, string>;
+}
+
+export interface UserDataWire extends Omit<UserData, 'additionalFields'> {
+  additionalFields?: Record<string, string> | Array<[string, string]> | null;
+}
+
+/**
+ * Normalizes host-provided user payloads so extension code can consume a stable shape.
+ * Supports both v1 and v2 user host payloads.
+ */
+export function normalizeUserData(input: UserDataWire): UserData {
+  const rawAdditional = input.additionalFields;
+  let additionalFields: Record<string, string> | undefined;
+
+  if (Array.isArray(rawAdditional)) {
+    additionalFields = Object.fromEntries(rawAdditional);
+  } else if (rawAdditional && typeof rawAdditional === 'object') {
+    additionalFields = rawAdditional;
+  }
+
+  return {
+    tenantId: input.tenantId,
+    clientName: input.clientName,
+    userId: input.userId,
+    userEmail: input.userEmail,
+    userName: input.userName,
+    userType: input.userType,
+    clientId: input.clientId,
+    additionalFields,
+  };
 }
 
 /** Errors that can occur when fetching user data */
@@ -366,6 +398,7 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
           userName: 'Mock User',
           userType: 'client',
           clientId: 'client-mock',
+          additionalFields: { locale: 'en-US' },
         };
       },
     },

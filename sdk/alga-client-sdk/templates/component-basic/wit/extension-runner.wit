@@ -84,6 +84,7 @@ record user-data-v2 {
     user-name: string,
     user-type: string,
     client-id: option<string>,
+    additional-fields: list<tuple<string, string>>,
 }
 
 enum user-error {
@@ -141,7 +142,7 @@ interface user {
     get-user: func() -> result<user-data, user-error>;
 }
 
-/// Access current user information (v2 adds client-id).
+/// Access current user information (v2 adds client-id and additional-fields).
 /// @requires(cap:user.read)
 interface user-v2 {
     get-user: func() -> result<user-data-v2, user-error>;
