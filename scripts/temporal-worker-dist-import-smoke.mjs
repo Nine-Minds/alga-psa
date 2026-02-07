@@ -26,6 +26,16 @@ function findExistingPath(candidates) {
   return null;
 }
 
+function ensureEventSchemasDistBuilt() {
+  const distIndex = path.join(REPO_ROOT, 'packages/event-schemas/dist/index.js');
+  if (fs.existsSync(distIndex)) {
+    return;
+  }
+
+  console.log('Building packages/event-schemas for dist import smoke test...');
+  run('npm', ['--prefix', 'packages/event-schemas', 'run', 'build']);
+}
+
 async function importModule(absPath) {
   await import(pathToFileURL(absPath).href);
 }
@@ -33,6 +43,7 @@ async function importModule(absPath) {
 async function main() {
   console.log('Building ee/temporal-workflows for dist import smoke test...');
   run('npm', ['--prefix', 'ee/temporal-workflows', 'run', 'build']);
+  ensureEventSchemasDistBuilt();
 
   const workerEntry = findExistingPath([
     'ee/temporal-workflows/dist/worker.js',
