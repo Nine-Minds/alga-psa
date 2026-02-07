@@ -10,7 +10,7 @@ use crate::providers::{
 use anyhow::{anyhow, Context};
 use base64::Engine as _;
 use once_cell::sync::Lazy;
-use reqwest::{Client, Method, StatusCode};
+use reqwest::{redirect::Policy, Client, Method, StatusCode};
 use serde_json::{Map, Value};
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
@@ -109,6 +109,14 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
         .timeout(Duration::from_secs(30))
         .build()
         .expect("http client")
+});
+
+static HTTP_FETCH_CLIENT: Lazy<Client> = Lazy::new(|| {
+    Client::builder()
+        .timeout(Duration::from_secs(30))
+        .redirect(Policy::none())
+        .build()
+        .expect("http fetch client")
 });
 
 static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
@@ -492,7 +500,7 @@ impl http::HostWithStore for HasSelf<HostState> {
                 "http capability fetch start"
             );
 
-            let mut builder = HTTP_CLIENT.request(method, url);
+            let mut builder = HTTP_FETCH_CLIENT.request(method, url);
             for header in request.headers {
                 builder = builder.header(&header.name, &header.value);
             }
@@ -2255,6 +2263,8 @@ impl invoicing::Host for HostState {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{routing::get, Router};
+    use tokio::net::TcpListener;
     use url::Url;
 
     #[test]
@@ -2291,5 +2301,43 @@ mod tests {
         let providers = HashSet::from([CAP_INVOICE_MANUAL_CREATE.to_string()]);
         let result = require_invoicing_access(&providers, None);
         assert_eq!(result.unwrap_err(), "Permission denied: install_id missing");
+    }
+
+    #[tokio::test]
+    async fn http_fetch_client_does_not_follow_redirects() {
+        let app = Router::new()
+            .route(
+                "/redirect",
+                get(|| async {
+                    (
+                        axum::http::StatusCode::FOUND,
+                        [(axum::http::header::LOCATION, "/target")],
+                    )
+                }),
+            )
+            .route("/target", get(|| async { "ok" }));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+
+        let response = HTTP_FETCH_CLIENT
+            .get(format!("http://{addr}/redirect"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status().as_u16(), 302);
+        assert_eq!(
+            response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok()),
+            Some("/target")
+        );
+
+        server.abort();
+        let _ = server.await;
     }
 }
