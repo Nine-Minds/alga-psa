@@ -213,6 +213,8 @@ async function handle(
         user_name: userInfo.user_name,
         user_type: userInfo.user_type,
         client_name: userInfo.client_name,
+        client_id: userInfo.client_id,
+        additional_fields: userInfo.additional_fields,
       } : undefined,
     };
 

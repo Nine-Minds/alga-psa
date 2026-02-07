@@ -64,7 +64,6 @@ interface types {
 
     record user-data {
         tenant-id: string,
-        client-id: option<string>,
         client-name: string,
         user-id: string,
         user-email: string,
@@ -80,6 +79,7 @@ interface types {
         user-name: string,
         user-type: string,
         client-id: option<string>,
+        additional-fields: list<tuple<string, string>>,
     }
 
     enum user-error {

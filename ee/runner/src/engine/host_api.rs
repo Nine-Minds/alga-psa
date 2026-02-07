@@ -2173,7 +2173,6 @@ impl user::HostWithStore for HasSelf<HostState> {
                     );
                     Ok(UserData {
                         tenant_id: tenant,
-                        client_id: user_info.client_id.clone(),
                         client_name: user_info.client_name.clone(),
                         user_id: user_info.user_id.clone(),
                         user_email: user_info.user_email.clone(),
@@ -2219,6 +2218,13 @@ impl user_v2::HostWithStore for HasSelf<HostState> {
 
             match &ctx.user {
                 Some(user_info) => {
+                    let mut additional_fields: Vec<(String, String)> = user_info
+                        .additional_fields
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect();
+                    additional_fields.sort_by(|a, b| a.0.cmp(&b.0));
+
                     tracing::info!(
                         tenant=%tenant,
                         extension=%extension,
@@ -2233,6 +2239,7 @@ impl user_v2::HostWithStore for HasSelf<HostState> {
                         user_name: user_info.user_name.clone(),
                         user_type: user_info.user_type.clone(),
                         client_id: user_info.client_id.clone(),
+                        additional_fields,
                     })
                 }
                 None => {
