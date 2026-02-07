@@ -34,8 +34,10 @@ COPY shared/package.json ./shared/
 COPY ee/server/package.json ./ee/server/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 
-# Install only production dependencies
-RUN npm install --omit=dev
+# Install only production dependencies.
+# npm@11 enforces peer dependency resolution more strictly; this image only
+# needs runtime deps and should not fail on dev-only peer conflicts.
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy base files
 COPY tsconfig.base.json ./
