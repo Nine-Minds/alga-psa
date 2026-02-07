@@ -176,6 +176,16 @@ body,
 .dark {
     --background: 0, 0, 0;
 
+    /* Border radius tokens */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Animation duration tokens */
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
+
     /* SEMANTIC BADGE COLORS - not affected by branding */
     --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
     --badge-info-text: 191 219 254;     /* blue-200 */
@@ -271,6 +281,16 @@ body,
 
 .light {
     --background: 255, 255, 255;
+
+    /* Border radius tokens */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Animation duration tokens */
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
 
     /* SEMANTIC BADGE COLORS - not affected by branding */
     --badge-info-bg: 219 234 254;       /* blue-100 */

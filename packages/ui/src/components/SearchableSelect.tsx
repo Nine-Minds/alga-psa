@@ -14,6 +14,14 @@ export interface SelectOption {
   label: string;
 }
 
+type SelectSize = 'sm' | 'md' | 'lg';
+
+const sizeClasses: Record<SelectSize, string> = {
+  sm: 'h-8 text-xs px-2',
+  md: 'h-10 text-sm px-4',
+  lg: 'h-12 text-base px-4',
+};
+
 interface SearchableSelectProps {
   options: SelectOption[];
   value: string;
@@ -45,6 +53,8 @@ interface SearchableSelectProps {
    * If omitted, the component will portal into the nearest dialog (role="dialog") if present, otherwise document.body.
    */
   portalContainer?: Element | null;
+  /** Size variant for the select trigger */
+  size?: SelectSize;
 }
 
 export function SearchableSelect({
@@ -63,6 +73,7 @@ export function SearchableSelect({
   autoFocusSearch = true,
   maxListHeight = '15rem',
   portalContainer,
+  size = 'md',
 }: SearchableSelectProps & AutomationProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -204,8 +215,8 @@ export function SearchableSelect({
       ref={contentRef}
       className={cn(
         dropdownMode === 'overlay'
-          ? 'bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden'
-          : 'rounded-md border border-gray-200 bg-white shadow-md overflow-hidden'
+          ? 'bg-background rounded-md shadow-lg border border-border overflow-hidden'
+          : 'rounded-md border border-border bg-background shadow-md overflow-hidden'
       )}
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -223,7 +234,7 @@ export function SearchableSelect({
                 setOpen(false);
               }
             }}
-            className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-gray-500"
+            className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
             placeholder={resolvedSearchPlaceholder}
           />
         </div>
@@ -245,9 +256,9 @@ export function SearchableSelect({
                 }}
                 className={cn(
                   'flex items-center px-2 py-1.5 text-sm rounded-sm cursor-pointer',
-                  'hover:bg-gray-100',
-                  'aria-selected:bg-gray-100',
-                  value === option.value && 'bg-gray-100'
+                  'hover:bg-muted',
+                  'aria-selected:bg-muted',
+                  value === option.value && 'bg-muted'
                 )}
               >
                 <span className="flex-1">{option.label}</span>
@@ -257,7 +268,7 @@ export function SearchableSelect({
               </Command.Item>
             ))
           ) : (
-            <div className="py-6 text-center text-sm text-gray-500">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               {emptyMessage}
             </div>
           )}
@@ -269,7 +280,7 @@ export function SearchableSelect({
   return (
     <div className={label ? 'mb-4' : ''} id={id} data-automation-type="searchable-select">
       {label && (
-        <label id={labelId} className="block text-sm font-medium text-gray-700 mb-1">
+        <label id={labelId} className="block text-sm font-medium text-foreground mb-1">
           {label}
         </label>
       )}
@@ -291,6 +302,7 @@ export function SearchableSelect({
           aria-required={required}
           className={cn(
             "w-full justify-between",
+            sizeClasses[size],
             disabled && "opacity-50 cursor-not-allowed",
             className
           )}
@@ -309,7 +321,7 @@ export function SearchableSelect({
           disabled={disabled}
           {...automationIdProps}
         >
-          <span className={cn("truncate", !selectedOption && "text-gray-400")}>
+          <span className={cn("truncate", !selectedOption && "text-muted-foreground")}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

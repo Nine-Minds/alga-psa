@@ -40,7 +40,15 @@ interface RadioGroupProps {
   className?: string;
   /** Orientation of the radio group */
   orientation?: 'vertical' | 'horizontal';
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
 }
+
+const radioSizeClasses: Record<'sm' | 'md' | 'lg', string> = {
+  sm: 'h-3.5 w-3.5',
+  md: 'h-4 w-4',
+  lg: 'h-5 w-5',
+};
 
 export const RadioGroup = ({
   options,
@@ -53,6 +61,7 @@ export const RadioGroup = ({
   disabled,
   className,
   orientation = 'vertical',
+  size = 'md',
 }: RadioGroupProps & AutomationProps) => {
   // Register with UI reflection system if id is provided
   const updateMetadata = useRegisterUIComponent<FormFieldComponent>({
@@ -112,7 +121,7 @@ export const RadioGroup = ({
               onChange={() => handleChange(option.value)}
               disabled={isDisabled}
               className={cn(
-                'mt-1 h-4 w-4 border-gray-300 text-primary-500',
+                `mt-1 ${radioSizeClasses[size]} border-[rgb(var(--color-border-300))] text-primary-500`,
                 'focus:ring-2 focus:ring-primary-500 focus:ring-offset-0',
                 'focus-visible:outline-none focus:outline-none',
                 isDisabled && 'cursor-not-allowed opacity-50'
@@ -126,7 +135,7 @@ export const RadioGroup = ({
               <label
                 htmlFor={optionId}
                 className={cn(
-                  'flex items-center gap-2 text-sm text-gray-900 cursor-pointer',
+                  'flex items-center gap-2 text-sm text-[rgb(var(--color-text-900))] cursor-pointer',
                   isDisabled && 'cursor-not-allowed opacity-50'
                 )}
               >

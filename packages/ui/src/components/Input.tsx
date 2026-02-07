@@ -5,7 +5,15 @@ import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { CommonActions } from '../ui-reflection/actionBuilders';
 
-interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
+type InputSize = 'sm' | 'md' | 'lg';
+
+const inputSizeClasses: Record<InputSize, string> = {
+  sm: 'py-1 px-2 text-xs h-8',
+  md: 'py-2 px-3 h-10',
+  lg: 'py-3 px-4 text-base h-12',
+};
+
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'size'> {
   label?: string;
   preserveCursor?: boolean;
   /** Unique identifier for UI reflection system */
@@ -24,6 +32,8 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   hasError?: boolean;
   /** Ref for the input element */
   ref?: React.Ref<HTMLInputElement>;
+  /** Size variant */
+  size?: InputSize;
 }
 
 export function Input({
@@ -39,6 +49,7 @@ export function Input({
   error,
   errors,
   hasError,
+  size = 'md',
   ref: forwardedRef,
   "data-automation-type": dataAutomationType = 'input',
   "data-automation-id": dataAutomationId,
@@ -134,14 +145,14 @@ export function Input({
   return (
     <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
       {label && (
-        <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-red-700' : 'text-gray-700'}`}>
+        <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-red-700' : 'text-[rgb(var(--color-text-700))]'}`}>
           {label}
         </label>
       )}
       <input
         {...finalAutomationProps}
         ref={mergedRef}
-        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 ${
+        className={`w-full ${inputSizeClasses[size]} border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] ${
           hasErrorState
             ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
             : 'border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))]'

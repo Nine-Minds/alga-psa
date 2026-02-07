@@ -71,7 +71,7 @@ const Drawer = ({
           onClick={() => onClose()} // Explicitly handle overlay clicks
         />
         <Dialog.Content
-          className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
+          className={`fixed inset-y-0 right-0 ${widthClasses} bg-background shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
           onCloseAutoFocus={(e) => e.preventDefault()}
           onEscapeKeyDown={isInsideDialog ? (e) => e.stopPropagation() : undefined}
@@ -90,7 +90,7 @@ const Drawer = ({
           </InsideDialogContext.Provider>
           {!hideCloseButton && (
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
               aria-label="Close"
               onClick={onClose}
             >

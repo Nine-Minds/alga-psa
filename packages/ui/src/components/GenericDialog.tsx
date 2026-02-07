@@ -146,7 +146,7 @@ const GenericDialog = ({
         <Dialog.Content 
           ref={dialogRef}
           {...dialogProps}
-          className="fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full max-w-md focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2"
+          className="fixed top-1/2 left-1/2 bg-background rounded-lg shadow-lg w-full max-w-md focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2"
           style={dialogStyle}
           onMouseDown={handleMouseDown}
         >
@@ -164,7 +164,7 @@ const GenericDialog = ({
           <Dialog.Close asChild>
             <button
               {...closeButtonProps}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
               aria-label="Close"
             >
               <Cross2Icon />

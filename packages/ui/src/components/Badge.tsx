@@ -2,18 +2,27 @@ import { cn } from '../lib/utils';
 import * as React from 'react';
 
 export type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'outline';
+export type BadgeSize = 'sm' | 'md' | 'lg';
+
+const badgeSizeClasses: Record<BadgeSize, string> = {
+  sm: 'text-[10px] px-1.5 py-0',
+  md: 'text-xs px-2.5 py-0.5',
+  lg: 'text-sm px-3 py-1',
+};
 
 interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: BadgeVariant;
+  size?: BadgeSize;
   ref?: React.Ref<HTMLDivElement>;
 }
 
-function Badge({ className, variant = 'default', ref, ...props }: BadgeProps) {
+function Badge({ className, variant = 'default', size = 'md', ref, ...props }: BadgeProps) {
   return (
     <div
       ref={ref}
       className={cn(
-        'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors',
+        'inline-flex items-center rounded-full border font-semibold transition-colors',
+        badgeSizeClasses[size],
         {
           'border-transparent bg-primary text-primary-foreground': variant === 'primary',
           'border-transparent bg-secondary-100 text-secondary-800': variant === 'secondary',
