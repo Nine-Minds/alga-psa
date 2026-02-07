@@ -32,9 +32,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alga-psa/core": "*",
-    "@alga-psa/event-schemas": "*",
-    "@alga-psa/types": "*",
+    "@alga-psa/core": "file:../core",
+    "@alga-psa/event-schemas": "file:../event-schemas",
+    "@alga-psa/types": "file:../types",
     "redis": "^4.7.0",
     "uuid": "^10.0.0",
     "zod": "^3.23.8"

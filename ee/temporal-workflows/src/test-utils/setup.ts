@@ -10,6 +10,11 @@ const execAsync = promisify(exec);
 dotenv.config({ path: path.join(process.cwd(), '.env.test') });
 
 beforeAll(async () => {
+  if (process.env.TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP === '1') {
+    console.log('Skipping Temporal test environment bootstrap (TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1)');
+    return;
+  }
+
   console.log('Setting up test environment...');
   
   // Check if Temporal dev server is already running (started by test script)
