@@ -309,7 +309,14 @@ export async function genericJobWorkflow(
       });
     }
 
-    // Re-throw the error
-    throw error;
+    // Return a terminal failure result so schedule-driven workflows close cleanly.
+    // Re-throwing a plain Error here causes workflow-task failures and can leave
+    // the schedule run wedged in Running state.
+    return {
+      success: false,
+      jobId,
+      error: state.error,
+      completedAt: state.completedAt,
+    };
   }
 }

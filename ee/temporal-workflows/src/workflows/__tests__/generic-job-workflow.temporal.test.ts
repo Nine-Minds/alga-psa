@@ -87,7 +87,7 @@ describe('genericJobWorkflow', () => {
     );
   });
 
-  it('marks a job failed when handler returns failure', async () => {
+  it('marks a job failed and returns terminal failure result when handler returns failure', async () => {
     mockActivities.executeJobHandler.mockResolvedValue({
       success: false,
       error: 'simulated handler failure',
@@ -101,7 +101,11 @@ describe('genericJobWorkflow', () => {
       data: { scheduleId: 'sched-2' },
     };
 
-    await expect(genericJobWorkflow(input)).rejects.toThrow('simulated handler failure');
+    const result = await genericJobWorkflow(input);
+
+    expect(result.success).toBe(false);
+    expect(result.jobId).toBe(input.jobId);
+    expect(result.error).toBe('simulated handler failure');
 
     expect(mockActivities.updateJobStatus).toHaveBeenNthCalledWith(
       1,

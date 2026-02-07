@@ -16,7 +16,7 @@ async function getSecretProvider(): Promise<SecretProvider> {
   if (!secretProviderPromise) {
     secretProviderPromise = (async () => {
       try {
-        const module = await import('@alga-psa/core/secrets.js');
+        const module = await import('@alga-psa/core/secrets');
         const factory = (module as { getSecretProviderInstance?: () => Promise<SecretProvider> })
           .getSecretProviderInstance;
         if (typeof factory === 'function') {
