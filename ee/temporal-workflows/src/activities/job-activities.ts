@@ -49,9 +49,30 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     return;
   }
 
+  // Register EE extension schedule invocation handler so Temporal can execute
+  // extension cron jobs on the shared alga-jobs queue.
+  try {
+    const { extensionScheduledInvocationHandler } = await import(
+      '../../../../server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+    );
+
+    registerJobHandlerForActivities(
+      'extension-scheduled-invocation',
+      async (jobId, data) => {
+        await extensionScheduledInvocationHandler(jobId, data as any);
+      }
+    );
+  } catch (error) {
+    logger.error('Failed to register extension scheduled invocation handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
   jobHandlersInitialized = true;
   logger.info('Initialized job handler registry for Temporal worker', {
     handlerCount: jobHandlers.size,
+    handlers: Array.from(jobHandlers.keys()),
   });
 }
 

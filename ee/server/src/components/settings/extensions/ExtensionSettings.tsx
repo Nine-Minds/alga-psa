@@ -11,6 +11,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import {
   fetchExtensionById,
@@ -59,6 +60,8 @@ export default function ExtensionSettings() {
   const [newScheduleTimezone, setNewScheduleTimezone] = useState<string>('UTC');
   const [newSchedulePayload, setNewSchedulePayload] = useState<string>('');
   const didTouchScheduleTimezoneRef = useRef(false);
+  const [creatingSchedule, setCreatingSchedule] = useState(false);
+  const creatingScheduleRef = useRef(false);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [editEndpointId, setEditEndpointId] = useState<string>('');
   const [editCron, setEditCron] = useState<string>('');
@@ -295,11 +298,24 @@ export default function ExtensionSettings() {
       prev.map((item) => {
         if (item.id !== id) return item;
         const newIsSensitive = !item.isSensitive;
-        let newValue = item.value;
+        // Preserve whatever is currently visible in the inputs at toggle time.
+        // This avoids dropping unsaved text if state is briefly stale.
+        const keyInput = typeof document !== 'undefined'
+          ? (document.querySelector(
+              `input[data-automation-id="custom-setting-key-${id}"]`
+            ) as HTMLInputElement | null)
+          : null;
+        const valueInput = typeof document !== 'undefined'
+          ? (document.querySelector(
+              `input[data-automation-id="custom-setting-value-${id}"]`
+            ) as HTMLInputElement | null)
+          : null;
+        const nextKey = keyInput?.value ?? item.key;
+        let newValue = valueInput?.value ?? item.value;
         if (!newIsSensitive && newValue === STORED_SECRET_PLACEHOLDER) {
           newValue = '';
         }
-        return { ...item, isSensitive: newIsSensitive, value: newValue };
+        return { ...item, key: nextKey, isSensitive: newIsSensitive, value: newValue };
       })
     );
     setHasChanges(true);
@@ -557,6 +573,48 @@ export default function ExtensionSettings() {
         );
     }
   };
+
+  if (isLoading) {
+    return (
+      <ReflectionContainer id={`extension-settings-${extensionId}`} label="Extension Settings">
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-8 w-64" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-36" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-40" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-52" />
+              <Skeleton className="h-4 w-2/3" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </ReflectionContainer>
+    );
+  }
 
   if (!extension) {
     return (
@@ -824,8 +882,11 @@ export default function ExtensionSettings() {
                       <Button
                         id="create-schedule-button"
                         variant="outline"
-                        disabled={!newScheduleEndpointId || schedulesLoading}
+                        disabled={!newScheduleEndpointId || schedulesLoading || creatingSchedule}
                         onClick={async () => {
+                          if (creatingScheduleRef.current || !newScheduleEndpointId || schedulesLoading) {
+                            return;
+                          }
                           let payloadJson: any = undefined;
                           const trimmed = newSchedulePayload.trim();
                           if (trimmed.length > 0) {
@@ -836,23 +897,30 @@ export default function ExtensionSettings() {
                               return;
                             }
                           }
-                          const result = await createExtensionSchedule(extensionId, {
-                            endpointId: newScheduleEndpointId,
-                            cron: newScheduleCron,
-                            timezone: newScheduleTimezone,
-                            enabled: true,
-                            payloadJson,
-                          });
-                          if (!result.success) {
-                            toast.error(result.message || 'Failed to create schedule.');
-                            return;
+                          creatingScheduleRef.current = true;
+                          setCreatingSchedule(true);
+                          try {
+                            const result = await createExtensionSchedule(extensionId, {
+                              endpointId: newScheduleEndpointId,
+                              cron: newScheduleCron,
+                              timezone: newScheduleTimezone,
+                              enabled: true,
+                              payloadJson,
+                            });
+                            if (!result.success) {
+                              toast.error(result.message || 'Failed to create schedule.');
+                              return;
+                            }
+                            toast.success('Schedule created.');
+                            setNewSchedulePayload('');
+                            await refreshSchedules();
+                          } finally {
+                            creatingScheduleRef.current = false;
+                            setCreatingSchedule(false);
                           }
-                          toast.success('Schedule created.');
-                          setNewSchedulePayload('');
-                          await refreshSchedules();
                         }}
                       >
-                        Create schedule
+                        {creatingSchedule ? 'Creating...' : 'Create schedule'}
                       </Button>
                       <Button
                         id="refresh-schedules-button"

@@ -1,12 +1,10 @@
 // Client-safe version utility
-// Import package.json to get version at build time
-import packageJson from '../../package.json';
+// Prefer explicit runtime env configuration. npm_package_version is available in many local dev contexts.
+const PACKAGE_VERSION = process.env.npm_package_version;
 
 export function getAppVersion(): string {
-  // Use package.json version which is available at build time
-  // Environment variable override still supported for Helm deployments
+  // Environment variable override is preferred for deployments.
   return process.env.NEXT_PUBLIC_APP_VERSION ||
-    packageJson.version ||
+    PACKAGE_VERSION ||
     'dev';
 }
-

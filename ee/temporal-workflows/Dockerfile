@@ -46,19 +46,14 @@ WORKDIR /app
 COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 # Provide source files referenced via TS path aliases
 COPY packages/ /app/packages/
-
-WORKDIR /app/packages/integrations
-RUN npm install --ignore-scripts
-
-# Install server dependencies (needed for type-checking server source files via path aliases)
-WORKDIR /app/server
-RUN npm install --ignore-scripts --legacy-peer-deps || true
-# TS module resolution for ee/server/src expects dependencies under /app/ee/server
-RUN mkdir -p /app/ee/server && ln -sf /app/server/node_modules /app/ee/server/node_modules
+COPY package*.json /app/
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build
 RUN npm install
+WORKDIR /app
+RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps
+WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
 # Copy onboarding seeds after build
@@ -66,6 +61,44 @@ COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 
 # Verify seeds were copied (debug step)
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found"
+
+# Prebuilt dist stage for parity/runtime validation builds.
+FROM base AS prebuilt
+
+COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+
+RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
+
+# Production image from prebuilt artifacts (skips in-container TypeScript compilation).
+FROM base AS production-prebuilt
+
+COPY --from=prebuilt /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+# Copy integrations node_modules to both locations for module resolution
+COPY --from=base /app/packages/integrations/node_modules /app/packages/integrations/node_modules
+COPY --from=base /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
+# Expose all local monorepo packages under @alga-psa/* for runtime resolution.
+RUN mkdir -p /app/node_modules/@alga-psa \
+    && for pkg in /app/packages/*; do \
+      name="$(basename "$pkg")"; \
+      ln -sfn "$pkg" "/app/node_modules/@alga-psa/$name"; \
+    done \
+    && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
+
+RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
+
+RUN groupadd -r temporal && useradd -r -g temporal temporal
+RUN chown -R temporal:temporal /app
+USER temporal
+
+WORKDIR /app/ee/temporal-workflows
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD node -e "console.log('Health check: OK')" || exit 1
+
+EXPOSE 8080
+
+CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
 
 # Production stage
 FROM base AS production
@@ -79,6 +112,13 @@ COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
+# Expose all local monorepo packages under @alga-psa/* for runtime resolution.
+RUN mkdir -p /app/node_modules/@alga-psa \
+    && for pkg in /app/packages/*; do \
+      name="$(basename "$pkg")"; \
+      ln -sfn "$pkg" "/app/node_modules/@alga-psa/$name"; \
+    done \
+    && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
@@ -98,4 +138,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 8080
 
 # Default command runs the worker
-CMD ["node", "dist/worker.js"]
+CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]

@@ -1,0 +1,75 @@
+name: Temporal Readiness
+
+on:
+  pull_request:
+    paths:
+      - 'ee/temporal-workflows/**'
+      - 'packages/integrations/**'
+      - 'scripts/check-temporal-worker-packaging-contract.mjs'
+      - 'scripts/temporal-worker-dist-import-smoke.mjs'
+      - 'scripts/temporal-worker-docker-parity.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/temporal-readiness.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'ee/temporal-workflows/**'
+      - 'packages/integrations/**'
+      - 'scripts/check-temporal-worker-packaging-contract.mjs'
+      - 'scripts/temporal-worker-dist-import-smoke.mjs'
+      - 'scripts/temporal-worker-docker-parity.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/temporal-readiness.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  fast-readiness:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          if ! npm ci; then
+            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
+            npm install
+          fi
+
+      - name: Temporal readiness fast gate
+        run: npm run guard:temporal-readiness:fast
+
+  docker-parity:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          if ! npm ci; then
+            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
+            npm install
+          fi
+
+      - name: Docker parity gate
+        run: npm run guard:temporal-readiness:docker
