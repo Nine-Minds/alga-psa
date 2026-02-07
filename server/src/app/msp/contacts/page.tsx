@@ -1,7 +1,7 @@
 // server/src/app/msp/contacts/page.tsx
 import React from 'react';
 import ContactModel from 'server/src/lib/models/contact';
-import UserModel from 'server/src/lib/models/user';
+import UserModel from '@alga-psa/db/models/user';
 import { IContact } from 'server/src/interfaces';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import type { IClient } from '@alga-psa/types';

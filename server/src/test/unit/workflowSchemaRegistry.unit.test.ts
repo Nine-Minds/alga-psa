@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user_1', tenant: 'tenant_1' })),
 }));
 

@@ -12,6 +12,7 @@ export { default as ProjectQuickAdd } from './ProjectQuickAdd';
 export { default as TaskEdit } from './TaskEdit';
 export { default as DonutChart } from './DonutChart';
 export { default as HoursProgressBar } from './HoursProgressBar';
+export { default as CreateTaskFromTicketDialog } from './CreateTaskFromTicketDialog';
 
 export { default as ProjectTemplatesList } from './project-templates/ProjectTemplatesList';
 export { default as CreateTemplateForm } from './project-templates/CreateTemplateForm';

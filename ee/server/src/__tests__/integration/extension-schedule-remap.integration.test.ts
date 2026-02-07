@@ -20,7 +20,7 @@ const runner = {
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
 }));
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
 }));
 

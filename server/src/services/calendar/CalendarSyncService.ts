@@ -12,7 +12,7 @@ import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '../../utils/calendar/eventMapping';
-import ScheduleEntry from '../../lib/models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '@/lib/eventBus/publishers';
 
@@ -38,7 +38,7 @@ export class CalendarSyncService {
       }
       
       // Get the schedule entry
-      const entry = await ScheduleEntry.get(knex, entryId);
+      const entry = await ScheduleEntry.get(knex, tenant!, entryId);
       if (!entry) {
         return {
           success: false,
@@ -264,7 +264,7 @@ export class CalendarSyncService {
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
-          const existingEntry = await ScheduleEntry.get(trx, existingMapping.schedule_entry_id);
+          const existingEntry = await ScheduleEntry.get(trx, tenant!, existingMapping.schedule_entry_id);
           if (!existingEntry) {
             return {
               success: false,
@@ -345,9 +345,9 @@ export class CalendarSyncService {
           // Update schedule entry
           const updatedEntry = await ScheduleEntry.update(
             trx,
+            tenant!,
             existingEntry.entry_id,
-            mergedEntry,
-            'all' as any // Default to updating all occurrences
+            mergedEntry
           );
 
           if (!updatedEntry) {
@@ -395,7 +395,7 @@ export class CalendarSyncService {
 
           if (algaEntryId) {
             // Check if the entry already exists
-            const existingEntry = await ScheduleEntry.get(trx, algaEntryId);
+            const existingEntry = await ScheduleEntry.get(trx, tenant!, algaEntryId);
             if (existingEntry) {
               // Entry exists but mapping doesn't - create mapping and skip creating duplicate
               const [mapping] = await trx('calendar_event_mappings')
@@ -475,10 +475,8 @@ export class CalendarSyncService {
           // Create schedule entry
           const createdEntry = await ScheduleEntry.create(
             trx,
-            {
-              ...entryData,
-              tenant
-            } as any,
+            tenant!,
+            entryData as any,
             {
               assignedUserIds
             }
@@ -566,7 +564,7 @@ export class CalendarSyncService {
         };
       }
 
-      const entry = await ScheduleEntry.get(knex, mapping.schedule_entry_id);
+      const entry = await ScheduleEntry.get(knex, tenant!, mapping.schedule_entry_id);
       if (!entry) {
         return {
           success: false,
@@ -594,9 +592,9 @@ export class CalendarSyncService {
 
           const updatedEntry = await ScheduleEntry.update(
             trx,
+            tenant!,
             entry.entry_id,
-            mergedEntry,
-            'all' as any
+            mergedEntry
           );
 
           if (!updatedEntry) {
@@ -645,7 +643,7 @@ export class CalendarSyncService {
       const mapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
       if (!mapping) {
         // No mapping exists, just delete the entry
-        await ScheduleEntry.delete(entryId, deleteType as any);
+        await ScheduleEntry.delete(knex, tenant, entryId);
         return { success: true };
       }
 
@@ -672,7 +670,7 @@ export class CalendarSyncService {
         }
 
         // Delete schedule entry
-        await ScheduleEntry.delete(entryId, deleteType as any);
+        await ScheduleEntry.delete(trx, tenant!, entryId);
 
         // Delete mapping
         await trx('calendar_event_mappings')

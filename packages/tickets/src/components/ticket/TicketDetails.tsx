@@ -128,6 +128,11 @@ interface TicketDetailsProps {
     }) => React.ReactNode;
 
     /**
+     * Optional injected UI for creating project tasks from tickets.
+     */
+    renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -174,6 +179,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     surveySummary = null,
     associatedAssets = null,
     renderContactDetails,
+    renderCreateProjectTask,
     renderClientDetails
 }) => {
     const { t } = useTranslation('clientPortal');
@@ -1465,20 +1471,22 @@ const handleClose = () => {
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
-                    {/* Add popout button only when in drawer */}
-                    {isInDrawer && (
-                        <Button
-                            id="ticket-popout-button"
-                            variant="outline"
-                            size="sm"
-                            onClick={openTicketInNewWindow}
-                            className="flex items-center gap-2"
-                            aria-label="Open in new tab"
-                        >
-                            <ExternalLink className="h-4 w-4" />
-                            <span>Open in new tab</span>
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {/* Add popout button only when in drawer */}
+                        {isInDrawer && (
+                            <Button
+                                id="ticket-popout-button"
+                                variant="outline"
+                                size="sm"
+                                onClick={openTicketInNewWindow}
+                                className="flex items-center gap-2"
+                                aria-label="Open in new tab"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                                <span>Open in new tab</span>
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
@@ -1742,6 +1750,13 @@ const handleClose = () => {
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    renderProjectTaskActions={renderCreateProjectTask}
+                                    additionalAgents={additionalAgents.map(a => ({
+                                        user_id: a.additional_user_id || a.assigned_to,
+                                        name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
+                                            ? `${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.first_name} ${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.last_name || ''}`.trim()
+                                            : ''
+                                    }))}
                                 />
                             </div>
                         </Suspense>

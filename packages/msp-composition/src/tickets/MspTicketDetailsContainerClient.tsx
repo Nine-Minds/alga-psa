@@ -5,6 +5,10 @@ import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDe
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import type { IClient, IContact } from '@alga-psa/types';
+import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
+import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
+import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
+import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
@@ -12,6 +16,8 @@ type MspTicketDetailsContainerClientProps = Omit<
 >;
 
 export default function MspTicketDetailsContainerClient(props: MspTicketDetailsContainerClientProps) {
+  const ticketIntegrationValue = useTicketIntegrationValue();
+
   const renderContactDetails = useCallback(
     ({ id, contact, clients, userId }: { id: string; contact: IContact; clients: IClient[]; userId?: string }) => {
       return (
@@ -31,6 +37,16 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
     []
   );
 
+  const renderCreateProjectTask = useCallback(
+    ({ ticket, additionalAgents }: { ticket: any; additionalAgents?: { user_id: string; name: string }[] }) => (
+      <>
+        <CreateTaskFromTicketDialog ticket={{ ...ticket, additional_agents: additionalAgents }} />
+        <LinkTicketToTaskDialog ticket={ticket} />
+      </>
+    ),
+    []
+  );
+
   const renderClientDetails = useCallback(
     ({ id, client }: { id: string; client: IClient }) => {
       return <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />;
@@ -39,11 +55,13 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
   );
 
   return (
-    <TicketDetailsContainer
-      {...props}
-      renderContactDetails={renderContactDetails}
-      renderClientDetails={renderClientDetails}
-    />
+    <TicketIntegrationProvider value={ticketIntegrationValue}>
+      <TicketDetailsContainer
+        {...props}
+        renderContactDetails={renderContactDetails}
+        renderCreateProjectTask={renderCreateProjectTask}
+        renderClientDetails={renderClientDetails}
+      />
+    </TicketIntegrationProvider>
   );
 }
-

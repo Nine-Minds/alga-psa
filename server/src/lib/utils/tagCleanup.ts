@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { TaggedEntityType } from '../../interfaces/tag.interfaces';
 import { getCurrentTenantId } from '../db';
-import TagMapping from '../models/tagMapping';
+import TagMapping from '@alga-psa/tags/models/tagMapping';
 
 /**
  * Delete all tags associated with an entity
@@ -17,7 +17,11 @@ export async function deleteEntityTags(
   entityId: string,
   entityType: TaggedEntityType
 ): Promise<number> {
-  return await TagMapping.deleteByEntity(trx, entityId, entityType);
+  const tenant = await getCurrentTenantId();
+  if (!tenant) {
+    throw new Error('Tenant context is required for tag operations');
+  }
+  return await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
 }
 
 /**

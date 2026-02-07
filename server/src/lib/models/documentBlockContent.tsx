@@ -11,7 +11,7 @@ import { IDocument } from '../../interfaces';
 import { createTenantKnex } from '../db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import Document from './document';
+import Document from '@alga-psa/documents/models/document';
 
 class DocumentBlockContent {
     static async getWithDocument(document_id: string): Promise<DocumentWithBlockContent | undefined> {

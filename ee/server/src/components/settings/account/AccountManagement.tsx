@@ -19,7 +19,7 @@ import {
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
 } from 'ee/server/src/lib/actions/license-actions';
-import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
+import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';

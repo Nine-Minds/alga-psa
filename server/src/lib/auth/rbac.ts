@@ -1,5 +1,5 @@
 import { IUser, IRole, IPermission, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
-import User from 'server/src/lib/models/user';
+import User from '@alga-psa/db/models/user';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { Knex } from 'knex';
 

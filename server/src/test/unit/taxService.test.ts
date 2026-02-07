@@ -1,10 +1,10 @@
 import { TaxService } from '../../lib/services/taxService';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../../interfaces/tax.interfaces';
-import ClientTaxSettings from '../../lib/models/clientTaxSettings';
+import ClientTaxSettings from '@alga-psa/billing/models/clientTaxSettings';
 
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll, Mocked } from 'vitest';
 
-vi.mock('../../lib/models/clientTaxSettings');
+vi.mock('@alga-psa/billing/models/clientTaxSettings');
 
 describe('TaxService', () => {
     let taxService: TaxService;

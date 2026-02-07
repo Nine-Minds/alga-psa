@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { IClientTaxSettings, ITaxRate, ITaxCalculationResult, ITaxComponent, ITaxRateThreshold } from 'server/src/interfaces/tax.interfaces';
-import ClientTaxSettings from 'server/src/lib/models/clientTaxSettings';
+import ClientTaxSettings from '@alga-psa/billing/models/clientTaxSettings';
 import { ISO8601String } from 'server/src/types/types.d';
 
 // Set up mock for ClientTaxSettings
-vi.mock('@/lib/models/clientTaxSettings', () => ({
+vi.mock('@alga-psa/billing/models/clientTaxSettings', () => ({
   default: {
     get: vi.fn(),
     getTaxRate: vi.fn(),

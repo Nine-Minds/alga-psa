@@ -1,0 +1,362 @@
+[
+  {
+    "id": "T001",
+    "description": "mapTicketToTaskFields: title maps to task_name",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "mapTicketToTaskFields: description is extracted from ticket data",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "mapTicketToTaskFields: assigned_to maps directly",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T004",
+    "description": "mapTicketToTaskFields: due_date ISO string converts to Date",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T005",
+    "description": "mapTicketToTaskFields: estimated_hours in hours stays as hours (TaskForm displays hours)",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T006",
+    "description": "mapTicketToTaskFields: null/undefined fields produce safe defaults (empty string, null, 0)",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T007",
+    "description": "mapTaskToTicketPrefill: task_name maps to title",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T008",
+    "description": "mapTaskToTicketPrefill: estimated_hours converts from minutes to hours (÷60)",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T009",
+    "description": "mapTaskToTicketPrefill: project client_id and client_name are included",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T010",
+    "description": "Both mapping functions never include priority_id in output",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T011",
+    "description": "PrefillFromTicketDialog: renders ticket search input and TicketSelect dropdown",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T012",
+    "description": "PrefillFromTicketDialog: tickets are fetched lazily when dialog opens",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T013",
+    "description": "PrefillFromTicketDialog: auto-link checkbox renders and defaults to checked",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T014",
+    "description": "PrefillFromTicketDialog: unchecking auto-link excludes ticket from returned prefill data",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T015",
+    "description": "PrefillFromTicketDialog: confirm button calls getConsolidatedTicketData for selected ticket",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T016",
+    "description": "PrefillFromTicketDialog: returns correctly mapped fields via onPrefill callback",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T017",
+    "description": "TaskForm: prefillData prop initializes task_name state",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T018",
+    "description": "TaskForm: prefillData prop initializes description state",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T019",
+    "description": "TaskForm: prefillData prop initializes assigned_to state",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T020",
+    "description": "TaskForm: prefillData prop initializes due_date state",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T021",
+    "description": "TaskForm: prefillData prop initializes estimated_hours state",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T022",
+    "description": "TaskForm: prefillData.pendingTicketLink initializes pendingTicketLinks state",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T023",
+    "description": "TaskForm: Ticket icon button is visible in create mode",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T024",
+    "description": "TaskForm: Ticket icon button is NOT visible in edit mode",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T025",
+    "description": "TaskForm: clicking Ticket icon opens PrefillFromTicketDialog",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T026",
+    "description": "TaskForm: after prefill confirm, all form fields are populated from ticket data",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T027",
+    "description": "TaskForm: after prefill confirm with auto-link on, ticket appears in Associated Tickets",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T028",
+    "description": "TaskForm: after prefill confirm with auto-link off, no ticket in Associated Tickets",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T029",
+    "description": "QuickAddTicket: prefilledTitle initializes title input",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T030",
+    "description": "QuickAddTicket: prefilledAssignedTo initializes assigned user picker",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T031",
+    "description": "QuickAddTicket: prefilledDueDate initializes date picker",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T032",
+    "description": "QuickAddTicket: prefilledEstimatedHours initializes estimated hours input",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T033",
+    "description": "QuickAddTicket: estimated_hours is included in FormData when > 0",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T034",
+    "description": "QuickAddTicket: estimated_hours is NOT included in FormData when 0",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T035",
+    "description": "addTicket action: parses estimated_hours from FormData and stores on ticket",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T036",
+    "description": "addTicket action: missing estimated_hours in FormData does not cause error",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T037",
+    "description": "TaskTicketLinks: accepts taskData prop without error",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T038",
+    "description": "TaskTicketLinks: 'Create Ticket' fetches project client before opening QuickAddTicket",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T039",
+    "description": "TaskTicketLinks: QuickAddTicket receives all prefill props from task data",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T040",
+    "description": "TaskTicketLinks: QuickAddTicket receives project client as prefilledClient",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T041",
+    "description": "TaskForm: passes current field values as taskData to TaskTicketLinks in edit mode",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T042",
+    "description": "TaskForm: does NOT pass taskData in create mode",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T043",
+    "description": "CreateTaskFromTicketDialog: renders project selector with projects list",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T044",
+    "description": "CreateTaskFromTicketDialog: project list filtered by ticket's client when possible",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T045",
+    "description": "CreateTaskFromTicketDialog: selecting project fetches phases and statuses",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T046",
+    "description": "CreateTaskFromTicketDialog: phase selector shows fetched phases",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T047",
+    "description": "CreateTaskFromTicketDialog: status selector shows fetched statuses",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T048",
+    "description": "CreateTaskFromTicketDialog: auto-link checkbox renders and defaults to checked",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T049",
+    "description": "CreateTaskFromTicketDialog: confirm opens TaskQuickAdd in drawer with correct prefillData",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T050",
+    "description": "CreateTaskFromTicketDialog: with auto-link on, prefillData includes pendingTicketLink",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T051",
+    "description": "CreateTaskFromTicketDialog: with auto-link off, prefillData does NOT include pendingTicketLink",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T052",
+    "description": "TaskQuickAdd: accepts prefillData prop and passes it to TaskForm",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T053",
+    "description": "TicketDetails: renderCreateProjectTask prop renders button in header area",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T054",
+    "description": "TicketDetails: when renderCreateProjectTask is not provided, no button renders",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T055",
+    "description": "TicketDetailsContainer: passes renderCreateProjectTask through to TicketDetails",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T056",
+    "description": "MspTicketDetailsContainerClient: injects CreateTaskFromTicketDialog button into TicketDetails",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T057",
+    "description": "E2E: Create new task in project, use 'Create from ticket' to prefill from existing ticket, save task, verify ticket is linked",
+    "implemented": true,
+    "featureIds": ["F004", "F005", "F006", "F007", "F008", "F009"]
+  },
+  {
+    "id": "T058",
+    "description": "E2E: Edit existing task, click 'Create Ticket', verify QuickAddTicket has title/description/client prefilled from task/project, save ticket, verify link",
+    "implemented": true,
+    "featureIds": ["F016", "F017", "F018", "F019"]
+  },
+  {
+    "id": "T059",
+    "description": "E2E: Open ticket detail, click 'Create Project Task', select project/phase/status, verify TaskForm opens in drawer with fields prefilled, save task",
+    "implemented": true,
+    "featureIds": ["F020", "F021", "F022", "F023", "F024", "F025", "F027", "F029"]
+  },
+  {
+    "id": "T060",
+    "description": "E2E: Verify priority is never prefilled in any of the three flows",
+    "implemented": true,
+    "featureIds": ["F003"]
+  }
+]

@@ -8,7 +8,7 @@ import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
-import User from 'server/src/lib/models/user';
+import User from '@alga-psa/db/models/user';
 import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
@@ -19,7 +19,7 @@ import { createClientContractLineCycles } from 'server/src/lib/billing/createBil
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { TimePeriodSettings } from './models/timePeriodSettings';
+import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
@@ -474,7 +474,7 @@ async function initializeJobScheduler(storageService: StorageService) {
         });
 
         const tenantKnex = await getConnection(tenantId);
-        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
+        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
 
         // Skip if no time period settings are configured for this tenant
         if (!settings || settings.length === 0) {

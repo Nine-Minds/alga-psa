@@ -9,7 +9,7 @@ import '@testing-library/jest-dom';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 
 // Mock the server actions
-vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
+vi.mock('@alga-psa/integrations/actions', () => ({
   getEmailProviders: vi.fn(),
   createEmailProvider: vi.fn(),
   updateEmailProvider: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
   autoWireEmailProvider: vi.fn(),
 }));
 
-import * as emailProviderActions from '../../../lib/actions/email-actions/emailProviderActions';
+import * as emailProviderActions from '@alga-psa/integrations/actions';
 
 // Mock the child components
 vi.mock('../../../components/MicrosoftProviderForm', () => ({

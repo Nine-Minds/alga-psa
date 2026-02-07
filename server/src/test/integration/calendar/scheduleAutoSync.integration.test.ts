@@ -9,7 +9,6 @@ const modulePaths = vi.hoisted(() => {
   const calendarActionsModuleUrl = new URL('../../../lib/actions/calendarActions.ts', import.meta.url);
   const libDbModulePath = new URL('../../lib/db/index.tsx', calendarActionsModuleUrl).pathname;
   const rootDbModulePath = new URL('../../db.ts', calendarActionsModuleUrl).pathname;
-  const userActionsModulePath = new URL('../../../lib/actions/user-actions/userActions.ts', import.meta.url).pathname;
   const eventBusIndexModulePath = new URL('../../../lib/eventBus/index.ts', import.meta.url).pathname;
 
   return {
@@ -17,8 +16,6 @@ const modulePaths = vi.hoisted(() => {
     libDbModulePathNoExt: libDbModulePath.replace(/\.tsx$/, ''),
     rootDbModulePath,
     rootDbModulePathNoExt: rootDbModulePath.replace(/\.ts$/, ''),
-    userActionsModulePath,
-    userActionsModulePathNoExt: userActionsModulePath.replace(/\.ts$/, ''),
     eventBusIndexModulePath,
     eventBusIndexModulePathNoExt: eventBusIndexModulePath.replace(/\.ts$/, ''),
   };
@@ -102,14 +99,7 @@ vi.mock(modulePaths.eventBusIndexModulePathNoExt, () => ({
   }),
 }));
 
-vi.mock(modulePaths.userActionsModulePath, () => ({
-  getCurrentUser: vi.fn(async () => ({
-    tenant: shared.defaultTenant,
-    user_id: shared.userId,
-  })),
-  getCurrentUserPermissions: vi.fn(async () => shared.permissions),
-}));
-vi.mock(modulePaths.userActionsModulePathNoExt, () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({
     tenant: shared.defaultTenant,
     user_id: shared.userId,
