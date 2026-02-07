@@ -5,6 +5,14 @@ import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { cn } from '../lib/utils';
 
+type TextAreaSize = 'sm' | 'md' | 'lg';
+
+const textAreaSizeClasses: Record<TextAreaSize, string> = {
+  sm: 'py-1 px-2 text-xs',
+  md: 'py-2 px-3',
+  lg: 'py-3 px-4 text-base',
+};
+
 interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
   label?: string;
   /** Unique identifier for UI reflection system */
@@ -15,6 +23,8 @@ interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
   ref?: React.Ref<HTMLTextAreaElement>;
   /** Optional wrapper class overrides */
   wrapperClassName?: string;
+  /** Size variant */
+  size?: TextAreaSize;
 }
 
 export function TextArea({
@@ -25,6 +35,7 @@ export function TextArea({
   id,
   disabled,
   required,
+  size = 'md',
   ref: forwardedRef,
   wrapperClassName,
   "data-automation-id": dataAutomationId,
@@ -123,7 +134,7 @@ export function TextArea({
   return (
     <div className={cn('mb-4 px-0.5', wrapperClassName)}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
           {label}
         </label>
       )}
@@ -132,8 +143,7 @@ export function TextArea({
         rows={1}
         className={`
           w-full max-w-4xl
-          px-3
-          py-2
+          ${textAreaSizeClasses[size]}
           border
           border-[rgb(var(--color-border-400))]
           rounded-md
@@ -145,7 +155,7 @@ export function TextArea({
           resize-none
           overflow-hidden
           whitespace-pre-wrap break-words
-          placeholder:text-gray-400
+          placeholder:text-[rgb(var(--color-text-400))]
           ${className}
         `}
         onChange={handleInput}

@@ -548,7 +548,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   return (
     <div
-      className="datatable-container overflow-hidden bg-white rounded-lg border border-gray-200"
+      className="datatable-container overflow-hidden bg-background rounded-lg border border-border"
       data-automation-id={id}
       ref={tableContainerRef}
     >
@@ -563,8 +563,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </Alert>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full divide-y divide-gray-200">
-            <thead className="bg-white">
+          <table className="w-full divide-y divide-[rgb(var(--color-border-200))]">
+            <thead className="bg-background">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
                   {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
@@ -579,13 +579,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       key={`header_${columnId}_${headerIndex}`}
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
-                      className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
+                      className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-muted' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
                     >
                         <div className={`flex space-x-1 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''} items-center`}>
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {isSortable && (
-                            <span className="text-gray-400">
+                            <span className="text-muted-foreground">
                               {{
                                 asc: ' ↑',
                                 desc: ' ↓',
@@ -609,8 +609,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
-                    ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
-                    ${onRowClick ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-default'}
+                    ${rowIndex % 2 === 0 ? 'bg-muted' : 'bg-background'}
+                    ${onRowClick ? 'hover:bg-primary-50 cursor-pointer' : 'cursor-default'}
                     transition-colors
                     ${extraRowClass}
                   `}

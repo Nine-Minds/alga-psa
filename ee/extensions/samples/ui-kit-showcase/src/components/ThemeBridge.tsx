@@ -7,17 +7,17 @@ const STYLE_ID = 'alga-ui-kit-theme-bridge';
 const themeCss = `
 :root {
   --alga-bg: #ffffff;
-  --alga-fg: #111111;
+  --alga-fg: #0f172a;
   --alga-muted: #f5f5f7;
   --alga-muted-fg: #4b5563;
-  --alga-primary: #9855ee;
+  --alga-primary: #8a4dea;
   --alga-primary-foreground: #ffffff;
-  --alga-primary-light: #ede2fd;
-  --alga-secondary: #53d7fa;
+  --alga-primary-light: #dcc5fb;
+  --alga-secondary: #40cff9;
   --alga-secondary-foreground: #ffffff;
-  --alga-border: #e5e7eb;
+  --alga-border: #e2e8f0;
   --alga-ring: 0 0% 0%;
-  --alga-radius: 6px;
+  --alga-radius: 8px;
   --alga-accent: #ff9c30;
   --alga-accent-foreground: #ffffff;
   --alga-primary-soft: #f6f0fe;
@@ -25,8 +25,8 @@ const themeCss = `
   --alga-primary-soft-hover: #ede2fd;
   --alga-primary-border: #caa8f9;
   --alga-danger: #dc2626;
-  --alga-warning: #d97706;
-  --alga-success: #16a34a;
+  --alga-warning: #f59e0b;
+  --alga-success: #22c55e;
 }
 
 :root[data-alga-theme="dark"] {

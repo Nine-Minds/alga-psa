@@ -13,9 +13,32 @@ interface SwitchProps extends Omit<React.ComponentPropsWithoutRef<typeof SwitchP
   id?: string;
   /** Whether the switch is required */
   required?: boolean;
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
   /** Ref for the switch element */
   ref?: React.Ref<React.ElementRef<typeof SwitchPrimitives.Root>>;
 }
+
+const switchSizeStyles: Record<'sm' | 'md' | 'lg', { root: React.CSSProperties; thumb: React.CSSProperties }> = {
+  sm: {
+    root: { width: '34px', height: '20px' },
+    thumb: { width: '16px', height: '16px', transform: 'translateX(2px)' },
+  },
+  md: {
+    root: {},
+    thumb: {},
+  },
+  lg: {
+    root: { width: '50px', height: '30px' },
+    thumb: { width: '26px', height: '26px', transform: 'translateX(2px)' },
+  },
+};
+
+const switchThumbCheckedTranslate: Record<'sm' | 'md' | 'lg', string> = {
+  sm: 'translateX(14px)',
+  md: '',
+  lg: 'translateX(20px)',
+};
 
 function Switch({
   className,
@@ -24,6 +47,7 @@ function Switch({
   required,
   checked,
   disabled,
+  size = 'md',
   ref,
   ...props
 }: SwitchProps & AutomationProps) {
@@ -50,10 +74,17 @@ function Switch({
     }
   }, [checked, updateMetadata, label, disabled, required]);
 
+  const sizeRoot = switchSizeStyles[size].root;
+  const sizeThumb = switchSizeStyles[size].thumb;
+  const thumbStyle: React.CSSProperties = checked && switchThumbCheckedTranslate[size]
+    ? { ...sizeThumb, transform: switchThumbCheckedTranslate[size] }
+    : { ...sizeThumb };
+
   return (
     <div className="flex items-center gap-2">
       <SwitchPrimitives.Root
         className={`switch-root ${className}`}
+        style={sizeRoot}
         checked={checked}
         disabled={disabled}
         required={required}
@@ -61,10 +92,10 @@ function Switch({
         {...props}
         ref={ref}
       >
-        <SwitchPrimitives.Thumb className="switch-thumb" />
+        <SwitchPrimitives.Thumb className="switch-thumb" style={thumbStyle} />
       </SwitchPrimitives.Root>
       {label && (
-        <label className="text-sm font-medium text-gray-700">
+        <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">
           {label}
         </label>
       )}
