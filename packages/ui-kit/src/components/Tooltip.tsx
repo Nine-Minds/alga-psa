@@ -20,19 +20,12 @@ const tooltipStyle: React.CSSProperties = {
   padding: '6px 10px',
   fontSize: '12px',
   fontWeight: 500,
-  color: 'var(--alga-bg, #fff)',
-  backgroundColor: 'var(--alga-fg, #1f2937)',
-  borderRadius: 'var(--alga-radius, 6px)',
+  color: '#fff',
+  backgroundColor: '#111827',
+  borderRadius: '6px',
   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
   whiteSpace: 'nowrap',
   pointerEvents: 'none',
-};
-
-const arrowStyle: React.CSSProperties = {
-  position: 'absolute',
-  width: 0,
-  height: 0,
-  borderStyle: 'solid',
 };
 
 export function Tooltip({
@@ -120,50 +113,6 @@ export function Tooltip({
     };
   }, []);
 
-  const getArrowStyle = (): React.CSSProperties => {
-    const arrowSize = 6;
-    const base: React.CSSProperties = { ...arrowStyle };
-
-    switch (position) {
-      case 'top':
-        return {
-          ...base,
-          bottom: -arrowSize,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          borderWidth: `${arrowSize}px ${arrowSize}px 0 ${arrowSize}px`,
-          borderColor: 'var(--alga-fg, #1f2937) transparent transparent transparent',
-        };
-      case 'bottom':
-        return {
-          ...base,
-          top: -arrowSize,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          borderWidth: `0 ${arrowSize}px ${arrowSize}px ${arrowSize}px`,
-          borderColor: 'transparent transparent var(--alga-fg, #1f2937) transparent',
-        };
-      case 'left':
-        return {
-          ...base,
-          right: -arrowSize,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          borderWidth: `${arrowSize}px 0 ${arrowSize}px ${arrowSize}px`,
-          borderColor: 'transparent transparent transparent var(--alga-fg, #1f2937)',
-        };
-      case 'right':
-        return {
-          ...base,
-          left: -arrowSize,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          borderWidth: `${arrowSize}px ${arrowSize}px ${arrowSize}px 0`,
-          borderColor: 'transparent var(--alga-fg, #1f2937) transparent transparent',
-        };
-    }
-  };
-
   const child = React.cloneElement(children, {
     ref: triggerRef,
     onMouseEnter: (e: React.MouseEvent) => {
@@ -199,7 +148,6 @@ export function Tooltip({
           }}
         >
           {content}
-          <span style={getArrowStyle()} />
         </div>
       )}
     </>

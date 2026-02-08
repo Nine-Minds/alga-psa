@@ -30,6 +30,9 @@ import { DrawerDemo } from '../demos/DrawerDemo';
 import { DropdownMenuDemo } from '../demos/DropdownMenuDemo';
 import { RadioDemo } from '../demos/RadioDemo';
 import { ViewSwitcherDemo } from '../demos/ViewSwitcherDemo';
+import { BreadcrumbsDemo } from '../demos/BreadcrumbsDemo';
+import { PopoverDemo } from '../demos/PopoverDemo';
+import { SeparatorDemo } from '../demos/SeparatorDemo';
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -75,6 +78,7 @@ export function App() {
           <AlertDemo />
           <TextDemo />
           <StackDemo />
+          <SeparatorDemo />
           <BadgeDemo />
         </>
       ),
@@ -91,6 +95,7 @@ export function App() {
         <>
           <DialogDemo />
           <ConfirmDialogDemo />
+          <PopoverDemo />
         </>
       ),
     },
@@ -126,6 +131,7 @@ export function App() {
       label: 'Navigation',
       content: (
         <>
+          <BreadcrumbsDemo />
           <TabsDemo />
           <DrawerDemo />
           <DropdownMenuDemo />

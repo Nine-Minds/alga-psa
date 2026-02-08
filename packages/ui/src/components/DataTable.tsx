@@ -18,6 +18,7 @@ import {
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from '@alga-psa/types';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
+import { cn } from '../lib/utils';
 import Pagination from './Pagination';
 import { Alert, AlertDescription } from './Alert';
 
@@ -191,7 +192,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
     columns.map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex)
   );
-  
+
   // Function to calculate which columns should be visible based on available width
   const updateVisibleColumns = () => {
     if (!tableContainerRef.current) return;
@@ -563,7 +564,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </Alert>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full divide-y divide-[rgb(var(--color-border-200))]">
+          <table
+            className="w-full divide-y divide-[rgb(var(--color-border-200))]"
+          >
             <thead className="bg-background">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
@@ -579,8 +582,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       key={`header_${columnId}_${headerIndex}`}
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
-                      className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-muted' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
-                      style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
+                      className={cn(
+                        'px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors',
+                        isSortable && 'cursor-pointer hover:bg-muted',
+                        colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left',
+                        colDef?.headerClassName ?? ''
+                      )}
+                      style={{ width: colDef?.width }}
                     >
                         <div className={`flex space-x-1 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''} items-center`}>
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
@@ -609,7 +617,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
-                    ${rowIndex % 2 === 0 ? 'bg-muted' : 'bg-background'}
+                    ${rowIndex % 2 === 0 ? 'bg-[rgb(var(--color-border-50))]' : 'bg-background'}
                     ${onRowClick ? 'hover:bg-primary-50 cursor-pointer' : 'cursor-default'}
                     transition-colors
                     ${extraRowClass}
@@ -636,7 +644,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           id={cellId}
                           content={cellContent}
                           className={`px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top ${columnDef?.cellClassName ?? ''}`}
-                          style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
+                          style={{ width: columnDef?.width }}
                         >
                           <div className="min-w-0">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}

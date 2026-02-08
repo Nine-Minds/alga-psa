@@ -1,4 +1,14 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  flexRender,
+  ColumnDef,
+  SortingState,
+  PaginationState,
+} from '@tanstack/react-table';
 import { Text } from './Text';
 import { CustomSelect } from './CustomSelect';
 import { Alert } from './Alert';
@@ -37,8 +47,6 @@ export type DataTableProps<Row extends Record<string, any>> = {
   onVisibleColumnsChange?: (visibleKeys: string[]) => void;
 };
 
-type SortState<Row> = { key: keyof Row & string; dir: 'asc' | 'desc' } | null;
-
 // Chevron icons
 const ChevronLeft = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -65,10 +73,6 @@ export function DataTable<Row extends Record<string, any>>({
   minColumnWidth = 120,
   onVisibleColumnsChange,
 }: DataTableProps<Row>) {
-  const [sort, setSort] = useState<SortState<Row>>(initialSortKey ? { key: initialSortKey, dir: initialSortDir } : null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
-
   // Responsive column hiding
   const containerRef = useRef<HTMLDivElement>(null);
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<Set<string>>(
@@ -188,35 +192,80 @@ export function DataTable<Row extends Record<string, any>>({
 
   const hiddenColumnCount = columns.length - visibleColumns.length;
 
-  const sorted = useMemo(() => {
-    if (!sort) return data;
-    const col = columns.find(c => c.key === sort.key);
-    if (!col) return data;
-    const copy = [...data];
-    copy.sort((a, b) => {
-      const av = a[sort.key];
-      const bv = b[sort.key];
-      if (av == null && bv == null) return 0;
-      if (av == null) return sort.dir === 'asc' ? -1 : 1;
-      if (bv == null) return sort.dir === 'asc' ? 1 : -1;
-      if (typeof av === 'number' && typeof bv === 'number') return sort.dir === 'asc' ? av - bv : bv - av;
-      return sort.dir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  // --- tanstack/react-table setup ---
+
+  // Sorting state: convert our props to tanstack SortingState
+  const [sorting, setSorting] = useState<SortingState>(
+    initialSortKey ? [{ id: initialSortKey, desc: initialSortDir === 'desc' }] : []
+  );
+
+  // Pagination state
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: defaultPageSize,
+  });
+
+  // Reset page to 0 when data changes or page size changes
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  }, [data.length, pagination.pageSize]);
+
+  // Convert Column<Row>[] to tanstack ColumnDef<Row>[]
+  const tableColumns = useMemo(
+    () =>
+      visibleColumns.map(
+        (col): ColumnDef<Row, unknown> => ({
+          id: col.key,
+          accessorKey: col.key,
+          header: col.header,
+          cell: (info) =>
+            col.render
+              ? col.render(info.row.original)
+              : String(info.getValue() ?? ''),
+          size: typeof col.width === 'number' ? col.width : undefined,
+          enableSorting: col.sortable !== false,
+        })
+      ),
+    [visibleColumns]
+  );
+
+  // Table instance
+  const table = useReactTable({
+    data,
+    columns: tableColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    ...(paginate ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    state: {
+      sorting,
+      ...(paginate ? { pagination } : {}),
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+  });
+
+  // Derive rows: when paginating use getRowModel() which returns paginated+sorted rows,
+  // otherwise also getRowModel() which returns sorted rows.
+  const rows = table.getRowModel().rows;
+  const totalRows = paginate ? table.getFilteredRowModel().rows.length : data.length;
+
+  // Pagination helpers
+  const totalPages = paginate ? table.getPageCount() : 1;
+  const currentPage = pagination.pageIndex + 1; // 1-indexed for display
+  const pageSize = pagination.pageSize;
+
+  const setCurrentPage = useCallback((pageOrFn: number | ((prev: number) => number)) => {
+    setPagination(prev => {
+      const newPage = typeof pageOrFn === 'function'
+        ? pageOrFn(prev.pageIndex + 1)
+        : pageOrFn;
+      return { ...prev, pageIndex: newPage - 1 };
     });
-    return copy;
-  }, [data, sort, columns]);
+  }, []);
 
-  // Pagination logic
-  const totalPages = paginate ? Math.ceil(sorted.length / pageSize) : 1;
-  const paginatedData = useMemo(() => {
-    if (!paginate) return sorted;
-    const start = (currentPage - 1) * pageSize;
-    return sorted.slice(start, start + pageSize);
-  }, [sorted, paginate, currentPage, pageSize]);
-
-  // Reset to page 1 when data changes or page size changes
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [data.length, pageSize]);
+  const setPageSize = useCallback((size: number) => {
+    setPagination({ pageIndex: 0, pageSize: size });
+  }, []);
 
   // Generate page buttons with ellipsis
   const renderPageButtons = () => {
@@ -282,10 +331,10 @@ export function DataTable<Row extends Record<string, any>>({
   };
 
   // Calculate item range
-  const firstItem = sorted.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const lastItem = Math.min(currentPage * pageSize, sorted.length);
+  const firstItem = totalRows === 0 ? 0 : pagination.pageIndex * pageSize + 1;
+  const lastItem = Math.min((pagination.pageIndex + 1) * pageSize, totalRows);
 
-  // Styles
+  // --- Styles ---
   const containerStyle: React.CSSProperties = {
     overflow: 'hidden',
     backgroundColor: 'var(--alga-bg, #fff)',
@@ -387,42 +436,52 @@ export function DataTable<Row extends Record<string, any>>({
       <div style={{ overflowX: 'auto' }}>
         <table style={tableStyle}>
           <thead>
-            <tr>
-              {visibleColumns.map(c => (
-                <th key={c.key} style={{ ...thStyle, width: c.width }}>
-                  <button
-                    onClick={() => c.sortable !== false && setSort(s => (!s || s.key !== c.key) ? { key: c.key, dir: 'asc' } : { key: c.key, dir: s.dir === 'asc' ? 'desc' : 'asc' })}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'inherit',
-                      cursor: c.sortable === false ? 'default' : 'pointer',
-                      padding: 0,
-                      fontWeight: 500,
-                      fontSize: 'inherit',
-                      textTransform: 'inherit',
-                      letterSpacing: 'inherit',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    {c.header}
-                    {sort?.key === c.key && (
-                      <span style={{ color: 'var(--alga-muted-fg)' }}>
-                        {sort.dir === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </button>
-                </th>
-              ))}
-            </tr>
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => {
+                  const canSort = header.column.getCanSort();
+                  const sortDir = header.column.getIsSorted();
+
+                  return (
+                    <th
+                      key={header.id}
+                      style={thStyle}
+                    >
+                      <button
+                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'inherit',
+                          cursor: canSort ? 'pointer' : 'default',
+                          padding: 0,
+                          fontWeight: 500,
+                          fontSize: 'inherit',
+                          textTransform: 'inherit',
+                          letterSpacing: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {sortDir && (
+                          <span style={{ color: 'var(--alga-muted-fg)' }}>
+                            {sortDir === 'asc' ? '\u2191' : '\u2193'}
+                          </span>
+                        )}
+                      </button>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
           <tbody>
-            {paginatedData.map((row, i) => (
+            {rows.map((row, i) => (
               <tr
-                key={i}
-                onClick={() => onRowClick?.(row)}
+                key={row.id}
+                onClick={() => onRowClick?.(row.original)}
                 style={{
                   backgroundColor: i % 2 === 0 ? 'var(--alga-muted, #f9fafb)' : 'var(--alga-bg, #fff)',
                   cursor: onRowClick ? 'pointer' : 'default',
@@ -435,14 +494,19 @@ export function DataTable<Row extends Record<string, any>>({
                   e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--alga-muted, #f9fafb)' : 'var(--alga-bg, #fff)';
                 }}
               >
-                {visibleColumns.map(c => (
-                  <td key={c.key} style={{ ...tdStyle, width: c.width }}>
-                    {c.render ? c.render(row) : String(row[c.key] ?? '')}
-                  </td>
-                ))}
+                {row.getVisibleCells().map(cell => {
+                  return (
+                    <td
+                      key={cell.id}
+                      style={tdStyle}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
-            {paginatedData.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={visibleColumns.length} style={{ ...tdStyle, textAlign: 'center', color: 'var(--alga-muted-fg)' }}>
                   No results
@@ -453,10 +517,10 @@ export function DataTable<Row extends Record<string, any>>({
         </table>
       </div>
 
-      {paginate && (totalPages > 1 || sorted.length > 0) && (
+      {paginate && (totalPages > 1 || totalRows > 0) && (
         <div style={paginationStyle}>
           <Text tone="muted" style={{ fontSize: '14px' }}>
-            {sorted.length === 0 ? '0 items' : `${firstItem}–${lastItem} of ${sorted.length} items`}
+            {totalRows === 0 ? '0 items' : `${firstItem}\u2013${lastItem} of ${totalRows} items`}
           </Text>
 
           {totalPages > 1 && (

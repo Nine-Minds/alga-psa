@@ -21,7 +21,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@radix-ui/react-select": "^2.1.2"
+    "@radix-ui/react-select": "^2.1.2",
+    "@tanstack/react-table": "^8.21.3"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
