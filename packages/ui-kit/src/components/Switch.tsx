@@ -19,7 +19,7 @@ export type SwitchProps = {
 
 const sizes = {
   sm: { track: { width: 28, height: 16 }, thumb: 12, translate: 12 },
-  md: { track: { width: 36, height: 20 }, thumb: 16, translate: 16 },
+  md: { track: { width: 42, height: 25 }, thumb: 21, translate: 17 },
   lg: { track: { width: 44, height: 24 }, thumb: 20, translate: 20 },
 };
 

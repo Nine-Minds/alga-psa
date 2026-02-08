@@ -14,6 +14,10 @@ export interface CustomSelectProps {
   placeholder?: string;
   disabled?: boolean;
   style?: React.CSSProperties;
+  /** Show error/validation border */
+  error?: boolean;
+  /** Error message displayed below the select */
+  errorMessage?: string;
 }
 
 // Inline SVG for chevron icon
@@ -41,6 +45,8 @@ export function CustomSelect({
   placeholder = 'Select...',
   disabled = false,
   style,
+  error,
+  errorMessage,
 }: CustomSelectProps) {
   // Ensure unique options
   const uniqueOptions = useMemo(() => {
@@ -73,6 +79,7 @@ export function CustomSelect({
     border: '1px solid var(--alga-border, #e5e7eb)',
     color: 'var(--alga-fg, #374151)',
     outline: 'none',
+    ...(error ? { borderColor: 'var(--alga-danger, #dc2626)' } : {}),
     ...style,
   };
 
@@ -112,50 +119,57 @@ export function CustomSelect({
   };
 
   return (
-    <RadixSelect.Root
-      value={radixValue}
-      onValueChange={(newValue: string) => {
-        if (newValue === PLACEHOLDER_VALUE) return;
-        onValueChange(newValue);
-      }}
-      disabled={disabled}
-    >
-      <RadixSelect.Trigger style={triggerStyle}>
-        <RadixSelect.Value placeholder={placeholder}>
-          <span style={{ color: !selectedOption ? 'var(--alga-muted-fg, #9ca3af)' : undefined }}>
-            {selectedOption?.label || placeholder}
-          </span>
-        </RadixSelect.Value>
-        <RadixSelect.Icon style={{ color: 'var(--alga-muted-fg, #9ca3af)' }}>
-          <ChevronDown />
-        </RadixSelect.Icon>
-      </RadixSelect.Trigger>
-
-      <RadixSelect.Portal>
-        <RadixSelect.Content style={contentStyle} position="popper" sideOffset={4} align="start">
-          <RadixSelect.ScrollUpButton style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '24px' }}>
-            <div style={{ transform: 'rotate(180deg)' }}><ChevronDown /></div>
-          </RadixSelect.ScrollUpButton>
-
-          <RadixSelect.Viewport style={viewportStyle}>
-            {/* Placeholder option */}
-            <RadixSelect.Item value={PLACEHOLDER_VALUE} disabled style={placeholderItemStyle}>
-              <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
-            </RadixSelect.Item>
-
-            {uniqueOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value} disabled={option.disabled} style={itemStyle}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </RadixSelect.Viewport>
-
-          <RadixSelect.ScrollDownButton style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '24px' }}>
+    <div>
+      <RadixSelect.Root
+        value={radixValue}
+        onValueChange={(newValue: string) => {
+          if (newValue === PLACEHOLDER_VALUE) return;
+          onValueChange(newValue);
+        }}
+        disabled={disabled}
+      >
+        <RadixSelect.Trigger style={triggerStyle}>
+          <RadixSelect.Value placeholder={placeholder}>
+            <span style={{ color: !selectedOption ? 'var(--alga-muted-fg, #9ca3af)' : undefined }}>
+              {selectedOption?.label || placeholder}
+            </span>
+          </RadixSelect.Value>
+          <RadixSelect.Icon style={{ color: 'var(--alga-muted-fg, #9ca3af)' }}>
             <ChevronDown />
-          </RadixSelect.ScrollDownButton>
-        </RadixSelect.Content>
-      </RadixSelect.Portal>
-    </RadixSelect.Root>
+          </RadixSelect.Icon>
+        </RadixSelect.Trigger>
+
+        <RadixSelect.Portal>
+          <RadixSelect.Content style={contentStyle} position="popper" sideOffset={4} align="start">
+            <RadixSelect.ScrollUpButton style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '24px' }}>
+              <div style={{ transform: 'rotate(180deg)' }}><ChevronDown /></div>
+            </RadixSelect.ScrollUpButton>
+
+            <RadixSelect.Viewport style={viewportStyle}>
+              {/* Placeholder option */}
+              <RadixSelect.Item value={PLACEHOLDER_VALUE} disabled style={placeholderItemStyle}>
+                <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+              </RadixSelect.Item>
+
+              {uniqueOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} disabled={option.disabled} style={itemStyle}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </RadixSelect.Viewport>
+
+            <RadixSelect.ScrollDownButton style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '24px' }}>
+              <ChevronDown />
+            </RadixSelect.ScrollDownButton>
+          </RadixSelect.Content>
+        </RadixSelect.Portal>
+      </RadixSelect.Root>
+      {error && errorMessage && (
+        <span style={{ color: 'var(--alga-danger, #dc2626)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+          {errorMessage}
+        </span>
+      )}
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 
 export type DrawerProps = {
   /** Whether the drawer is open */
@@ -23,18 +23,21 @@ export type DrawerProps = {
 
 const DEFAULT_WIDTH = '400px';
 
-const overlayStyle: React.CSSProperties = {
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
+const overlayBaseStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
   backgroundColor: 'rgba(0, 0, 0, 0.5)',
   zIndex: 9998,
-  opacity: 0,
-  transition: 'opacity 0.2s ease',
-};
-
-const overlayVisibleStyle: React.CSSProperties = {
-  ...overlayStyle,
-  opacity: 1,
+  transition: 'opacity 0.3s ease',
 };
 
 const baseDrawerStyle: React.CSSProperties = {
@@ -45,6 +48,9 @@ const baseDrawerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   transition: 'transform 0.3s ease',
+  top: 0,
+  right: 0,
+  bottom: 0,
 };
 
 const headerStyle: React.CSSProperties = {
@@ -94,6 +100,73 @@ export function Drawer({
   closeOnEscape = true,
   style,
 }: DrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<Element | null>(null);
+  const [closeButtonHovered, setCloseButtonHovered] = useState(false);
+
+  // Track whether the drawer has ever been opened so we don't render
+  // the closed-state DOM on initial mount (avoids a flash).
+  const hasBeenOpenRef = useRef(false);
+  if (open) {
+    hasBeenOpenRef.current = true;
+  }
+
+  // Focus management: save previous focus on open, restore on close
+  useEffect(() => {
+    if (open) {
+      previousFocusRef.current = document.activeElement;
+
+      // Defer focus to after the browser paints the drawer
+      const raf = requestAnimationFrame(() => {
+        drawerRef.current?.focus();
+      });
+      return () => cancelAnimationFrame(raf);
+    } else if (previousFocusRef.current) {
+      const el = previousFocusRef.current as HTMLElement;
+      if (typeof el.focus === 'function') {
+        el.focus();
+      }
+      previousFocusRef.current = null;
+    }
+  }, [open]);
+
+  // Focus trapping via Tab key
+  useEffect(() => {
+    if (!open) return;
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const container = drawerRef.current;
+      if (!container) return;
+
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first || document.activeElement === container) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, [open]);
+
   // Handle escape key
   useEffect(() => {
     if (!open || !closeOnEscape) return;
@@ -125,34 +198,52 @@ export function Drawer({
     }
   }, [closeOnOverlayClick, onClose]);
 
-  const getDrawerStyle = (): React.CSSProperties => {
-    return {
-      ...baseDrawerStyle,
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: width,
-      transform: open ? 'translateX(0)' : 'translateX(100%)',
-      ...style,
-    };
+  // Don't render anything until the drawer has been opened at least once.
+  // After that, always render so the close animation can play.
+  if (!hasBeenOpenRef.current) return null;
+
+  const drawerStyle: React.CSSProperties = {
+    ...baseDrawerStyle,
+    width,
+    transform: open ? 'translateX(0)' : 'translateX(100%)',
+    visibility: open ? 'visible' : 'hidden',
+    pointerEvents: open ? 'auto' : 'none',
+    // Keep visible during close animation, then hide after transition
+    ...(open ? {} : { transitionProperty: 'transform, visibility' }),
+    ...style,
   };
 
-  if (!open) return null;
+  const currentOverlayStyle: React.CSSProperties = {
+    ...overlayBaseStyle,
+    opacity: open ? 1 : 0,
+    visibility: open ? 'visible' : 'hidden',
+    pointerEvents: open ? 'auto' : 'none',
+    ...(open ? {} : { transitionProperty: 'opacity, visibility' }),
+  };
+
+  const currentCloseButtonStyle: React.CSSProperties = {
+    ...closeButtonStyle,
+    backgroundColor: closeButtonHovered
+      ? 'var(--alga-muted, #f5f5f7)'
+      : 'transparent',
+  };
 
   return (
     <>
       {overlay && (
         <div
-          style={open ? overlayVisibleStyle : overlayStyle}
+          style={currentOverlayStyle}
           onClick={handleOverlayClick}
           aria-hidden="true"
         />
       )}
       <div
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'drawer-title' : undefined}
-        style={getDrawerStyle()}
+        tabIndex={-1}
+        style={drawerStyle}
       >
         {title && (
           <div style={headerStyle}>
@@ -162,7 +253,9 @@ export function Drawer({
             <button
               type="button"
               onClick={onClose}
-              style={closeButtonStyle}
+              style={currentCloseButtonStyle}
+              onMouseEnter={() => setCloseButtonHovered(true)}
+              onMouseLeave={() => setCloseButtonHovered(false)}
               aria-label="Close drawer"
             >
               <svg

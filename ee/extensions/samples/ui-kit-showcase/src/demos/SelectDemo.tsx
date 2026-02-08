@@ -35,6 +35,18 @@ export function SelectDemo() {
             style={{ marginTop: 8 }}
           />
         </div>
+        <div style={{ maxWidth: 240 }}>
+          <Text weight={600}>Error State</Text>
+          <CustomSelect
+            options={options}
+            value={null}
+            onValueChange={() => {}}
+            placeholder="Select a status"
+            error
+            errorMessage="Please select an option"
+            style={{ marginTop: 8 }}
+          />
+        </div>
       </Stack>
     </DemoSection>
   );

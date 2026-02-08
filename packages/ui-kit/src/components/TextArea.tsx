@@ -11,8 +11,8 @@ function ensureFocusStyles() {
   style.textContent = `
     .alga-textarea:focus {
       outline: none;
-      border-color: var(--alga-primary, #9855ee);
-      box-shadow: 0 0 0 2px var(--alga-primary-light, #ede2fd);
+      border-color: transparent;
+      box-shadow: 0 0 0 2px var(--alga-primary, #8a4dea);
     }
   `;
   document.head.appendChild(style);
@@ -25,6 +25,10 @@ export type TextAreaProps = Omit<React.TextareaHTMLAttributes<HTMLTextAreaElemen
   autoResize?: boolean;
   /** Additional styles */
   style?: React.CSSProperties;
+  /** Show error/validation border */
+  error?: boolean;
+  /** Error message displayed below the textarea */
+  errorMessage?: string;
 };
 
 const containerStyle: React.CSSProperties = {
@@ -62,6 +66,8 @@ export function TextArea({
   onChange,
   disabled,
   className,
+  error,
+  errorMessage,
   ...props
 }: TextAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -95,6 +101,7 @@ export function TextArea({
     overflow: autoResize ? 'hidden' : 'auto',
     opacity: disabled ? 0.5 : 1,
     cursor: disabled ? 'not-allowed' : 'text',
+    ...(error ? { borderColor: 'var(--alga-danger, #dc2626)' } : {}),
     ...style,
   };
 
@@ -110,6 +117,11 @@ export function TextArea({
         style={textareaStyle}
         {...props}
       />
+      {error && errorMessage && (
+        <span style={{ color: 'var(--alga-danger, #dc2626)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }

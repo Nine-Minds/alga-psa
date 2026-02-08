@@ -26,6 +26,10 @@ export function TextAreaDemo() {
           <Text weight={600}>Disabled</Text>
           <TextArea placeholder="Disabled" disabled style={{ marginTop: 8 }} />
         </div>
+        <div style={{ maxWidth: 360 }}>
+          <Text weight={600}>Error State</Text>
+          <TextArea error errorMessage="This field is required" placeholder="Error state" style={{ marginTop: 8 }} />
+        </div>
       </Stack>
     </DemoSection>
   );

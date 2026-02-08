@@ -14,6 +14,10 @@ export function InputDemo() {
           <Text weight={600}>Disabled</Text>
           <Input placeholder="Disabled" disabled style={{ marginTop: 8, width: 240 }} />
         </div>
+        <div>
+          <Text weight={600}>Error State</Text>
+          <Input error errorMessage="This field is required" placeholder="Error state" style={{ marginTop: 8, width: 240 }} />
+        </div>
       </Stack>
     </DemoSection>
   );
