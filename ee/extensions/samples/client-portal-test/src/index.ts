@@ -3,7 +3,8 @@ import {
   ExecuteRequest,
   ExecuteResponse,
   HostBindings,
-  ContextData
+  ContextData,
+  normalizeUserData,
 } from '@alga-psa/extension-runtime';
 
 // Raw imports from the WIT world
@@ -29,7 +30,9 @@ import { callRoute as uiProxyCall } from 'alga:extension/ui-proxy';
 // @ts-ignore
 import { getContext } from 'alga:extension/context';
 // @ts-ignore
-import { getUser } from 'alga:extension/user';
+import { getUser as getUserV1 } from 'alga:extension/user';
+// @ts-ignore
+import { getUser as getUserV2 } from 'alga:extension/user-v2';
 
 // Construct the HostBindings object that the SDK expects
 const host: HostBindings = {
@@ -60,7 +63,13 @@ const host: HostBindings = {
     callRoute: async (route: string, payload: any) => uiProxyCall(route, payload)
   },
   user: {
-    getUser: async () => getUser()
+    getUser: async () => {
+      try {
+        return normalizeUserData(await getUserV2() as any);
+      } catch {
+        return normalizeUserData(await getUserV1() as any);
+      }
+    }
   },
   // Scheduler not used in this extension, but required by HostBindings
   scheduler: {
