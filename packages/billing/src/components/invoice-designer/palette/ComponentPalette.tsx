@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
@@ -23,90 +23,77 @@ const groupByCategory = (components: ComponentDefinition[]) => {
 
 const paletteGroups = groupByCategory(COMPONENT_CATALOG);
 
-const ComponentCard: React.FC<{
-  component: ComponentDefinition;
-  onInsert?: (componentType: ComponentDefinition['type']) => void;
-}> = ({ component, onInsert }) => {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `component-${component.type}`,
-    data: {
-      source: 'component',
-      componentType: component.type,
-    },
-  });
+type PaletteDragData =
+  | {
+      source: 'component';
+      componentType: ComponentDefinition['type'];
+    }
+  | {
+      source: 'preset';
+      presetId: string;
+    };
 
-  return (
-    <div
-      ref={setNodeRef}
-      className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md ${
-        isDragging ? 'opacity-60 border-dashed' : 'bg-white'
-      }`}
-      data-component-type={component.type}
-      {...listeners}
-      {...attributes}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{component.label}</p>
-          <p className="text-xs text-gray-500">{component.description}</p>
-        </div>
-        {onInsert && (
-          <button
-            type="button"
-            className="h-6 w-6 shrink-0 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-            data-automation-id={`designer-palette-add-${component.type}`}
-            aria-label={`Add ${component.label}`}
-            title={`Add ${component.label}`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onInsert(component.type);
-            }}
-          >
-            +
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const PresetCard: React.FC<{
-  presetId: string;
+interface CompactPaletteRowProps {
+  draggableId: string;
+  draggableData: PaletteDragData;
   label: string;
   description: string;
-  onInsert?: (presetId: string) => void;
-}> = ({ presetId, label, description, onInsert }) => {
+  icon: string;
+  dataComponentType?: string;
+  addAutomationId?: string;
+  addAriaLabel?: string;
+  onAdd?: () => void;
+}
+
+const CompactPaletteRow: React.FC<CompactPaletteRowProps> = ({
+  draggableId,
+  draggableData,
+  label,
+  description,
+  icon,
+  dataComponentType,
+  addAutomationId,
+  addAriaLabel,
+  onAdd,
+}) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `preset-${presetId}`,
-    data: { source: 'preset', presetId },
+    id: draggableId,
+    data: draggableData,
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md ${
-        isDragging ? 'opacity-60 border-dashed' : 'bg-white'
-      }`}
+      className={clsx(
+        'group w-full cursor-grab active:cursor-grabbing rounded border px-2 py-1.5 transition-colors',
+        isDragging
+          ? 'opacity-60 border-dashed border-slate-300 bg-white'
+          : 'border-slate-200 bg-white hover:bg-blue-50/40 hover:border-blue-200 focus-within:bg-blue-50/40 focus-within:border-blue-300'
+      )}
+      data-component-type={dataComponentType}
       {...listeners}
       {...attributes}
+      title={description}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{label}</p>
-          <p className="text-xs text-gray-500">{description}</p>
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="min-w-0 flex flex-1 items-center gap-1.5">
+          <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded bg-slate-100 text-[9px] font-semibold text-slate-600">
+            {icon}
+          </span>
+          <span className="truncate text-xs font-medium text-slate-800">{label}</span>
+          <span className="hidden truncate text-[10px] text-slate-400 group-hover:inline">{description}</span>
         </div>
-        {onInsert && (
+        {onAdd && (
           <button
             type="button"
-            className="h-6 w-6 shrink-0 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-            data-automation-id={`designer-palette-add-preset-${presetId}`}
-            aria-label={`Add ${label}`}
-            title={`Add ${label}`}
+            className="h-5 w-5 shrink-0 rounded border border-slate-300 bg-white text-[11px] font-semibold leading-none text-slate-600 transition-colors hover:bg-slate-100 group-hover:border-blue-400 group-hover:bg-blue-50 group-hover:text-blue-700 group-focus-within:border-blue-400 group-focus-within:bg-blue-50 group-focus-within:text-blue-700"
+            data-automation-id={addAutomationId}
+            aria-label={addAriaLabel}
+            title={addAriaLabel}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
-              onInsert(presetId);
+              onAdd();
             }}
           >
             +
@@ -118,58 +105,133 @@ const PresetCard: React.FC<{
 };
 
 export const ComponentPalette: React.FC<PaletteProps> = ({ onInsertComponent, onInsertPreset }) => {
-  const [activeTab, setActiveTab] = useState<'components' | 'outline'>('components');
+  const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'outline'>('blocks');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredPaletteGroups = useMemo<Record<string, ComponentDefinition[]>>(() => {
+    if (!normalizedQuery) {
+      return paletteGroups;
+    }
+    return Object.entries(paletteGroups).reduce<Record<string, ComponentDefinition[]>>((acc, [category, components]) => {
+      const filtered = components.filter((component) => {
+        const haystack = `${component.label} ${component.description}`.toLowerCase();
+        return haystack.includes(normalizedQuery);
+      });
+      if (filtered.length > 0) {
+        acc[category] = filtered;
+      }
+      return acc;
+    }, {});
+  }, [normalizedQuery]);
+
+  const filteredPresets = useMemo(() => {
+    if (!normalizedQuery) {
+      return LAYOUT_PRESETS;
+    }
+    return LAYOUT_PRESETS.filter((preset) =>
+      `${preset.label} ${preset.description}`.toLowerCase().includes(normalizedQuery)
+    );
+  }, [normalizedQuery]);
 
   return (
     <div className="flex flex-col h-full border-r border-slate-200 bg-slate-50">
-      <div className="px-4 pt-3 pb-0 border-b border-slate-200 bg-white">
-        <div className="flex space-x-4">
+      <div className="border-b border-slate-200 bg-white px-3 py-2">
+        <div className="flex gap-3">
           <button
             className={clsx(
-              "pb-2 text-sm font-medium border-b-2 transition-colors",
-              activeTab === 'components' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+              'pb-1 text-[11px] font-semibold tracking-wide border-b-2 transition-colors',
+              activeTab === 'blocks' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
             )}
-            onClick={() => setActiveTab('components')}
+            onClick={() => setActiveTab('blocks')}
           >
-            COMPONENTS
+            BLOCKS
           </button>
           <button
             className={clsx(
-              "pb-2 text-sm font-medium border-b-2 transition-colors",
-              activeTab === 'outline' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+              'pb-1 text-[11px] font-semibold tracking-wide border-b-2 transition-colors',
+              activeTab === 'presets' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+            )}
+            onClick={() => setActiveTab('presets')}
+          >
+            PRESETS
+          </button>
+          <button
+            className={clsx(
+              'pb-1 text-[11px] font-semibold tracking-wide border-b-2 transition-colors',
+              activeTab === 'outline' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
             )}
             onClick={() => setActiveTab('outline')}
           >
             OUTLINE
           </button>
         </div>
+        {activeTab !== 'outline' && (
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="mt-2 h-7 w-full rounded border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700 outline-none focus:border-blue-400"
+            placeholder={activeTab === 'blocks' ? 'Search blocks...' : 'Search presets...'}
+            data-automation-id="designer-palette-search"
+          />
+        )}
       </div>
       
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'components' ? (
-          <div className="px-4 py-3 space-y-4">
-             <p className="text-xs text-slate-500 mb-2">Drag components onto the canvas or click + to insert.</p>
-            <section>
-              <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">Layout Presets</h4>
-              {LAYOUT_PRESETS.map((preset) => (
-                <PresetCard
-                  key={preset.id}
-                  presetId={preset.id}
-                  label={preset.label}
-                  description={preset.description}
-                  onInsert={onInsertPreset}
-                />
-              ))}
-            </section>
-            <hr className="border-slate-200" />
-            {Object.entries(paletteGroups).map(([category, components]) => (
+        {activeTab === 'blocks' ? (
+          <div className="px-2 py-2 space-y-2">
+            <p className="px-1 text-[11px] text-slate-500">Drag or tap `+` to insert.</p>
+            {Object.entries(filteredPaletteGroups).map(([category, components]) => (
               <section key={category}>
-                <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">{category}</h4>
+                <h4 className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{category}</h4>
                 {components.map((component) => (
-                  <ComponentCard key={component.type} component={component} onInsert={onInsertComponent} />
+                  <CompactPaletteRow
+                    key={component.type}
+                    draggableId={`component-${component.type}`}
+                    draggableData={{ source: 'component', componentType: component.type }}
+                    label={component.label}
+                    description={component.description}
+                    icon={component.category.charAt(0)}
+                    dataComponentType={component.type}
+                    addAutomationId={`designer-palette-add-${component.type}`}
+                    addAriaLabel={`Add ${component.label}`}
+                    onAdd={onInsertComponent ? () => onInsertComponent(component.type) : undefined}
+                  />
                 ))}
               </section>
             ))}
+            {Object.keys(filteredPaletteGroups).length === 0 && (
+              <p className="px-1 text-xs text-slate-500">No blocks match this search.</p>
+            )}
+          </div>
+        ) : activeTab === 'presets' ? (
+          <div className="px-2 py-2">
+            <div className="rounded-md border border-blue-200 bg-blue-50/70 p-2 shadow-[inset_3px_0_0_0_rgb(59,130,246)]">
+              <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                Macro Templates
+              </p>
+              <p className="mb-2 px-1 text-[11px] text-blue-700/80">Preset bundles for common invoice sections.</p>
+              <div className="space-y-1">
+                {filteredPresets.map((preset) => (
+                  <CompactPaletteRow
+                    key={preset.id}
+                    draggableId={`preset-${preset.id}`}
+                    draggableData={{ source: 'preset', presetId: preset.id }}
+                    label={preset.label}
+                    description={preset.description}
+                    icon="P"
+                    addAutomationId={`designer-palette-add-preset-${preset.id}`}
+                    addAriaLabel={`Add ${preset.label}`}
+                    onAdd={onInsertPreset ? () => onInsertPreset(preset.id) : undefined}
+                  />
+                ))}
+                {filteredPresets.length === 0 && (
+                  <p className="px-1 text-xs text-blue-700/80">No presets match this search.</p>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <OutlineView />
