@@ -1,7 +1,4 @@
-import { IframeBridge } from '@alga-psa/extension-iframe-sdk';
-
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+import { IframeBridge, callHandlerJson } from '@alga-psa/extension-iframe-sdk';
 
 const output = document.getElementById('output');
 const btnCreate = document.getElementById('btn-create') as HTMLButtonElement | null;
@@ -17,13 +14,6 @@ function getInputValue(id: string): string {
   return el?.value ?? '';
 }
 
-async function callProxyJson<T>(bridge: IframeBridge, route: string, payload?: unknown): Promise<T | null> {
-  const bodyBytes = payload === undefined ? undefined : encoder.encode(JSON.stringify(payload));
-  const responseBytes = await bridge.uiProxy.callRoute(route, bodyBytes);
-  const text = decoder.decode(responseBytes);
-  return text ? (JSON.parse(text) as T) : null;
-}
-
 async function main() {
   // The host currently does not provide a stable parentOrigin query param on all routes.
   // For local/dev, allow wildcard so the SDK accepts messages from the embedding origin.
@@ -32,7 +22,7 @@ async function main() {
 
   btnStatus?.addEventListener('click', async () => {
     try {
-      const data = await callProxyJson(bridge, '/api/status');
+      const data = await callHandlerJson(bridge, '/api/status');
       write({ ok: true, data });
     } catch (err) {
       write({ ok: false, error: err instanceof Error ? err.message : String(err) });
@@ -64,7 +54,10 @@ async function main() {
         items: [{ serviceId, quantity, description, rate }],
       };
 
-      const data = await callProxyJson(bridge, '/api/create-manual-invoice', body);
+      const data = await callHandlerJson(bridge, '/api/create-manual-invoice', {
+        method: 'POST',
+        body,
+      });
       write({ ok: true, data });
     } catch (err) {
       write({ ok: false, error: err instanceof Error ? err.message : String(err) });
@@ -78,4 +71,3 @@ async function main() {
 main().catch((err) => {
   write({ ok: false, error: err instanceof Error ? err.message : String(err) });
 });
-

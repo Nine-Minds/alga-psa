@@ -70,6 +70,38 @@ describe('scheduler-demo handler', () => {
     expect(body.schedules).toEqual([]);
   });
 
+  it('supports proxy-style method override from body for schedule listing', async () => {
+    const request = makeRequest({
+      http: {
+        method: 'POST',
+        url: '/api/schedules',
+        headers: [],
+        body: new TextEncoder().encode(JSON.stringify({ __method: 'GET' })),
+      },
+    });
+    const response = await handler(request, mockHost);
+
+    expect(response.status).toBe(200);
+    const body = JSON.parse(new TextDecoder().decode(response.body));
+    expect(body.count).toBe(0);
+  });
+
+  it('supports proxy-style method override from body for schedule delete', async () => {
+    const request = makeRequest({
+      http: {
+        method: 'POST',
+        url: '/api/schedules/sched-1',
+        headers: [],
+        body: new TextEncoder().encode(JSON.stringify({ __method: 'DELETE' })),
+      },
+    });
+    const response = await handler(request, mockHost);
+
+    expect(response.status).toBe(200);
+    const body = JSON.parse(new TextDecoder().decode(response.body));
+    expect(body.scheduleId).toBe('sched-1');
+  });
+
   it('returns 404 for unknown routes', async () => {
     const request = makeRequest({ http: { method: 'GET', url: '/unknown', headers: [] } });
     const response = await handler(request, mockHost);
@@ -78,6 +110,7 @@ describe('scheduler-demo handler', () => {
   });
 
   it('handles POST /api/setup', async () => {
+    const createSpy = vi.spyOn(mockHost.scheduler!, 'create');
     const request = makeRequest({ http: { method: 'POST', url: '/api/setup', headers: [] } });
     const response = await handler(request, mockHost);
 
@@ -85,5 +118,7 @@ describe('scheduler-demo handler', () => {
     expect(response.status).toBeLessThan(300);
     const body = JSON.parse(new TextDecoder().decode(response.body));
     expect(body.results).toBeDefined();
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ endpoint: '/api/heartbeat' }));
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ endpoint: '/api/status' }));
   });
 });

@@ -1688,8 +1688,26 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
                 payload.insert("name".into(), Value::String(name.clone()));
             }
             if let Some(p) = &input.payload {
-                // payload from extension is already JSON-encoded string
-                payload.insert("payload".into(), Value::String(p.clone()));
+                // Payload from extension is JSON-encoded; decode before forwarding to host API.
+                match serde_json::from_str::<Value>(p) {
+                    Ok(v) => {
+                        payload.insert("payload".into(), v);
+                    }
+                    Err(err) => {
+                        tracing::warn!(
+                            tenant=%tenant,
+                            extension=%extension,
+                            error=%err,
+                            "scheduler capability create_schedule invalid payload JSON"
+                        );
+                        return CreateScheduleResult {
+                            success: false,
+                            schedule_id: None,
+                            error: Some("Payload must be valid JSON object or array".to_string()),
+                            field_errors: Some("{\"payload\":\"Payload must be valid JSON object or array\"}".to_string()),
+                        };
+                    }
+                }
             }
 
             let response = match scheduler_request(&install_id, "create", payload).await {
@@ -1808,7 +1826,25 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
                 payload.insert("name".into(), Value::String(name.clone()));
             }
             if let Some(p) = &input.payload {
-                payload.insert("payload".into(), Value::String(p.clone()));
+                match serde_json::from_str::<Value>(p) {
+                    Ok(v) => {
+                        payload.insert("payload".into(), v);
+                    }
+                    Err(err) => {
+                        tracing::warn!(
+                            tenant=%tenant,
+                            extension=%extension,
+                            schedule_id=%schedule_id,
+                            error=%err,
+                            "scheduler capability update_schedule invalid payload JSON"
+                        );
+                        return UpdateScheduleResult {
+                            success: false,
+                            error: Some("Payload must be valid JSON object or array".to_string()),
+                            field_errors: Some("{\"payload\":\"Payload must be valid JSON object or array\"}".to_string()),
+                        };
+                    }
+                }
             }
 
             let response = match scheduler_request(&install_id, "update", payload).await {

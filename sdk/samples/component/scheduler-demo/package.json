@@ -4,12 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "rimraf dist bundle *.tar.zst",
-    "build": "tsup src/handler.ts --format esm --target esnext --dts --clean && node scripts/postbuild.mjs",
-    "pack": "node scripts/pack.mjs",
+    "clean": "rimraf dist bundle *.tar.zst ui/main.js ui/main.js.map",
+    "build:handler": "tsup src/handler.ts --format esm --target esnext --dts --clean",
+    "build:js": "esbuild src/index.ts --bundle --format=esm --platform=neutral --target=es2022 --external:alga:extension/* --outfile=dist/js/index.js",
+    "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
+    "build:ui": "esbuild ui/main.tsx --bundle --format=esm --platform=browser --target=es2020 --minify --alias:@alga-psa/ui-kit=../../../../packages/ui-kit/src/index.ts --outfile=ui/main.js",
+    "build": "npm run build:handler && npm run build:js && npm run build:component && npm run build:ui && node scripts/postbuild.mjs",
+    "pack": "npm run build && node scripts/pack.mjs",
     "test": "vitest run"
   },
   "dependencies": {
+    "@alga-psa/extension-iframe-sdk": "^0.1.0",
+    "@alga-psa/ui-kit": "^0.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "rimraf": "^6.0.0"
   },
   "devDependencies": {

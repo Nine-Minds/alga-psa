@@ -159,31 +159,122 @@ function scheduleSingletonKey(installId: string, scheduleId: string): string {
 
 // Endpoint resolution
 
+function normalizeMethod(method: string): string {
+  return String(method || '').toUpperCase()
+}
+
+function normalizeEndpointPath(path: string): string {
+  const raw = String(path || '').trim()
+  if (!raw) return ''
+  const withSlash = raw.startsWith('/') ? raw : `/${raw}`
+  return withSlash.replace(/\/{2,}/g, '/')
+}
+
+function parseEndpointSelector(selector: string): { method?: string; path: string } {
+  const raw = String(selector || '').trim()
+  const match = raw.match(/^([A-Za-z]+)\s+(.+)$/)
+  if (!match) {
+    return { path: normalizeEndpointPath(raw) }
+  }
+  return {
+    method: normalizeMethod(match[1]),
+    path: normalizeEndpointPath(match[2]),
+  }
+}
+
+async function listVersionEndpoints(
+  knex: Knex,
+  versionId: string
+): Promise<Array<{ id: string; method: string; path: string; handler: string }>> {
+  const rows = await knex('extension_api_endpoint')
+    .where({ version_id: versionId })
+    .orderBy([{ column: 'path', order: 'asc' }])
+    .select(['id', 'method', 'path', 'handler'])
+  return rows.map((row: any) => ({
+    id: String(row.id),
+    method: normalizeMethod(row.method),
+    path: normalizeEndpointPath(String(row.path || '')),
+    handler: String(row.handler || ''),
+  }))
+}
+
+async function materializeVersionEndpoints(knex: Knex, versionId: string): Promise<void> {
+  const version = await knex('extension_version')
+    .where({ id: versionId })
+    .first(['api_endpoints'])
+  if (!version) return
+
+  const raw = (version as any).api_endpoints
+  let parsed: any[] = []
+  try {
+    parsed = Array.isArray(raw) ? raw : JSON.parse(raw || '[]')
+  } catch {
+    parsed = []
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) return
+
+  const deduped = new Map<string, { method: string; path: string; handler: string }>()
+  for (const endpoint of parsed) {
+    if (!endpoint || typeof endpoint !== 'object') continue
+    const method = normalizeMethod((endpoint as any).method)
+    const path = normalizeEndpointPath((endpoint as any).path)
+    const handler = String((endpoint as any).handler || '')
+    if (!method || !path || !handler) continue
+    deduped.set(`${method} ${path}`, { method, path, handler })
+  }
+  if (deduped.size === 0) return
+
+  const now = new Date()
+  await knex('extension_api_endpoint')
+    .insert(
+      Array.from(deduped.values()).map((e) => ({
+        version_id: versionId,
+        method: e.method,
+        path: e.path,
+        handler: e.handler,
+        updated_at: now,
+      }))
+    )
+    .onConflict(['version_id', 'method', 'path'])
+    .merge({ handler: knex.raw('excluded.handler'), updated_at: knex.raw('excluded.updated_at') })
+}
+
 async function resolveEndpointByPath(
   knex: Knex,
   versionId: string,
-  path: string
+  endpointSelector: string
 ): Promise<{ id: string; method: string; path: string } | null> {
-  // Normalize path to have leading /
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const selector = parseEndpointSelector(endpointSelector)
+  const queryEndpoint = async () => {
+    const query = knex('extension_api_endpoint')
+      .where({ version_id: versionId })
+      .andWhere(function () {
+        this.where('path', selector.path).orWhere('path', selector.path.replace(/^\//, ''))
+      })
+      .first(['id', 'method', 'path'])
 
-  const row = await knex('extension_api_endpoint')
-    .where({ version_id: versionId })
-    .andWhere(function () {
-      this.where('path', normalizedPath).orWhere('path', normalizedPath.replace(/^\//, ''))
-    })
-    .whereIn('method', ['GET', 'POST'])
-    .first(['id', 'method', 'path'])
-
-  if (!row) return null
-
-  // Check for path parameters
-  const pathStr = String(row.path || '')
-  if (pathStr.includes('/:') || pathStr.includes(':') || pathStr.includes('{') || pathStr.includes('}')) {
-    return null // Not schedulable
+    if (selector.method) {
+      query.where('method', selector.method)
+    } else {
+      query.whereIn('method', ['GET', 'POST'])
+    }
+    return query
   }
 
-  return { id: row.id, method: String(row.method).toUpperCase(), path: pathStr }
+  let row = await queryEndpoint()
+  if (!row) {
+    await materializeVersionEndpoints(knex, versionId)
+    row = await queryEndpoint()
+  }
+  if (!row) return null
+
+  // Check for path parameters and unsupported methods.
+  const method = normalizeMethod(String((row as any).method || ''))
+  if (!['GET', 'POST'].includes(method)) return null
+  const pathStr = normalizeEndpointPath(String(row.path || ''))
+  if (pathStr.includes('/:') || pathStr.includes(':') || pathStr.includes('{') || pathStr.includes('}')) return null
+
+  return { id: row.id, method, path: pathStr }
 }
 
 // API Implementation
@@ -623,11 +714,11 @@ export async function getEndpoints(ctx: InstallContext): Promise<EndpointInfo[]>
 
   try {
     const knex = await getConnection(ctx.tenantId)
-
-    const rows = await knex('extension_api_endpoint')
-      .where({ version_id: ctx.versionId })
-      .orderBy([{ column: 'path', order: 'asc' }])
-      .select(['id', 'method', 'path', 'handler'])
+    let rows = await listVersionEndpoints(knex, ctx.versionId)
+    if (rows.length === 0) {
+      await materializeVersionEndpoints(knex, ctx.versionId)
+      rows = await listVersionEndpoints(knex, ctx.versionId)
+    }
 
     const result = rows.map((row: any) => {
       const method = String(row.method || '').toUpperCase()
