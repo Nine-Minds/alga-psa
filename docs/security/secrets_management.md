@@ -115,23 +115,29 @@ The system uses a two-user database authentication model for security:
 1. Create the `secrets/` directory
 2. Create individual files for each secret:
 ```bash
+# Use single quotes to avoid shell expansion of special characters in secret values.
+# If a value contains a single quote ('), use a quoted heredoc instead:
+# cat > secrets/email_password <<'EOF'
+# your-secret-value
+# EOF
+
 # Database
-echo "your-secure-admin-password" > secrets/postgres_password
-echo "your-secure-app-password" > secrets/db_password_server
-echo "your-secure-hocuspocus-password" > secrets/db_password_hocuspocus
+echo 'your-secure-admin-password' > secrets/postgres_password
+echo 'your-secure-app-password' > secrets/db_password_server
+echo 'your-secure-hocuspocus-password' > secrets/db_password_hocuspocus
 
 # Redis
-echo "your-secure-password" > secrets/redis_password
+echo 'your-secure-password' > secrets/redis_password
 
 # Security
-echo "your-32-char-min-key" > secrets/crypto_key
-echo "your-32-char-min-key" > secrets/token_secret_key
-echo "your-32-char-min-key" > secrets/nextauth_secret
+echo 'your-32-char-min-key' > secrets/crypto_key
+echo 'your-32-char-min-key' > secrets/token_secret_key
+echo 'your-32-char-min-key' > secrets/nextauth_secret
 
 # Email & OAuth
-echo "your-email-password" > secrets/email_password
-echo "your-client-id" > secrets/google_oauth_client_id
-echo "your-client-secret" > secrets/google_oauth_client_secret
+echo 'your-email-password' > secrets/email_password
+echo 'your-client-id' > secrets/google_oauth_client_id
+echo 'your-client-secret' > secrets/google_oauth_client_secret
 ```
 
 3. Set appropriate permissions:
