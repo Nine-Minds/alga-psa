@@ -12,19 +12,20 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import clsx from 'clsx';
 import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
 import type { DesignerComponentType, DesignerConstraint, DesignerNode, Point } from './state/designerStore';
-import { useInvoiceDesignerStore } from './state/designerStore';
+import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, calculateGuides, clampPositionToParent } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
-import { canNestWithinParent } from './state/hierarchy';
+import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -53,6 +54,46 @@ type DropTargetMeta = {
   nodeType: DesignerComponentType;
   allowedChildren: DesignerComponentType[];
 };
+
+type DropFeedback = {
+  tone: 'info' | 'error';
+  message: string;
+};
+
+type ComponentDropResolution =
+  | { ok: true; parentId: string; notice?: string }
+  | { ok: false; message: string };
+
+type ComponentInsertOptions = {
+  dropMeta?: DropTargetMeta;
+  dropPoint?: Point;
+  requireCanvasPointer?: boolean;
+};
+
+type PresetInsertOptions = {
+  dropMeta?: DropTargetMeta;
+  dropPoint?: Point;
+  requireDropTarget?: boolean;
+};
+
+type DesignerTestApi = {
+  insertComponent: (type: DesignerComponentType) => boolean;
+  insertPreset: (id: string) => boolean;
+  selectNode: (id: string | null) => void;
+  simulateComponentDrop: (
+    type: DesignerComponentType,
+    targetNodeId?: string | 'canvas',
+    dropPoint?: Point
+  ) => boolean;
+  simulatePresetDrop: (presetId: string, targetNodeId?: string | 'canvas', dropPoint?: Point) => boolean;
+  setForcedDropTarget: (nodeId: string | 'canvas' | null) => void;
+};
+
+declare global {
+  interface Window {
+    __ALGA_INVOICE_DESIGNER_TEST_API__?: DesignerTestApi;
+  }
+}
 
 const isPaletteDragData = (value: unknown): value is PaletteDragData =>
   typeof value === 'object' &&
@@ -145,7 +186,10 @@ export const DesignerShell: React.FC = () => {
   const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
   const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
+  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
+  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Fail-safe: Clear guides when no drag is active
   React.useEffect(() => {
@@ -187,8 +231,41 @@ export const DesignerShell: React.FC = () => {
     }
   }, [selectedNode]);
 
+  React.useEffect(() => {
+    if (selectedNodeId && !selectedNode) {
+      selectNode(null);
+    }
+  }, [selectedNode, selectedNodeId, selectNode]);
+
   const updatePointerLocation = useCallback((point: { x: number; y: number } | null) => {
     pointerRef.current = point;
+  }, []);
+
+  const clearDropFeedback = useCallback(() => {
+    if (dropFeedbackTimeoutRef.current) {
+      clearTimeout(dropFeedbackTimeoutRef.current);
+      dropFeedbackTimeoutRef.current = null;
+    }
+    setDropFeedback(null);
+  }, []);
+
+  const showDropFeedback = useCallback((tone: DropFeedback['tone'], message: string) => {
+    if (dropFeedbackTimeoutRef.current) {
+      clearTimeout(dropFeedbackTimeoutRef.current);
+    }
+    setDropFeedback({ tone, message });
+    dropFeedbackTimeoutRef.current = setTimeout(() => {
+      setDropFeedback(null);
+      dropFeedbackTimeoutRef.current = null;
+    }, 2200);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (dropFeedbackTimeoutRef.current) {
+        clearTimeout(dropFeedbackTimeoutRef.current);
+      }
+    };
   }, []);
 
   const snapModifier = useMemo<Modifier | null>(() => {
@@ -218,6 +295,286 @@ export const DesignerShell: React.FC = () => {
       return override ? { ...node, position: override } : node;
     });
   }, [nodes, previewPositions]);
+
+  const resolvePageForDrop = useCallback((nodesForDrop: DesignerNode[], startNodeId?: string): DesignerNode | null => {
+    const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
+    let current = startNodeId ? nodesById.get(startNodeId) ?? null : null;
+    while (current) {
+      if (current.type === 'page') {
+        return current;
+      }
+      current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+    }
+
+    const documentNode =
+      nodesForDrop.find((node) => node.type === 'document' && node.parentId === null) ??
+      nodesForDrop.find((node) => node.parentId === null);
+    if (!documentNode) {
+      return nodesForDrop.find((node) => node.type === 'page') ?? null;
+    }
+
+    return (
+      documentNode.childIds
+        .map((childId) => nodesById.get(childId))
+        .find((node): node is DesignerNode => Boolean(node && node.type === 'page')) ??
+      nodesForDrop.find((node) => node.type === 'page') ??
+      null
+    );
+  }, []);
+
+  const resolveCanvasDropMeta = useCallback((nodesForDrop: DesignerNode[]): DropTargetMeta | undefined => {
+    const documentNode =
+      nodesForDrop.find((node) => node.type === 'document' && node.parentId === null) ??
+      nodesForDrop.find((node) => node.parentId === null);
+    if (!documentNode) {
+      return undefined;
+    }
+    const pageNode = nodesForDrop.find((node) => node.type === 'page' && node.parentId === documentNode.id);
+    const root = pageNode ?? documentNode;
+    return {
+      nodeId: root.id,
+      nodeType: root.type,
+      allowedChildren: root.allowedChildren,
+    };
+  }, []);
+
+  const resolveDropMetaFromTarget = useCallback(
+    (targetNodeId?: string | 'canvas'): DropTargetMeta | undefined => {
+      const nodesForDrop = useInvoiceDesignerStore.getState().nodes;
+      if (!targetNodeId || targetNodeId === 'canvas') {
+        return resolveCanvasDropMeta(nodesForDrop);
+      }
+      const node = nodesForDrop.find((candidate) => candidate.id === targetNodeId);
+      if (!node) {
+        return undefined;
+      }
+      return {
+        nodeId: node.id,
+        nodeType: node.type,
+        allowedChildren: node.allowedChildren,
+      };
+    },
+    [resolveCanvasDropMeta]
+  );
+
+  const resolveComponentDropParent = useCallback(
+    (componentType: DesignerComponentType, dropMeta: DropTargetMeta | undefined, dropPoint: Point): ComponentDropResolution => {
+      const nodesForDrop = useInvoiceDesignerStore.getState().nodes;
+      const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
+      const dropNode = dropMeta?.nodeId ? nodesById.get(dropMeta.nodeId) : undefined;
+      const allowedParents = getAllowedParentsForType(componentType);
+
+      if (dropNode && canNestWithinParent(componentType, dropNode.type)) {
+        return { ok: true, parentId: dropNode.id };
+      }
+
+      let ancestor = dropNode;
+      while (ancestor?.parentId) {
+        const parent = nodesById.get(ancestor.parentId);
+        if (!parent) {
+          break;
+        }
+        if (canNestWithinParent(componentType, parent.type)) {
+          return { ok: true, parentId: parent.id };
+        }
+        ancestor = parent;
+      }
+
+      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id);
+      if (componentType === 'section') {
+        if (pageNode && canNestWithinParent('section', pageNode.type)) {
+          return { ok: true, parentId: pageNode.id };
+        }
+        return { ok: false, message: 'Unable to place section here.' };
+      }
+
+      if (allowedParents.includes('section') && pageNode) {
+        const existingSection = pageNode.childIds
+          .map((childId) => nodesById.get(childId))
+          .find((node): node is DesignerNode => Boolean(node && node.type === 'section'));
+        if (existingSection) {
+          return { ok: true, parentId: existingSection.id };
+        }
+
+        const existingNodeIds = new Set(nodesForDrop.map((node) => node.id));
+        const sectionDefinition = getDefinition('section');
+        addNode(
+          'section',
+          dropPoint,
+          sectionDefinition
+            ? {
+                parentId: pageNode.id,
+                defaults: {
+                  size: sectionDefinition.defaultSize,
+                  layout: {
+                    mode: 'flex',
+                    direction: 'column',
+                    gap: 12,
+                    padding: 12,
+                    justify: 'start',
+                    align: 'stretch',
+                    sizing: 'fixed',
+                  },
+                },
+              }
+            : { parentId: pageNode.id }
+        );
+
+        const nodesAfterScaffold = useInvoiceDesignerStore.getState().nodes;
+        const createdSection = nodesAfterScaffold.find(
+          (node) => node.type === 'section' && node.parentId === pageNode.id && !existingNodeIds.has(node.id)
+        );
+        if (createdSection) {
+          return { ok: true, parentId: createdSection.id, notice: 'Added a section scaffold for this drop.' };
+        }
+
+        const fallbackSection = nodesAfterScaffold.find(
+          (node) => node.type === 'section' && node.parentId === pageNode.id
+        );
+        if (fallbackSection) {
+          return { ok: true, parentId: fallbackSection.id };
+        }
+      }
+
+      return { ok: false, message: 'Drop target is not compatible for this component.' };
+    },
+    [addNode, resolvePageForDrop]
+  );
+
+  const getDefaultInsertionPoint = useCallback((): Point => {
+    if (pointerRef.current) {
+      return pointerRef.current;
+    }
+
+    if (selectedNodeId) {
+      const selected = nodes.find((node) => node.id === selectedNodeId);
+      if (selected) {
+        const absolute = getAbsolutePosition(selected.id, nodes);
+        return {
+          x: absolute.x + Math.min(24, Math.max(8, selected.size.width / 6)),
+          y: absolute.y + Math.min(24, Math.max(8, selected.size.height / 6)),
+        };
+      }
+    }
+
+    const page = resolvePageForDrop(nodes, selectedNodeId ?? undefined);
+    if (page) {
+      const absolute = getAbsolutePosition(page.id, nodes);
+      return { x: absolute.x + 64, y: absolute.y + 64 };
+    }
+
+    return { x: 120, y: 120 };
+  }, [nodes, resolvePageForDrop, selectedNodeId]);
+
+  const insertComponentWithResolution = useCallback(
+    (componentType: DesignerComponentType, options: ComponentInsertOptions = {}) => {
+      const dropMeta = options.dropMeta;
+      const dropPoint = options.dropPoint ?? getDefaultInsertionPoint();
+
+      if (options.requireCanvasPointer && !dropMeta && !pointerRef.current) {
+        recordDropResult(false);
+        showDropFeedback('error', 'Drop on the canvas to add this component.');
+        return false;
+      }
+
+      const resolution = resolveComponentDropParent(componentType, dropMeta, dropPoint);
+      if (!resolution.ok) {
+        recordDropResult(false);
+        showDropFeedback('error', resolution.message);
+        return false;
+      }
+
+      const def = getDefinition(componentType);
+      const defaultMetadata = def ? buildDefaultMetadata(componentType, def.defaultMetadata) : undefined;
+      const existingNodeIds = new Set(useInvoiceDesignerStore.getState().nodes.map((node) => node.id));
+      addNode(
+        componentType,
+        dropPoint,
+        def
+          ? {
+              parentId: resolution.parentId,
+              defaults: { size: def.defaultSize, metadata: defaultMetadata },
+            }
+          : { parentId: resolution.parentId }
+      );
+      const inserted = useInvoiceDesignerStore
+        .getState()
+        .nodes.some((node) => !existingNodeIds.has(node.id));
+      recordDropResult(inserted);
+      if (!inserted) {
+        showDropFeedback('error', 'Unable to add this component in the current context.');
+        return false;
+      }
+      if (resolution.notice) {
+        showDropFeedback('info', resolution.notice);
+      }
+      return true;
+    },
+    [addNode, getDefaultInsertionPoint, recordDropResult, resolveComponentDropParent, showDropFeedback]
+  );
+
+  const insertPresetWithResolution = useCallback(
+    (presetId: string, options: PresetInsertOptions = {}) => {
+      const presetDef = getPresetById(presetId);
+      if (!presetDef) {
+        recordDropResult(false);
+        showDropFeedback('error', 'Preset definition is unavailable.');
+        return false;
+      }
+
+      const dropPoint = options.dropPoint ?? getDefaultInsertionPoint();
+      const dropMeta = options.dropMeta;
+      if (options.requireDropTarget && !dropMeta) {
+        recordDropResult(false);
+        showDropFeedback('error', 'Drop target is not compatible for this preset.');
+        return false;
+      }
+
+      const rootTypes = presetDef.nodes.filter((node) => !node.parentKey).map((node) => node.type);
+      const nodesForDrop = useInvoiceDesignerStore.getState().nodes;
+      const fallbackParent = resolvePageForDrop(nodesForDrop, selectedNodeId ?? undefined);
+      const resolvedParent = dropMeta
+        ? nodesForDrop.find((node) => node.id === dropMeta.nodeId) ?? null
+        : fallbackParent;
+
+      if (!resolvedParent) {
+        recordDropResult(false);
+        showDropFeedback('error', 'Unable to resolve where to place this preset.');
+        return false;
+      }
+
+      const presetDropAllowed =
+        rootTypes.length > 0
+          ? rootTypes.every((type) => type === resolvedParent.type || canNestWithinParent(type, resolvedParent.type))
+          : canNestWithinParent('section', resolvedParent.type);
+      if (!presetDropAllowed) {
+        recordDropResult(false);
+        showDropFeedback('error', 'Drop target is not compatible for this preset.');
+        return false;
+      }
+
+      const existingNodeIds = new Set(useInvoiceDesignerStore.getState().nodes.map((node) => node.id));
+      insertPreset(presetId, dropPoint, resolvedParent.id);
+      const inserted = useInvoiceDesignerStore
+        .getState()
+        .nodes.some((node) => !existingNodeIds.has(node.id));
+      recordDropResult(inserted);
+      if (!inserted) {
+        showDropFeedback('error', 'Unable to add this preset in the current context.');
+        return false;
+      }
+      return true;
+    },
+    [getDefaultInsertionPoint, insertPreset, recordDropResult, resolvePageForDrop, selectedNodeId, showDropFeedback]
+  );
+
+  const cleanupDragState = useCallback(() => {
+    dragSessionRef.current = null;
+    setPreviewPositions({});
+    setGuides([]);
+    setActiveDrag(null);
+    updatePointerLocation(null);
+  }, [updatePointerLocation]);
 
   const renderLayoutInspector = () => {
     if (!selectedNode) return null;
@@ -670,6 +1027,7 @@ export const DesignerShell: React.FC = () => {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
+    clearDropFeedback();
     const data = event.active.data.current;
     if (isPaletteDragData(data)) {
       if (data.source === 'component') {
@@ -748,71 +1106,112 @@ export const DesignerShell: React.FC = () => {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    if (activeDrag?.kind === 'component' || activeDrag?.kind === 'preset') {
-      const dropPoint = pointerRef.current ?? { x: 120, y: 120 };
-      const dropMeta = event.over?.data?.current as DropTargetMeta | undefined;
-      if (!dropMeta) {
-        recordDropResult(false);
-      } else if (
-        activeDrag.kind === 'component' &&
-        canNestWithinParent(activeDrag.componentType, dropMeta.nodeType)
-      ) {
-        const def = getDefinition(activeDrag.componentType);
-        const defaultMetadata = def ? buildDefaultMetadata(activeDrag.componentType, def.defaultMetadata) : undefined;
-        addNode(
-          activeDrag.componentType,
-          dropPoint,
-          def
-            ? {
-                parentId: dropMeta.nodeId,
-                defaults: { size: def.defaultSize, metadata: defaultMetadata },
-              }
-            : { parentId: dropMeta.nodeId }
-        );
-        recordDropResult(true);
-      } else if (activeDrag.kind === 'preset') {
-        const presetDef = getPresetById(activeDrag.presetId);
-        const rootTypes =
-          presetDef?.nodes.filter((node) => !node.parentKey).map((node) => node.type) ?? [];
-        const presetDropAllowed =
-          rootTypes.length > 0
-            ? rootTypes.every(
-                (type) =>
-                  type === dropMeta.nodeType || canNestWithinParent(type, dropMeta.nodeType)
-              )
-            : canNestWithinParent('section', dropMeta.nodeType);
-        if (!presetDropAllowed) {
-          recordDropResult(false);
-        } else {
-          insertPreset(activeDrag.presetId, dropPoint, dropMeta.nodeId);
-          recordDropResult(true);
+    try {
+      if (activeDrag?.kind === 'component' || activeDrag?.kind === 'preset') {
+        const dropPoint = pointerRef.current ?? { x: 120, y: 120 };
+        const dropMeta = event.over?.data?.current as DropTargetMeta | undefined;
+        if (activeDrag.kind === 'component') {
+          insertComponentWithResolution(activeDrag.componentType, {
+            dropMeta,
+            dropPoint,
+            requireCanvasPointer: true,
+          });
+        } else if (activeDrag.kind === 'preset') {
+          insertPresetWithResolution(activeDrag.presetId, {
+            dropMeta,
+            dropPoint,
+            requireDropTarget: true,
+          });
         }
       }
-    }
-    if (activeDrag?.kind === 'node' && dragSessionRef.current) {
-      const session = dragSessionRef.current;
-      const activeNode = nodes.find((node) => node.id === session.nodeId);
-      if (activeNode) {
-        const desiredPosition = {
-          x: session.origin.x + session.lastDelta.x,
-          y: session.origin.y + session.lastDelta.y,
-        };
-        const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
-        setNodePosition(session.nodeId, boundedPosition, true);
+      if (activeDrag?.kind === 'node' && dragSessionRef.current) {
+        const session = dragSessionRef.current;
+        const activeNode = nodes.find((node) => node.id === session.nodeId);
+        if (activeNode) {
+          const desiredPosition = {
+            x: session.origin.x + session.lastDelta.x,
+            y: session.origin.y + session.lastDelta.y,
+          };
+          const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
+          setNodePosition(session.nodeId, boundedPosition, true);
+        }
       }
+    } finally {
+      cleanupDragState();
     }
-    dragSessionRef.current = null;
-    setPreviewPositions({});
-    setGuides([]);
-    setActiveDrag(null);
   };
 
   const handleDragCancel = () => {
-    setActiveDrag(null);
-    setGuides([]);
-    dragSessionRef.current = null;
-    setPreviewPositions({});
+    cleanupDragState();
   };
+
+  const handleQuickInsertComponent = useCallback(
+    (componentType: DesignerComponentType) => {
+      clearDropFeedback();
+      insertComponentWithResolution(componentType);
+    },
+    [clearDropFeedback, insertComponentWithResolution]
+  );
+
+  const handleQuickInsertPreset = useCallback(
+    (presetId: string) => {
+      clearDropFeedback();
+      insertPresetWithResolution(presetId);
+    },
+    [clearDropFeedback, insertPresetWithResolution]
+  );
+
+  const simulateComponentDrop = useCallback(
+    (type: DesignerComponentType, targetNodeId?: string | 'canvas', dropPoint?: Point) => {
+      clearDropFeedback();
+      const dropMeta = resolveDropMetaFromTarget(targetNodeId);
+      return insertComponentWithResolution(type, { dropMeta, dropPoint });
+    },
+    [clearDropFeedback, insertComponentWithResolution, resolveDropMetaFromTarget]
+  );
+
+  const simulatePresetDrop = useCallback(
+    (presetId: string, targetNodeId?: string | 'canvas', dropPoint?: Point) => {
+      clearDropFeedback();
+      const dropMeta = resolveDropMetaFromTarget(targetNodeId);
+      return insertPresetWithResolution(presetId, { dropMeta, dropPoint });
+    },
+    [clearDropFeedback, insertPresetWithResolution, resolveDropMetaFromTarget]
+  );
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (!isLocalHost) {
+      return;
+    }
+    const api: DesignerTestApi = {
+      insertComponent: (type) => insertComponentWithResolution(type),
+      insertPreset: (id) => insertPresetWithResolution(id),
+      selectNode: (id) => selectNode(id),
+      simulateComponentDrop: (type, targetNodeId, dropPoint) =>
+        simulateComponentDrop(type, targetNodeId, dropPoint),
+      simulatePresetDrop: (presetId, targetNodeId, dropPoint) =>
+        simulatePresetDrop(presetId, targetNodeId, dropPoint),
+      setForcedDropTarget: (nodeId) => {
+        if (nodeId === null || nodeId === 'canvas') {
+          setForcedDropTarget(nodeId);
+          return;
+        }
+        const exists = useInvoiceDesignerStore.getState().nodes.some((node) => node.id === nodeId);
+        setForcedDropTarget(exists ? nodeId : null);
+      },
+    };
+    window.__ALGA_INVOICE_DESIGNER_TEST_API__ = api;
+    return () => {
+      if (window.__ALGA_INVOICE_DESIGNER_TEST_API__ === api) {
+        delete window.__ALGA_INVOICE_DESIGNER_TEST_API__;
+      }
+      setForcedDropTarget(null);
+    };
+  }, [insertComponentWithResolution, insertPresetWithResolution, selectNode, simulateComponentDrop, simulatePresetDrop]);
 
   const handlePropertyInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -842,11 +1241,53 @@ export const DesignerShell: React.FC = () => {
         onRedo={redo}
         onGridSizeChange={setGridSize}
       />
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-1.5 text-xs text-slate-600">
+        <span className="font-semibold text-slate-700">Selected:</span>{' '}
+        {selectedNode ? (
+          <span data-automation-id="designer-selected-context">
+            {selectedNode.name} <span className="text-slate-500">({selectedNode.type})</span>
+          </span>
+        ) : (
+          <>
+            <span className="text-slate-500" data-automation-id="designer-selected-context">
+              None
+            </span>
+            <span className="ml-2 text-slate-400" data-automation-id="designer-no-selection-help">
+              <span className="rounded-full border border-slate-300/70 bg-white/70 px-1.5 py-0.5 text-slate-500">
+                Click a block on canvas
+              </span>{' '}
+              or use{' '}
+              <span className="rounded-full border border-slate-300/70 bg-white/70 px-1.5 py-0.5 text-slate-500">
+                + in the left panel
+              </span>
+              .
+            </span>
+          </>
+        )}
+      </div>
       <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
+      {dropFeedback && (
+        <div
+          className={clsx(
+            'border-b px-4 py-2 text-xs',
+            dropFeedback.tone === 'error'
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : 'border-blue-200 bg-blue-50 text-blue-700'
+          )}
+          role="status"
+          aria-live="polite"
+          data-automation-id="designer-drop-feedback"
+        >
+          {dropFeedback.message}
+        </div>
+      )}
       <DndContext sensors={sensors} modifiers={modifiers}>
         <div className="flex flex-1 min-h-[560px] bg-white">
           <div className="w-72">
-            <ComponentPalette />
+            <ComponentPalette
+              onInsertComponent={handleQuickInsertComponent}
+              onInsertPreset={handleQuickInsertPreset}
+            />
           </div>
           <DesignerWorkspace
             nodes={renderedNodes}
@@ -857,6 +1298,8 @@ export const DesignerShell: React.FC = () => {
             canvasScale={canvasScale}
             snapToGrid={snapToGrid}
             guides={guides}
+            isDragActive={Boolean(activeDrag)}
+            forcedDropTarget={forcedDropTarget}
             activeDrag={activeDrag}
             modifiers={modifiers}
             onPointerLocationChange={updatePointerLocation}
@@ -959,6 +1402,8 @@ type DesignerWorkspaceProps = {
   canvasScale: number;
   snapToGrid: boolean;
   guides: AlignmentGuide[];
+  isDragActive: boolean;
+  forcedDropTarget: string | 'canvas' | null;
   activeDrag: ActiveDragState;
   modifiers: Modifier[];
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
@@ -979,6 +1424,8 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   canvasScale,
   snapToGrid,
   guides,
+  isDragActive,
+  forcedDropTarget,
   activeDrag,
   modifiers,
   onPointerLocationChange,
@@ -1007,6 +1454,8 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
         canvasScale={canvasScale}
         snapToGrid={snapToGrid}
         guides={guides}
+        isDragActive={isDragActive}
+        forcedDropTarget={forcedDropTarget}
         droppableId={DROPPABLE_CANVAS_ID}
         onPointerLocationChange={onPointerLocationChange}
         onNodeSelect={onNodeSelect}

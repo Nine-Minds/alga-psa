@@ -7,6 +7,8 @@ import clsx from 'clsx';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
+  onInsertComponent?: (componentType: ComponentDefinition['type']) => void;
+  onInsertPreset?: (presetId: string) => void;
 }
 
 const groupByCategory = (components: ComponentDefinition[]) => {
@@ -21,7 +23,10 @@ const groupByCategory = (components: ComponentDefinition[]) => {
 
 const paletteGroups = groupByCategory(COMPONENT_CATALOG);
 
-const ComponentCard: React.FC<{ component: ComponentDefinition }> = ({ component }) => {
+const ComponentCard: React.FC<{
+  component: ComponentDefinition;
+  onInsert?: (componentType: ComponentDefinition['type']) => void;
+}> = ({ component, onInsert }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `component-${component.type}`,
     data: {
@@ -31,45 +36,88 @@ const ComponentCard: React.FC<{ component: ComponentDefinition }> = ({ component
   });
 
   return (
-    <button
+    <div
       ref={setNodeRef}
-      className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+      className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md ${
         isDragging ? 'opacity-60 border-dashed' : 'bg-white'
       }`}
       data-component-type={component.type}
       {...listeners}
       {...attributes}
-      type="button"
     >
-      <p className="text-sm font-semibold text-gray-900">{component.label}</p>
-      <p className="text-xs text-gray-500">{component.description}</p>
-    </button>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900">{component.label}</p>
+          <p className="text-xs text-gray-500">{component.description}</p>
+        </div>
+        {onInsert && (
+          <button
+            type="button"
+            className="h-6 w-6 shrink-0 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+            data-automation-id={`designer-palette-add-${component.type}`}
+            aria-label={`Add ${component.label}`}
+            title={`Add ${component.label}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onInsert(component.type);
+            }}
+          >
+            +
+          </button>
+        )}
+      </div>
+    </div>
   );
 };
 
-const PresetCard: React.FC<{ presetId: string; label: string; description: string }> = ({ presetId, label, description }) => {
+const PresetCard: React.FC<{
+  presetId: string;
+  label: string;
+  description: string;
+  onInsert?: (presetId: string) => void;
+}> = ({ presetId, label, description, onInsert }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `preset-${presetId}`,
     data: { source: 'preset', presetId },
   });
 
   return (
-    <button
+    <div
       ref={setNodeRef}
-      className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+      className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md ${
         isDragging ? 'opacity-60 border-dashed' : 'bg-white'
       }`}
-      type="button"
       {...listeners}
       {...attributes}
     >
-      <p className="text-sm font-semibold text-gray-900">{label}</p>
-      <p className="text-xs text-gray-500">{description}</p>
-    </button>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900">{label}</p>
+          <p className="text-xs text-gray-500">{description}</p>
+        </div>
+        {onInsert && (
+          <button
+            type="button"
+            className="h-6 w-6 shrink-0 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+            data-automation-id={`designer-palette-add-preset-${presetId}`}
+            aria-label={`Add ${label}`}
+            title={`Add ${label}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onInsert(presetId);
+            }}
+          >
+            +
+          </button>
+        )}
+      </div>
+    </div>
   );
 };
 
-export const ComponentPalette: React.FC<PaletteProps> = () => {
+export const ComponentPalette: React.FC<PaletteProps> = ({ onInsertComponent, onInsertPreset }) => {
   const [activeTab, setActiveTab] = useState<'components' | 'outline'>('components');
 
   return (
@@ -100,11 +148,17 @@ export const ComponentPalette: React.FC<PaletteProps> = () => {
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'components' ? (
           <div className="px-4 py-3 space-y-4">
-             <p className="text-xs text-slate-500 mb-2">Drag components onto the canvas.</p>
+             <p className="text-xs text-slate-500 mb-2">Drag components onto the canvas or click + to insert.</p>
             <section>
               <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">Layout Presets</h4>
               {LAYOUT_PRESETS.map((preset) => (
-                <PresetCard key={preset.id} presetId={preset.id} label={preset.label} description={preset.description} />
+                <PresetCard
+                  key={preset.id}
+                  presetId={preset.id}
+                  label={preset.label}
+                  description={preset.description}
+                  onInsert={onInsertPreset}
+                />
               ))}
             </section>
             <hr className="border-slate-200" />
@@ -112,7 +166,7 @@ export const ComponentPalette: React.FC<PaletteProps> = () => {
               <section key={category}>
                 <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">{category}</h4>
                 {components.map((component) => (
-                  <ComponentCard key={component.type} component={component} />
+                  <ComponentCard key={component.type} component={component} onInsert={onInsertComponent} />
                 ))}
               </section>
             ))}

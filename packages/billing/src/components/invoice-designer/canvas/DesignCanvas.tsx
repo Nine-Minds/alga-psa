@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import clsx from 'clsx';
 import { AlignmentGuide } from '../utils/layout';
-import { DesignerNode, Point } from '../state/designerStore';
+import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 
 interface DesignCanvasProps {
@@ -14,6 +14,8 @@ interface DesignCanvasProps {
   canvasScale: number;
   snapToGrid: boolean;
   guides: AlignmentGuide[];
+  isDragActive: boolean;
+  forcedDropTarget: string | 'canvas' | null;
   droppableId: string;
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (id: string | null) => void;
@@ -25,6 +27,9 @@ const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 interface CanvasNodeProps {
   node: DesignerNode;
   isSelected: boolean;
+  hasActiveSelection: boolean;
+  isDragActive: boolean;
+  forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
@@ -110,6 +115,9 @@ const getPreviewContent = (node: DesignerNode): React.ReactNode => {
 const CanvasNode: React.FC<CanvasNodeProps> = ({
   node,
   isSelected,
+  hasActiveSelection,
+  isDragActive,
+  forcedDropTarget,
   onSelect,
   onResize,
   renderChildren,
@@ -153,7 +161,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     left: localPosition.x,
     position: 'absolute',
     transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
+  const shouldDeemphasize = hasActiveSelection && !isSelected && !isDragging;
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -209,10 +219,12 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       ref={combinedRef}
       style={nodeStyle}
       className={clsx(
-        'border rounded-md select-none',
+        'border rounded-md select-none transition-[opacity,box-shadow,border-color] duration-150',
         isContainer ? 'bg-blue-50/40 border-blue-200 border-dashed' : 'bg-white shadow-sm border-slate-300',
-        isSelected ? 'ring-2 ring-blue-400' : '',
-        isNodeDropTarget && 'ring-2 ring-blue-400/60',
+        isSelected && 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500',
+        ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
+          'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
+        shouldDeemphasize && 'opacity-65',
         isDragging && 'opacity-80'
       )}
       {...listeners}
@@ -267,6 +279,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   canvasScale,
   snapToGrid,
   guides,
+  isDragActive,
+  forcedDropTarget,
   droppableId,
   onPointerLocationChange,
   onNodeSelect,
@@ -341,13 +355,16 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
           isSelected={selectedNodeId === node.id}
+          hasActiveSelection={selectedNodeId !== null}
+          isDragActive={isDragActive}
+          forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
           onResize={onResize}
           renderChildren={renderNodeTree}
           childExtents={childExtentsMap.get(node.id)}
         />
       ));
-  }, [childExtentsMap, childrenMap, onNodeSelect, onResize, selectedNodeId]);
+  }, [childExtentsMap, childrenMap, forcedDropTarget, isDragActive, onNodeSelect, onResize, selectedNodeId]);
 
   const rootParentId = (defaultPageNode ?? documentNode)?.id;
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
@@ -392,7 +409,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           ref={setArtboardNodeRef}
           className={clsx(
             'relative mx-auto rounded-lg border border-slate-300 shadow-inner bg-white',
-            isOver && 'ring-2 ring-blue-400',
+            ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500',
             selectedNodeId === rootParentId && 'ring-2 ring-blue-400'
           )}
           data-designer-canvas="true"
@@ -411,6 +428,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             }
           }}
         >
+          <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
+            Template Boundary
+          </div>
           <div
             className="absolute inset-0"
             style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}

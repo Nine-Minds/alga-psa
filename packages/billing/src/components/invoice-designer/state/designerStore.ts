@@ -586,6 +586,15 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         : relativeDropPoint;
 
       const size = options.defaults?.size ?? DEFAULT_SIZE;
+      const defaultLayout: NonNullable<DesignerNode['layout']> = {
+        mode: 'flex', // Default to flex for new nodes if applicable
+        direction: type === 'section' ? 'row' : 'column',
+        gap: type === 'section' || type === 'container' ? 16 : 0,
+        padding: type === 'section' || type === 'container' ? 16 : 0,
+        justify: 'start',
+        align: 'stretch',
+        sizing: type === 'section' ? 'fill' : 'fixed',
+      };
       const node: DesignerNode = {
         id: generateId(),
         type,
@@ -601,15 +610,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         parentId: resolvedParentId,
         childIds: [],
         allowedChildren: getAllowedChildrenForType(type),
-        layout: {
-            mode: 'flex', // Default to flex for new nodes if applicable
-            direction: type === 'section' ? 'row' : 'column',
-            gap: type === 'section' || type === 'container' ? 16 : 0,
-            padding: type === 'section' || type === 'container' ? 16 : 0,
-            justify: 'start',
-            align: 'stretch',
-            sizing: type === 'section' ? 'fill' : 'fixed',
-        }
+        layout: options.defaults?.layout ?? defaultLayout,
       };
 
       set((state) => {
@@ -623,10 +624,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           historyIndex,
           constraintError,
           selectedNodeId: node.id,
-          metrics: {
-            ...state.metrics,
-            completedDrops: state.metrics.completedDrops + 1,
-          },
         };
       }, false, 'designer/addNodeFromPalette');
     },
@@ -788,11 +785,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           history,
           historyIndex,
           constraintError,
-          metrics: {
-            ...state.metrics,
-            totalDrags: state.metrics.totalDrags + createdNodes.length,
-            completedDrops: state.metrics.completedDrops + createdNodes.length,
-          },
         };
       }, false, 'designer/insertPreset');
     },
