@@ -140,7 +140,9 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
 
     async create(input: Omit<ExtensionVersionRecord, 'id' | 'createdAt'>): Promise<ExtensionVersionRecord> {
       const id = uuid();
-      const now = knex.fn.now();
+      // Citus requires IMMUTABLE expressions in ON CONFLICT DO UPDATE;
+      // use a precomputed literal timestamp instead of knex.fn.now().
+      const now = new Date();
       const vRow: any = {
         id: id || undefined,
         registry_id: input.extensionId,
@@ -191,7 +193,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
             await knex('extension_api_endpoint')
               .insert(rows)
               .onConflict(['version_id', 'method', 'path'])
-              .merge({ handler: knex.raw('excluded.handler'), updated_at: now });
+              .merge({ handler: knex.raw('excluded.handler'), updated_at: knex.raw('excluded.updated_at') });
           }
         }
       } catch (error: any) {

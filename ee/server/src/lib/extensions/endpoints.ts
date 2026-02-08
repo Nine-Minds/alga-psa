@@ -43,7 +43,9 @@ async function readVersionEndpoints(db: Knex, versionId: string): Promise<Array<
 }
 
 async function materializeEndpoints(db: Knex, versionId: string): Promise<void> {
-  const now = db.fn.now();
+  // Citus requires IMMUTABLE expressions in ON CONFLICT DO UPDATE;
+  // use a precomputed literal timestamp instead of db.fn.now().
+  const now = new Date();
   const endpoints = await readVersionEndpoints(db, versionId);
   if (endpoints.length === 0) return;
 
@@ -66,7 +68,7 @@ async function materializeEndpoints(db: Knex, versionId: string): Promise<void> 
       }))
     )
     .onConflict(['version_id', 'method', 'path'])
-    .merge({ handler: db.raw('excluded.handler'), updated_at: now });
+    .merge({ handler: db.raw('excluded.handler'), updated_at: db.raw('excluded.updated_at') });
 }
 
 export async function listEndpointsForVersion(versionId: string): Promise<ExtensionApiEndpointRow[]> {

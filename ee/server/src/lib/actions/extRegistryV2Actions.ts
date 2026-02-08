@@ -152,7 +152,9 @@ async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: 
   } catch {
     endpoints = [];
   }
-  const now = trx.fn.now();
+  // Citus requires IMMUTABLE expressions in ON CONFLICT DO UPDATE;
+  // use a precomputed literal timestamp instead of trx.fn.now().
+  const now = new Date();
   const rows = endpoints
     .filter((e) => e && typeof e === 'object')
     .map((e) => ({
@@ -175,7 +177,7 @@ async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: 
   await trx('extension_api_endpoint')
     .insert(uniq)
     .onConflict(['version_id', 'method', 'path'])
-    .merge({ handler: trx.raw('excluded.handler'), updated_at: now });
+    .merge({ handler: trx.raw('excluded.handler'), updated_at: trx.raw('excluded.updated_at') });
 }
 
 export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, ctx, params: { registryId: string; version: string; disableMissingSchedules?: boolean }): Promise<{ success: boolean; message: string }> => {
