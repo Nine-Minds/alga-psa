@@ -126,8 +126,8 @@ if (typeof document !== 'undefined') {
       @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       .alga-search-input:focus {
         outline: none;
-        border-color: var(--alga-primary, #9855ee);
-        box-shadow: 0 0 0 2px var(--alga-primary-light, #ede2fd);
+        border-color: transparent;
+        box-shadow: 0 0 0 2px var(--alga-primary, #8a4dea);
       }
     `;
     document.head.appendChild(style);

@@ -28,6 +28,8 @@ import { SearchInputDemo } from '../demos/SearchInputDemo';
 import { TabsDemo } from '../demos/TabsDemo';
 import { DrawerDemo } from '../demos/DrawerDemo';
 import { DropdownMenuDemo } from '../demos/DropdownMenuDemo';
+import { RadioDemo } from '../demos/RadioDemo';
+import { ViewSwitcherDemo } from '../demos/ViewSwitcherDemo';
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -115,6 +117,7 @@ export function App() {
           <TextAreaDemo />
           <LabelDemo />
           <SearchInputDemo />
+          <RadioDemo />
         </>
       ),
     },
@@ -126,6 +129,7 @@ export function App() {
           <TabsDemo />
           <DrawerDemo />
           <DropdownMenuDemo />
+          <ViewSwitcherDemo />
         </>
       ),
     },

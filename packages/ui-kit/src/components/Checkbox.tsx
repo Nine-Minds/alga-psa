@@ -1,10 +1,12 @@
 import React from 'react';
 
-export type CheckboxProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+export type CheckboxProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> & {
   /** Label text or element */
   label?: React.ReactNode;
   /** Indeterminate state (partially checked) */
   indeterminate?: boolean;
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
 };
 
 const containerStyle: React.CSSProperties = {
@@ -13,9 +15,13 @@ const containerStyle: React.CSSProperties = {
   gap: '8px',
 };
 
-const checkboxStyle: React.CSSProperties = {
-  width: '16px',
-  height: '16px',
+const sizeMap: Record<'sm' | 'md' | 'lg', string> = {
+  sm: '14px',
+  md: '16px',
+  lg: '20px',
+};
+
+const baseCheckboxStyle: React.CSSProperties = {
   accentColor: 'var(--alga-primary, #9855ee)',
   cursor: 'pointer',
   margin: 0,
@@ -40,6 +46,7 @@ export function Checkbox({
   disabled,
   id,
   style,
+  size = 'md',
   ...props
 }: CheckboxProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -59,7 +66,7 @@ export function Checkbox({
         type="checkbox"
         id={checkboxId}
         disabled={disabled}
-        style={{ ...checkboxStyle, cursor: disabled ? 'not-allowed' : 'pointer', ...style }}
+        style={{ ...baseCheckboxStyle, width: sizeMap[size], height: sizeMap[size], cursor: disabled ? 'not-allowed' : 'pointer', ...style }}
         {...props}
       />
       {label && (
