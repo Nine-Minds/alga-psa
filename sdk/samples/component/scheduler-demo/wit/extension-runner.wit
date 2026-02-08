@@ -80,6 +80,7 @@ interface types {
         user-name: string,
         user-type: string,
         client-id: option<string>,
+        additional-fields: list<tuple<string, string>>,
     }
 
     enum user-error {
@@ -241,11 +242,6 @@ interface ui-proxy {
     call-route: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
 }
 
-interface user {
-    use types.{user-data, user-error};
-    get-user: func() -> result<user-data, user-error>;
-}
-
 interface user-v2 {
     use types.{user-data-v2, user-error};
     get-user: func() -> result<user-data-v2, user-error>;
@@ -284,7 +280,6 @@ world runner {
     import storage;
     import logging;
     import ui-proxy;
-    import user;
     import user-v2;
     import scheduler;
     import invoicing;
