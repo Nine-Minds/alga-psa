@@ -7,6 +7,11 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  COMMENT_RESPONSE_SOURCES,
+  type CommentMetadata,
+  type InboundEmailProviderType,
+} from '@alga-psa/types';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 
 // =============================================================================
@@ -619,6 +624,59 @@ export async function createTicketFromEmail(
     });
 }
 
+const INBOUND_PROVIDER_TYPES: ReadonlySet<InboundEmailProviderType> = new Set([
+  'google',
+  'microsoft',
+  'imap',
+]);
+
+export function normalizeInboundEmailProvider(
+  provider: string | undefined
+): InboundEmailProviderType | undefined {
+  if (!provider) {
+    return undefined;
+  }
+
+  return INBOUND_PROVIDER_TYPES.has(provider as InboundEmailProviderType)
+    ? (provider as InboundEmailProviderType)
+    : undefined;
+}
+
+export function buildInboundEmailCommentMetadata(
+  metadata: unknown,
+  inboundReplyEvent?: { provider: string }
+): CommentMetadata {
+  const baseMetadata: Record<string, unknown> =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+
+  const emailMetadata: Record<string, unknown> =
+    baseMetadata.email && typeof baseMetadata.email === 'object' && !Array.isArray(baseMetadata.email)
+      ? { ...(baseMetadata.email as Record<string, unknown>) }
+      : {};
+
+  const providerType =
+    normalizeInboundEmailProvider(inboundReplyEvent?.provider) ??
+    normalizeInboundEmailProvider(
+      typeof emailMetadata.provider === 'string' ? emailMetadata.provider : undefined
+    ) ??
+    normalizeInboundEmailProvider(
+      typeof emailMetadata.providerType === 'string' ? emailMetadata.providerType : undefined
+    );
+
+  if (providerType) {
+    emailMetadata.provider = providerType;
+    emailMetadata.providerType = providerType;
+  }
+
+  return {
+    ...baseMetadata,
+    responseSource: COMMENT_RESPONSE_SOURCES.INBOUND_EMAIL,
+    ...(Object.keys(emailMetadata).length ? { email: emailMetadata } : {}),
+  };
+}
+
 /**
  * Create comment from email data - Enhanced with events and analytics
  */
@@ -650,6 +708,26 @@ export async function createCommentFromEmail(
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
 
+  const normalizedAuthorType: 'internal' | 'client' | 'unknown' = (() => {
+    switch (commentData.author_type) {
+      case 'contact':
+      case 'client':
+        return 'client';
+      case 'internal':
+      case 'system':
+        return 'internal';
+      default:
+        return 'unknown';
+    }
+  })();
+
+  const ticketModelAuthorType: 'internal' | 'contact' | 'system' =
+    normalizedAuthorType === 'client'
+      ? 'contact'
+      : normalizedAuthorType === 'internal'
+        ? 'internal'
+        : 'system';
+
   const commentId = await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
@@ -661,10 +739,27 @@ export async function createCommentFromEmail(
         content: commentData.content,
         is_internal: false,
         is_resolution: false,
-        author_type: commentData.author_type as any || 'system',
+        author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
-        metadata: commentData.metadata
+        metadata: buildInboundEmailCommentMetadata(
+          commentData.metadata,
+          commentData.inboundReplyEvent
+            ? {
+                provider: commentData.inboundReplyEvent.provider,
+              }
+            : undefined
+        )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
+
+      if (normalizedAuthorType === 'client') {
+        await trx('tickets')
+          .where({ ticket_id: commentData.ticket_id, tenant })
+          .update({ response_state: 'awaiting_internal' });
+      } else if (normalizedAuthorType === 'internal') {
+        await trx('tickets')
+          .where({ ticket_id: commentData.ticket_id, tenant })
+          .update({ response_state: 'awaiting_client' });
+      }
 
       return result.comment_id;
     });

@@ -6,7 +6,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../ui-reflection/ReflectionParentContext';
-import { ModalityContext } from './ModalityContext';
+import { ModalityContext, InsideDialogContext, useInsideDialog } from './ModalityContext';
 import { DialogComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -67,7 +67,9 @@ export function Dialog({
   allowOverflow = false,
   disableFocusTrap = false
 }: DialogProps & AutomationProps): React.ReactElement {
-  const hasDescription = containsDialogDescription(children);
+  // Auto-detect when this Dialog is nested inside a Drawer or another Dialog.
+  const isInsideDialog = useInsideDialog();
+
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
     type: 'dialog',
@@ -82,9 +84,9 @@ export function Dialog({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
 
-  // Prevent background scroll when dialog is open
+  // Prevent background scroll when dialog is open (non-nested only)
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || isInsideDialog) return;
 
     if (isOpen) {
       const originalOverflow = document.body.style.overflow;
@@ -103,16 +105,16 @@ export function Dialog({
         document.body.style.paddingRight = originalPaddingRight;
       };
     }
-  }, [isOpen]);
+  }, [isOpen, isInsideDialog]);
 
   // Update dialog metadata when props change
   useEffect(() => {
     updateMetadata({ open: isOpen, title });
-  }, [ isOpen, title, updateMetadata, id, disableFocusTrap ]);
+  }, [ isOpen, title, updateMetadata, id ]);
 
   // Reset position when dialog opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isInsideDialog) {
       if (initialPosition) {
         setPosition({
           x: initialPosition.x || 0,
@@ -122,65 +124,28 @@ export function Dialog({
         setPosition({ x: 0, y: 0 });
       }
     }
-  }, [isOpen, initialPosition]);
+  }, [isOpen, initialPosition, isInsideDialog]);
 
   // Update dialog size for viewport constraints
   useEffect(() => {
-    if (dialogRef.current && isOpen) {
+    if (dialogRef.current && isOpen && !isInsideDialog) {
       const rect = dialogRef.current.getBoundingClientRect();
       setDialogSize({ width: rect.width, height: rect.height });
     }
-  }, [isOpen]);
+  }, [isOpen, isInsideDialog]);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!draggable) return;
-    
-    // Prevent default to avoid text selection
-    e.preventDefault();
-    e.stopPropagation();
-
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !draggable) return;
-
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // Add global mouse event listeners for dragging
+  // Auto-focus nested dialog content on open
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
+    if (isInsideDialog && isOpen && dialogRef.current) {
+      dialogRef.current.focus();
     }
-  }, [isDragging, dragStart]);
-
-  const dialogStyle: React.CSSProperties = {
-    transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-    cursor: isDragging ? 'move' : 'auto',
-  };
+  }, [isInsideDialog, isOpen]);
 
   // Handle click outside for dialogs with disabled focus trap.
   // Use pointerdown + capture so we can reliably detect portaled content before it unmounts.
+  // (Only needed for non-nested dialogs with explicit disableFocusTrap prop)
   useEffect(() => {
-    if (!isOpen || !disableFocusTrap) return;
+    if (!isOpen || !disableFocusTrap || isInsideDialog) return;
 
     // Track if a select dropdown was recently closed to prevent dialog from closing
     let selectCloseTimeout: NodeJS.Timeout | null = null;
@@ -188,18 +153,18 @@ export function Dialog({
     const handlePointerDownOutside = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       const path = (typeof e.composedPath === 'function' ? e.composedPath() : []) as EventTarget[];
-      
+
       const isComboboxTrigger = (element: HTMLElement | null): boolean => {
         if (!element) return false;
         if (element.getAttribute('role') === 'combobox') return true;
-        
+
         let current: HTMLElement | null = element;
         while (current && current !== document.body) {
           if (current.getAttribute('role') === 'combobox') return true;
           if (current.hasAttribute('data-radix-select-trigger')) return true;
           current = current.parentElement;
         }
-        
+
         return path.some((node) => {
           if (!(node instanceof HTMLElement)) return false;
           return node.getAttribute('role') === 'combobox' || node.hasAttribute('data-radix-select-trigger');
@@ -229,7 +194,7 @@ export function Dialog({
       }
 
       const selectJustClosedAttr = document.body.getAttribute('data-radix-select-just-closed') === 'true';
-      
+
       const isInsideDialogRect = () => {
         if (!dialogRef.current) return false;
         const rect = dialogRef.current.getBoundingClientRect();
@@ -251,7 +216,7 @@ export function Dialog({
 
       const openSelectContent = document.querySelector('[data-radix-select-content]');
       if (openSelectContent && dialogRef.current) {
-        const isSelectRelated = 
+        const isSelectRelated =
           (target && (
             target.closest('[data-radix-select-content]') !== null ||
             target.closest('[data-radix-select-viewport]') !== null
@@ -261,7 +226,7 @@ export function Dialog({
             return node.hasAttribute('data-radix-select-content') ||
                    node.hasAttribute('data-radix-select-viewport');
           });
-        
+
         if (isSelectRelated) return;
       }
 
@@ -276,9 +241,11 @@ export function Dialog({
         if (node.hasAttribute('data-radix-dropdown-menu-content')) return true;
         if (node.hasAttribute('data-radix-menu-content')) return true;
         if (node.hasAttribute('data-radix-collection-item')) return true;
+        if (node.hasAttribute('data-radix-dialog-content')) return true;
+        if (node.hasAttribute('data-radix-dialog-overlay')) return true;
 
         const role = node.getAttribute('role');
-        return role === 'listbox' || role === 'menu' || role === 'option';
+        return role === 'listbox' || role === 'menu' || role === 'option' || role === 'dialog';
       });
 
       if (isInsidePortaledContent) return;
@@ -298,12 +265,131 @@ export function Dialog({
       document.removeEventListener('mousedown', handleMouseDownOutside, true);
       if (selectCloseTimeout) clearTimeout(selectCloseTimeout);
     };
-  }, [isOpen, disableFocusTrap, onClose]);
+  }, [isOpen, disableFocusTrap, isInsideDialog, onClose]);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!draggable) return;
+
+    // Prevent default to avoid text selection
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging || !draggable) return;
+
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+
+    setPosition({ x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, dragStart]);
+
+  const dialogStyle: React.CSSProperties = {
+    transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+    cursor: isDragging ? 'move' : 'auto',
+  };
+
+  // ── Nested dialog rendering (inside a Drawer or another Dialog) ──
+  // Renders inline (no Radix Portal) so the dialog stays within the parent's
+  // FocusTrap scope, avoiding the infinite focus-fight crash.
+  // Because the Drawer's Dialog.Content has `transform`, `position: fixed`
+  // here acts like `position: absolute` relative to the Drawer panel — which
+  // is exactly what we want: a centered overlay inside the Drawer.
+  if (isInsideDialog) {
+    if (!isOpen) return <></>;
+
+    return (
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            onClose();
+          }
+          onKeyDown?.(e);
+        }}
+      >
+        {/* Overlay */}
+        <div
+          className="absolute inset-0 bg-black/50"
+          onClick={onClose}
+        />
+        {/* Dialog content */}
+        <div
+          ref={dialogRef}
+          {...withDataAutomationId(updateDialog)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title || 'Dialog'}
+          tabIndex={-1}
+          className={`relative bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col focus:outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
+        >
+          {/* Title bar */}
+          {title ? (
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 rounded-t-lg">
+              <h2 className="text-xl font-semibold select-none">{title}</h2>
+            </div>
+          ) : (
+            <div className="p-2 rounded-t-lg" />
+          )}
+          {/* Scrollable body */}
+          <div
+            className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
+          >
+            <ReflectionParentContext.Provider value={updateDialog.id}>
+              <InsideDialogContext.Provider value={true}>
+                <ModalityContext.Provider value={{ modal: false }}>
+                  {children}
+                </ModalityContext.Provider>
+              </InsideDialogContext.Provider>
+            </ReflectionParentContext.Provider>
+          </div>
+          {/* Close button */}
+          {!hideCloseButton && (
+            <button
+              onClick={onClose}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+              aria-label="Close"
+            >
+              <Cross2Icon />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Normal (non-nested) dialog rendering via Radix ──
+
+  const hasDescription = containsDialogDescription(children);
 
   return (
-    <RadixDialog.Root 
-      open={isOpen} 
-      onOpenChange={(open) => { 
+    <RadixDialog.Root
+      open={isOpen}
+      onOpenChange={(open) => {
         // Don't close if it's due to a select interaction
         if (!open && !disableFocusTrap && !preventCloseRef.current) {
           onClose();
@@ -314,7 +400,7 @@ export function Dialog({
             preventCloseRef.current = false;
           }, 0);
         }
-      }} 
+      }}
       modal={!disableFocusTrap}
     >
       <RadixDialog.Portal>
@@ -338,7 +424,7 @@ export function Dialog({
             const target = e.target as HTMLElement;
             if (target) {
               // Check if click is on a combobox trigger
-              if (target.getAttribute('role') === 'combobox' || 
+              if (target.getAttribute('role') === 'combobox' ||
                   target.closest('[role="combobox"]') !== null) {
                 e.preventDefault();
                 return;
@@ -350,8 +436,7 @@ export function Dialog({
                 return;
               }
             }
-            // When disableFocusTrap is true, we handle closing via our own mousedown listener
-            // But we still need to prevent Radix Dialog's default behavior for select interactions
+            // When focus trap is disabled, we handle closing via our own mousedown listener
             if (disableFocusTrap) {
               e.preventDefault();
             }
@@ -380,9 +465,11 @@ export function Dialog({
             className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
           >
             <ReflectionParentContext.Provider value={updateDialog.id}>
-              <ModalityContext.Provider value={{ modal: !disableFocusTrap }}>
-                {children}
-              </ModalityContext.Provider>
+              <InsideDialogContext.Provider value={true}>
+                <ModalityContext.Provider value={{ modal: !disableFocusTrap }}>
+                  {children}
+                </ModalityContext.Provider>
+              </InsideDialogContext.Provider>
             </ReflectionParentContext.Provider>
           </div>
           {!hideCloseButton && (

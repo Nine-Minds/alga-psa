@@ -7,6 +7,7 @@ import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
 
+
 interface TicketDetailsPageProps {
   params: Promise<{
     id: string;
@@ -46,15 +47,15 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
       ) : null;
     
     return (
-      <div id="ticket-details-container" className="bg-gray-100">
-        <Suspense fallback={<TicketDetailsSkeleton />}>
-          <MspTicketDetailsContainerClient
-            ticketData={ticketData}
-            surveySummary={surveySummary ?? null}
-            associatedAssets={associatedAssets}
-          />
-        </Suspense>
-      </div>
+        <div id="ticket-details-container" className="bg-gray-100">
+          <Suspense fallback={<TicketDetailsSkeleton />}>
+            <MspTicketDetailsContainerClient
+              ticketData={ticketData}
+              surveySummary={surveySummary ?? null}
+              associatedAssets={associatedAssets}
+            />
+          </Suspense>
+        </div>
     );
   } catch (error) {
     console.error(`Error fetching ticket with id ${id}:`, error);

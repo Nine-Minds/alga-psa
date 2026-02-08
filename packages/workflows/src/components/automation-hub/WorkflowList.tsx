@@ -111,6 +111,7 @@ type SortableColumnId = 'name' | 'status' | 'updated_at' | 'created_at';
 interface WorkflowListProps {
   onSelectWorkflow?: (workflowId: string) => void;
   onCreateNew?: () => void;
+  onOpenEventCatalog?: () => void;
 }
 
 const getStatusBadgeVariant = (status: string, isPaused?: boolean): BadgeVariant => {
@@ -169,7 +170,7 @@ const getTriggerLabel = (trigger?: Record<string, unknown> | null): string => {
   return 'Manual';
 };
 
-export default function WorkflowList({ onSelectWorkflow, onCreateNew }: WorkflowListProps) {
+export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEventCatalog }: WorkflowListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const didUnmount = useRef(false);
@@ -348,6 +349,15 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     e.stopPropagation();
     // Navigate to runs tab with workflow filter
     router.push(`/msp/workflows?tab=runs&workflowId=${workflow.workflow_id}`);
+  };
+
+  const handleOpenEventCatalog = () => {
+    clearSearchDebounce();
+    if (onOpenEventCatalog) {
+      onOpenEventCatalog();
+      return;
+    }
+    router.push('/msp/workflows?tab=event-catalog');
   };
 
   // Bulk selection handlers
@@ -698,16 +708,26 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
           <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md mb-6">
             Create your first workflow to automate tasks, respond to events, and streamline your processes.
           </p>
-          <Button
-            id="create-first-workflow-btn"
-            onClick={() => {
-              clearSearchDebounce();
-              onCreateNew?.();
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Your First Workflow
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              id="open-event-catalog-empty-btn"
+              variant="outline"
+              onClick={handleOpenEventCatalog}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Event Catalog
+            </Button>
+            <Button
+              id="create-first-workflow-btn"
+              onClick={() => {
+                clearSearchDebounce();
+                onCreateNew?.();
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Workflow
+            </Button>
+          </div>
         </div>
       </ReflectionContainer>
     );
@@ -737,16 +757,26 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
               )}
             </div>
           </div>
-          <Button
-            id="create-workflow-btn"
-            onClick={() => {
-              clearSearchDebounce();
-              onCreateNew?.();
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Workflow
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              id="workflow-list-open-event-catalog-btn"
+              variant="outline"
+              onClick={handleOpenEventCatalog}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Event Catalog
+            </Button>
+            <Button
+              id="create-workflow-btn"
+              onClick={() => {
+                clearSearchDebounce();
+                onCreateNew?.();
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Workflow
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

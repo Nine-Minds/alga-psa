@@ -69,7 +69,17 @@ interface types {
         user-email: string,
         user-name: string,
         user-type: string,
+    }
+
+    record user-data-v2 {
+        tenant-id: string,
+        client-name: string,
+        user-id: string,
+        user-email: string,
+        user-name: string,
+        user-type: string,
         client-id: option<string>,
+        additional-fields: list<tuple<string, string>>,
     }
 
     enum user-error {
@@ -236,6 +246,11 @@ interface user {
     get-user: func() -> result<user-data, user-error>;
 }
 
+interface user-v2 {
+    use types.{user-data-v2, user-error};
+    get-user: func() -> result<user-data-v2, user-error>;
+}
+
 interface scheduler {
     use types.{
         scheduler-error,
@@ -270,6 +285,7 @@ world runner {
     import logging;
     import ui-proxy;
     import user;
+    import user-v2;
     import scheduler;
     import invoicing;
 

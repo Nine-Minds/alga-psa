@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
+import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
+import { calculateColumnWidth, calculateCardGap } from './KanbanZoomControl';
 import styles from './ProjectDetail.module.css';
 import * as LucideIcons from 'lucide-react';
 import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';
@@ -24,12 +26,14 @@ interface KanbanBoardProps {
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Map<string, number>;
   allTaskTags?: ITag[];
-  projectTreeData?: any[]; // Add projectTreeData prop
+  priorities?: (IPriority | IStandardPriority)[];
+  projectTreeData?: any[];
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
   searchQuery?: string;
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
+  zoomLevel?: number;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -97,12 +101,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   taskTags = {},
   taskDocumentCounts = {},
   allTaskTags = [],
+  priorities = [],
   projectTreeData,
   animatingTasks,
   avatarUrls = {},
   searchQuery = '',
   searchCaseSensitive = false,
   searchWholeWord = false,
+  zoomLevel = 50,
   onDrop,
   onDragOver,
   onAddCard,
@@ -118,6 +124,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onTaskTagsChange,
   taskTypes,
 }) => {
+  // Calculate column width and card gap based on zoom level
+  const columnWidth = calculateColumnWidth(zoomLevel);
+  const cardGap = calculateCardGap(zoomLevel);
   // Ensure all tasks have ticket_links and resources initialized
   const enrichedTasks = tasks.map(task => {
     // Only create a new object if we need to add properties
@@ -179,6 +188,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskDependencies={taskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
+            priorities={priorities}
             statusIcon={statusIcon}
             backgroundColor={backgroundColor}
             darkBackgroundColor={darkBackgroundColor}
@@ -187,6 +197,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             isAddingTask={isAddingTask}
             selectedPhase={selectedPhase}
             avatarUrls={avatarUrls}
+            columnWidth={columnWidth}
+            cardGap={cardGap}
+            zoomLevel={zoomLevel}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}

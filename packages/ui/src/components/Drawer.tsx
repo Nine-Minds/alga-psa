@@ -7,6 +7,7 @@ import { Theme } from '@radix-ui/themes';
 import { useRegisterUIComponent } from "../ui-reflection/useRegisterUIComponent";
 import { DrawerComponent, UIComponent, AutomationProps } from "../ui-reflection/types";
 import { withDataAutomationId } from "../ui-reflection/withDataAutomationId";
+import { InsideDialogContext, useInsideDialog } from './ModalityContext';
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -37,13 +38,18 @@ const Drawer = ({
   width
 }: DrawerComponentProps): React.ReactElement => {
   // Determine width classes and styles based on width prop or default behavior
-  const widthClasses = width 
+  const widthClasses = width
     ? '' // Use inline style when width is specified
     : `w-fit max-w-[60vw]`;
-  
-  const widthStyle = width 
+
+  const widthStyle = width
     ? { width: width, maxWidth: width }
     : undefined;
+
+  // Detect when this Drawer is nested inside another Drawer or Dialog.
+  // Two modal Radix Dialogs cause FocusScope conflicts, so the nested one
+  // must use modal={false}.
+  const isInsideDialog = useInsideDialog();
 
   // Always register drawer when mounted, but track open state
   const updateMetadata = useRegisterUIComponent<DrawerComponent>({
@@ -53,29 +59,35 @@ const Drawer = ({
     width: width || (isInDrawer ? '40%' : '50%'),
     children: reflectionChildren
   });
+
   return (
-    <Dialog.Root modal open={isOpen} onOpenChange={(open) => {
+    <Dialog.Root modal={!isInsideDialog} open={isOpen} onOpenChange={(open) => {
       if (!open) onClose(); // Ensure onClose is called when dialog is closed
     }}>
       <Dialog.Portal>
         <Dialog.Overlay
           className={`fixed inset-0 bg-black/50 transition-opacity duration-300 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${isInDrawer ? 'z-[60]' : 'z-50'}`}
+          style={isInsideDialog ? { pointerEvents: 'auto' } : undefined}
           onClick={() => onClose()} // Explicitly handle overlay clicks
         />
-        <Dialog.Content 
+        <Dialog.Content
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
-          style={widthStyle}
+          style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
           onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={isInsideDialog ? (e) => e.stopPropagation() : undefined}
+          onInteractOutside={isInsideDialog ? (e) => e.preventDefault() : undefined}
         >
           {/* Visually hidden title for accessibility */}
           <Dialog.Title className="sr-only">
             Dialog Content
           </Dialog.Title>
-          <Theme>
-            <div className="p-6">
-              {children}
-            </div>
-          </Theme>
+          <InsideDialogContext.Provider value={true}>
+            <Theme>
+              <div className="p-6">
+                {children}
+              </div>
+            </Theme>
+          </InsideDialogContext.Provider>
           {!hideCloseButton && (
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"

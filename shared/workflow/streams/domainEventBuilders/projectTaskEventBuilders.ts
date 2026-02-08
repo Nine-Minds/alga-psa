@@ -30,6 +30,7 @@ export function buildProjectTaskAssignedPayload(params: {
   assignedToId: string;
   assignedToType: 'user' | 'team';
   assignedByUserId?: string;
+  assignedByName?: string;
   assignedAt?: Date | string;
 }): Record<string, unknown> {
   return {
@@ -38,6 +39,7 @@ export function buildProjectTaskAssignedPayload(params: {
     assignedToId: params.assignedToId,
     assignedToType: params.assignedToType,
     ...(params.assignedByUserId ? { assignedByUserId: params.assignedByUserId } : {}),
+    ...(params.assignedByName ? { assignedByName: params.assignedByName } : {}),
     ...(params.assignedAt ? { assignedAt: normalizeValue(params.assignedAt) } : {}),
   };
 }

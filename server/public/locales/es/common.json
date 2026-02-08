@@ -72,6 +72,12 @@
   "fields": {
     "notes": "Notas"
   },
+  "tickets": {
+    "responseSource": {
+      "clientPortal": "Recibido vía Portal de Cliente",
+      "inboundEmail": "Recibido vía correo electrónico"
+    }
+  },
   "errors": {
     "auth": {
       "notAuthenticated": "No autenticado",

@@ -76,6 +76,17 @@ record user-data {
     user-type: string,
 }
 
+record user-data-v2 {
+    tenant-id: string,
+    client-name: string,
+    user-id: string,
+    user-email: string,
+    user-name: string,
+    user-type: string,
+    client-id: option<string>,
+    additional-fields: list<tuple<string, string>>,
+}
+
 enum user-error {
     not-available,
     not-allowed,
@@ -131,6 +142,12 @@ interface user {
     get-user: func() -> result<user-data, user-error>;
 }
 
+/// Access current user information (v2 adds client-id and additional-fields).
+/// @requires(cap:user.read)
+interface user-v2 {
+    get-user: func() -> result<user-data-v2, user-error>;
+}
+
 /// Guest exported HTTP-style handler entrypoint (initial contract).
 record execute-request {
     context: context-data,
@@ -151,8 +168,7 @@ world runner {
     import storage: interface storage;
     import logging: interface logging;
     import ui-proxy: interface ui-proxy;
-    import user: interface user;
+    import user-v2: interface user-v2;
 
     export handler: func(request: execute-request) -> execute-response;
 }
-

@@ -52,6 +52,8 @@ interface TicketDetailsContainerProps {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   associatedAssets?: React.ReactNode;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
+  renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
+  renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
 }
 
 export default function TicketDetailsContainer({
@@ -59,6 +61,8 @@ export default function TicketDetailsContainer({
   surveySummary = null,
   associatedAssets = null,
   renderContactDetails,
+  renderCreateProjectTask,
+  renderClientDetails,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -213,8 +217,8 @@ export default function TicketDetailsContainer({
     <UnsavedChangesProvider>
       <div className="bg-gray-100 min-h-screen p-4">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <TicketDetails
-            initialTicket={ticketData.ticket}
+        <TicketDetails
+          initialTicket={ticketData.ticket}
             initialBundle={ticketData.bundle}
             aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
             onClose={() => router.back()}
@@ -241,10 +245,12 @@ export default function TicketDetailsContainer({
             onAddComment={handleAddComment}
             onUpdateDescription={handleUpdateDescription}
             isSubmitting={isSubmitting}
-            surveySummary={surveySummary}
-            associatedAssets={associatedAssets}
-            renderContactDetails={renderContactDetails}
-          />
+          surveySummary={surveySummary}
+          associatedAssets={associatedAssets}
+          renderContactDetails={renderContactDetails}
+          renderCreateProjectTask={renderCreateProjectTask}
+            renderClientDetails={renderClientDetails}
+        />
         </Suspense>
       </div>
     </UnsavedChangesProvider>

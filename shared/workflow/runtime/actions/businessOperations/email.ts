@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
@@ -51,7 +52,7 @@ export function registerEmailActions(): void {
       // Use the existing email permission taxonomy (email:process).
       await requirePermission(ctx, tx, { resource: 'email', action: 'process' });
 
-      const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = await import('@alga-psa/email');
+      const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = getWorkflowEmailProvider();
       const { StorageProviderFactory } = await import('@alga-psa/documents');
 
       const settings = await TenantEmailService.getTenantEmailSettings(tx.tenantId, tx.trx);
@@ -95,7 +96,7 @@ export function registerEmailActions(): void {
       // From domain constraints: allow tenant custom domains or the defaultFromDomain.
       const fromDomain = String(from.email).split('@')[1]?.toLowerCase() ?? '';
       const allowedDomains = new Set<string>([
-        ...(settings.customDomains ?? []).map((d) => String(d).toLowerCase()),
+        ...(settings.customDomains ?? []).map((d: string) => String(d).toLowerCase()),
         ...(settings.defaultFromDomain ? [String(settings.defaultFromDomain).toLowerCase()] : [])
       ]);
       if (fromDomain && allowedDomains.size > 0 && !allowedDomains.has(fromDomain)) {

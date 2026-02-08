@@ -25,37 +25,39 @@ jobs:
 
       #--------------------------------------------------------------
       # Detect whether the proposed changes require running the
-      # (slow) E2E installation tests.  If the pull-request only
-      # touches the Helm chart (which lives in the `helm/` folder)
-      # we can safely skip the remainder of the workflow because the
-      # chart does not influence the application code executed inside
-      # these containers.
+      # (slow) E2E installation tests.  Skip if only non-application
+      # files changed (e.g., Helm charts, docs, scripts).
       #--------------------------------------------------------------
       - name: Check for relevant file changes
         id: changed_files_check
         uses: tj-actions/changed-files@v42 # Using a specific version
         with:
           # List of paths that, when modified, SHOULD trigger the heavy
-          # E2E job.  **Notice that the `helm/**` path is intentionally
-          # omitted** so that commits exclusively touching Helm logic
-          # will set `any_changed` to `false`.
+          # E2E job. Paths NOT listed here (helm/, docs/, scripts/, sdk/)
+          # will not trigger the tests.
           files: |
             .github/workflows/e2e-fresh-install-tests.yaml
             docker-compose.base.yaml
             docker-compose.ce.yaml
+            docker-compose.prod.yaml
+            Dockerfile
+            Dockerfile.build
             server/**
             setup/**
             shared/**
+            packages/**
+            services/**
+            ee/**
             e2e-tests/**
+            package.json
+            package-lock.json
+            tsconfig.base.json
 
-      # Short-circuit the job if no relevant files changed (i.e. only
-      # Helm-chart related modifications).  GitHub marks a job as
-      # successful when all executed steps succeed, so emitting an
-      # informative log and exiting early is sufficient.
-      - name: Skip job -- only Helm chart files changed
+      # Short-circuit the job if no relevant files changed
+      - name: Skip job -- no application files changed
         if: steps.changed_files_check.outputs.any_changed == 'false'
         run: |
-          echo "Only Helm chart-related files were modified – skipping E2E Fresh Install Tests."
+          echo "No application files were modified – skipping E2E Fresh Install Tests."
           echo "No further steps will be executed."
           # Nothing else to do, the job will report success because the
           # previous steps (including this one) have succeeded.
@@ -172,11 +174,14 @@ jobs:
           df -h
         shell: bash
 
-      - name: Build server image with no cache
+      - name: Build images with no cache
         if: steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Building server image with --no-cache to ensure fresh build"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache server setup
+          echo "Building all required images with --no-cache to ensure fresh build"
+          # Build all images needed for e2e tests upfront
+          # Excludes: workflow-worker (EE only, not needed for CE e2e)
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache \
+            server setup imap-service hocuspocus
         shell: bash
 
       - name: Start foundational services (postgres and redis)
@@ -350,7 +355,12 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Setup completed successfully. Starting remaining services..."
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d --scale setup=0
+          # Start CE services needed for e2e tests (images already built earlier)
+          # Use --no-recreate to avoid restarting setup which already completed
+          # Use --no-deps to avoid waiting on setup dependency again
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d \
+            --no-recreate --no-deps \
+            server imap-service imap-test-server hocuspocus
         shell: bash
 
       - name: Collect initial container logs

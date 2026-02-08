@@ -8,7 +8,7 @@ import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { getRecentInteractions, getInteractionStatuses } from '@alga-psa/clients/actions';
+import { getRecentInteractions, getInteractionStatuses, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from "@alga-psa/ui";
 import { InteractionDetails } from '@alga-psa/clients/components';
@@ -56,6 +56,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [allContacts, setAllContacts] = useState<IContact[]>(contacts);
   const { openDrawer } = useDrawer();
 
   // UI Reflection System Integration
@@ -109,6 +110,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
     fetchInteractionTypes();
     fetchStatuses();
     fetchInteractions();
+    fetchContacts();
   }, []);
 
   const fetchInteractionTypes = async () => {
@@ -147,6 +149,15 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
     }
   }, []);
 
+  const fetchContacts = async () => {
+    try {
+      const fetchedContacts = await getAllContacts('all');
+      setAllContacts(fetchedContacts);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    }
+  };
+
   const getTypeLabel = (type: IInteractionType) => {
     return (
       <div className="flex items-center gap-2">
@@ -155,6 +166,18 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
       </div>
     );
   };
+
+  const typeFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All Types' },
+      ...interactionTypes.map((type) => ({
+        value: type.type_id,
+        label: getTypeLabel(type),
+        textValue: type.type_name
+      }))
+    ],
+    [interactionTypes]
+  );
 
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction => {
@@ -263,10 +286,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   // Filter contacts based on selected client
   const filteredContacts = useMemo(() => {
     if (selectedClient === 'all') {
-      return contacts; // Show all contacts if no client is selected
+      return allContacts;
     }
-    return contacts.filter(contact => contact.client_id === selectedClient);
-  }, [contacts, selectedClient]);
+    return allContacts.filter(contact => contact.client_id === selectedClient);
+  }, [allContacts, selectedClient]);
 
   return (
     <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
@@ -337,21 +360,16 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         )}
       </div>
 
-      <Dialog 
-        isOpen={isFilterDialogOpen} 
-        onClose={() => setIsFilterDialogOpen(false)} 
+      <Dialog
+        isOpen={isFilterDialogOpen}
+        onClose={() => setIsFilterDialogOpen(false)}
         title="Filter Interactions"
+        disableFocusTrap
       >
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect
-              options={[
-                { value: 'all', label: 'All Types' },
-                ...interactionTypes.map((type) => ({
-                  value: type.type_id,
-                  label: getTypeLabel(type)
-                }))
-              ]}
+              options={typeFilterOptions}
               value={interactionTypeId}
               onValueChange={setInteractionTypeId}
               placeholder="Interaction Type"

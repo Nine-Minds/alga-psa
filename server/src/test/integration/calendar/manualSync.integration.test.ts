@@ -7,7 +7,6 @@ const modulePaths = vi.hoisted(() => {
   const calendarActionsModuleUrl = new URL('../../../lib/actions/calendarActions.ts', import.meta.url);
   const libDbModulePath = new URL('../../lib/db/index.tsx', calendarActionsModuleUrl).pathname;
   const rootDbModulePath = new URL('../../db.ts', calendarActionsModuleUrl).pathname;
-  const userActionsModulePath = new URL('../../../lib/actions/user-actions/userActions.ts', import.meta.url).pathname;
   const rbacModulePath = new URL('../../../lib/auth/rbac.ts', import.meta.url).pathname;
 
   return {
@@ -15,8 +14,6 @@ const modulePaths = vi.hoisted(() => {
     libDbModulePathNoExt: libDbModulePath.replace(/\.tsx$/, ''),
     rootDbModulePath,
     rootDbModulePathNoExt: rootDbModulePath.replace(/\.ts$/, ''),
-    userActionsModulePath,
-    userActionsModulePathNoExt: userActionsModulePath.replace(/\.ts$/, ''),
     rbacModulePath,
     rbacModulePathNoExt: rbacModulePath.replace(/\.ts$/, ''),
   };
@@ -281,13 +278,7 @@ vi.mock('@/services/calendar/CalendarSyncService', () => ({
   },
 }));
 
-vi.mock(modulePaths.userActionsModulePath, () => ({
-  getCurrentUser: vi.fn(async () => ({
-    tenant: context.defaultTenant,
-    user_id: context.userId,
-  })),
-}));
-vi.mock(modulePaths.userActionsModulePathNoExt, () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({
     tenant: context.defaultTenant,
     user_id: context.userId,

@@ -12,7 +12,7 @@ import {
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate } from '../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';

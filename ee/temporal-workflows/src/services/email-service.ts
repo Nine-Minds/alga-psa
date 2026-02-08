@@ -1,6 +1,6 @@
 import { Context } from '@temporalio/activity';
 import { Resend } from 'resend';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets.js';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 const logger = () => Context.current().log;
 

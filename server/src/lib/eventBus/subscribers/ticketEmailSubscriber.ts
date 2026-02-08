@@ -126,6 +126,15 @@ async function sendNotificationIfEnabled(
   recipientUserId?: string
 ): Promise<void> {
   try {
+    if (!isValidEmail(params.to)) {
+      logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
+        recipient: params.to,
+        subtypeName,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
     const { knex } = await createTenantKnex();
 
     // 1. Check global notification settings
@@ -214,7 +223,8 @@ async function sendNotificationIfEnabled(
     // Pass recipientUserId for rate limiting in TenantEmailService
     await sendEventEmail({
       ...params,
-      recipientUserId
+      recipientUserId,
+      notificationSubtypeId: subtype?.id
     });
 
     // 7. Log the notification (only for internal users with userId)
@@ -238,6 +248,22 @@ async function sendNotificationIfEnabled(
     }
 
   } catch (error) {
+    const isEmailProviderError =
+      typeof error === 'object' &&
+      error !== null &&
+      (error as any).name === 'EmailProviderError' &&
+      typeof (error as any).isRetryable === 'boolean';
+
+    if (isEmailProviderError && (error as any).isRetryable === false) {
+      logger.warn('[TicketEmailSubscriber] Non-retryable email send failure; skipping:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        subtypeName,
+        recipient: params.to,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
     logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,
@@ -697,11 +723,19 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       threadId: ticket.email_metadata?.threadId
     };
     const emailSubject = `New Ticket • ${ticket.title} (${priorityName})`;
+    const emailEntityContext = {
+      entityType: 'ticket',
+      entityId: ticket.ticket_id || payload.ticketId
+    };
+    const primaryContactId =
+      safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
 
     // Send to primary recipient (contact or client) - external user, no userId
     if (isValidEmail(primaryEmail)) {
       await sendNotificationIfEnabled({
         tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
         to: primaryEmail,
         subject: emailSubject,
         template: 'ticket-created',
@@ -715,6 +749,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
       await sendNotificationIfEnabled({
         tenantId,
+        ...emailEntityContext,
         to: assignedEmail,
         subject: emailSubject,
         template: 'ticket-created',
@@ -854,6 +889,12 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const assignedEmail = safeString(ticket.assigned_to_email);
+    const primaryContactId =
+      safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
+    const emailEntityContext = {
+      entityType: 'ticket',
+      entityId: ticket.ticket_id || payload.ticketId
+    };
 
     console.log('[EmailSubscriber] Found ticket:', {
       ticketId: ticket.ticket_id,
@@ -1074,6 +1115,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       if (isValidEmail(primaryEmail)) {
         await sendNotificationIfEnabled({
           tenantId,
+          ...emailEntityContext,
+          contactId: primaryContactId,
           to: primaryEmail,
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
@@ -1090,6 +1133,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
         await sendNotificationIfEnabled({
           tenantId,
+          ...emailEntityContext,
           to: assignedEmail,
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
@@ -1119,6 +1163,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         if (isValidEmail(resource.email)) {
           await sendNotificationIfEnabled({
             tenantId,
+            ...emailEntityContext,
             to: resource.email,
             subject: `Ticket Updated: ${ticket.title}`,
             template: 'ticket-updated',
@@ -1408,9 +1453,18 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
 
     // Build subject line indicating multiple updates if applicable
     const subjectSuffix = accumulatedChanges.length > 1 ? ` (${accumulatedChanges.length} updates)` : '';
+    const normalizedRecipient = recipientEmail.trim().toLowerCase();
+    const contactEmail = safeString(ticket.contact_email);
+    const contactId =
+      !isInternal && contactEmail && contactEmail.trim().toLowerCase() === normalizedRecipient
+        ? (ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined)
+        : undefined;
 
     await sendNotificationIfEnabled({
       tenantId,
+      entityType: 'ticket',
+      entityId: ticket.ticket_id,
+      contactId,
       to: recipientEmail,
       subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
       template: 'ticket-updated',
@@ -1680,6 +1734,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     };
 
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    const emailEntityContext = {
+      entityType: 'ticket',
+      entityId: ticket.ticket_id || payload.ticketId
+    };
 
     const sentEmails = new Set<string>();
     const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -1709,6 +1767,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     if (isValidEmail(ticket.assigned_to_email)) {
       await sendIfUnique({
         tenantId,
+        ...emailEntityContext,
         to: ticket.assigned_to_email,
         subject: `You have been assigned to ticket: ${ticket.title}`,
         template: 'ticket-assigned',
@@ -1719,10 +1778,14 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
+    const primaryContactId =
+      safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
 
     if (isValidEmail(primaryEmail)) {
       await sendIfUnique({
         tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
         to: primaryEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
         template: 'ticket-assigned',
@@ -1748,6 +1811,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       if (isValidEmail(resource.email)) {
         await sendIfUnique({
           tenantId,
+          ...emailEntityContext,
           to: resource.email,
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
           template: 'ticket-assigned',
@@ -2017,6 +2081,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Determine primary email (contact first, then client)
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
+    const primaryContactId =
+      safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
+    const emailEntityContext = {
+      entityType: 'ticket',
+      entityId: ticket.ticket_id || payload.ticketId
+    };
 
     const emailMetadata = ticket.email_metadata || {};
 
@@ -2025,6 +2095,25 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const fromAddress = ticketingFromAddress
       ? { email: ticketingFromAddress.email, name: senderName }
       : undefined;
+
+    const sentEmails = new Set<string>();
+    const normalizeEmail = (email: string) => email.trim().toLowerCase();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null,
+    ) => {
+      const email = params.to?.trim();
+      if (!isValidEmail(email)) {
+        return;
+      }
+      const key = normalizeEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+    };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
     // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
@@ -2055,6 +2144,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
       const emailParams: SendEmailParams = {
         tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
         to: primaryEmail,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
@@ -2073,7 +2164,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         emailParams.recipientClientId = ticket.client_id;
       }
 
-      await sendNotificationIfEnabled(emailParams, 'Ticket Comment Added');
+      await sendIfUnique(emailParams, 'Ticket Comment Added');
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
@@ -2107,16 +2198,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
       if (bundleChildren.length > 0) {
-        const sentTo = new Set<string>();
-        if (primaryEmail) sentTo.add(primaryEmail.toLowerCase());
-
         for (const child of bundleChildren) {
           const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
           if (!childPrimaryEmail) continue;
-
-          const normalizedEmail = childPrimaryEmail.toLowerCase();
-          if (sentTo.has(normalizedEmail)) continue;
-          sentTo.add(normalizedEmail);
 
           const childMeta = child.email_metadata || {};
           const childMessageId = childMeta.messageId;
@@ -2129,8 +2213,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
           const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
 
-          await sendNotificationIfEnabled({
+          await sendIfUnique({
             tenantId,
+            entityType: 'ticket',
+            entityId: child.ticket_id,
             to: childPrimaryEmail,
             subject: `New Comment on Ticket: ${ticket.title}`,
             template: 'ticket-comment-added',
@@ -2163,8 +2249,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // The person who made the comment should not receive a notification about their own comment
     const isAssignedUserTheCommentAuthor = ticket.assigned_to === payload.userId;
     if (assignedEmail && assignedEmail !== primaryEmail && !isAssignedUserTheCommentAuthor) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
+        ...emailEntityContext,
         to: assignedEmail,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
@@ -2182,20 +2269,21 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     for (const resource of additionalResources) {
       // Skip if this resource is the comment author - they shouldn't be notified about their own comment
       const isResourceTheCommentAuthor = resource.user_id === payload.userId;
-      if (isValidEmail(resource.email) && !isResourceTheCommentAuthor) {
-        await sendNotificationIfEnabled({
+      if (!isResourceTheCommentAuthor) {
+        await sendIfUnique({
           tenantId,
+          ...emailEntityContext,
           to: resource.email,
           subject: `New Comment on Ticket: ${ticket.title}`,
-        template: 'ticket-comment-added',
-        context: buildContext(internalUrl),
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          commentId: payload.comment?.id,
-          threadId: ticket.email_metadata?.threadId
-        },
-        from: fromAddress as any
-      }, 'Ticket Comment Added', resource.user_id);
+          template: 'ticket-comment-added',
+          context: buildContext(internalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: fromAddress as any
+        }, 'Ticket Comment Added', resource.user_id);
       }
     }
 

@@ -43,10 +43,15 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       ...posthogConfig.defaultConfig,
       debug: process.env.NODE_ENV === 'development',
       loaded: (posthogClient) => {
-        if (process.env.NEXT_PUBLIC_ANALYTICS_ANONYMIZE_USER_IDS !== 'false') {
-          const anonymousId = `anonymous_${window.location.hostname}`;
-          posthogClient.identify(anonymousId);
-        }
+        // IMPORTANT:
+        // Do not call `identify()` here.
+        //
+        // `PostHogUserIdentifier` is responsible for identifying the current session with
+        // tenant/user properties and then reloading feature flags.
+        //
+        // Calling `identify()` here can race with (and overwrite) tenant identification,
+        // leaving PostHog with `distinct_id=anonymous_<hostname>` and no tenant properties,
+        // which breaks tenant-scoped feature flags for newly logged-in users.
         setIsInitialized(true);
       },
       bootstrap: {

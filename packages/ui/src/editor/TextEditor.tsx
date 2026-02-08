@@ -270,7 +270,8 @@ export default function TextEditor({
       }
     };
 
-    editor.onEditorContentChange(handleChange);
+    const cleanup = editor.onEditorContentChange(handleChange);
+    return cleanup;
   }, [editor, onContentChange]);
 
   return (

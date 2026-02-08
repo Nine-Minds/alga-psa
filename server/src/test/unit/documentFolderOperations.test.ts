@@ -11,7 +11,7 @@ import {
 import { IUser } from '@/interfaces/auth.interfaces';
 
 // Mock dependencies
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn()
 }));
 
@@ -27,7 +27,7 @@ vi.mock('../../lib/utils/documentPermissionUtils', () => ({
   getEntityTypesForUser: vi.fn()
 }));
 
-import { getCurrentUser } from '../../lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../lib/auth/rbac';
 import { createTenantKnex } from '../../lib/db';
 import { getEntityTypesForUser } from '../../lib/utils/documentPermissionUtils';

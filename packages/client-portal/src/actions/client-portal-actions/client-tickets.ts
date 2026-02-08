@@ -1,8 +1,7 @@
 'use server'
 
 import { validateData } from '@alga-psa/validation';
-import { ITicket, ITicketListItem, ITicketWithDetails } from '@alga-psa/types';
-import { IComment } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -423,7 +422,7 @@ export const addClientTicketComment = withAuth(async (
 
       let markdownContent = "";
       try {
-        markdownContent = convertBlockNoteToMarkdown(content);
+        markdownContent = await convertBlockNoteToMarkdown(content);
         console.log("Converted markdown content for client comment:", markdownContent);
       } catch (e) {
         console.error("Error converting client comment to markdown:", e);
@@ -437,12 +436,22 @@ export const addClientTicketComment = withAuth(async (
       note: content,
       is_internal: isInternal,
       is_resolution: isResolution,
+        metadata: JSON.stringify({
+          responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
+        }),
         created_at: new Date().toISOString(),
         user_id: user.user_id,
         markdown_content: markdownContent
       }).returning('*');
 
       if (!isInternal) {
+        await trx('tickets')
+          .where({
+            ticket_id: ticketId,
+            tenant,
+          })
+          .update({ response_state: 'awaiting_internal' });
+
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id);
       }
 
@@ -530,7 +539,7 @@ export const updateClientTicketComment = withAuth(async (
       let updatesWithMarkdown = { ...updates };
       if (updates.note) {
         try {
-          const markdownContent = convertBlockNoteToMarkdown(updates.note);
+          const markdownContent = await convertBlockNoteToMarkdown(updates.note);
           console.log("Converted markdown content for updated client comment:", markdownContent);
           updatesWithMarkdown.markdown_content = markdownContent;
         } catch (e) {

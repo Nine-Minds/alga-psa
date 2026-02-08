@@ -9,6 +9,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { useDrawer } from "@alga-psa/ui";
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import AgentScheduleDrawer from '@alga-psa/tickets/components/ticket/AgentScheduleDrawer';
@@ -23,6 +24,7 @@ import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
+import { buildInteractionTimeEntryContext } from '../../lib/timeEntryContext';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -48,6 +50,7 @@ const formatDuration = (totalMinutes: number): string => {
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { openDrawer, goBack, closeDrawer } = useDrawer();
+  const { launchTimeEntry } = useSchedulingCallbacks();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -158,6 +161,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
               documents={[]}
               contacts={[]}
               isInDrawer={true}
+              quickView={true}
             />
           );
         } else {
@@ -228,7 +232,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
   const handleAddTimeEntry = async () => {
     try {
-      toast('Time entry is managed in Scheduling.');
+      await launchTimeEntry({
+        openDrawer,
+        closeDrawer,
+        context: buildInteractionTimeEntryContext(interaction),
+      });
     } catch (error) {
       console.error('Error preparing time entry:', error);
       toast.error('Failed to prepare time entry. Please try again.');
@@ -283,24 +291,20 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             <Text size="2" weight="bold">Notes</Text>
             <div className="prose max-w-none">
               <RichTextViewer content={(() => {
-                try {
-                  return JSON.parse(interaction.notes || '[]');
-                } catch (e) {
-                  // If parsing fails, return a simple paragraph with the text
-                  return [{
-                    type: "paragraph",
-                    props: {
-                      textAlignment: "left",
-                      backgroundColor: "default",
-                      textColor: "default"
-                    },
-                    content: [{
-                      type: "text",
-                      text: interaction.notes || '',
-                      styles: {}
-                    }]
-                  }];
+                const raw = (interaction.notes || '').trim();
+                if (raw.startsWith('[') || raw.startsWith('{')) {
+                  try {
+                    return JSON.parse(raw);
+                  } catch {
+                    // fall through to plain-text wrapper
+                  }
                 }
+                // Plain text or malformed JSON – wrap in a paragraph block
+                return raw ? [{
+                  type: "paragraph",
+                  props: { textAlignment: "left", backgroundColor: "default", textColor: "default" },
+                  content: [{ type: "text", text: raw, styles: {} }]
+                }] : [];
               })()} />
             </div>
           </div>

@@ -10,7 +10,7 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate } from '../../../test-utils/dateUtils';
 import { v4 as uuidv4 } from 'uuid';
 

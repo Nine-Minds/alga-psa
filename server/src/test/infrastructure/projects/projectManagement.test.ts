@@ -29,8 +29,7 @@ import {
     deleteTask
 } from '@alga-psa/projects/actions/projectTaskActions';
 import type { IProject, IProjectPhase, IProjectTask } from '@alga-psa/types';
-import ProjectModel from 'server/src/lib/models/project';
-import ProjectTaskModel from 'server/src/lib/models/projectTask';
+import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
 
 global.TextEncoder = TextEncoder;
 
@@ -40,78 +39,43 @@ type CreatePhaseInput = Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated
 type CreateTaskInput = Omit<IProjectTask, 'task_id' | 'created_at' | 'updated_at' | 'tenant' | 'phase_id'>;
 
 // Mock ProjectModel
-vi.mock('@/lib/models/project', () => {
-    const taskStore = new Map();
-    
+vi.mock('@alga-psa/projects/models/project', () => {
     return {
         default: {
             getAll: vi.fn(),
             getById: vi.fn(),
-            create: vi.fn((data: any) => ({
+            create: vi.fn((_knex: any, _tenant: string, data: any) => ({
                 ...data,
                 project_id: uuidv4(),
                 created_at: new Date(),
                 updated_at: new Date()
             })),
-            update: vi.fn((id: string, data: any) => ({
+            update: vi.fn((_knex: any, _tenant: string, id: string, data: any) => ({
                 project_id: id,
                 ...data,
                 updated_at: new Date()
             })),
             delete: vi.fn(),
             getPhases: vi.fn(() => []),
-            getPhaseById: vi.fn((id: string) => ({
+            getPhaseById: vi.fn((_knex: any, _tenant: string, id: string) => ({
                 phase_id: id,
                 project_id: 'test-project-id',
                 phase_name: 'Test Phase',
                 wbs_code: '1.1'
             })),
-            addPhase: vi.fn((data: any) => ({
+            addPhase: vi.fn((_knex: any, _tenant: string, data: any) => ({
                 ...data,
                 phase_id: uuidv4(),
                 created_at: new Date(),
                 updated_at: new Date()
             })),
-            updatePhase: vi.fn((id: string, data: any) => ({
+            updatePhase: vi.fn((_knex: any, _tenant: string, id: string, data: any) => ({
                 phase_id: id,
                 ...data,
                 updated_at: new Date()
             })),
             deletePhase: vi.fn(),
-            getTasks: vi.fn(() => []),
-            getTaskById: vi.fn((id: string) => taskStore.get(id) || null),
-            addTask: vi.fn((phaseId: string, data: any) => {
-                const task = {
-                    task_id: uuidv4(),
-                    phase_id: phaseId,
-                    task_name: data.task_name,
-                    description: data.description,
-                    estimated_hours: data.estimated_hours,
-                    actual_hours: data.actual_hours || 0,
-                    assigned_to: data.assigned_to,
-                    due_date: data.due_date,
-                    project_status_mapping_id: data.project_status_mapping_id,
-                    wbs_code: data.wbs_code,
-                    created_at: new Date(),
-                    updated_at: new Date(),
-                    checklist_items: []
-                };
-                taskStore.set(task.task_id, task);
-                return task;
-            }),
-            updateTask: vi.fn((id: string, data: any) => {
-                const task = {
-                    task_id: id,
-                    ...data,
-                    updated_at: new Date()
-                };
-                taskStore.set(id, task);
-                return task;
-            }),
-            deleteTask: vi.fn((id: string) => {
-                taskStore.delete(id);
-            }),
-            getProjectStatusMappings: vi.fn((projectId: string) => [{
+            getProjectStatusMappings: vi.fn((_knex: any, _tenant: string, projectId: string) => [{
                 project_status_mapping_id: 'test-status-mapping-id',
                 project_id: projectId,
                 standard_status_id: 'test-standard-status-id',
@@ -120,7 +84,7 @@ vi.mock('@/lib/models/project', () => {
                 display_order: 1,
                 is_visible: true
             }]),
-            getProjectStatusMapping: vi.fn((id: string) => ({
+            getProjectStatusMapping: vi.fn((_knex: any, _tenant: string, id: string) => ({
                 project_status_mapping_id: id,
                 project_id: 'test-project-id',
                 standard_status_id: 'test-standard-status-id',
@@ -171,11 +135,54 @@ vi.mock('@/lib/models/project', () => {
                     order_number: 2
                 }
             ]),
-            generateNextWbsCode: vi.fn((parentWbsCode: string) => {
+            generateNextWbsCode: vi.fn((_knex: any, _tenant: string, parentWbsCode: string) => {
                 const parts = parentWbsCode.split('.');
                 const lastPart = parseInt(parts[parts.length - 1]);
                 parts[parts.length - 1] = (lastPart + 1).toString();
                 return Promise.resolve(parts.join('.'));
+            }),
+        }
+    };
+});
+
+// Mock ProjectTaskModel
+vi.mock('@alga-psa/projects/models/projectTask', () => {
+    const taskStore = new Map();
+
+    return {
+        default: {
+            getTasks: vi.fn(() => []),
+            getTaskById: vi.fn((_knex: any, _tenant: string, id: string) => taskStore.get(id) || null),
+            addTask: vi.fn((_knex: any, _tenant: string, phaseId: string, data: any) => {
+                const task = {
+                    task_id: uuidv4(),
+                    phase_id: phaseId,
+                    task_name: data.task_name,
+                    description: data.description,
+                    estimated_hours: data.estimated_hours,
+                    actual_hours: data.actual_hours || 0,
+                    assigned_to: data.assigned_to,
+                    due_date: data.due_date,
+                    project_status_mapping_id: data.project_status_mapping_id,
+                    wbs_code: data.wbs_code,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                    checklist_items: []
+                };
+                taskStore.set(task.task_id, task);
+                return task;
+            }),
+            updateTask: vi.fn((_knex: any, _tenant: string, id: string, data: any) => {
+                const task = {
+                    task_id: id,
+                    ...data,
+                    updated_at: new Date()
+                };
+                taskStore.set(id, task);
+                return task;
+            }),
+            deleteTask: vi.fn((_knex: any, _tenant: string, id: string) => {
+                taskStore.delete(id);
             }),
             getTaskTicketLinks: vi.fn(() => []),
             updateTaskTicketLink: vi.fn(),
@@ -432,7 +439,7 @@ describe('Project Management', () => {
             phaseId = phase.phase_id;
 
             // Get status mapping
-            const statusMappings = await ProjectModel.getProjectStatusMappings(db, projectId);
+            const statusMappings = await ProjectModel.getProjectStatusMappings(db, tenantId, projectId);
             statusMappingId = statusMappings[0].project_status_mapping_id;
         });
 
@@ -577,7 +584,7 @@ describe('Project Management', () => {
             const newPhase = await addProjectPhase(newPhaseData);
 
             // Get status mapping for new project
-            const newStatusMappings = await ProjectModel.getProjectStatusMappings(db, newProject.project_id);
+            const newStatusMappings = await ProjectModel.getProjectStatusMappings(db, tenantId, newProject.project_id);
             const newStatusMappingId = newStatusMappings[0].project_status_mapping_id;
 
             // Create a task
@@ -655,7 +662,7 @@ describe('Project Management', () => {
             phaseId = phase.phase_id;
 
             // Get status mapping
-            const statusMappings = await ProjectModel.getProjectStatusMappings(db, projectId);
+            const statusMappings = await ProjectModel.getProjectStatusMappings(db, tenantId, projectId);
             const statusMappingId = statusMappings[0].project_status_mapping_id;
 
             // Create task
@@ -680,17 +687,17 @@ describe('Project Management', () => {
 
         it('should delete a task', async () => {
             await deleteTask(taskId);
-            expect(ProjectTaskModel.deleteTask).toHaveBeenCalledWith(taskId);
+            expect(ProjectTaskModel.deleteTask).toHaveBeenCalledWith(expect.anything(), expect.any(String), taskId);
         });
 
         it('should delete a phase', async () => {
             await deletePhase(phaseId);
-            expect(ProjectModel.deletePhase).toHaveBeenCalledWith(phaseId);
+            expect(ProjectModel.deletePhase).toHaveBeenCalledWith(expect.anything(), expect.any(String), phaseId);
         });
 
         it('should delete a project', async () => {
             await deleteProject(projectId);
-            expect(ProjectModel.delete).toHaveBeenCalledWith(projectId);
+            expect(ProjectModel.delete).toHaveBeenCalledWith(expect.anything(), expect.any(String), projectId);
         });
     });
 });

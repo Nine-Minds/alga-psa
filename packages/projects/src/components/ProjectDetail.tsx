@@ -33,10 +33,11 @@ import MoveTaskDialog from './MoveTaskDialog';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
+import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List, Search } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -45,10 +46,71 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
+const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
+const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
+const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
+
+const STATUS_FALLBACK_BACKGROUNDS = ['#f3f4f6', '#e0e7ff', '#dcfce7', '#fef9c3'];
+const STATUS_FALLBACK_BADGES = ['#e5e7eb', '#c7d2fe', '#bbf7d0', '#fef08a'];
+const STATUS_FALLBACK_BORDERS = ['#d1d5db', '#a5b4fc', '#86efac', '#fde047'];
+
+// Task type icons for the filter dropdown
+const taskTypeIcons: Record<string, React.ComponentType<any>> = {
+  task: CheckSquare,
+  bug: Bug,
+  feature: Sparkles,
+  improvement: TrendingUp,
+  epic: Flag,
+  story: BookOpen
+};
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 100; // Pixels from edge to start scrolling
 const MAX_SCROLL_SPEED = 20; // Maximum scroll speed in pixels per frame
+
+const normalizeHexColor = (color: string): string | null => {
+  const value = color.trim();
+  if (!value.startsWith('#')) return null;
+  const hex = value.slice(1);
+  if (hex.length === 3) {
+    return `#${hex.split('').map((ch) => ch + ch).join('')}`;
+  }
+  if (hex.length === 6) {
+    return value;
+  }
+  return null;
+};
+
+const hexToRgb = (hex: string): [number, number, number] | null => {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return null;
+  const raw = normalized.slice(1);
+  const num = Number.parseInt(raw, 16);
+  if (Number.isNaN(num)) return null;
+  return [
+    (num >> 16) & 0xff,
+    (num >> 8) & 0xff,
+    num & 0xff
+  ];
+};
+
+const hexToRgba = (hex: string, alpha: number): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const lightenHexColor = (hex: string, amount: number): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  const blend = (channel: number) => Math.min(255, Math.round(channel + (255 - channel) * amount));
+  const next = [blend(r), blend(g), blend(b)]
+    .map((channel) => channel.toString(16).padStart(2, '0'))
+    .join('');
+  return `#${next}`;
+};
 
 interface ProjectDetailProps {
   project: IProject;
@@ -103,6 +165,45 @@ export default function ProjectDetail({
     {
       defaultValue: true,
       localStorageKey: PROJECT_PHASES_PANEL_VISIBLE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Kanban zoom level state with persistence (default: 50 = 350px columns)
+  const {
+    value: kanbanZoomLevel,
+    setValue: setKanbanZoomLevel,
+  } = useUserPreference<number>(
+    PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
+    {
+      defaultValue: 50,
+      localStorageKey: PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Header pinned state with persistence (default: false - not pinned/sticky)
+  const {
+    value: isHeaderPinned,
+    setValue: setIsHeaderPinned,
+  } = useUserPreference<boolean>(
+    PROJECT_HEADER_PINNED_SETTING,
+    {
+      defaultValue: false,
+      localStorageKey: PROJECT_HEADER_PINNED_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Sticky status names strip visibility (default: off)
+  const {
+    value: showStickyStatusNames,
+    setValue: setShowStickyStatusNames,
+  } = useUserPreference<boolean>(
+    PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
+    {
+      defaultValue: false,
+      localStorageKey: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
       debounceMs: 300
     }
   );
@@ -176,7 +277,12 @@ export default function ProjectDetail({
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
   const [animatingPhases, setAnimatingPhases] = useState<Set<string>>(new Set());
   const [taskDraggingOverPhaseId, setTaskDraggingOverPhaseId] = useState<string | null>(null); // Added state
-  
+
+  // All project tasks for phase count filtering (like list view)
+  const [allProjectTasks, setAllProjectTasks] = useState<IProjectTask[]>([]);
+  const [allProjectTaskResources, setAllProjectTaskResources] = useState<Record<string, ITaskResource[]>>({});
+  const [allProjectTaskTags, setAllProjectTaskTags] = useState<Record<string, ITag[]>>({});
+
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
@@ -252,6 +358,7 @@ export default function ProjectDetail({
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
+  const [selectedTaskTypeFilter, setSelectedTaskTypeFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
   const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
@@ -300,6 +407,11 @@ export default function ProjectDetail({
       tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
     }
 
+    // Apply task type filter
+    if (selectedTaskTypeFilter !== 'all') {
+      tasks = tasks.filter(task => task.task_type_key === selectedTaskTypeFilter);
+    }
+
     // Apply tag filter
     if (selectedTaskTags.length > 0) {
       tasks = tasks.filter(task => {
@@ -345,7 +457,7 @@ export default function ProjectDetail({
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -369,8 +481,116 @@ export default function ProjectDetail({
     fetchTaskCounts();
   }, [project.project_id]);
 
+  // Load all project tasks for phase count filtering (like list view does)
+  useEffect(() => {
+    const fetchAllProjectTasks = async () => {
+      try {
+        const data = await getAllProjectTasksForListView(project.project_id);
+        setAllProjectTasks(data.tasks);
+        setAllProjectTaskResources(data.taskResources);
+        setAllProjectTaskTags(data.taskTags);
+      } catch (error) {
+        console.error('Error fetching all project tasks:', error);
+      }
+    };
+    fetchAllProjectTasks();
+  }, [project.project_id]);
+
+  // Filter all project tasks (same logic as list view) for phase count calculation
+  const allFilteredTasks = useMemo(() => {
+    let filtered = allProjectTasks;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+      filtered = filtered.filter(task => {
+        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const taskDescription = searchCaseSensitive
+          ? (task.description ?? '')
+          : (task.description?.toLowerCase() ?? '');
+
+        if (searchWholeWord) {
+          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+        } else {
+          return taskName.includes(query) || taskDescription.includes(query);
+        }
+      });
+    }
+
+    // Apply priority filter
+    if (selectedPriorityFilter !== 'all') {
+      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
+    }
+
+    // Apply task type filter
+    if (selectedTaskTypeFilter !== 'all') {
+      filtered = filtered.filter(task => task.task_type_key === selectedTaskTypeFilter);
+    }
+
+    // Apply tag filter
+    if (selectedTaskTags.length > 0) {
+      filtered = filtered.filter(task => {
+        const tags = allProjectTaskTags[task.task_id] || [];
+        const tagTexts = tags.map(tag => tag.tag_text);
+        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
+      });
+    }
+
+    // Apply agent filter
+    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+      filtered = filtered.filter(task => {
+        const isUnassigned = !task.assigned_to;
+
+        if (includeUnassignedAgents && isUnassigned) {
+          return true;
+        }
+
+        if (selectedAgentFilter.length > 0) {
+          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
+            return true;
+          }
+
+          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
+            const resources = allProjectTaskResources[task.task_id] || [];
+            const hasMatchingAdditionalAgent = resources.some(
+              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
+            );
+            if (hasMatchingAdditionalAgent) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      });
+    }
+
+    return filtered;
+  }, [allProjectTasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+
+  // Calculate filtered phase task counts (like list view's phaseGroups)
+  // Falls back to server-fetched counts while allProjectTasks is loading
+  const filteredPhaseTaskCounts = useMemo(() => {
+    // If allProjectTasks hasn't loaded yet, use server-fetched counts
+    if (allProjectTasks.length === 0 && Object.keys(phaseTaskCounts).length > 0) {
+      return phaseTaskCounts;
+    }
+    const counts: Record<string, number> = {};
+    allFilteredTasks.forEach(task => {
+      if (task.phase_id) {
+        counts[task.phase_id] = (counts[task.phase_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [allFilteredTasks, allProjectTasks, phaseTaskCounts]);
+
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const scrollbarProxyRef = useRef<HTMLDivElement>(null);
+  const stickyStatusStripRef = useRef<HTMLDivElement>(null);
+  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
     horizontal: 0,
@@ -385,6 +605,77 @@ export default function ProjectDetail({
       }
     };
   }, []);
+
+  const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
+  const visibleKanbanStatuses = useMemo(
+    () => projectStatuses.filter((status) => status.is_visible),
+    [projectStatuses]
+  );
+  const statusTaskCounts = useMemo(() => {
+    return filteredTasks.reduce<Record<string, number>>((counts, task) => {
+      const statusId = task.project_status_mapping_id;
+      counts[statusId] = (counts[statusId] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [filteredTasks]);
+
+  // Proxy scrollbar and sticky status strip: keep horizontal scroll positions in sync.
+  useEffect(() => {
+    const container = kanbanBoardRef.current;
+    const proxy = scrollbarProxyRef.current;
+    const stickyStrip = stickyStatusStripRef.current;
+    if (!container || !proxy) return;
+
+    let isSyncing = false;
+
+    const syncScrollPositions = (source: 'container' | 'proxy' | 'sticky') => {
+      if (isSyncing) return;
+      isSyncing = true;
+      const nextLeft = source === 'container'
+        ? container.scrollLeft
+        : source === 'proxy'
+          ? proxy.scrollLeft
+          : (stickyStrip?.scrollLeft ?? 0);
+
+      if (source !== 'container') container.scrollLeft = nextLeft;
+      if (source !== 'proxy') proxy.scrollLeft = nextLeft;
+      if (stickyStrip && source !== 'sticky') stickyStrip.scrollLeft = nextLeft;
+      isSyncing = false;
+    };
+
+    const onContainerScroll = () => syncScrollPositions('container');
+    const onProxyScroll = () => syncScrollPositions('proxy');
+    const onStickyStripScroll = () => syncScrollPositions('sticky');
+
+    container.addEventListener('scroll', onContainerScroll);
+    proxy.addEventListener('scroll', onProxyScroll);
+    if (stickyStrip) {
+      stickyStrip.addEventListener('scroll', onStickyStripScroll);
+    }
+    syncScrollPositions('container');
+
+    // Track the board's scroll width with ResizeObserver
+    const updateWidth = () => {
+      setBoardScrollWidth(container.scrollWidth);
+    };
+    updateWidth();
+
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(container);
+    // Also observe the first child (the kanban board) if it exists
+    if (container.firstElementChild) {
+      ro.observe(container.firstElementChild);
+    }
+
+    return () => {
+      container.removeEventListener('scroll', onContainerScroll);
+      proxy.removeEventListener('scroll', onProxyScroll);
+      if (stickyStrip) {
+        stickyStrip.removeEventListener('scroll', onStickyStripScroll);
+      }
+      ro.disconnect();
+    };
+  }, [showStickyStatusNames, viewMode]);
 
   // Lazy load list view data when switching to list mode
   const loadListViewData = useCallback(async () => {
@@ -436,12 +727,10 @@ export default function ProjectDetail({
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
         await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
-        // Update task counts: decrement source, increment target
-        setPhaseTaskCounts(prev => ({
-          ...prev,
-          [task.phase_id]: Math.max((prev[task.phase_id] || 0) - 1, 0),
-          [newPhaseId]: (prev[newPhaseId] || 0) + 1
-        }));
+        // Update allProjectTasks for filtered counts
+        setAllProjectTasks(prev => prev.map(t =>
+          t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
+        ));
         toast.success('Task moved to new phase');
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
@@ -1130,12 +1419,10 @@ export default function ProjectDetail({
           task.task_id === updatedTask.task_id ? taskWithChecklist : task
         )
       );
-      // Update task counts: decrement source, increment target
-      setPhaseTaskCounts(prev => ({
-        ...prev,
-        [moveConfirmation.sourcePhase.phase_id]: Math.max((prev[moveConfirmation.sourcePhase.phase_id] || 0) - 1, 0),
-        [moveConfirmation.targetPhase.phase_id]: (prev[moveConfirmation.targetPhase.phase_id] || 0) + 1
-      }));
+      // Update allProjectTasks for filtered counts
+      setAllProjectTasks(prev => prev.map(t =>
+        t.task_id === updatedTask.task_id ? { ...t, phase_id: moveConfirmation.targetPhase.phase_id } : t
+      ));
 
       toast.success(`Task moved to ${moveConfirmation.targetPhase.phase_name}`);
     } catch (error) {
@@ -1184,11 +1471,8 @@ export default function ProjectDetail({
           } : null);
         }
 
-        // Update task count for the phase
-        setPhaseTaskCounts(prev => ({
-          ...prev,
-          [newTask.phase_id]: (prev[newTask.phase_id] || 0) + 1
-        }));
+        // Add to allProjectTasks for filtered counts
+        setAllProjectTasks(prev => [...prev, taskWithChecklist]);
         setShowQuickAdd(false);
         toast.success('New task added successfully!');
       } else {
@@ -1565,12 +1849,10 @@ export default function ProjectDetail({
           setProjectTasks(prevTasks =>
             prevTasks.filter(t => t.task_id !== movedTask.task_id)
           );
-          // Update task counts: decrement source, increment target
-          setPhaseTaskCounts(prev => ({
-            ...prev,
-            [taskToMove.phase_id]: Math.max((prev[taskToMove.phase_id] || 0) - 1, 0),
-            [targetPhaseId]: (prev[targetPhaseId] || 0) + 1
-          }));
+          // Update allProjectTasks for filtered counts
+          setAllProjectTasks(prev => prev.map(t =>
+            t.task_id === movedTask.task_id ? { ...t, phase_id: targetPhaseId, project_status_mapping_id: targetStatusId || t.project_status_mapping_id } : t
+          ));
           toast.success(`Task "${taskToMove.task_name}" moved to different phase successfully! Switch to the target phase to see it.`);
         } else {
           // Task moved within the same phase (to different status) - update in place
@@ -1594,27 +1876,78 @@ export default function ProjectDetail({
   // Render the sticky header with title, view switcher, search, and filters
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
+    const getStatusStripStyles = (status: ProjectStatus, index: number) => {
+      if (status.color) {
+        const base = status.color;
+        const itemBgHex = lightenHexColor(base, 0.72) ?? base;
+        const itemBorderHex = lightenHexColor(base, 0.45) ?? base;
+        const badgeBgHex = lightenHexColor(base, 0.62) ?? base;
+
+        return {
+          itemStyle: {
+            backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
+            borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
+            color: base,
+          } as React.CSSProperties,
+          countStyle: {
+            backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
+            color: base,
+          } as React.CSSProperties,
+        };
+      }
+
+      const paletteIndex = index % STATUS_FALLBACK_BACKGROUNDS.length;
+      const itemBg = STATUS_FALLBACK_BACKGROUNDS[paletteIndex];
+      const badgeBg = STATUS_FALLBACK_BADGES[paletteIndex];
+      const border = STATUS_FALLBACK_BORDERS[paletteIndex];
+      return {
+        itemStyle: {
+          backgroundColor: hexToRgba(itemBg, 0.72) ?? itemBg,
+          borderColor: hexToRgba(border, 0.85) ?? border,
+          color: 'rgb(var(--color-text-700))',
+        } as React.CSSProperties,
+        countStyle: {
+          backgroundColor: hexToRgba(badgeBg, 0.82) ?? badgeBg,
+          color: 'rgb(var(--color-text-700))',
+        } as React.CSSProperties,
+      };
+    };
 
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
-          {/* Top row: Title + View Switcher */}
+          {/* Top row: Title + Pin + View Switcher */}
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Task List</h2>
-            <ViewSwitcher
-              currentView={viewMode}
-              onChange={setViewMode}
-              options={[
-                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                { value: 'list', label: 'List', icon: List }
-              ]}
-            />
+            <div className="flex items-center gap-4">
+              <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+                <button
+                  onClick={() => setIsHeaderPinned(!isHeaderPinned)}
+                  className={`p-1.5 rounded-md transition-colors ${
+                    isHeaderPinned
+                      ? 'bg-primary-100 text-primary-600'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                  }`}
+                  aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+                >
+                  <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
+                </button>
+              </Tooltip>
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={setViewMode}
+                options={[
+                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                  { value: 'list', label: 'List', icon: List }
+                ]}
+              />
+            </div>
           </div>
 
           {/* Bottom row: Search + Filters */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Search Input with Options */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -1623,8 +1956,18 @@ export default function ProjectDetail({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <Button
                 id="search-whole-word-list"
@@ -1704,6 +2047,60 @@ export default function ProjectDetail({
               className="w-40"
               placeholder="Priority"
             />
+
+            {/* Task Type Filter */}
+            <CustomSelect
+              value={selectedTaskTypeFilter}
+              onValueChange={setSelectedTaskTypeFilter}
+              options={[
+                { value: 'all', label: 'All Types' },
+                ...taskTypes.map(t => {
+                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  return {
+                    value: t.type_key,
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <Icon
+                          className="w-4 h-4"
+                          style={{ color: t.color || '#6B7280' }}
+                        />
+                        <span>{t.type_name}</span>
+                      </div>
+                    )
+                  };
+                })
+              ]}
+              className="w-40"
+              placeholder="Task Type"
+            />
+
+            {/* Clear all filters button */}
+            {(searchQuery || searchWholeWord || searchCaseSensitive ||
+              selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 ||
+              includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' ||
+              selectedTaskTypeFilter !== 'all') && (
+              <Tooltip content="Clear all filters">
+                <Button
+                  id="clear-task-filters-list"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchWholeWord(false);
+                    setSearchCaseSensitive(false);
+                    setSelectedTaskTags([]);
+                    setSelectedAgentFilter([]);
+                    setIncludeUnassignedAgents(false);
+                    setPrimaryAgentOnly(false);
+                    setSelectedPriorityFilter('all');
+                    setSelectedTaskTypeFilter('all');
+                  }}
+                  className="-ml-1 shrink-0 text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         </div>
       );
@@ -1712,7 +2109,7 @@ export default function ProjectDetail({
     // Kanban view header
     return (
       <div className="mb-4 space-y-3 flex-shrink-0">
-        {/* Top row: Title + View Switcher */}
+        {/* Top row: Title + Zoom Control + View Switcher */}
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold">
@@ -1722,21 +2119,60 @@ export default function ProjectDetail({
               <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
             )}
           </div>
-          <ViewSwitcher
-            currentView={viewMode}
-            onChange={setViewMode}
-            options={[
-              { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-              { value: 'list', label: 'List', icon: List }
-            ]}
-          />
+          <div className="flex items-center gap-4">
+            <KanbanZoomControl
+              zoomLevel={kanbanZoomLevel}
+              onZoomChange={setKanbanZoomLevel}
+            />
+            <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
+              <button
+                id="sticky-status-names-toggle-kanban"
+                onClick={() => {
+                  const nextValue = !showStickyStatusNames;
+                  setShowStickyStatusNames(nextValue);
+                  if (nextValue && !isHeaderPinned) {
+                    setIsHeaderPinned(true);
+                  }
+                }}
+                className={`p-1.5 rounded-md transition-colors ${
+                  showStickyStatusNames
+                    ? 'bg-primary-100 text-primary-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
+              >
+                <Columns3 className="h-4 w-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+              <button
+                onClick={() => setIsHeaderPinned(!isHeaderPinned)}
+                className={`p-1.5 rounded-md transition-colors ${
+                  isHeaderPinned
+                    ? 'bg-primary-100 text-primary-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+              >
+                <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
+              </button>
+            </Tooltip>
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={setViewMode}
+              options={[
+                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                { value: 'list', label: 'List', icon: List }
+              ]}
+            />
+          </div>
         </div>
 
         {/* Bottom row: Search + Filters + Completion */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Search Input with Options */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -1745,8 +2181,18 @@ export default function ProjectDetail({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-72 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <Button
                 id="search-whole-word-kanban"
@@ -1826,6 +2272,60 @@ export default function ProjectDetail({
               className="w-40"
               placeholder="Priority"
             />
+
+            {/* Task Type Filter */}
+            <CustomSelect
+              value={selectedTaskTypeFilter}
+              onValueChange={setSelectedTaskTypeFilter}
+              options={[
+                { value: 'all', label: 'All Types' },
+                ...taskTypes.map(t => {
+                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  return {
+                    value: t.type_key,
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <Icon
+                          className="w-4 h-4"
+                          style={{ color: t.color || '#6B7280' }}
+                        />
+                        <span>{t.type_name}</span>
+                      </div>
+                    )
+                  };
+                })
+              ]}
+              className="w-40"
+              placeholder="Task Type"
+            />
+
+            {/* Clear all filters button */}
+            {(searchQuery || searchWholeWord || searchCaseSensitive ||
+              selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 ||
+              includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' ||
+              selectedTaskTypeFilter !== 'all') && (
+              <Tooltip content="Clear all filters">
+                <Button
+                  id="clear-task-filters-kanban"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchWholeWord(false);
+                    setSearchCaseSensitive(false);
+                    setSelectedTaskTags([]);
+                    setSelectedAgentFilter([]);
+                    setIncludeUnassignedAgents(false);
+                    setPrimaryAgentOnly(false);
+                    setSelectedPriorityFilter('all');
+                    setSelectedTaskTypeFilter('all');
+                  }}
+                  className="-ml-1 shrink-0 text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
 
           {/* Completion Stats */}
@@ -1841,6 +2341,38 @@ export default function ProjectDetail({
             </div>
           )}
         </div>
+
+        {showStickyStatusNames && (
+          <div className={styles.kanbanStatusStrip}>
+            <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
+              <div className={styles.kanbanStatusStripTrack}>
+                {visibleKanbanStatuses.map((status, index) => {
+                  const { itemStyle, countStyle } = getStatusStripStyles(status, index);
+                  return (
+                    <div
+                      key={status.project_status_mapping_id}
+                      className={styles.kanbanStatusStripItem}
+                      style={{
+                        ...itemStyle,
+                        width: `${kanbanColumnWidth}px`,
+                        minWidth: `${kanbanColumnWidth}px`,
+                        maxWidth: `${kanbanColumnWidth}px`,
+                      }}
+                      title={status.custom_name || status.name}
+                    >
+                      <span className={styles.kanbanStatusStripName}>
+                        {status.custom_name || status.name}
+                      </span>
+                      <span className={styles.kanbanStatusStripCount} style={countStyle}>
+                        {statusTaskCounts[status.project_status_mapping_id] ?? 0}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1944,12 +2476,14 @@ export default function ProjectDetail({
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts}
             allTaskTags={allTaskTags}
+            priorities={priorities}
             projectTreeData={projectTreeData}
             animatingTasks={animatingTasks}
             avatarUrls={avatarUrls}
             searchQuery={searchQuery}
             searchCaseSensitive={searchCaseSensitive}
             searchWholeWord={searchWholeWord}
+            zoomLevel={kanbanZoomLevel}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -2001,7 +2535,7 @@ export default function ProjectDetail({
                   editingPhaseDescription={editingPhaseDescription}
                   editingStartDate={editingStartDate}
                   editingEndDate={editingEndDate}
-                  phaseTaskCounts={phaseTaskCounts}
+                  phaseTaskCounts={filteredPhaseTaskCounts}
                   phaseDropTarget={phaseDropTarget}
                   taskDraggingOverPhaseId={taskDraggingOverPhaseId}
                   animatingPhases={animatingPhases}
@@ -2034,8 +2568,13 @@ export default function ProjectDetail({
             </div>
           )}
           <div className={styles.kanbanArea}>
-            {/* Sticky header - stays fixed when scrolling */}
-            {renderHeader()}
+            <div className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}>
+              {renderHeader()}
+              {/* Proxy scrollbar — sits at the bottom edge of the header */}
+              <div className={styles.kanbanScrollbarProxy} ref={scrollbarProxyRef}>
+                <div className={styles.kanbanScrollbarProxyInner} style={{ width: boardScrollWidth }} />
+              </div>
+            </div>
             {/* Scrollable content area */}
             <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
               {renderContent()}
@@ -2143,11 +2682,8 @@ export default function ProjectDetail({
               const checklistItems = await getTaskChecklistItems(newTask.task_id);
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
-              // Update task count for the target phase
-              setPhaseTaskCounts(prev => ({
-                ...prev,
-                [newTask.phase_id]: (prev[newTask.phase_id] || 0) + 1
-              }));
+              // Add to allProjectTasks for filtered counts
+              setAllProjectTasks(prev => [...prev, taskWithChecklist]);
 
               toast.success(`Task "${newTask.task_name}" duplicated successfully!`);
               setIsDuplicateDialogOpen(false);
@@ -2186,11 +2722,8 @@ export default function ProjectDetail({
             try {
               await deleteTaskAction(taskToDelete.task_id);
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
-              // Update task count for the phase
-              setPhaseTaskCounts(prev => ({
-                ...prev,
-                [taskToDelete.phase_id]: Math.max((prev[taskToDelete.phase_id] || 0) - 1, 0)
-              }));
+              // Remove from allProjectTasks for filtered counts
+              setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               toast.success(`Task "${taskToDelete.task_name}" deleted successfully!`);
               setTaskToDelete(null);
             } catch (error) {

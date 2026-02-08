@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 import type { IClient } from '@alga-psa/types';
 
 import { Input } from './Input';
 import CustomSelect from './CustomSelect';
-import { Button } from './Button';
+import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
 import type { EntityAvatarProps } from './EntityAvatar';
 
@@ -15,6 +16,9 @@ import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import type { AutomationProps, FormFieldComponent, ButtonComponent } from '../ui-reflection/types';
 import { CommonActions } from '../ui-reflection/actionBuilders';
+
+type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 
 interface ClientPickerProps {
   id?: string;
@@ -30,6 +34,9 @@ interface ClientPickerProps {
   placeholder?: string;
   modal?: boolean;
   size?: EntityAvatarProps['size'];
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  triggerButtonClassName?: string;
 }
 
 interface OptionButtonProps {
@@ -68,6 +75,9 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   placeholder = 'Select Client',
   modal = true,
   size = 'sm',
+  triggerVariant = 'outline',
+  triggerSize,
+  triggerButtonClassName = '',
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -323,8 +333,9 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           <Button
             id={`${id}-trigger`}
             type="button"
-            variant="outline"
-            className={`w-full justify-between ${fitContent ? 'w-auto' : ''}`}
+            variant={triggerVariant}
+            size={triggerSize}
+            className={`${fitContent ? 'w-auto' : 'w-full'} justify-between ${triggerButtonClassName}`}
             onClick={() => setIsOpen((prev) => !prev)}
             data-automation-type={dataAutomationType}
           >

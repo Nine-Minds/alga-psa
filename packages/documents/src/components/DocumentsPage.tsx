@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { DocumentFilters as DocumentFilterType } from '@alga-psa/types';
 import Documents from './Documents';
 import { Card } from '@alga-psa/ui/components/Card';
+import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getDistinctEntityTypes } from '../actions/documentActions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
@@ -213,6 +214,7 @@ export default function DocumentsPage() {
   const displayError = error;
 
   return (
+    <UnsavedChangesProvider>
     <div className="p-6">
       <div className="mb-6">
         <div className="flex items-center gap-2 text-2xl font-semibold">
@@ -303,5 +305,6 @@ export default function DocumentsPage() {
         </div>
       </div>
     </div>
+    </UnsavedChangesProvider>
   );
 }

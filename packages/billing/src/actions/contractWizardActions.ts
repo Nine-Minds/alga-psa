@@ -210,6 +210,28 @@ const isUsageConfig = (
 ): config is IContractLineServiceUsageConfig =>
   Boolean(config && 'unit_of_measure' in config && 'enable_tiered_pricing' in config);
 
+const toPositiveCentsOrUndefined = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  const numeric = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return undefined;
+  }
+  const rounded = Math.round(numeric);
+  return rounded > 0 ? rounded : undefined;
+};
+
+const firstPositiveRateInCents = (...candidates: unknown[]): number | undefined => {
+  for (const candidate of candidates) {
+    const normalized = toPositiveCentsOrUndefined(candidate);
+    if (normalized !== undefined) {
+      return normalized;
+    }
+  }
+  return undefined;
+};
+
 // ---------------------------------------------------------------------------
 // Template wizard
 // ---------------------------------------------------------------------------
@@ -502,7 +524,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       const templateLineId = await recordTemplateMapping(hourlyPlanId, null);
 
       for (const service of filteredHourlyServices) {
-        const normalizedHourlyRate = Math.max(0, Math.round(service.hourly_rate ?? 0));
+        const normalizedHourlyRate = toPositiveCentsOrUndefined(service.hourly_rate);
 
         // Insert into template line services table (not contract_line_services)
         await trx('contract_template_line_services').insert({
@@ -510,7 +532,7 @@ export const createContractTemplateFromWizard = withAuth(async (
           template_line_id: templateLineId,
           service_id: service.service_id,
           quantity: null,
-          custom_rate: normalizedHourlyRate > 0 ? normalizedHourlyRate : null,  // Already in cents
+          custom_rate: normalizedHourlyRate ?? null,
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -524,7 +546,7 @@ export const createContractTemplateFromWizard = withAuth(async (
           service_id: service.service_id,
           configuration_type: 'Hourly',
           quantity: null,
-          custom_rate: normalizedHourlyRate > 0 ? normalizedHourlyRate : null,  // Already in cents
+          custom_rate: normalizedHourlyRate ?? null,
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -533,7 +555,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         await trx('contract_template_line_service_hourly_config').insert({
           tenant,
           config_id: configId,
-          hourly_rate: normalizedHourlyRate,  // Already in cents
+          hourly_rate: normalizedHourlyRate ?? null,
           minimum_billable_time: submission.minimum_billable_time ?? 0,
           round_up_to_nearest: submission.round_up_to_nearest ?? 0,
           enable_overtime: false,
@@ -580,7 +602,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       const templateLineId = await recordTemplateMapping(usagePlanId, null);
 
       for (const service of filteredUsageServices) {
-        const normalizedUnitRate = service.unit_rate != null ? Math.max(0, Math.round(service.unit_rate)) : 0;
+        const normalizedUnitRate = toPositiveCentsOrUndefined(service.unit_rate);
 
         // Insert into template line services table (not contract_line_services)
         await trx('contract_template_line_services').insert({
@@ -588,7 +610,7 @@ export const createContractTemplateFromWizard = withAuth(async (
           template_line_id: templateLineId,
           service_id: service.service_id,
           quantity: null,
-          custom_rate: normalizedUnitRate > 0 ? normalizedUnitRate : null,  // Already in cents
+          custom_rate: normalizedUnitRate ?? null,
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -602,7 +624,7 @@ export const createContractTemplateFromWizard = withAuth(async (
           service_id: service.service_id,
           configuration_type: 'Usage',
           quantity: null,
-          custom_rate: normalizedUnitRate > 0 ? normalizedUnitRate : null,  // Already in cents
+          custom_rate: normalizedUnitRate ?? null,
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -614,7 +636,7 @@ export const createContractTemplateFromWizard = withAuth(async (
           unit_of_measure: service.unit_of_measure || 'unit',
           enable_tiered_pricing: false,
           minimum_usage: 0,
-          base_rate: normalizedUnitRate > 0 ? normalizedUnitRate : null,  // Already in cents
+          base_rate: normalizedUnitRate ?? null,
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -836,13 +858,16 @@ export const createClientContractFromWizard = withAuth(async (
       ...filteredHourlyServices.map((s) => s.service_id),
       ...filteredUsageServices.map((s) => s.service_id),
     ];
+    const serviceCatalogById = new Map<string, any>();
 
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
         .whereIn('service_id', allServiceIds)
-        .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active');
+        .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active', 'default_rate');
 
-      const servicesById = new Map<string, any>(services.map((s: any) => [s.service_id, s]));
+      services.forEach((service: any) => {
+        serviceCatalogById.set(service.service_id, service);
+      });
 
       // Validate services have prices in the contract's currency OR have custom rates specified
       const contractCurrency = submission.currency_code || 'USD';
@@ -852,14 +877,14 @@ export const createClientContractFromWizard = withAuth(async (
 
       // Hourly services with hourly_rate specified
       filteredHourlyServices.forEach(s => {
-        if (s.hourly_rate !== undefined && s.hourly_rate !== null) {
+        if (toPositiveCentsOrUndefined(s.hourly_rate) !== undefined) {
           servicesWithCustomRates.add(s.service_id);
         }
       });
 
       // Usage services with unit_rate specified
       filteredUsageServices.forEach(s => {
-        if (s.unit_rate !== undefined && s.unit_rate !== null) {
+        if (toPositiveCentsOrUndefined(s.unit_rate) !== undefined) {
           servicesWithCustomRates.add(s.service_id);
         }
       });
@@ -920,7 +945,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const item of filteredFixedServices) {
-        const match = servicesById.get(item.service_id);
+        const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
         if (match.item_kind !== 'service' || match.billing_method !== 'fixed') {
           throw new Error(
@@ -930,7 +955,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const item of filteredProductServices) {
-        const match = servicesById.get(item.service_id);
+        const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
         if (match.item_kind !== 'product') {
           throw new Error(`Catalog item "${match.service_name}" must be a product to be added to product lines.`);
@@ -941,7 +966,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const item of filteredHourlyServices) {
-        const match = servicesById.get(item.service_id);
+        const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
         if (match.item_kind !== 'service' || match.billing_method !== 'hourly') {
           throw new Error(
@@ -951,7 +976,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const item of filteredUsageServices) {
-        const match = servicesById.get(item.service_id);
+        const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
         if (match.item_kind !== 'service' || match.billing_method !== 'usage') {
           throw new Error(
@@ -1118,7 +1143,11 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const service of filteredHourlyServices) {
-        const normalizedHourlyRate = Math.max(0, Math.round(service.hourly_rate ?? 0));
+        const normalizedHourlyRate =
+          firstPositiveRateInCents(
+            service.hourly_rate,
+            serviceCatalogById.get(service.service_id)?.default_rate
+          ) ?? 0;
         await trx('contract_line_services').insert({
           tenant,
           contract_line_id: hourlyPlanId,
@@ -1167,7 +1196,11 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const service of filteredUsageServices) {
-        const normalizedUnitRate = Math.max(0, Math.round(service.unit_rate ?? 0));
+        const normalizedUnitRate =
+          firstPositiveRateInCents(
+            service.unit_rate,
+            serviceCatalogById.get(service.service_id)?.default_rate
+          ) ?? 0;
         await trx('contract_line_services').insert({
           tenant,
           contract_line_id: usagePlanId,
@@ -1419,11 +1452,11 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     } else if (line.contract_line_type === 'Hourly') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
-        const hourlyRateSource =
-          (hourlyConfig && hourlyConfig.hourly_rate != null ? hourlyConfig.hourly_rate : configuration?.custom_rate) ??
-          null;
-        const hourlyRateCents =
-          hourlyRateSource != null ? Math.round(Number(hourlyRateSource)) : undefined;
+        const hourlyRateCents = firstPositiveRateInCents(
+          hourlyConfig?.hourly_rate,
+          configuration?.custom_rate,
+          service.default_rate
+        );
 
         const minimumBillable =
           hourlyConfig && hourlyConfig.minimum_billable_time != null
@@ -1455,10 +1488,11 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     } else if (line.contract_line_type === 'Usage') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const usageConfig = isUsageConfig(typeConfig) ? typeConfig : null;
-        const unitRateSource =
-          (usageConfig && usageConfig.base_rate != null ? usageConfig.base_rate : configuration?.custom_rate) ?? null;
-        const unitRateCents =
-          unitRateSource != null ? Math.round(Number(unitRateSource)) : undefined;
+        const unitRateCents = firstPositiveRateInCents(
+          usageConfig?.base_rate,
+          configuration?.custom_rate,
+          service.default_rate
+        );
 
         usageServices?.push({
           service_id: service.service_id,
@@ -1648,11 +1682,11 @@ export const getDraftContractForResume = withAuth(async (
       hourlyBillingFrequency = line.billing_frequency ?? hourlyBillingFrequency;
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
-        const hourlyRateSource =
-          (hourlyConfig && hourlyConfig.hourly_rate != null ? hourlyConfig.hourly_rate : configuration?.custom_rate) ??
-          null;
-        const hourlyRateCents =
-          hourlyRateSource != null ? Math.round(Number(hourlyRateSource)) : undefined;
+        const hourlyRateCents = firstPositiveRateInCents(
+          hourlyConfig?.hourly_rate,
+          configuration?.custom_rate,
+          service.default_rate
+        );
 
         const minimumBillable =
           hourlyConfig && hourlyConfig.minimum_billable_time != null
@@ -1685,10 +1719,11 @@ export const getDraftContractForResume = withAuth(async (
       usageBillingFrequency = line.billing_frequency ?? usageBillingFrequency;
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const usageConfig = isUsageConfig(typeConfig) ? typeConfig : null;
-        const unitRateSource =
-          (usageConfig && usageConfig.base_rate != null ? usageConfig.base_rate : configuration?.custom_rate) ?? null;
-        const unitRateCents =
-          unitRateSource != null ? Math.round(Number(unitRateSource)) : undefined;
+        const unitRateCents = firstPositiveRateInCents(
+          usageConfig?.base_rate,
+          configuration?.custom_rate,
+          service.default_rate
+        );
 
         usageServices.push({
           service_id: service.service_id,

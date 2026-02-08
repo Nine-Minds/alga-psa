@@ -12,6 +12,9 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { getCommentResponseSource } from '../../lib/responseSource';
+import ResponseSourceBadge from '../ResponseSourceBadge';
 
 interface CommentItemProps {
   id?: string;
@@ -106,6 +109,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return commentUser?.email;
   };
 
+  const commentSource = useMemo(
+    () => getCommentResponseSource(conversation),
+    [conversation]
+  );
+
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
     if (conversation.is_system_generated) return false;
@@ -135,6 +143,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}
           onContentChange={handleContentChange}
+          searchMentions={searchUsersForMentions}
         />
 
         <div className="flex justify-end space-x-2 mt-1">
@@ -269,6 +278,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     </span>
                   </Tooltip>
+                )}
+                {commentSource && (
+                  <ResponseSourceBadge
+                    source={commentSource}
+                    labels={{
+                      clientPortal: t('tickets.responseSource.clientPortal', 'Received via Client Portal'),
+                      inboundEmail: t('tickets.responseSource.inboundEmail', 'Received via Inbound Email'),
+                    }}
+                  />
                 )}
               </div>
               <div className="flex flex-col">

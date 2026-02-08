@@ -10,7 +10,7 @@ use crate::providers::{
 use anyhow::{anyhow, Context};
 use base64::Engine as _;
 use once_cell::sync::Lazy;
-use reqwest::{Client, Method, StatusCode};
+use reqwest::{redirect::Policy, Client, Method, StatusCode};
 use serde_json::{Map, Value};
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
@@ -32,10 +32,11 @@ use component::alga::extension::{
     storage::{self, StorageEntry, StorageError},
     types::{
         ContextData, ExecuteRequest as WitExecuteRequest, ExecuteResponse as WitExecuteResponse,
-        HttpHeader, UserData, UserError,
+        HttpHeader, UserData, UserDataV2, UserError,
     },
     ui_proxy::{self, ProxyError},
     user,
+    user_v2,
 };
 
 #[derive(Clone)]
@@ -108,6 +109,14 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
         .timeout(Duration::from_secs(30))
         .build()
         .expect("http client")
+});
+
+static HTTP_FETCH_CLIENT: Lazy<Client> = Lazy::new(|| {
+    Client::builder()
+        .timeout(Duration::from_secs(30))
+        .redirect(Policy::none())
+        .build()
+        .expect("http fetch client")
 });
 
 static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
@@ -491,7 +500,7 @@ impl http::HostWithStore for HasSelf<HostState> {
                 "http capability fetch start"
             );
 
-            let mut builder = HTTP_CLIENT.request(method, url);
+            let mut builder = HTTP_FETCH_CLIENT.request(method, url);
             for header in request.headers {
                 builder = builder.header(&header.name, &header.value);
             }
@@ -1679,8 +1688,26 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
                 payload.insert("name".into(), Value::String(name.clone()));
             }
             if let Some(p) = &input.payload {
-                // payload from extension is already JSON-encoded string
-                payload.insert("payload".into(), Value::String(p.clone()));
+                // Payload from extension is JSON-encoded; decode before forwarding to host API.
+                match serde_json::from_str::<Value>(p) {
+                    Ok(v) => {
+                        payload.insert("payload".into(), v);
+                    }
+                    Err(err) => {
+                        tracing::warn!(
+                            tenant=%tenant,
+                            extension=%extension,
+                            error=%err,
+                            "scheduler capability create_schedule invalid payload JSON"
+                        );
+                        return CreateScheduleResult {
+                            success: false,
+                            schedule_id: None,
+                            error: Some("Payload must be valid JSON object or array".to_string()),
+                            field_errors: Some("{\"payload\":\"Payload must be valid JSON object or array\"}".to_string()),
+                        };
+                    }
+                }
             }
 
             let response = match scheduler_request(&install_id, "create", payload).await {
@@ -1799,7 +1826,25 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
                 payload.insert("name".into(), Value::String(name.clone()));
             }
             if let Some(p) = &input.payload {
-                payload.insert("payload".into(), Value::String(p.clone()));
+                match serde_json::from_str::<Value>(p) {
+                    Ok(v) => {
+                        payload.insert("payload".into(), v);
+                    }
+                    Err(err) => {
+                        tracing::warn!(
+                            tenant=%tenant,
+                            extension=%extension,
+                            schedule_id=%schedule_id,
+                            error=%err,
+                            "scheduler capability update_schedule invalid payload JSON"
+                        );
+                        return UpdateScheduleResult {
+                            success: false,
+                            error: Some("Payload must be valid JSON object or array".to_string()),
+                            field_errors: Some("{\"payload\":\"Payload must be valid JSON object or array\"}".to_string()),
+                        };
+                    }
+                }
             }
 
             let response = match scheduler_request(&install_id, "update", payload).await {
@@ -2169,7 +2214,6 @@ impl user::HostWithStore for HasSelf<HostState> {
                         user_email: user_info.user_email.clone(),
                         user_name: user_info.user_name.clone(),
                         user_type: user_info.user_type.clone(),
-                        client_id: user_info.client_id.clone(),
                     })
                 }
                 None => {
@@ -2177,6 +2221,68 @@ impl user::HostWithStore for HasSelf<HostState> {
                         tenant=%tenant,
                         extension=%extension,
                         "user capability granted but no user context available"
+                    );
+                    Err(UserError::NotAvailable)
+                }
+            }
+        }
+    }
+}
+
+impl user_v2::HostWithStore for HasSelf<HostState> {
+    fn get_user<T>(
+        accessor: &Accessor<T, Self>,
+    ) -> impl std::future::Future<Output = Result<UserDataV2, UserError>> + Send {
+        let (providers, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (state.context.providers.clone(), state.context.clone())
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_USER_READ) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "user-v2 capability denied - cap:user.read not granted"
+                );
+                return Err(UserError::NotAllowed);
+            }
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            match &ctx.user {
+                Some(user_info) => {
+                    let mut additional_fields: Vec<(String, String)> = user_info
+                        .additional_fields
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect();
+                    additional_fields.sort_by(|a, b| a.0.cmp(&b.0));
+
+                    tracing::info!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        user_id=%user_info.user_id,
+                        "user-v2 capability granted - returning user data"
+                    );
+                    Ok(UserDataV2 {
+                        tenant_id: tenant,
+                        client_name: user_info.client_name.clone(),
+                        user_id: user_info.user_id.clone(),
+                        user_email: user_info.user_email.clone(),
+                        user_name: user_info.user_name.clone(),
+                        user_type: user_info.user_type.clone(),
+                        client_id: user_info.client_id.clone(),
+                        additional_fields,
+                    })
+                }
+                None => {
+                    tracing::info!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        "user-v2 capability granted but no user context available"
                     );
                     Err(UserError::NotAvailable)
                 }
@@ -2193,12 +2299,15 @@ impl storage::Host for HostState {}
 impl logging::Host for HostState {}
 impl ui_proxy::Host for HostState {}
 impl user::Host for HostState {}
+impl user_v2::Host for HostState {}
 impl scheduler::Host for HostState {}
 impl invoicing::Host for HostState {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{routing::get, Router};
+    use tokio::net::TcpListener;
     use url::Url;
 
     #[test]
@@ -2235,5 +2344,43 @@ mod tests {
         let providers = HashSet::from([CAP_INVOICE_MANUAL_CREATE.to_string()]);
         let result = require_invoicing_access(&providers, None);
         assert_eq!(result.unwrap_err(), "Permission denied: install_id missing");
+    }
+
+    #[tokio::test]
+    async fn http_fetch_client_does_not_follow_redirects() {
+        let app = Router::new()
+            .route(
+                "/redirect",
+                get(|| async {
+                    (
+                        axum::http::StatusCode::FOUND,
+                        [(axum::http::header::LOCATION, "/target")],
+                    )
+                }),
+            )
+            .route("/target", get(|| async { "ok" }));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+
+        let response = HTTP_FETCH_CLIENT
+            .get(format!("http://{addr}/redirect"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status().as_u16(), 302);
+        assert_eq!(
+            response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok()),
+            Some("/target")
+        );
+
+        server.abort();
+        let _ = server.await;
     }
 }

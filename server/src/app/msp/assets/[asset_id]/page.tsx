@@ -1,9 +1,7 @@
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
-import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
-import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 
 interface Props {
@@ -19,8 +17,8 @@ export default async function AssetPage({ params }: Props) {
     redirect('/auth/msp/signin');
   }
 
-  const userEmail = await getCurrentUser();
-  const userId = userEmail?.user_id;
+  const currentUser = await getCurrentUser();
+  const userId = currentUser?.user_id;
   
   if (!userId) {
     console.error('User ID is missing from the session');
@@ -28,13 +26,6 @@ export default async function AssetPage({ params }: Props) {
   }
 
   try {
-    const knex = await getConnection();
-    const user = await User.get(knex, userId);
-    if (!user) {
-      console.error(`User not found for ID: ${userId}`);
-      redirect('/auth/msp/signin');
-    }
-
     const bundle = await getAssetDetailBundle(resolvedParams.asset_id);
     if (!bundle.asset) {
       return <div>Asset not found</div>;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
-import { ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { ITicketListItem, ITicketCategory, ITicketListFilters, ITag } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -25,7 +25,7 @@ interface TicketingDashboardContainerProps {
       categories: ITicketCategory[];
       clients: IClient[];
       users: IUser[];
-      tags?: string[];
+      tags?: ITag[];
     };
     tickets: ITicketListItem[];
     totalCount: number;

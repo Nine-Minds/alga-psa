@@ -33,6 +33,7 @@ export const ticketSchema = z.object({
   master_ticket_id: z.string().uuid().nullable().optional(),
   ticket_number: z.string(),
   title: z.string(),
+  description: z.string().nullable().optional(),
   url: z.string().nullable(),
   board_id: z.string().uuid(),
   client_id: z.string().uuid().nullable(),

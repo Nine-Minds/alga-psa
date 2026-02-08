@@ -8,7 +8,7 @@ import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
-import User from 'server/src/lib/models/user';
+import User from '@alga-psa/db/models/user';
 import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
@@ -19,21 +19,19 @@ import { createClientContractLineCycles } from 'server/src/lib/billing/createBil
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { TimePeriodSettings } from './models/timePeriodSettings';
+import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
-import { CompositeSecretProvider } from '@alga-psa/core/secrets';
-import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import type { ISecretProvider } from '@alga-psa/core';
-import { EnvSecretProvider } from '@alga-psa/core/secrets';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
-import { DelayedEmailQueue, TenantEmailService, TokenBucketRateLimiter, BucketConfig } from '@alga-psa/email';
+import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { registerAuthEmailProvider } from '@alga-psa/auth';
+import { registerWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 let isFunctionExecuted = false;
 
@@ -66,9 +64,13 @@ export async function initializeApp() {
       throw error; // Cannot continue without critical configuration
     }
 
-    let secretProvider: ISecretProvider = await getSecretProviderInstance();
-    let nextAuthSecret: string | undefined = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
-    process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;
+    const secretProvider = await getSecretProviderInstance();
+    const nextAuthSecret =
+      (await secretProvider.getAppSecret('nextauth_secret')) ??
+      (await secretProvider.getAppSecret('NEXTAUTH_SECRET'));
+    if (nextAuthSecret && !nextAuthSecret.trim().startsWith('/run/secrets/')) {
+      process.env.NEXTAUTH_SECRET = nextAuthSecret;
+    }
 
     // Validate database connectivity (critical - must succeed)
     try {
@@ -103,6 +105,20 @@ export async function initializeApp() {
       logger.error('Failed to initialize event bus:', error);
       throw error; // Critical failure - cannot continue without event bus
     }
+
+    // Register email provider implementations into registries
+    // This breaks circular dependencies: auth and shared no longer import from email directly
+    registerAuthEmailProvider({
+      sendPasswordResetEmail,
+      getSystemEmailService: async () => getSystemEmailService(),
+      getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
+    });
+    registerWorkflowEmailProvider({
+      TenantEmailService: TenantEmailService as any,
+      StaticTemplateProcessor: StaticTemplateProcessor as any,
+      EmailProviderManager: EmailProviderManager as any,
+    });
+    logger.info('Email provider registries initialized');
 
     // Initialize notification accumulator for batching ticket update emails
     // This is non-critical - if it fails, the system falls back to immediate sending
@@ -458,7 +474,7 @@ async function initializeJobScheduler(storageService: StorageService) {
         });
 
         const tenantKnex = await getConnection(tenantId);
-        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
+        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
 
         // Skip if no time period settings are configured for this tenant
         if (!settings || settings.length === 0) {

@@ -1,0 +1,19 @@
+import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
+    sequence: { concurrent: false, shuffle: false },
+    coverage: { enabled: false },
+  },
+  resolve: {
+    alias: [
+      { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
+      { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
+      { find: /^@alga-psa\/scheduling$/, replacement: path.resolve(__dirname, '../scheduling/src/index.ts') },
+      { find: /^@alga-psa\/scheduling\/(.*)$/, replacement: path.resolve(__dirname, '../scheduling/src/$1') },
+    ],
+  },
+});

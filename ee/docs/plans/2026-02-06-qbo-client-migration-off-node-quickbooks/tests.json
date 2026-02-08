@@ -1,0 +1,206 @@
+[
+  {
+    "id": "T001",
+    "description": "QboClientService.create throws QBO_SETUP_INCOMPLETE when tenant credentials are missing for realm.",
+    "implemented": false,
+    "featureIds": ["F001", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "QboClientService.create initializes successfully when tenant credentials and app secrets are present.",
+    "implemented": false,
+    "featureIds": ["F001", "F012"]
+  },
+  {
+    "id": "T003",
+    "description": "Environment/base URL resolution uses sandbox endpoint outside production and production endpoint in production.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "query returns parsed Item array when QueryResponse contains Item list.",
+    "implemented": false,
+    "featureIds": ["F003", "F018"]
+  },
+  {
+    "id": "T005",
+    "description": "query returns empty array when QueryResponse is missing or has no entity arrays.",
+    "implemented": false,
+    "featureIds": ["F003", "F018"]
+  },
+  {
+    "id": "T006",
+    "description": "query retries once after 401 by refreshing token and succeeds on second attempt.",
+    "implemented": false,
+    "featureIds": ["F003", "F008", "F020"]
+  },
+  {
+    "id": "T007",
+    "description": "query surfaces AppError with mapped code when REST call fails with non-401 fault payload.",
+    "implemented": false,
+    "featureIds": ["F003", "F009", "F019"]
+  },
+  {
+    "id": "T008",
+    "description": "query containing CompanyInfo dispatches to CompanyInfo REST endpoint and returns single-element array.",
+    "implemented": false,
+    "featureIds": ["F004", "F018"]
+  },
+  {
+    "id": "T009",
+    "description": "CompanyInfo path returns empty array when API returns no company payload.",
+    "implemented": false,
+    "featureIds": ["F004", "F018"]
+  },
+  {
+    "id": "T010",
+    "description": "create(entityType, data) posts to entity endpoint and returns created entity payload.",
+    "implemented": false,
+    "featureIds": ["F005", "F019"]
+  },
+  {
+    "id": "T011",
+    "description": "create maps REST fault response to AppError with expected code/message shape.",
+    "implemented": false,
+    "featureIds": ["F005", "F009", "F019"]
+  },
+  {
+    "id": "T012",
+    "description": "update throws QBO_INVALID_INPUT when Id is missing.",
+    "implemented": false,
+    "featureIds": ["F006", "F019"]
+  },
+  {
+    "id": "T013",
+    "description": "update throws QBO_INVALID_INPUT when SyncToken is missing.",
+    "implemented": false,
+    "featureIds": ["F006", "F019"]
+  },
+  {
+    "id": "T014",
+    "description": "update posts with update operation semantics and returns updated entity payload.",
+    "implemented": false,
+    "featureIds": ["F006", "F019"]
+  },
+  {
+    "id": "T015",
+    "description": "read(entityType, id) returns entity when REST endpoint responds successfully.",
+    "implemented": false,
+    "featureIds": ["F007", "F019"]
+  },
+  {
+    "id": "T016",
+    "description": "read returns null when QBO not-found fault/code is returned.",
+    "implemented": false,
+    "featureIds": ["F007", "F009", "F019"]
+  },
+  {
+    "id": "T017",
+    "description": "read maps unexpected REST errors to AppError when failure is not not-found.",
+    "implemented": false,
+    "featureIds": ["F007", "F009", "F019"]
+  },
+  {
+    "id": "T018",
+    "description": "401 refresh path updates stored tenant credentials with new access and refresh token values.",
+    "implemented": false,
+    "featureIds": ["F008", "F012", "F020"]
+  },
+  {
+    "id": "T019",
+    "description": "401 refresh path throws QBO_AUTH_ERROR when refresh token grant is rejected.",
+    "implemented": false,
+    "featureIds": ["F008", "F020"]
+  },
+  {
+    "id": "T020",
+    "description": "mapQboError maps stale SyncToken code to QBO_STALE_OBJECT.",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T021",
+    "description": "mapQboError maps object-not-found code to QBO_NOT_FOUND.",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T022",
+    "description": "mapQboError maps 2xxx validation-style codes to QBO_VALIDATION_ERROR.",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T023",
+    "description": "findCustomerByDisplayName escapes apostrophes in DisplayName and executes expected query string.",
+    "implemented": false,
+    "featureIds": ["F010", "F021"]
+  },
+  {
+    "id": "T024",
+    "description": "findCustomerByDisplayName returns null when query result is empty.",
+    "implemented": false,
+    "featureIds": ["F010", "F021"]
+  },
+  {
+    "id": "T025",
+    "description": "createOrUpdateCustomer creates customer when no existing record is found.",
+    "implemented": false,
+    "featureIds": ["F011", "F021"]
+  },
+  {
+    "id": "T026",
+    "description": "createOrUpdateCustomer updates customer when existing record has SyncToken.",
+    "implemented": false,
+    "featureIds": ["F011", "F021"]
+  },
+  {
+    "id": "T027",
+    "description": "createOrUpdateCustomer fetches SyncToken via read before update when existing record lacks SyncToken.",
+    "implemented": false,
+    "featureIds": ["F011", "F021"]
+  },
+  {
+    "id": "T028",
+    "description": "createOrUpdateCustomer returns existing record unchanged when SyncToken cannot be resolved.",
+    "implemented": false,
+    "featureIds": ["F011", "F021"]
+  },
+  {
+    "id": "T029",
+    "description": "qboActions getQboItems path still returns normalized item list with unchanged shape.",
+    "implemented": false,
+    "featureIds": ["F013", "F022"]
+  },
+  {
+    "id": "T030",
+    "description": "qboActions connection status validation still resolves CompanyName/ClientName logic correctly.",
+    "implemented": false,
+    "featureIds": ["F013", "F022"]
+  },
+  {
+    "id": "T031",
+    "description": "QuickBooksOnlineCompanyAdapter findExternalCompany still delegates to QboClientService and returns ExternalCompanyRecord/null.",
+    "implemented": false,
+    "featureIds": ["F014", "F022"]
+  },
+  {
+    "id": "T032",
+    "description": "QuickBooksOnlineCompanyAdapter createOrUpdateExternalCompany still delegates and returns ExternalCompanyRecord.",
+    "implemented": false,
+    "featureIds": ["F014", "F022"]
+  },
+  {
+    "id": "T033",
+    "description": "Dependency graph check confirms node-quickbooks is absent after migration dependency updates.",
+    "implemented": false,
+    "featureIds": ["F016", "F017", "F023"]
+  },
+  {
+    "id": "T034",
+    "description": "Audit check confirms security warning reduction attributable to removing node-quickbooks request chain.",
+    "implemented": false,
+    "featureIds": ["F017", "F023"]
+  }
+]

@@ -20,8 +20,10 @@ import {
   removeTaskResourceAction,
   getTaskResourcesAction,
   addTicketLinkAction,
+  deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
-  getTaskDependencies
+  getTaskDependencies,
+  addTaskDependency
 } from '../actions/projectTaskActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
@@ -30,7 +32,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { ListChecks, Trash2, Clock } from 'lucide-react';
+import { ListChecks, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -42,20 +44,28 @@ import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import TaskTicketLinks from './TaskTicketLinks';
+import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
 import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
-import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
+import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
+import PrefillFromTicketDialog from './PrefillFromTicketDialog';
+import { TaskPrefillFields } from '../lib/taskTicketMapping';
+import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
+
+export interface TaskFormPrefillData extends TaskPrefillFields {
+  pendingTicketLink?: IProjectTicketLinkWithDetails | null;
+}
 
 interface TaskFormProps {
   task?: IProjectTask;
@@ -70,6 +80,7 @@ interface TaskFormProps {
   onPhaseChange: (phaseId: string) => void;
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
+  prefillData?: TaskFormPrefillData;
 }
 
 export default function TaskForm({
@@ -84,35 +95,60 @@ export default function TaskForm({
   mode,
   onPhaseChange,
   inDrawer = false,
-  projectTreeData = []
+  projectTreeData = [],
+  prefillData
 }: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
-  const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
+  const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [taskName, setTaskName] = useState(task?.task_name || '');
-  const [description, setDescription] = useState(task?.description || '');
+  const [taskName, setTaskName] = useState(task?.task_name || prefillData?.task_name || '');
+  const [description, setDescription] = useState(task?.description || prefillData?.description || '');
   const [projectTreeOptions, setProjectTreeOptions] = useState<Array<TreeSelectOption<'project' | 'phase' | 'status'>>>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>(phase.phase_id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checklistItems, setChecklistItems] = useState<Omit<ITaskChecklistItem, 'tenant'>[]>(task?.checklist_items || []);
   const [isEditingChecklist, setIsEditingChecklist] = useState(false);
-  const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? null);
+  const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? prefillData?.assigned_to ?? null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDocumentCleanupConfirm, setShowDocumentCleanupConfirm] = useState(false);
   const [isDeletingDocuments, setIsDeletingDocuments] = useState(false);
+  const [showTicketCleanupConfirm, setShowTicketCleanupConfirm] = useState(false);
+  const [isDeletingTickets, setIsDeletingTickets] = useState(false);
+  const [sessionCreatedTickets, setSessionCreatedTickets] = useState<{ ticket_id: string; ticket_number: string; title: string }[]>([]);
   const [tempTaskId] = useState<string>(`temp-${Date.now()}`);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { launchTimeEntry } = useSchedulingCallbacks();
   // Convert from minutes to hours for display
-  const [estimatedHours, setEstimatedHours] = useState<number>(Number(task?.estimated_hours) / 60 || 0);
+  const [estimatedHours, setEstimatedHours] = useState<number>(
+    task?.estimated_hours !== undefined && task?.estimated_hours !== null
+      ? Number(task?.estimated_hours) / 60
+      : prefillData?.estimated_hours ?? 0
+  );
   const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) / 60 || 0);
-  const [dueDate, setDueDate] = useState<Date | undefined>(task?.due_date ? new Date(task.due_date) : undefined);
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    task?.due_date
+      ? new Date(task.due_date)
+      : prefillData?.due_date ?? undefined
+  );
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
-  const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
+  const [tempTaskResources, setTempTaskResources] = useState<any[]>(() => {
+    if (prefillData?.additional_agents?.length) {
+      return prefillData.additional_agents.map(agent => {
+        const nameParts = agent.name?.split(' ') ?? [];
+        return {
+          additional_user_id: agent.user_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          assignment_id: `temp-${Date.now()}-${agent.user_id}`
+        };
+      });
+    }
+    return [];
+  });
   const [pendingDocuments, setPendingDocuments] = useState<PendingTaskDocument[]>([]);
   // Track documents added during edit session (for cleanup on cancel)
   const [sessionAddedDocuments, setSessionAddedDocuments] = useState<PendingTaskDocument[]>([]);
@@ -121,11 +157,18 @@ export default function TaskForm({
   const isProcessingAgentsRef = useRef(false);
   const [taskTags, setTaskTags] = useState<ITag[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
+  const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(() => {
+    if (task?.ticket_links?.length) return task.ticket_links;
+    if (prefillData?.pendingTicketLink) return [prefillData.pendingTicketLink];
+    return [];
+  });
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
+  const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
+  const [showPrefillDialog, setShowPrefillDialog] = useState(false);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedTaskType, setSelectedTaskType] = useState<string>(task?.task_type_key || 'task');
   const [initialTaskType] = useState<string>(task?.task_type_key || 'task');
@@ -151,6 +194,7 @@ export default function TaskForm({
   }>({ predecessors: [], successors: [] });
 
   const { openDrawer, closeDrawer } = useDrawer();
+  const { renderPrioritySelect, deleteTicket } = useTicketIntegration();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -159,6 +203,64 @@ export default function TaskForm({
   );
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const handlePrefillFromTicket = (payload: {
+    prefillData: TaskFormPrefillData;
+    ticket: {
+      ticket_id: string;
+      ticket_number: string;
+      title: string;
+      status_name?: string;
+      is_closed?: boolean;
+      closed_at?: string | null;
+    };
+    shouldLink: boolean;
+  }) => {
+    const { prefillData, ticket, shouldLink } = payload;
+    setTaskName(prefillData.task_name);
+    setDescription(prefillData.description);
+    setAssignedUser(prefillData.assigned_to);
+    setDueDate(prefillData.due_date ?? undefined);
+    setEstimatedHours(prefillData.estimated_hours);
+
+    if (prefillData.additional_agents?.length) {
+      setTempTaskResources(prefillData.additional_agents.map(agent => {
+        const nameParts = agent.name?.split(' ') ?? [];
+        return {
+          additional_user_id: agent.user_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          assignment_id: `temp-${Date.now()}-${agent.user_id}`
+        };
+      }));
+    }
+
+    if (shouldLink) {
+      const newLink: IProjectTicketLinkWithDetails = {
+        link_id: `temp-${Date.now()}`,
+        task_id: 'temp',
+        ticket_id: ticket.ticket_id,
+        ticket_number: ticket.ticket_number,
+        title: ticket.title,
+        created_at: new Date(),
+        project_id: phase.project_id,
+        phase_id: phase.phase_id,
+        status_name: ticket.status_name || 'New',
+        is_closed: ticket.is_closed ?? ticket.closed_at != null
+      };
+      // Use the ref to inject the link into TaskTicketLinks' internal state,
+      // which also calls onLinksChange to keep pendingTicketLinks in sync
+      if (ticketLinksRef.current) {
+        ticketLinksRef.current.addExternalLink(newLink);
+      } else {
+        // Fallback: directly update pendingTicketLinks
+        setPendingTicketLinks((prev) => {
+          if (prev.some(link => link.ticket_id === ticket.ticket_id)) return prev;
+          return [...prev, newLink];
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -433,7 +535,7 @@ export default function TaskForm({
 
     setValidationErrors([]);
 
-    // Check for unsaved dependencies
+    // Check for unsaved dependency selection
     if (dependenciesRef.current?.hasPendingChanges()) {
       setPendingSubmit(e);
       setShowDependencyConfirmation(true);
@@ -441,6 +543,19 @@ export default function TaskForm({
     }
 
     await performSubmit();
+  };
+
+  const handleDependencyConfirm = async () => {
+    // "Discard changes" — discard the pending dependency selection and save the task
+    setShowDependencyConfirmation(false);
+    setPendingSubmit(null);
+    await performSubmit();
+  };
+
+  const handleDependencyCancel = () => {
+    // "Continue editing" — go back so user can click the + button
+    setShowDependencyConfirmation(false);
+    setPendingSubmit(null);
   };
 
   const performSubmit = async () => {
@@ -533,6 +648,15 @@ export default function TaskForm({
               const documentIds = pendingDocuments.map(d => d.document_id);
               await createDocumentAssociations(resultTask.task_id, 'project_task', documentIds);
             }
+
+            // Save pending dependencies
+            // Always pass new task as predecessor — addTaskDependency handles the swap for 'blocked_by'
+            if (dependenciesRef.current) {
+              const pendingDeps = dependenciesRef.current.getPendingDependencies();
+              for (const dep of pendingDeps) {
+                await addTaskDependency(resultTask.task_id, dep.targetTaskId, dep.dependencyType, 0, undefined);
+              }
+            }
           } catch (error) {
             console.error('Error adding resources or linking tickets:', error);
             toast.error('Task created but failed to link some items');
@@ -565,21 +689,6 @@ export default function TaskForm({
     }
   };
 
-  const handleDependencyConfirm = async () => {
-    if (dependenciesRef.current) {
-      await dependenciesRef.current.savePendingDependency();
-    }
-    setShowDependencyConfirmation(false);
-    await performSubmit();
-  };
-
-  const handleDependencyCancel = async () => {
-    setShowDependencyConfirmation(false);
-    setPendingSubmit(null);
-    // Proceed with submit without saving dependency
-    await performSubmit();
-  };
-
   const handlePhaseChange = (phaseId: string) => {
     if (!phases) return;
 
@@ -607,6 +716,7 @@ export default function TaskForm({
       if (selectedServiceId !== null) return true; // User explicitly selected a service
       if (pendingTags.length > 0) return true;
       if (pendingDocuments.length > 0) return true; // User has added pending documents
+      if (dependenciesRef.current?.getPendingDependencies()?.length) return true; // User has added pending dependencies
       return false; // No changes detected
     }
 
@@ -668,24 +778,22 @@ export default function TaskForm({
     return false;
   };
 
-  const handleCancelClick = (e?: React.MouseEvent | boolean) => {
-    // If called from Dialog's onOpenChange, e will be false
-    if (typeof e === 'boolean' && !e) {
-      if (hasChanges()) {
-        setShowCancelConfirm(true);
-      } else {
-        onClose();
-      }
-      return;
-    }
-
-    // Original mouse event handling
-    if (e && typeof e !== 'boolean') {
+  const handleCancelClick = (e?: React.MouseEvent) => {
+    if (e) {
       e.preventDefault();
     }
 
     if (hasChanges()) {
       setShowCancelConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const proceedAfterDocumentCleanup = () => {
+    // After documents are handled, check for tickets that need cleanup
+    if (sessionCreatedTickets.length > 0) {
+      setShowTicketCleanupConfirm(true);
     } else {
       onClose();
     }
@@ -700,7 +808,7 @@ export default function TaskForm({
     if (newDocsToCleanup.length > 0) {
       setShowDocumentCleanupConfirm(true);
     } else {
-      onClose();
+      proceedAfterDocumentCleanup();
     }
   };
 
@@ -709,9 +817,9 @@ export default function TaskForm({
   };
 
   const handleDocumentCleanupKeep = () => {
-    // Keep documents in the system, just close the form
+    // Keep documents in the system, proceed to ticket cleanup check
     setShowDocumentCleanupConfirm(false);
-    onClose();
+    proceedAfterDocumentCleanup();
   };
 
   const handleDocumentCleanupDelete = async () => {
@@ -743,6 +851,37 @@ export default function TaskForm({
     } finally {
       setIsDeletingDocuments(false);
       setShowDocumentCleanupConfirm(false);
+      proceedAfterDocumentCleanup();
+    }
+  };
+
+  const handleTicketCleanupKeep = () => {
+    // Keep tickets in the system, just close the form
+    setShowTicketCleanupConfirm(false);
+    onClose();
+  };
+
+  const handleTicketCleanupDelete = async () => {
+    setIsDeletingTickets(true);
+    try {
+      let failureCount = 0;
+      for (const ticket of sessionCreatedTickets) {
+        try {
+          // Remove any ticket links first to avoid FK constraint violations
+          await deleteTaskTicketLinksByTicketIdAction(ticket.ticket_id);
+          await deleteTicket(ticket.ticket_id);
+        } catch (error) {
+          console.error(`Failed to delete ticket ${ticket.ticket_id}:`, error);
+          failureCount++;
+        }
+      }
+
+      if (failureCount > 0) {
+        toast.error(`${failureCount} ticket${failureCount !== 1 ? 's' : ''} could not be deleted`);
+      }
+    } finally {
+      setIsDeletingTickets(false);
+      setShowTicketCleanupConfirm(false);
       onClose();
     }
   };
@@ -826,7 +965,34 @@ export default function TaskForm({
     }
 
     try {
-      toast('Time entry is managed in Scheduling.');
+      const findProjectName = (options: Array<TreeSelectOption<'project' | 'phase' | 'status'>>, phaseId: string): string | undefined => {
+        for (const option of options) {
+          if (option.type === 'project' && option.children?.some(child => child.value === phaseId)) {
+            return typeof option.label === 'string' ? option.label : undefined;
+          }
+          if (option.children) {
+            const nested = findProjectName(option.children, phaseId);
+            if (nested) return nested;
+          }
+        }
+        return undefined;
+      };
+
+      const projectName = findProjectName(projectTreeOptions, selectedPhaseId);
+      const serviceName = availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null;
+
+      await launchTimeEntry({
+        openDrawer,
+        closeDrawer,
+        context: buildTaskTimeEntryContext({
+          taskId: task.task_id,
+          taskName: taskName || task.task_name,
+          projectName,
+          phaseName: selectedPhase.phase_name,
+          serviceId: selectedServiceId,
+          serviceName,
+        }),
+      });
     } catch (error) {
       console.error('Error preparing time entry:', error);
       toast.error('Failed to prepare time entry. Please try again.');
@@ -951,6 +1117,14 @@ export default function TaskForm({
 
   const renderContent = () => (
     <div className="h-full">
+      {mode === 'create' && (
+        <PrefillFromTicketDialog
+          open={showPrefillDialog}
+          onOpenChange={setShowPrefillDialog}
+          onPrefill={handlePrefillFromTicket}
+          users={users}
+        />
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
@@ -968,7 +1142,21 @@ export default function TaskForm({
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Task Name *</label>
+              <div className="flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700">Task Name *</label>
+                {mode === 'create' && (
+                  <Button
+                    id="task-create-from-ticket"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPrefillDialog(true)}
+                    title="Create from ticket"
+                  >
+                    <Ticket className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <TaskStatusSelect
                 id="task-status-select"
                 value={selectedStatusId}
@@ -1008,10 +1196,10 @@ export default function TaskForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Service (for time entries)
             </label>
-            <CustomSelect
+            <SearchableSelect
               id="task-service-select"
               value={selectedServiceId || ''}
-              onValueChange={(value) => setSelectedServiceId(value || null)}
+              onChange={(value) => setSelectedServiceId(value || null)}
               options={[
                 { value: '', label: 'No service' },
                 ...availableServices.map(s => ({
@@ -1021,6 +1209,7 @@ export default function TaskForm({
               ]}
               placeholder="Select service for time entry prefill..."
               className="w-full"
+              dropdownMode="overlay"
             />
             <p className="text-xs text-gray-500 mt-1">
               When set, this service will be automatically selected when creating time entries from this task.
@@ -1041,19 +1230,19 @@ export default function TaskForm({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <PrioritySelect
-                value={selectedPriorityId}
-                options={priorities
+              {renderPrioritySelect({
+                value: selectedPriorityId,
+                options: priorities
                   .sort((a, b) => a.order_number - b.order_number)
                   .map(p => ({
                     value: p.priority_id,
                     label: p.priority_name,
                     color: p.color
-                  }))}
-                onValueChange={(value) => setSelectedPriorityId(value || null)}
-                placeholder="Select priority"
-                className="w-full"
-              />
+                  })),
+                onValueChange: (value) => setSelectedPriorityId(value || null),
+                placeholder: 'Select priority',
+                className: 'w-full',
+              })}
             </div>
 
             {/* Row 2: Move To and Duplicate To (Edit mode only) */}
@@ -1333,7 +1522,7 @@ export default function TaskForm({
           </div>
 
           {/* Full width Dependencies section */}
-          {mode === 'edit' && task && (
+          {mode === 'edit' && task ? (
             <TaskDependencies
               ref={dependenciesRef}
               task={task}
@@ -1352,16 +1541,41 @@ export default function TaskForm({
                 }
               }}
             />
+          ) : mode === 'create' && allProjectTasks.length > 0 && (
+            <TaskDependencies
+              ref={dependenciesRef}
+              allTasksInProject={allProjectTasks}
+              taskTypes={taskTypes}
+              users={users}
+              phases={phases}
+              pendingMode
+            />
           )}
 
           {/* Full width Associated Tickets section */}
           <TaskTicketLinks
+            ref={ticketLinksRef}
             taskId={task?.task_id || undefined}
             phaseId={phase.phase_id}
             projectId={phase.project_id}
             initialLinks={task?.ticket_links}
             users={users}
             onLinksChange={setPendingTicketLinks}
+            onTicketCreated={(ticket) => setSessionCreatedTickets(prev => [...prev, ticket])}
+            taskData={
+              mode === 'edit'
+                ? {
+                    task_name: taskName,
+                    description,
+                    assigned_to: assignedUser,
+                    due_date: dueDate ?? null,
+                    additional_agents: (task?.task_id ? taskResources : tempTaskResources).map(r => ({
+                      user_id: r.additional_user_id,
+                      name: r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : undefined
+                    }))
+                  }
+                : undefined
+            }
           />
 
           {/* Full width Attachments section */}
@@ -1444,6 +1658,7 @@ export default function TaskForm({
           onClose={handleCancelClick}
           className="max-w-3xl"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
+          disableFocusTrap
         >
           <DialogContent>
             {renderContent()}
@@ -1497,6 +1712,37 @@ export default function TaskForm({
         cancelLabel="Continue editing"
         thirdButtonLabel="Keep documents"
         isConfirming={isDeletingDocuments}
+      />
+
+      {/* Ticket cleanup confirmation - shown when canceling with newly created tickets */}
+      <ConfirmationDialog
+        isOpen={showTicketCleanupConfirm}
+        onClose={() => setShowTicketCleanupConfirm(false)}
+        onConfirm={handleTicketCleanupDelete}
+        onCancel={handleTicketCleanupKeep}
+        title="Keep Created Tickets?"
+        message={(() => {
+          return (
+            <div>
+              <p>You created {sessionCreatedTickets.length} ticket{sessionCreatedTickets.length !== 1 ? 's' : ''} during this session:</p>
+              <ul className="list-disc list-inside mt-2 text-sm">
+                {sessionCreatedTickets.slice(0, 5).map(ticket => (
+                  <li key={ticket.ticket_id} className="truncate">
+                    {ticket.ticket_number} - {ticket.title}
+                  </li>
+                ))}
+                {sessionCreatedTickets.length > 5 && (
+                  <li className="text-gray-500">...and {sessionCreatedTickets.length - 5} more</li>
+                )}
+              </ul>
+              <p className="mt-3">Would you like to keep these tickets or delete them?</p>
+            </div>
+          );
+        })()}
+        confirmLabel={isDeletingTickets ? "Deleting..." : "Delete tickets"}
+        cancelLabel="Continue editing"
+        thirdButtonLabel="Keep tickets"
+        isConfirming={isDeletingTickets}
       />
 
       <ConfirmationDialog
@@ -1567,10 +1813,10 @@ export default function TaskForm({
         isOpen={showDependencyConfirmation}
         onClose={handleDependencyCancel}
         onConfirm={handleDependencyConfirm}
-        title="Unsaved Dependency Changes"
-        message="You have unsaved dependency changes. Would you like to save them before updating the task?"
-        confirmLabel="Save & Continue"
-        cancelLabel="Discard & Continue"
+        title="Unsaved Changes"
+        message="You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save."
+        confirmLabel="Discard changes"
+        cancelLabel="Continue editing"
       />
 
     </>

@@ -8,8 +8,8 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@/lib/db';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { createTenantKnex } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildIntegrationTokenExpiringPayload,
   buildIntegrationTokenRefreshFailedPayload,

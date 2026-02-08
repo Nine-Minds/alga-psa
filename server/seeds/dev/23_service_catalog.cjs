@@ -1,3 +1,10 @@
+const resolveBillingMethod = (typeName, fallbackMethod) => {
+    if (typeName === 'Hourly Time') return 'hourly';
+    if (typeName === 'Usage Based') return 'usage';
+    if (typeName === 'Fixed Price') return 'fixed';
+    return fallbackMethod || 'per_unit';
+};
+
 exports.seed = async function (knex) { // Changed to async function
     const tenantInfo = await knex('tenants').select('tenant').first();
     if (!tenantInfo) return;
@@ -9,7 +16,7 @@ exports.seed = async function (knex) { // Changed to async function
         .whereIn('name', ['Hourly Time', 'Fixed Price', 'Usage Based']) // Fetch only the types used in this seed
         .select('id', 'name');
 
-    const typeMap = serviceTypes.reduce((map, type) => {
+    let typeMap = serviceTypes.reduce((map, type) => {
         // Map standard names (like 'Hourly Time') to their tenant-specific UUIDs
         map[type.name] = type.id;
         return map;
@@ -42,7 +49,7 @@ exports.seed = async function (knex) { // Changed to async function
                 name: stdType.name,
                 standard_service_type_id: stdType.id,
                 is_active: true,
-                billing_method: stdType.billing_method || 'per_unit', // Use the billing_method from standard type or default to 'per_unit'
+                billing_method: resolveBillingMethod(stdType.name, stdType.billing_method),
             }));
 
             // Insert missing types, ignoring conflicts just in case
@@ -88,7 +95,7 @@ exports.seed = async function (knex) { // Changed to async function
             service_name: 'Rabbit Tracking',
             description: 'Locating and tracking white rabbits',
             custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
-            billing_method: 'per_unit', // Add required billing_method
+            billing_method: 'hourly',
             default_rate: 7500,
             unit_of_measure: 'Hour',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Network Services' }).select('category_id').first()
@@ -108,7 +115,7 @@ exports.seed = async function (knex) { // Changed to async function
             service_name: 'Shrinking Potion',
             description: 'Potion to reduce size',
             custom_service_type_id: typeMap['Usage Based'], // Use fetched ID
-            billing_method: 'per_unit', // Add required billing_method
+            billing_method: 'usage',
             default_rate: 2500,
             unit_of_measure: 'Dose',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Cloud Services' }).select('category_id').first()
@@ -118,7 +125,7 @@ exports.seed = async function (knex) { // Changed to async function
             service_name: 'Yellow Brick Road Repair',
             description: 'Fixing and maintaining the yellow brick road',
             custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
-            billing_method: 'per_unit', // Add required billing_method
+            billing_method: 'hourly',
             default_rate: 10000,
             unit_of_measure: 'Hour',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Network Services' }).select('category_id').first()
@@ -138,7 +145,7 @@ exports.seed = async function (knex) { // Changed to async function
             service_name: 'Basic Support',
             description: 'Standard support package',
             custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
-            billing_method: 'per_unit', // Add required billing_method
+            billing_method: 'hourly',
             default_rate: 10000,
             unit_of_measure: 'Hour',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Support Services' }).select('category_id').first()
@@ -148,7 +155,7 @@ exports.seed = async function (knex) { // Changed to async function
             service_name: 'Premium Support',
             description: 'Premium support package with priority response',
             custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
-            billing_method: 'per_unit', // Add required billing_method
+            billing_method: 'hourly',
             default_rate: 15000,
             unit_of_measure: 'Hour',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Support Services' }).select('category_id').first() // Corrected tenant reference in subquery

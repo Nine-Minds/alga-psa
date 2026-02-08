@@ -1,2 +1,1 @@
-export { default } from '@alga-psa/projects/components/ProjectPage';
-
+export { default } from '@alga-psa/msp-composition/projects/MspProjectPageClient';

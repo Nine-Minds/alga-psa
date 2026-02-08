@@ -797,7 +797,7 @@ export default function EventsCatalogV2() {
       const workflowId = (created as any)?.workflowId;
       toast.success('Workflow created');
       if (workflowId) {
-        router.push(`/msp/automation-hub?tab=designer&workflowId=${encodeURIComponent(workflowId)}`);
+        router.push(`/msp/workflows?tab=designer&workflowId=${encodeURIComponent(workflowId)}`);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to create workflow');
@@ -1135,7 +1135,7 @@ export default function EventsCatalogV2() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <Button id={`workflow-event-details-open-workflow-${wf.workflow_id}`} asChild variant="outline" size="sm">
-                            <Link href={`/msp/automation-hub?tab=designer&workflowId=${encodeURIComponent(wf.workflow_id)}`}>
+                            <Link href={`/msp/workflows?tab=designer&workflowId=${encodeURIComponent(wf.workflow_id)}`}>
                               <ExternalLink className="h-4 w-4 mr-2" />
                               Open
                             </Link>
@@ -1295,7 +1295,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
             </Button>
             {eventType && (
               <Button id="workflow-event-metrics-open-designer" asChild variant="ghost" className="ml-auto">
-                <Link href={`/msp/automation-hub?tab=designer`}>
+                <Link href={`/msp/workflows?tab=designer`}>
                   Open designer
                 </Link>
               </Button>

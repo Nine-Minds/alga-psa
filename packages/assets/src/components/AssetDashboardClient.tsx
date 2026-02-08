@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,9 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetListResponse, ClientMaintenanceSummary, ColumnDefinition } from '@alga-psa/types';
+import type { Asset, AssetListResponse, ClientMaintenanceSummary, ColumnDefinition, IClient } from '@alga-psa/types';
 import { getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
+import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
@@ -43,7 +45,8 @@ import {
   Search,
   MoreVertical,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 
 interface AssetDashboardClientProps {
@@ -93,6 +96,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [clientFilters, setClientFilters] = useState<string[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [agentStatusFilters, setAgentStatusFilters] = useState<string[]>([]);
   const [rmmManagedFilter, setRmmManagedFilter] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>([
@@ -149,6 +156,23 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return () => {
       // No cleanup needed
     };
+  }, []);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      setClientsLoading(true);
+      try {
+        const clientData = await getAllClientsForAssets(true);
+        setClients(clientData);
+      } catch (error) {
+        console.error('Error fetching clients for asset filters:', error);
+        setClients([]);
+      } finally {
+        setClientsLoading(false);
+      }
+    };
+
+    void fetchClients();
   }, []);
 
   const openDrawerForAsset = useCallback((asset: Asset, tab?: AssetDrawerTab) => {
@@ -261,15 +285,18 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     );
   }, [maintenanceSummaries]);
 
-  const clientOptions = useMemo(() => {
-    const unique = new Map<string, string>();
-    assets.forEach(asset => {
-      if (asset.client_id && asset.client?.client_name) {
-        unique.set(asset.client_id, asset.client.client_name);
+  const clientNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    clients.forEach((client) => {
+      map.set(client.client_id, client.client_name);
+    });
+    assets.forEach((asset) => {
+      if (asset.client_id && asset.client?.client_name && !map.has(asset.client_id)) {
+        map.set(asset.client_id, asset.client.client_name);
       }
     });
-    return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
-  }, [assets]);
+    return map;
+  }, [assets, clients]);
 
 
 
@@ -668,7 +695,7 @@ const handleAssetAdded = async () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="asset-search-input"
-                    placeholder="Search by name, tag, or client"
+                    placeholder="Search by name, tag, or serial number"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     className="pl-9"
@@ -733,29 +760,6 @@ const handleAssetAdded = async () => {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button id="client-filter-button" variant="ghost" size="sm" className="gap-1">
-                      <Filter className="h-4 w-4" /> Client
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-60 max-h-72 overflow-y-auto">
-                    {clientOptions.map(({ value, label }) => (
-                      <DropdownMenuItem key={value} id={`filter-client-${value}`} onSelect={(event) => event.preventDefault()}>
-                        <Checkbox
-                          id={`client-checkbox-${value}`}
-                          checked={clientFilters.includes(value)}
-                          onChange={() => toggleFilterValue(clientFilters, value, setClientFilters)}
-                          className="mr-2"
-                          containerClassName="m-0"
-                        />
-                        <span>{label}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
                     <Button id="agent-status-filter-button" variant="ghost" size="sm" className="gap-1">
                       <Monitor className="h-4 w-4" /> Agent
                       <ChevronDown className="h-4 w-4" />
@@ -812,6 +816,41 @@ const handleAssetAdded = async () => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                <div className="flex items-center gap-1 border-l border-gray-200 pl-2 ml-1">
+                  <ClientPicker
+                    id="asset-client-filter"
+                    clients={clients}
+                    selectedClientId={clientFilters[0] ?? null}
+                    onSelect={(clientId) => setClientFilters(clientId ? [clientId] : [])}
+                    filterState={clientFilterState}
+                    onFilterStateChange={setClientFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
+                    placeholder={clientsLoading ? 'Loading clients…' : 'Client'}
+                    fitContent
+                    triggerVariant="ghost"
+                    triggerSize="sm"
+                    className="min-w-[200px]"
+                    triggerButtonClassName="gap-1"
+                  />
+                  {clientFilters.length > 0 && (
+                    <Button
+                      id="asset-client-filter-clear"
+                      variant="ghost"
+                      size="sm"
+                      className="px-0 w-9"
+                      aria-label="Clear client filter"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setClientFilters([]);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -846,7 +885,7 @@ const handleAssetAdded = async () => {
                   </Badge>
                 ))}
                 {clientFilters.map((clientId) => {
-                  const label = clientOptions.find(option => option.value === clientId)?.label || 'Client';
+                  const label = clientNameById.get(clientId) ?? 'Client';
                   return (
                     <Badge key={`client-pill-${clientId}`} variant="outline" className="flex items-center gap-2">
                       Client: {label}

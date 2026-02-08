@@ -1,4 +1,5 @@
 import { TenantEntity } from './index';
+import { WorkItemType } from './workItem.interfaces';
 
 /**
  * Appointment Request Status
@@ -111,4 +112,25 @@ export interface IAppointmentRequestWithDetails extends IAppointmentRequest {
   preferred_assigned_user_name?: string;
   approved_by_user_name?: string;
   ticket_number?: string;
+}
+
+/**
+ * Context provided when launching a time entry for a specific work item.
+ */
+export interface TimeEntryWorkItemContext {
+  workItemId: string;
+  workItemType: WorkItemType;
+  workItemName: string;
+  ticketNumber?: string;
+  interactionType?: string;
+  clientName?: string | null;
+  startTime?: Date;
+  endTime?: Date;
+  projectName?: string;
+  phaseName?: string;
+  taskName?: string;
+  serviceId?: string | null;
+  serviceName?: string | null;
+  elapsedTime?: number;
+  timeDescription?: string;
 }

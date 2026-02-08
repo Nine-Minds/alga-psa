@@ -464,6 +464,12 @@
   "fields": {
     "notes": "Notities"
   },
+  "tickets": {
+    "responseSource": {
+      "clientPortal": "Ontvangen via Klantenportaal",
+      "inboundEmail": "Ontvangen via e-mail"
+    }
+  },
   "surveys": {
     "common": {
       "loading": "Bezig met laden..."

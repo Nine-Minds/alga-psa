@@ -29,10 +29,12 @@ import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
+import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "@alga-psa/ui";
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
@@ -50,12 +52,14 @@ import { ExternalLink } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
+import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
@@ -122,6 +126,20 @@ interface TicketDetailsProps {
         clients: IClient[];
         userId?: string;
     }) => React.ReactNode;
+
+    /**
+     * Optional injected UI for creating project tasks from tickets.
+     */
+    renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+
+    /**
+     * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
+     * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
+     */
+    renderClientDetails?: (args: {
+        id: string;
+        client: IClient;
+    }) => React.ReactNode;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -160,10 +178,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     isSubmitting = false,
     surveySummary = null,
     associatedAssets = null,
-    renderContactDetails
+    renderContactDetails,
+    renderCreateProjectTask,
+    renderClientDetails
 }) => {
+    const { t } = useTranslation('clientPortal');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
+    const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
 
     useEffect(() => {
         setHasHydrated(true);
@@ -245,7 +267,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [team, setTeam] = useState<ITeam | null>(null);
-
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -280,6 +301,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
+    const { launchTimeEntry } = useSchedulingCallbacks();
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
@@ -535,21 +557,42 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
     }, []);
 
-    const handleClientClick = () => {
-        if (client) {
-            openDrawer(
-                <div className="p-4 space-y-3">
-                    <div className="text-lg font-semibold">{client.client_name}</div>
-                    <Button
-                        id="ticket-details-open-client"
-                        type="button"
-                        variant="outline"
-                        onClick={() => window.open(`/msp/clients/${client.client_id}`, '_blank', 'noopener,noreferrer')}
-                    >
-                        Open Client <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                </div>
+    const handleClientClick = async () => {
+        if (!client?.client_id) return;
+
+        openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+        try {
+            const fullClient = await getClientById(client.client_id);
+            if (!fullClient) {
+                replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+                return;
+            }
+
+            replaceDrawer(
+                renderClientDetails
+                    ? renderClientDetails({
+                        id: `${id}-client-details`,
+                        client: fullClient
+                    })
+                    : (
+                        <div className="p-4 space-y-3">
+                            <div className="text-lg font-semibold">{fullClient.client_name}</div>
+                            <Button
+                                id="ticket-details-open-client"
+                                type="button"
+                                variant="outline"
+                                onClick={() => window.open(`/msp/clients/${fullClient.client_id}`, '_blank', 'noopener,noreferrer')}
+                            >
+                                Open Client <ExternalLink className="ml-2 h-4 w-4" />
+                            </Button>
+                        </div>
+                    ),
+                undefined,
+                '900px'
             );
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to load client.';
+            replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
         }
     };
 
@@ -974,7 +1017,26 @@ const handleClose = () => {
 
     const handleAddTimeEntry = async () => {
         try {
-            toast('Time entry is managed in Scheduling.');
+            if (!ticket.ticket_id) {
+                toast.error('Ticket ID is missing.');
+                return;
+            }
+
+            await launchTimeEntry({
+                openDrawer,
+                closeDrawer,
+                context: buildTicketTimeEntryContext({
+                    ticket,
+                    clientName: client?.client_name ?? null,
+                    elapsedTime,
+                    timeDescription,
+                }),
+                onComplete: createTicketTimeEntryOnComplete({
+                    stopTracking,
+                    setElapsedTime,
+                    setIsRunning,
+                }),
+            });
         } catch (error) {
             console.error('Error in handleAddTimeEntry:', error);
             toast.error('An error occurred while preparing the time entry. Please try again.');
@@ -1409,20 +1471,22 @@ const handleClose = () => {
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
-                    {/* Add popout button only when in drawer */}
-                    {isInDrawer && (
-                        <Button
-                            id="ticket-popout-button"
-                            variant="outline"
-                            size="sm"
-                            onClick={openTicketInNewWindow}
-                            className="flex items-center gap-2"
-                            aria-label="Open in new tab"
-                        >
-                            <ExternalLink className="h-4 w-4" />
-                            <span>Open in new tab</span>
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {/* Add popout button only when in drawer */}
+                        {isInDrawer && (
+                            <Button
+                                id="ticket-popout-button"
+                                variant="outline"
+                                size="sm"
+                                onClick={openTicketInNewWindow}
+                                className="flex items-center gap-2"
+                                aria-label="Open in new tab"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                                <span>Open in new tab</span>
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
@@ -1686,6 +1750,13 @@ const handleClose = () => {
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    renderProjectTaskActions={renderCreateProjectTask}
+                                    additionalAgents={additionalAgents.map(a => ({
+                                        user_id: a.additional_user_id || a.assigned_to,
+                                        name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
+                                            ? `${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.first_name} ${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.last_name || ''}`.trim()
+                                            : ''
+                                    }))}
                                 />
                             </div>
                         </Suspense>
@@ -1722,6 +1793,15 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                         
+                        {emailLogsEnabled ? (
+                            <Suspense fallback={<div id="ticket-email-notifications-skeleton" className="animate-pulse bg-gray-200 h-40 rounded-lg mb-6"></div>}>
+                                <TicketEmailNotifications
+                                    id={`${id}-email-notifications`}
+                                    ticketId={ticket.ticket_id || ''}
+                                />
+                            </Suspense>
+                        ) : null}
+
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}

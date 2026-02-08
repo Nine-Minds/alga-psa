@@ -39,7 +39,7 @@ interface ContactTicketsProps {
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
-  initialTags?: string[];
+  initialTags?: ITag[];
   initialUsers?: IUser[];
 }
 
@@ -93,7 +93,22 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags, selectedAssignees, includeUnassigned]);
 
   // Pre-fetch tag permissions
   useTagPermissions(['ticket']);
@@ -255,16 +270,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const tagsInitializedRef = useRef(false);
   useEffect(() => {
     if (!tagsInitializedRef.current && initialTags.length > 0) {
-      const uniqueTags = initialTags.map((tagText, index) => ({
-        tag_id: `temp-${index}`,
-        tag_text: tagText,
-        tagged_type: 'ticket' as const,
-        tagged_id: '',
-        tenant: '',
-        created_at: new Date(),
-        updated_at: new Date()
-      }));
-      setAllUniqueTags(uniqueTags);
+      setAllUniqueTags(initialTags);
       tagsInitializedRef.current = true;
     }
   }, [initialTags]);
@@ -495,7 +501,11 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
                   return filteredTickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }));
                 })()}
                 columns={columns}
-                pagination={false}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
               />
 
               {/* Load More Button */}

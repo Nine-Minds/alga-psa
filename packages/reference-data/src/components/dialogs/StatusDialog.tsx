@@ -155,7 +155,7 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
                   const usedOrders = statusesOfType
                     .filter(s => s.status_id !== editingStatus?.status_id)
                     .map(s => s.order_number)
-                    .filter(n => n !== null && n !== undefined)
+                    .filter((n): n is number => n !== null && n !== undefined)
                     .sort((a, b) => a - b);
                   if (usedOrders.length > 0) {
                     return `Used order numbers: ${usedOrders.join(', ')}`;

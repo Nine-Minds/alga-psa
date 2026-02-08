@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { IUser, IUserWithRoles, IRoleWithPermissions, IPermission, IRole, IProject } from '@alga-psa/types';
 import * as projectActions from '@alga-psa/projects/actions/projectActions';
-import ProjectModel from 'server/src/lib/models/project';
+import ProjectModel from '@alga-psa/projects/models/project';
 
 // Mock the Project model methods
-vi.mock('server/src/lib/models/project', () => ({
+vi.mock('@alga-psa/projects/models/project', () => ({
   default: {
     getAll: vi.fn(),
     getById: vi.fn(),

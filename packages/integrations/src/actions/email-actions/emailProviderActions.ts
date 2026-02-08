@@ -199,6 +199,8 @@ async function persistMicrosoftConfig(
     await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
   }
   
+  const now = new Date();
+
   // Upsert config while preserving existing sensitive/webhook fields when incoming values are NULL
   const msConfig = await trx.raw(`
     INSERT INTO microsoft_email_provider_config (
@@ -207,7 +209,7 @@ async function persistMicrosoftConfig(
       access_token, refresh_token, token_expires_at,
       webhook_subscription_id, webhook_expires_at, webhook_verification_token,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
       client_id = EXCLUDED.client_id,
       client_secret = EXCLUDED.client_secret,
@@ -224,7 +226,7 @@ async function persistMicrosoftConfig(
       webhook_subscription_id = COALESCE(EXCLUDED.webhook_subscription_id, microsoft_email_provider_config.webhook_subscription_id),
       webhook_expires_at = COALESCE(EXCLUDED.webhook_expires_at, microsoft_email_provider_config.webhook_expires_at),
       webhook_verification_token = COALESCE(EXCLUDED.webhook_verification_token, microsoft_email_provider_config.webhook_verification_token),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = EXCLUDED.updated_at
     RETURNING *
   `, [
     providerId,
@@ -241,7 +243,9 @@ async function persistMicrosoftConfig(
     config.token_expires_at || null,
     null, // webhook_subscription_id (preserve existing if null)
     null, // webhook_expires_at (preserve existing if null)
-    null  // webhook_verification_token (preserve existing if null)
+    null, // webhook_verification_token (preserve existing if null)
+    now,  // created_at
+    now   // updated_at
   ]).then((result: any) => result.rows[0]);
   
   if (msConfig) {
@@ -328,13 +332,15 @@ async function persistGoogleConfig(
     updated_at: trx.fn.now()
   };
   
+  const now = new Date();
+
   const googleConfig = await trx.raw(`
     INSERT INTO google_email_provider_config (
       email_provider_id, tenant, client_id, client_secret, project_id, redirect_uri,
       pubsub_topic_name, pubsub_subscription_name, auto_process_emails, max_emails_per_sync,
       label_filters, access_token, refresh_token, token_expires_at, history_id,
       watch_expiration, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
       client_id = EXCLUDED.client_id,
       client_secret = EXCLUDED.client_secret,
@@ -351,7 +357,7 @@ async function persistGoogleConfig(
       token_expires_at = COALESCE(EXCLUDED.token_expires_at, google_email_provider_config.token_expires_at),
       history_id = COALESCE(EXCLUDED.history_id, google_email_provider_config.history_id),
       watch_expiration = COALESCE(EXCLUDED.watch_expiration, google_email_provider_config.watch_expiration),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = EXCLUDED.updated_at
     RETURNING *
   `, [
     providerId, 
@@ -369,7 +375,9 @@ async function persistGoogleConfig(
     configPayload.refresh_token || null, 
     configPayload.token_expires_at || null,
     configPayload.history_id || null, 
-    configPayload.watch_expiration || null
+    configPayload.watch_expiration || null,
+    now,  // created_at
+    now   // updated_at
   ]).then((result: any) => result.rows[0]);
   
   if (googleConfig) {
@@ -413,6 +421,8 @@ async function persistImapConfig(
 
   const folderFiltersArray = config.folder_filters || [];
 
+  const now = new Date();
+
   const imapConfig = await trx.raw(`
     INSERT INTO imap_email_provider_config (
       email_provider_id, tenant, host, port, secure, allow_starttls, auth_type, username,
@@ -422,7 +432,7 @@ async function persistImapConfig(
       uid_validity, last_uid, last_seen_at, last_sync_at, last_error,
 	      connection_timeout_ms, socket_keepalive,
 	      created_at, updated_at
-	    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
 	      host = EXCLUDED.host,
 	      port = EXCLUDED.port,
@@ -449,7 +459,7 @@ async function persistImapConfig(
       last_seen_at = COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at),
       last_sync_at = COALESCE(EXCLUDED.last_sync_at, imap_email_provider_config.last_sync_at),
       last_error = COALESCE(EXCLUDED.last_error, imap_email_provider_config.last_error),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = EXCLUDED.updated_at
     RETURNING *
   `, [
     providerId,
@@ -477,7 +487,9 @@ async function persistImapConfig(
     config.last_sync_at || null,
     config.last_error || null,
     connectionTimeoutMs,
-    socketKeepalive
+    socketKeepalive,
+    now,  // created_at
+    now   // updated_at
   ]).then((result: any) => result.rows[0]);
 
   if (imapConfig) {

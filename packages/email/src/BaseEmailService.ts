@@ -5,6 +5,7 @@ import {
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
 import { SupportedLocale } from './lib/localeConfig';
 
 export interface EmailAddress {
@@ -47,6 +48,14 @@ export interface BaseEmailParams {
   headers?: Record<string, string>;
   providerId?: string;
   userId?: string;  // For per-user rate limiting (optional)
+  /**
+   * Optional entity association context for downstream logging/analytics.
+   * These are persisted to `email_sending_logs` when available.
+   */
+  entityType?: string;
+  entityId?: string;
+  contactId?: string;
+  notificationSubtypeId?: number;
   // Allow subclasses to add their own parameters
   [key: string]: any;
 }
@@ -68,6 +77,7 @@ export interface BaseEmailParams {
 export abstract class BaseEmailService {
   protected initialized: boolean = false;
   protected emailProvider: IEmailProvider | null = null;
+  protected static readonly EMAIL_LOG_TABLE = 'email_sending_logs';
 
   /**
    * Get email provider instance
@@ -121,6 +131,8 @@ export abstract class BaseEmailService {
       };
     }
 
+    let emailMessage: ProviderEmailMessage | null = null;
+
     try {
       let subject: string;
       let html: string;
@@ -152,7 +164,7 @@ export abstract class BaseEmailService {
       });
       
       // Convert to provider email message format
-      const emailMessage: ProviderEmailMessage = {
+      emailMessage = {
         from,
         to: this.convertToProviderAddressArray(params.to),
         cc: params.cc ? this.convertToProviderAddressArray(params.cc) : undefined,
@@ -167,6 +179,17 @@ export abstract class BaseEmailService {
 
       // Send via provider
       const result = await this.emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
+
+      // Best-effort: persist provider-level send result for auditing/debugging.
+      void this.logEmailSendResult({
+        tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
+        providerResult: result,
+        message: emailMessage,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        contactId: params.contactId,
+        notificationSubtypeId: params.notificationSubtypeId,
+      });
 
       if (result.success) {
         logger.info(`[${this.getServiceName()}] Email sent successfully:`, {
@@ -183,11 +206,86 @@ export abstract class BaseEmailService {
         error: result.error
       };
     } catch (error) {
+      // Best-effort: log provider failure if we made it to message construction.
+      if (emailMessage) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const providerId = this.emailProvider?.providerId ?? 'unknown';
+        const providerType = this.emailProvider?.providerType ?? 'unknown';
+
+        void this.logEmailSendResult({
+          tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
+          providerResult: {
+            success: false,
+            messageId: undefined,
+            providerId,
+            providerType,
+            error: errorMessage,
+            metadata: { error: errorMessage },
+            sentAt: new Date(),
+          } satisfies ProviderEmailSendResult,
+          message: emailMessage,
+          entityType: params.entityType,
+          entityId: params.entityId,
+          contactId: params.contactId,
+          notificationSubtypeId: params.notificationSubtypeId,
+        });
+      }
+
       logger.error(`[${this.getServiceName()}] Failed to send email:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+    }
+  }
+
+  protected async logEmailSendResult(params: {
+    tenantId: string | null;
+    providerResult: ProviderEmailSendResult;
+    message: ProviderEmailMessage;
+    entityType?: string;
+    entityId?: string;
+    contactId?: string;
+    notificationSubtypeId?: number;
+  }): Promise<void> {
+    if (!params.tenantId) return;
+
+    try {
+      const { knex } = await createTenantKnex(params.tenantId);
+
+      const toAddresses = params.message.to.map((addr) => addr.email);
+      const ccAddresses = params.message.cc?.map((addr) => addr.email) ?? null;
+      const bccAddresses = params.message.bcc?.map((addr) => addr.email) ?? null;
+
+      await knex(BaseEmailService.EMAIL_LOG_TABLE).insert({
+        tenant: params.tenantId,
+        message_id: params.providerResult.messageId ?? null,
+        provider_id: params.providerResult.providerId,
+        provider_type: params.providerResult.providerType,
+        from_address: params.message.from.email,
+        to_addresses: JSON.stringify(toAddresses),
+        cc_addresses: ccAddresses ? JSON.stringify(ccAddresses) : null,
+        bcc_addresses: bccAddresses ? JSON.stringify(bccAddresses) : null,
+        subject: params.message.subject,
+        status: params.providerResult.success ? 'sent' : 'failed',
+        error_message: params.providerResult.error ?? null,
+        metadata: params.providerResult.metadata ?? null,
+        sent_at: params.providerResult.sentAt ?? new Date(),
+        entity_type: params.entityType ?? null,
+        entity_id: params.entityId ?? null,
+        contact_id: params.contactId ?? null,
+        notification_subtype_id: params.notificationSubtypeId ?? null,
+      });
+    } catch (error) {
+      logger.warn(`[${this.getServiceName()}] Failed to write email_sending_logs record`, {
+        tenantId: params.tenantId,
+        providerId: params.providerResult.providerId,
+        providerType: params.providerResult.providerType,
+        status: params.providerResult.success ? 'sent' : 'failed',
+        subject: params.message.subject,
+        toCount: params.message.to.length,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 

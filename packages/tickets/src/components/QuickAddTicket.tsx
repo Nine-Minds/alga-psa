@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { addTicket } from '../actions/ticketActions';
+import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
@@ -34,6 +35,14 @@ import type { PendingTag } from '@alga-psa/types';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
+
+/** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
+function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
+  if (isEmbedded) {
+    return <div className="space-y-4">{children}</div>;
+  }
+  return <form onSubmit={onSubmit} className="space-y-4" noValidate>{children}</form>;
+}
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation): string => {
@@ -76,8 +85,13 @@ interface QuickAddTicketProps {
     name: string;
   };
   prefilledDescription?: string;
+  prefilledTitle?: string;
+  prefilledAssignedTo?: string;
+  prefilledDueDate?: Date | string | null;
+  prefilledAdditionalAgents?: { user_id: string; name?: string }[];
   isEmbedded?: boolean;
   assetId?: string;
+  renderBeforeFooter?: () => React.ReactNode;
 }
 
 export function QuickAddTicket({
@@ -88,16 +102,21 @@ export function QuickAddTicket({
   prefilledClient,
   prefilledContact,
   prefilledDescription,
+  prefilledTitle,
+  prefilledAssignedTo,
+  prefilledDueDate,
+  prefilledAdditionalAgents,
   isEmbedded = false,
-  assetId
+  assetId,
+  renderBeforeFooter
 }: QuickAddTicketProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(prefilledTitle || '');
   const [description, setDescription] = useState(prefilledDescription || '');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
   const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
@@ -125,9 +144,12 @@ export function QuickAddTicket({
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [dueDateDate, setDueDateDate] = useState<Date | undefined>(undefined);
+  const [dueDateDate, setDueDateDate] = useState<Date | undefined>(() => {
+    if (!prefilledDueDate) return undefined;
+    const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  });
   const [dueDateTime, setDueDateTime] = useState<string | undefined>(undefined);
-
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
@@ -218,7 +240,16 @@ export function QuickAddTicket({
         if (prefilledDescription) {
           setDescription(prefilledDescription);
         }
-
+        if (prefilledTitle) {
+          setTitle(prefilledTitle);
+        }
+        if (prefilledAssignedTo) {
+          setAssignedTo(prefilledAssignedTo);
+        }
+        if (prefilledDueDate) {
+          const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
+          setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+        }
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -368,9 +399,9 @@ export function QuickAddTicket({
 
 
   const resetForm = () => {
-    setTitle('');
+    setTitle(prefilledTitle || '');
     setDescription(prefilledDescription || '');
-    setAssignedTo('');
+    setAssignedTo(prefilledAssignedTo || '');
     setBoardId('');
     setStatusId('');
     setPriorityId('');
@@ -393,7 +424,12 @@ export function QuickAddTicket({
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
     setPendingTags([]);
-    setDueDateDate(undefined);
+    if (prefilledDueDate) {
+      const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
+      setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+    } else {
+      setDueDateDate(undefined);
+    }
     setDueDateTime(undefined);
     setError(null);
     setHasAttemptedSubmit(false);
@@ -436,6 +472,7 @@ export function QuickAddTicket({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setHasAttemptedSubmit(true);
 
       const validationErrors = validateForm();
@@ -513,6 +550,17 @@ export function QuickAddTicket({
       const newTicket = await addTicket(formData);
       if (!newTicket) {
         throw new Error('Failed to create ticket');
+      }
+
+      // Add additional agents as ticket resources
+      if (prefilledAdditionalAgents?.length && newTicket.ticket_id) {
+        for (const agent of prefilledAdditionalAgents) {
+          try {
+            await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
+          } catch (agentError) {
+            console.error(`Failed to add additional agent ${agent.user_id}:`, agentError);
+          }
+        }
       }
 
       // Create tags for the new ticket
@@ -605,7 +653,9 @@ export function QuickAddTicket({
               )}
 
               <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
-                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                {/* Use a div instead of form when embedded to avoid nested <form> tags */}
+                <FormOrDiv isEmbedded={isEmbedded} onSubmit={handleSubmit}>
+
                   <Input
                     id={`${id}-title`}
                     value={title}
@@ -949,6 +999,7 @@ export function QuickAddTicket({
                     disabled={isSubmitting}
                   />
 
+                  {renderBeforeFooter?.()}
                   <DialogFooter>
                     <Button
                       id={`${id}-cancel-btn`}
@@ -960,9 +1011,10 @@ export function QuickAddTicket({
                     </Button>
                     <Button
                       id={`${id}-submit-btn`}
-                      type="submit"
+                      type={isEmbedded ? "button" : "submit"}
                       variant="default"
                       disabled={isSubmitting}
+                      onClick={isEmbedded ? () => handleSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent) : undefined}
                       className={!title.trim() || !description.trim() || !assignedTo || !boardId || !statusId ||
                         (boardConfig.priority_type === 'custom' && !priorityId) ||
                         (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
@@ -972,7 +1024,7 @@ export function QuickAddTicket({
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>
                   </DialogFooter>
-                </form>
+                </FormOrDiv>
               </ReflectionContainer>
             </>
           )}

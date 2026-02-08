@@ -20,6 +20,14 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
+    },
+    "./components/schedule/AgentScheduleView": {
+      "import": "./src/components/schedule/AgentScheduleView.tsx",
+      "types": "./src/components/schedule/AgentScheduleView.tsx"
+    },
+    "./lib/timeEntryLauncher": {
+      "import": "./src/lib/timeEntryLauncher.tsx",
+      "types": "./src/lib/timeEntryLauncher.tsx"
     }
   },
   "scripts": {

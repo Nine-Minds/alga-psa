@@ -101,6 +101,8 @@ export * from './UserAvatar';
 export { default as UserAvatar } from './UserAvatar';
 export * from './UserPicker';
 export { default as UserPicker } from './UserPicker';
+export * from './ViewDensityControl';
+export { default as ViewDensityControl } from './ViewDensityControl';
 export * from './ViewSwitcher';
 export { default as ViewSwitcher } from './ViewSwitcher';
 export * from './providers/TenantProvider';

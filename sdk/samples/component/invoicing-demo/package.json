@@ -18,8 +18,10 @@
     "@mongodb-js/zstd": "^7.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.20.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "esbuild": "^0.27.3",
     "rimraf": "^5.0.0",
-    "vitest": "^3.0.7"
+    "tsup": "^8.5.1",
+    "vitest": "^4.0.18"
   }
 }

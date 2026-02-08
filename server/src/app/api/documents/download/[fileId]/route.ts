@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
-import Document from 'server/src/lib/models/document';
+import Document from '@alga-psa/documents/models/document';
 import { marked } from 'marked';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import logger from '@alga-psa/core/logger';

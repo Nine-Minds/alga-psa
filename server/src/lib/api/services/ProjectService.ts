@@ -28,8 +28,7 @@ import {
   ProjectExportQuery
 } from '../schemas/project';
 import { NotFoundError } from '../middleware/apiMiddleware';
-import ProjectModel from 'server/src/lib/models/project';
-import ProjectTaskModel from 'server/src/lib/models/projectTask';
+import { ProjectModel } from '@alga-psa/projects/models';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
@@ -43,6 +42,22 @@ import {
   buildProjectTaskCreatedPayload,
   buildProjectTaskStatusChangedPayload,
 } from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+
+async function resolveUserName(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string | undefined
+): Promise<string | undefined> {
+  if (!userId) return undefined;
+  const user = await trx('users')
+    .where({ user_id: userId, tenant, is_inactive: false })
+    .select('first_name', 'last_name')
+    .first<{ first_name: string; last_name: string }>();
+  if (user?.first_name && user?.last_name) {
+    return `${user.first_name} ${user.last_name}`;
+  }
+  return undefined;
+}
 
 async function resolveProjectStatusInfo(
   trx: Knex.Transaction,
@@ -175,17 +190,27 @@ export class ProjectService extends BaseService<IProject> {
 
   async getById(id: string, context: ServiceContext): Promise<IProject | null> {
       const { knex } = await this.getKnex();
+      const tableName = this.tableName;
       
-      const project = await knex(this.tableName)
-        .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
-        .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
-        .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
+      const project = await knex(tableName)
+        .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+          this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+            .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+        })
+        .leftJoin('contacts', function joinContacts(this: Knex.JoinClause) {
+          this.on(`${tableName}.contact_name_id`, '=', 'contacts.contact_name_id')
+            .andOn(`${tableName}.tenant`, '=', 'contacts.tenant');
+        })
+        .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
+          this.on(`${tableName}.assigned_to`, '=', 'users.user_id')
+            .andOn(`${tableName}.tenant`, '=', 'users.tenant');
+        })
         .where({
-          [`${this.tableName}.${this.primaryKey}`]: id,
-          [`${this.tableName}.tenant`]: context.tenant
+          [`${tableName}.${this.primaryKey}`]: id,
+          [`${tableName}.tenant`]: context.tenant
         })
         .select(
-          `${this.tableName}.*`,
+          `${tableName}.*`,
           'clients.client_name as client_name',
           'contacts.full_name as contact_name',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
@@ -225,7 +250,7 @@ export class ProjectService extends BaseService<IProject> {
       const projectNumber = data.project_number ?? await SharedNumberingService.getNextNumber('PROJECT', { knex: trx, tenant: context.tenant });
 
       // Generate WBS code
-      const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
+      const wbsCode = await ProjectModel.generateNextWbsCode(trx, context.tenant, '');
       
       // Get default status if not provided
       let status = data.status;
@@ -260,7 +285,7 @@ export class ProjectService extends BaseService<IProject> {
 
       // Create initial phase if needed
       if (data.create_default_phase) {
-        const phaseWbsCode = await ProjectModel.generateNextWbsCode(trx, project.wbs_code);
+        const phaseWbsCode = await ProjectModel.generateNextWbsCode(trx, context.tenant, project.wbs_code);
         await trx('project_phases').insert({
           phase_id: trx.raw('gen_random_uuid()'),
           project_id: project.project_id,
@@ -537,7 +562,7 @@ export class ProjectService extends BaseService<IProject> {
         .select('project_tasks.*')
         .orderBy([
           { column: 'project_tasks.order_key', order: 'asc' },
-          { column: 'project_tasks.order_number', order: 'asc' }
+          { column: 'project_tasks.wbs_code', order: 'asc' }
         ]);
     }
 
@@ -586,7 +611,6 @@ export class ProjectService extends BaseService<IProject> {
         const taskData = {
           ...data,
           phase_id: phaseId,
-          order_number: tasks.length + 1,
           wbs_code: newWbsCode,
           order_key: orderKey,
           tenant: context.tenant,
@@ -622,6 +646,7 @@ export class ProjectService extends BaseService<IProject> {
         });
 
         if (task.assigned_to) {
+          const assignedByName = await resolveUserName(trx, context.tenant, context.userId);
           await publishWorkflowEvent({
             eventType: 'PROJECT_TASK_ASSIGNED',
             ctx,
@@ -631,11 +656,12 @@ export class ProjectService extends BaseService<IProject> {
               assignedToId: task.assigned_to,
               assignedToType: 'user',
               assignedByUserId: context.userId,
+              assignedByName,
               assignedAt: occurredAt,
             }),
           });
         }
-  
+
         return task;
       });
     }
@@ -681,6 +707,7 @@ export class ProjectService extends BaseService<IProject> {
           };
 
           if (beforeTask.assigned_to !== task.assigned_to && task.assigned_to) {
+            const assignedByName = await resolveUserName(trx, context.tenant, context.userId);
             await publishWorkflowEvent({
               eventType: 'PROJECT_TASK_ASSIGNED',
               ctx,
@@ -690,6 +717,7 @@ export class ProjectService extends BaseService<IProject> {
                 assignedToId: task.assigned_to,
                 assignedToType: 'user',
                 assignedByUserId: context.userId,
+                assignedByName,
                 assignedAt: occurredAt,
               }),
             });
@@ -787,7 +815,10 @@ export class ProjectService extends BaseService<IProject> {
       
       return knex('project_ticket_links')
         .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-        .leftJoin('clients', 'tickets.client_id', 'clients.client_id')
+        .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+          this.on('tickets.client_id', '=', 'clients.client_id')
+            .andOn('tickets.tenant', '=', 'clients.tenant');
+        })
         .where({
           'project_ticket_links.project_id': projectId,
           'project_ticket_links.tenant': context.tenant
@@ -863,7 +894,10 @@ export class ProjectService extends BaseService<IProject> {
       }
   
       // Add client join for client name search
-      query.leftJoin('clients', `${tableName}.client_id`, 'clients.client_id')
+      query.leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+        this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+          .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+      })
         .select(`${tableName}.*`, 'clients.client_name')
         .orderBy(`${tableName}.project_name`)
         .limit(searchData.limit || 25);
@@ -908,7 +942,10 @@ export class ProjectService extends BaseService<IProject> {
   
       // Get projects by client
       const projectsByClient = await knex(tableName)
-        .join('clients', `${tableName}.client_id`, 'clients.client_id')
+        .join('clients', function joinClients(this: Knex.JoinClause) {
+          this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+            .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+        })
         .where(`${tableName}.tenant`, context.tenant)
         .groupBy('clients.client_name')
         .select('clients.client_name', knex.raw('COUNT(*) as count'))
@@ -1090,7 +1127,7 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return knex('users')
-        .where({ user_id: userId })
+        .where({ user_id: userId, tenant: context.tenant })
         .select('user_id', 'first_name', 'last_name', 'email')
         .first();
     }
@@ -1106,40 +1143,50 @@ export class ProjectService extends BaseService<IProject> {
 
   async exportProjects(filters: any, format: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    const query = knex(this.tableName)
-      .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
-      .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
-      .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
-      .where(`${this.tableName}.tenant`, context.tenant)
+    const tableName = this.tableName;
+    const query = knex(tableName)
+      .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+        this.on(`${tableName}.client_id`, '=', 'clients.client_id')
+          .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
+      })
+      .leftJoin('contacts', function joinContacts(this: Knex.JoinClause) {
+        this.on(`${tableName}.contact_name_id`, '=', 'contacts.contact_name_id')
+          .andOn(`${tableName}.tenant`, '=', 'contacts.tenant');
+      })
+      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
+        this.on(`${tableName}.assigned_to`, '=', 'users.user_id')
+          .andOn(`${tableName}.tenant`, '=', 'users.tenant');
+      })
+      .where(`${tableName}.tenant`, context.tenant)
       .select(
-        `${this.tableName}.*`,
+        `${tableName}.*`,
         'clients.client_name',
         'contacts.full_name as contact_name',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
       )
-      .orderBy(`${this.tableName}.project_name`);
+      .orderBy(`${tableName}.project_name`);
 
     // Apply filters
     if (filters.project_name) {
-      query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+      query.where(`${tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
     }
     if (filters.client_id) {
-      query.where(`${this.tableName}.client_id`, filters.client_id);
+      query.where(`${tableName}.client_id`, filters.client_id);
     }
     if (filters.status) {
-      query.where(`${this.tableName}.status`, filters.status);
+      query.where(`${tableName}.status`, filters.status);
     }
     if (filters.assigned_to) {
-      query.where(`${this.tableName}.assigned_to`, filters.assigned_to);
+      query.where(`${tableName}.assigned_to`, filters.assigned_to);
     }
     if (filters.start_date_from) {
-      query.where(`${this.tableName}.start_date`, '>=', filters.start_date_from);
+      query.where(`${tableName}.start_date`, '>=', filters.start_date_from);
     }
     if (filters.start_date_to) {
-      query.where(`${this.tableName}.start_date`, '<=', filters.start_date_to);
+      query.where(`${tableName}.start_date`, '<=', filters.start_date_to);
     }
     if (filters.is_inactive !== undefined) {
-      query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
+      query.where(`${tableName}.is_inactive`, filters.is_inactive);
     }
 
     const projects = await query;
@@ -1162,8 +1209,14 @@ export class ProjectService extends BaseService<IProject> {
     // Get tickets related to this project through project_ticket_links
     const baseQuery = knex('project_ticket_links')
       .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-      .leftJoin('clients', 'tickets.client_id', 'clients.client_id')
-      .leftJoin('users', 'tickets.assigned_to', 'users.user_id')
+      .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+        this.on('tickets.client_id', '=', 'clients.client_id')
+          .andOn('tickets.tenant', '=', 'clients.tenant');
+      })
+      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
+        this.on('tickets.assigned_to', '=', 'users.user_id')
+          .andOn('tickets.tenant', '=', 'users.tenant');
+      })
       .where({
         'project_ticket_links.project_id': projectId,
         'project_ticket_links.tenant': context.tenant

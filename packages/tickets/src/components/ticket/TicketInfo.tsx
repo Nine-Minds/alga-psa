@@ -57,6 +57,8 @@ interface TicketInfoProps {
   itilUrgency?: number;
   itilCategory?: string;
   itilSubcategory?: string;
+  renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  additionalAgents?: { user_id: string; name: string }[];
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -82,6 +84,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilUrgency,
   itilCategory,
   itilSubcategory,
+  renderProjectTaskActions,
+  additionalAgents,
 }) => {
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -117,6 +121,40 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     response_state: ticket.response_state,
     title: ticket.title,
   }));
+
+  // Keep "original" values in sync when the upstream ticket changes (e.g. response_state updates after save).
+  // Only sync fields the user isn't actively editing in this form.
+  useEffect(() => {
+    if (!ticket || !isFormInitialized) return;
+
+    const syncFields: (keyof ITicket)[] = [
+      'status_id',
+      'assigned_to',
+      'board_id',
+      'category_id',
+      'subcategory_id',
+      'priority_id',
+      'due_date',
+      'response_state',
+      'title',
+    ];
+
+    setOriginalTicketValues((prev) => {
+      let changed = false;
+      const next: Partial<ITicket> = { ...prev };
+
+      for (const field of syncFields) {
+        if (field in pendingChanges) continue;
+        const incoming = (ticket as any)[field];
+        if ((prev as any)[field] !== incoming) {
+          (next as any)[field] = incoming;
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [ticket, pendingChanges, isFormInitialized]);
 
   // Local state for board config based on selected (pending) board
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
@@ -1103,7 +1141,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
 
           {/* Save Changes Button - matching contracts behavior */}
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+          <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
+            {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            <div className="flex-1" />
             <Button
               id={`${id}-cancel-btn`}
               type="button"

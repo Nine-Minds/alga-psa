@@ -42,8 +42,8 @@ export const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
     title: 'Import Core Data',
     description: 'Add contacts so you can start working for clients and keep workflows moving.',
     icon: FileSpreadsheet,
-    ctaHref: '/msp/settings?tab=import-export',
-    ctaLabel: 'Open Import Tools',
+    ctaHref: '/msp/contacts',
+    ctaLabel: 'Create Contacts',
     analyticsTarget: 'data_import',
   },
   calendar_sync: {

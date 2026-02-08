@@ -1,5 +1,4 @@
 // @ts-nocheck
-// TODO: Invoice model missing getFullInvoiceById method, argument count issues
 'use server';
 
 import { withTransaction } from '@alga-psa/db';
@@ -421,7 +420,7 @@ export const getInvoiceForRendering = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
-    return Invoice.getFullInvoiceById(knex, invoiceId);
+    return Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);
     throw new Error('Error fetching invoice for rendering');
@@ -493,7 +492,7 @@ export const getInvoiceLineItems = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     console.log('Fetching line items for invoice:', invoiceId);
-    const items = await Invoice.getInvoiceItems(knex, invoiceId);
+    const items = await Invoice.getInvoiceItems(knex, tenant, invoiceId);
     console.log(`Got ${items.length} line items`);
     return items;
   } catch (error) {

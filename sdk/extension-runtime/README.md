@@ -82,6 +82,8 @@ interface UserData {
   userEmail: string;
   userName: string;
   userType: string;  // "internal" or "client"
+  clientId?: string;
+  additionalFields?: Record<string, string>;
 }
 ```
 
@@ -127,15 +129,16 @@ Create mock host bindings for testing.
 When building with jco componentize, host capabilities are imported from WIT modules. Create a wrapper `index.ts`:
 
 ```typescript
+import { normalizeUserData } from '@alga-psa/extension-runtime';
 // Import WIT functions
 // @ts-ignore
-import { getUser } from 'alga:extension/user';
+import { getUser } from 'alga:extension/user-v2';
 // @ts-ignore
 import { logInfo } from 'alga:extension/logging';
 
 // Build HostBindings
 const host: HostBindings = {
-  user: { getUser: async () => getUser() },
+  user: { getUser: async () => normalizeUserData(await getUser()) },
   logging: { info: async (msg) => logInfo(msg), /* ... */ },
   // ... other bindings
 };

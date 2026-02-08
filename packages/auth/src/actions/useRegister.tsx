@@ -12,27 +12,7 @@ import { hashPassword } from '@alga-psa/core/encryption';
 import logger from '@alga-psa/core/logger';
 import { isValidEmail } from '@alga-psa/validation';
 
-// Dynamic imports to avoid circular dependency (auth -> email -> integrations -> users -> auth)
-// Note: Using string concatenation to prevent static analysis from detecting these dependencies
-const getEmailModule = () => '@alga-psa/' + 'email';
-
-const getSystemEmailServiceAsync = async () => {
-  const { getSystemEmailService } = await import('@alga-psa/email');
-  return getSystemEmailService();
-};
-
-const sendPasswordResetEmailAsync = async (params: {
-  email: string;
-  userName: string;
-  resetLink: string;
-  expirationTime: string;
-  tenant: string;
-  supportEmail: string;
-  clientName: string;
-}) => {
-  const { sendPasswordResetEmail } = await import('@alga-psa/email');
-  return sendPasswordResetEmail(params);
-};
+import { getAuthEmailRegistry } from '../lib/emailRegistry';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -185,7 +165,7 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
 
     // Use the proper sendPasswordResetEmail function which respects language hierarchy
     try {
-      await sendPasswordResetEmailAsync({
+      await getAuthEmailRegistry().sendPasswordResetEmail({
         email,
         userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username || email,
         resetLink,
@@ -237,7 +217,7 @@ export async function registerUser({ username, email, password, clientName }: IU
     const verificationUrl = `${process.env.HOST}/auth/verify-email?token=${verificationToken}`;
     
     // Use SystemEmailService for email verification
-    const systemEmailService = await getSystemEmailServiceAsync();
+    const systemEmailService = await getAuthEmailRegistry().getSystemEmailService();
     const emailResult = await systemEmailService.sendEmailVerification({
       email: email,
       verificationUrl: verificationUrl,

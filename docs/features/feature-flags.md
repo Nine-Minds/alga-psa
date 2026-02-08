@@ -84,6 +84,18 @@ Controls access to the new (experimental) invoice template visual designer.
   - The visual designer persists its workspace state alongside the template source (and uses local storage as a best-effort fallback).
   - Invoice output remains driven by the AssemblyScript template (until the compilation pipeline is finalized).
 
+### 6. `email-logs`
+Controls access to email log UI surfaces for outbound email auditing/debugging.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - System Monitor → Email Logs menu link
+  - Email Logs page at `/msp/email-logs`
+  - Ticket Details → Email Notifications section (per-ticket)
+
+**Behavior:**
+- When disabled: Email Logs page shows construction placeholder; navigation link and ticket section are hidden.
+
 ## Implementation Details
 
 ### User Identification

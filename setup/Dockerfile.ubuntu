@@ -30,7 +30,8 @@ COPY server/package.json ./server/
 
 # 4) Install root workspaces (will create node_modules and workspace links)
 #    Use npm ci if lockfile is present
-RUN npm ci --workspaces --no-optional || npm install --workspaces --no-optional
+#    Note: Do NOT use --no-optional as rollup needs platform-specific binaries (@rollup/rollup-linux-x64-gnu)
+RUN npm ci --workspaces --legacy-peer-deps || npm install --workspaces --legacy-peer-deps
 
 # 5) Build the shared package so dist/* is available for setup scripts
 COPY shared/ ./shared/

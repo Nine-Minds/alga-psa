@@ -3,6 +3,8 @@ export * from './init';
 export { SchemaRegistry, getSchemaRegistry } from './registries/schemaRegistry';
 export { ActionRegistry, getActionRegistryV2 } from './registries/actionRegistry';
 export { NodeTypeRegistry, getNodeTypeRegistry } from './registries/nodeTypeRegistry';
+export { registerWorkflowEmailProvider, getWorkflowEmailProvider, resetWorkflowEmailProvider } from './registries/workflowEmailRegistry';
+export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';
 export {
   validateWorkflowDefinition,

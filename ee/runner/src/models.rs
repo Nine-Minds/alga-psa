@@ -44,6 +44,9 @@ pub struct UserInfo {
     /// For client portal users, the client_id they are associated with
     #[serde(default)]
     pub client_id: Option<String>,
+    /// Additional user attributes forwarded by the gateway/proxy.
+    #[serde(default)]
+    pub additional_fields: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

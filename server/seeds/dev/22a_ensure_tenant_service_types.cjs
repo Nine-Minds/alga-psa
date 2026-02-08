@@ -4,6 +4,13 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+const resolveBillingMethod = (typeName, fallbackMethod) => {
+  if (typeName === 'Hourly Time') return 'hourly';
+  if (typeName === 'Usage Based') return 'usage';
+  if (typeName === 'Fixed Price') return 'fixed';
+  return fallbackMethod || 'per_unit';
+};
+
 exports.seed = async function(knex) {
   // Fetch all tenant IDs (using the correct column name 'tenant')
   const tenants = await knex('tenants').select('tenant');
@@ -42,7 +49,7 @@ exports.seed = async function(knex) {
             name: stdType.name,
             standard_service_type_id: stdType.id,
             is_active: true,
-            billing_method: stdType.billing_method || 'per_unit', // Use the billing_method from standard type or default to 'per_unit'
+            billing_method: resolveBillingMethod(stdType.name, stdType.billing_method),
             order_number: stdType.display_order || 0,
           });
           insertedCount++;

@@ -97,6 +97,12 @@
   "fields": {
     "notes": "Note"
   },
+  "tickets": {
+    "responseSource": {
+      "clientPortal": "Ricevuto tramite Portale Clienti",
+      "inboundEmail": "Ricevuto tramite e-mail"
+    }
+  },
   "time": {
     "today": "Oggi",
     "yesterday": "Ieri",

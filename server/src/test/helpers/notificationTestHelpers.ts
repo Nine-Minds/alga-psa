@@ -449,9 +449,15 @@ export function createMockProjectEvent(
   payload: {
     tenantId: string;
     projectId: string;
-    userId: string;
+    userId?: string;
     taskId?: string;
     assignedTo?: string;
+    // New fields for PROJECT_TASK_ASSIGNED
+    assignedToId?: string;
+    assignedToType?: 'user' | 'team';
+    assignedByUserId?: string;
+    assignedByName?: string;
+    assignedAt?: string;
   }
 ) {
   return {

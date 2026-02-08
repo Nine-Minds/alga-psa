@@ -189,6 +189,10 @@
       "awaitingYourResponseTooltip": "Support is waiting for your response",
       "awaitingSupportResponseTooltip": "Your response has been received. Support will respond soon."
     },
+    "responseSource": {
+      "clientPortal": "Received via Client Portal",
+      "inboundEmail": "Received via Inbound Email"
+    },
     "documents": {
       "title": "Documents",
       "noDocuments": "No documents attached",

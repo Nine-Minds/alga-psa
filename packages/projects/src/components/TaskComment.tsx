@@ -12,6 +12,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { updateTaskComment, deleteTaskComment } from '../actions/projectTaskCommentActions';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { searchUsersForMentions } from '@alga-psa/users/actions';
 
 interface TaskCommentProps {
   comment: IProjectTaskCommentWithUser;
@@ -230,6 +231,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 roomName={`task-${comment.taskId}-comment-${comment.taskCommentId}`}
                 initialContent={editedContent}
                 onContentChange={handleContentChange}
+                searchMentions={searchUsersForMentions}
               />
               <div className="flex justify-end space-x-2 mt-1">
                 <Button

@@ -551,6 +551,18 @@ export class TemporalJobRunner implements IJobRunner {
         priority: options?.priority,
       };
 
+      let userId: string | null = options?.userId ?? null;
+      if (!userId) {
+        const row = await knex('users')
+          .where({ tenant: data.tenantId })
+          .orderBy([{ column: 'created_at', order: 'asc' }])
+          .first(['user_id']);
+        userId = row?.user_id ? String(row.user_id) : null;
+      }
+      if (!userId) {
+        throw new Error(`Unable to attribute Temporal job to a user for tenant ${data.tenantId}`);
+      }
+
       const [inserted] = await knex('jobs')
         .insert({
           tenant: data.tenantId,
@@ -558,7 +570,7 @@ export class TemporalJobRunner implements IJobRunner {
           status: JobStatus.Pending,
           metadata: JSON.stringify(metadata),
           created_at: new Date(),
-          user_id: options?.userId || data.tenantId,
+          user_id: userId,
           runner_type: 'temporal',
         })
         .returning('job_id');

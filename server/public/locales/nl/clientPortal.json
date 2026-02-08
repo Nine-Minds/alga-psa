@@ -182,6 +182,10 @@
       "awaitingYourResponseTooltip": "Support wacht op uw reactie",
       "awaitingSupportResponseTooltip": "Uw reactie is ontvangen. Support zal spoedig reageren."
     },
+    "responseSource": {
+      "clientPortal": "Ontvangen via Klantenportaal",
+      "inboundEmail": "Ontvangen via e-mail"
+    },
     "documents": {
       "title": "Documenten",
       "noDocuments": "Geen documenten toegevoegd",

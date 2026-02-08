@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IUserWithRoles, IRole, IRoleWithPermissions, IPermission } from '../../interfaces/auth.interfaces';
 import { ITicket } from '../../interfaces/ticket.interfaces';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
-import Ticket from '../../lib/models/ticket';
+import Ticket from '@alga-psa/tickets/models/ticket';
 
 // Mock the Ticket model methods
-vi.mock('../../lib/models/ticket', () => ({
+vi.mock('@alga-psa/tickets/models/ticket', () => ({
   default: {
     getAll: vi.fn(),
     update: vi.fn(),
