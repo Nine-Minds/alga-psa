@@ -224,7 +224,7 @@ async function persistMicrosoftConfig(
       webhook_subscription_id = COALESCE(EXCLUDED.webhook_subscription_id, microsoft_email_provider_config.webhook_subscription_id),
       webhook_expires_at = COALESCE(EXCLUDED.webhook_expires_at, microsoft_email_provider_config.webhook_expires_at),
       webhook_verification_token = COALESCE(EXCLUDED.webhook_verification_token, microsoft_email_provider_config.webhook_verification_token),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = EXCLUDED.updated_at
     RETURNING *
   `, [
     providerId,
@@ -351,7 +351,7 @@ async function persistGoogleConfig(
       token_expires_at = COALESCE(EXCLUDED.token_expires_at, google_email_provider_config.token_expires_at),
       history_id = COALESCE(EXCLUDED.history_id, google_email_provider_config.history_id),
       watch_expiration = COALESCE(EXCLUDED.watch_expiration, google_email_provider_config.watch_expiration),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = EXCLUDED.updated_at
     RETURNING *
   `, [
     providerId, 
@@ -449,7 +449,7 @@ async function persistImapConfig(
       last_seen_at = COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at),
       last_sync_at = COALESCE(EXCLUDED.last_sync_at, imap_email_provider_config.last_sync_at),
       last_error = COALESCE(EXCLUDED.last_error, imap_email_provider_config.last_error),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = EXCLUDED.updated_at
     RETURNING *
   `, [
     providerId,
