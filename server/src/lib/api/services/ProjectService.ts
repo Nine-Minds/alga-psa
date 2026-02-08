@@ -562,7 +562,7 @@ export class ProjectService extends BaseService<IProject> {
         .select('project_tasks.*')
         .orderBy([
           { column: 'project_tasks.order_key', order: 'asc' },
-          { column: 'project_tasks.order_number', order: 'asc' }
+          { column: 'project_tasks.wbs_code', order: 'asc' }
         ]);
     }
 
@@ -611,7 +611,6 @@ export class ProjectService extends BaseService<IProject> {
         const taskData = {
           ...data,
           phase_id: phaseId,
-          order_number: tasks.length + 1,
           wbs_code: newWbsCode,
           order_key: orderKey,
           tenant: context.tenant,
