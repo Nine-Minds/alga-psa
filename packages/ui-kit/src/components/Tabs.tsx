@@ -20,8 +20,8 @@ export type TabsProps = {
   defaultActiveKey?: string;
   /** Callback when tab changes */
   onChange?: (key: string) => void;
-  /** Tab bar position */
-  variant?: 'default' | 'pills' | 'underline';
+  /** Tab bar style */
+  variant?: 'default';
   /** Additional styles for container */
   style?: React.CSSProperties;
 };
@@ -35,22 +35,6 @@ const tabListStyle: React.CSSProperties = {
   display: 'flex',
   gap: '4px',
   borderBottom: '1px solid var(--alga-border, #e5e7eb)',
-  marginBottom: '16px',
-};
-
-const pillsTabListStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '8px',
-  padding: '4px',
-  backgroundColor: 'var(--alga-muted, #f3f4f6)',
-  borderRadius: 'var(--alga-radius, 8px)',
-  marginBottom: '16px',
-};
-
-const underlineTabListStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '24px',
-  borderBottom: '2px solid var(--alga-border, #e5e7eb)',
   marginBottom: '16px',
 };
 
@@ -70,45 +54,6 @@ const baseTabStyle: React.CSSProperties = {
 
 const activeTabStyle: React.CSSProperties = {
   ...baseTabStyle,
-  color: 'var(--alga-primary, #9855ee)',
-  fontWeight: 500,
-  borderBottom: '2px solid var(--alga-primary, #9855ee)',
-};
-
-const pillTabStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  fontSize: '14px',
-  fontWeight: 500,
-  color: 'var(--alga-muted-fg, #6b7280)',
-  backgroundColor: 'transparent',
-  border: 'none',
-  borderRadius: 'var(--alga-radius, 6px)',
-  cursor: 'pointer',
-  transition: 'all 0.15s ease',
-};
-
-const activePillTabStyle: React.CSSProperties = {
-  ...pillTabStyle,
-  color: 'var(--alga-fg, #111)',
-  backgroundColor: 'var(--alga-bg, #fff)',
-  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-};
-
-const underlineTabStyle: React.CSSProperties = {
-  padding: '8px 0',
-  fontSize: '14px',
-  fontWeight: 500,
-  color: 'var(--alga-muted-fg, #6b7280)',
-  backgroundColor: 'transparent',
-  border: 'none',
-  borderBottom: '2px solid transparent',
-  cursor: 'pointer',
-  transition: 'all 0.15s ease',
-  marginBottom: '-2px',
-};
-
-const activeUnderlineTabStyle: React.CSSProperties = {
-  ...underlineTabStyle,
   color: 'var(--alga-primary, #9855ee)',
   fontWeight: 500,
   borderBottom: '2px solid var(--alga-primary, #9855ee)',
@@ -177,39 +122,16 @@ export function Tabs({
     [tabs, handleTabClick]
   );
 
-  const getListStyle = () => {
-    switch (variant) {
-      case 'pills':
-        return pillsTabListStyle;
-      case 'underline':
-        return underlineTabListStyle;
-      default:
-        return tabListStyle;
-    }
-  };
-
   const getTabStyle = (isActive: boolean, isDisabled: boolean) => {
-    let baseStyle: React.CSSProperties;
-
-    switch (variant) {
-      case 'pills':
-        baseStyle = isActive ? activePillTabStyle : pillTabStyle;
-        break;
-      case 'underline':
-        baseStyle = isActive ? activeUnderlineTabStyle : underlineTabStyle;
-        break;
-      default:
-        baseStyle = isActive ? activeTabStyle : baseTabStyle;
-    }
-
-    return isDisabled ? { ...baseStyle, ...disabledTabStyle } : baseStyle;
+    const base = isActive ? activeTabStyle : baseTabStyle;
+    return isDisabled ? { ...base, ...disabledTabStyle } : base;
   };
 
   const activeTab = tabs.find((t) => t.key === activeKey);
 
   return (
     <div style={{ ...containerStyle, ...style }}>
-      <div role="tablist" style={getListStyle()}>
+      <div role="tablist" style={tabListStyle}>
         {tabs.map((tab, index) => (
           <button
             key={tab.key}

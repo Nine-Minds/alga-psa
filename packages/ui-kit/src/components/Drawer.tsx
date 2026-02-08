@@ -5,8 +5,10 @@ export type DrawerProps = {
   open: boolean;
   /** Callback when the drawer should close */
   onClose: () => void;
-  /** Drawer width — CSS value like '400px', '50vw', '40%' */
+  /** Drawer width — CSS value like '400px', '50vw', '40%'. Defaults to fit-content up to 60vw */
   width?: string;
+  /** Max width when using default fit-content width */
+  maxWidth?: string;
   /** Drawer title */
   title?: React.ReactNode;
   /** Drawer content */
@@ -21,7 +23,8 @@ export type DrawerProps = {
   style?: React.CSSProperties;
 };
 
-const DEFAULT_WIDTH = '400px';
+const DEFAULT_WIDTH = 'fit-content';
+const DEFAULT_MAX_WIDTH = '60vw';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -93,6 +96,7 @@ export function Drawer({
   open,
   onClose,
   width = DEFAULT_WIDTH,
+  maxWidth = DEFAULT_MAX_WIDTH,
   title,
   children,
   overlay = true,
@@ -205,6 +209,7 @@ export function Drawer({
   const drawerStyle: React.CSSProperties = {
     ...baseDrawerStyle,
     width,
+    maxWidth,
     transform: open ? 'translateX(0)' : 'translateX(100%)',
     visibility: open ? 'visible' : 'hidden',
     pointerEvents: open ? 'auto' : 'none',

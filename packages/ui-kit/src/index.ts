@@ -24,6 +24,9 @@ export { Tabs } from './components/Tabs';
 export { ViewSwitcher } from './components/ViewSwitcher';
 export { Drawer } from './components/Drawer';
 export { DropdownMenu } from './components/DropdownMenu';
+export { Breadcrumbs } from './components/Breadcrumbs';
+export { Popover } from './components/Popover';
+export { Separator } from './components/Separator';
 
 // Feedback Components
 export { Tooltip } from './components/Tooltip';
@@ -50,6 +53,9 @@ export type { TabItem, TabsProps } from './components/Tabs';
 export type { ViewSwitcherOption, ViewSwitcherProps } from './components/ViewSwitcher';
 export type { DrawerProps } from './components/Drawer';
 export type { DropdownMenuItem, DropdownMenuProps } from './components/DropdownMenu';
+export type { BreadcrumbItem, BreadcrumbsProps } from './components/Breadcrumbs';
+export type { PopoverProps } from './components/Popover';
+export type { SeparatorProps } from './components/Separator';
 
 // Types - Feedback
 export type { TooltipProps } from './components/Tooltip';

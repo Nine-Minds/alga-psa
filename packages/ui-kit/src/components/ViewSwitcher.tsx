@@ -19,11 +19,11 @@ export function ViewSwitcher<T extends string>({
   options,
   style,
 }: ViewSwitcherProps<T>) {
+  const radius = 'var(--alga-radius, 8px)';
   const containerStyle: React.CSSProperties = {
     display: 'inline-flex',
     border: '1px solid var(--alga-border, #d1d5db)',
-    borderRadius: 'var(--alga-radius, 8px)',
-    overflow: 'hidden',
+    borderRadius: radius,
     height: 36,
     ...style,
   };
@@ -35,7 +35,9 @@ export function ViewSwitcher<T extends string>({
           key={option.value}
           option={option}
           isActive={currentView === option.value}
+          isFirst={index === 0}
           isLast={index === options.length - 1}
+          radius={radius}
           onClick={() => onChange(option.value)}
         />
       ))}
@@ -46,18 +48,31 @@ export function ViewSwitcher<T extends string>({
 type ViewSwitcherButtonProps<T extends string> = {
   option: ViewSwitcherOption<T>;
   isActive: boolean;
+  isFirst: boolean;
   isLast: boolean;
+  radius: string;
   onClick: () => void;
 };
 
 function ViewSwitcherButton<T extends string>({
   option,
   isActive,
+  isFirst,
   isLast,
+  radius,
   onClick,
 }: ViewSwitcherButtonProps<T>) {
   const [hovered, setHovered] = React.useState(false);
   const Icon = option.icon;
+
+  // Compute individual corner radii so the first/last button match the container
+  const borderRadiusValue = isFirst && isLast
+    ? radius
+    : isFirst
+      ? `${radius} 0 0 ${radius}`
+      : isLast
+        ? `0 ${radius} ${radius} 0`
+        : '0';
 
   const buttonStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -68,6 +83,7 @@ function ViewSwitcherButton<T extends string>({
     height: '100%',
     border: 'none',
     borderRight: isLast ? 'none' : '1px solid var(--alga-border, #d1d5db)',
+    borderRadius: borderRadiusValue,
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: 500,
