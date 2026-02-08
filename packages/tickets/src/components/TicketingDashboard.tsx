@@ -38,6 +38,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
 
@@ -79,6 +80,8 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   }, [value, delay]);
   return debouncedValue;
 };
+
+const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -160,6 +163,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     initialFilterValues.responseState ?? 'all'
   );
   const [bundleView, setBundleView] = useState<'bundled' | 'individual'>(initialFilterValues.bundleView ?? 'bundled');
+  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(50);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -318,6 +322,47 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(BUNDLE_VIEW_STORAGE_KEY, bundleView);
   }, [bundleView]);
+
+  // Persist ticket list density preference locally.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = Number(window.localStorage.getItem(TICKET_LIST_DENSITY_STORAGE_KEY));
+    if (Number.isFinite(stored) && stored >= 0 && stored <= 100) {
+      setTicketListDensityLevel(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(TICKET_LIST_DENSITY_STORAGE_KEY, String(ticketListDensityLevel));
+  }, [ticketListDensityLevel]);
+
+  const densityClasses = useMemo(() => {
+    if (ticketListDensityLevel <= 15) {
+      return {
+        filterPadding: 'p-4',
+        filterGap: 'gap-3',
+        bodyPadding: 'p-4',
+        tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
+      };
+    }
+
+    if (ticketListDensityLevel >= 85) {
+      return {
+        filterPadding: 'p-7',
+        filterGap: 'gap-5',
+        bodyPadding: 'p-7',
+        tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px]',
+      };
+    }
+
+    return {
+      filterPadding: 'p-6',
+      filterGap: 'gap-4',
+      bodyPadding: 'p-6',
+      tableRowDensity: '',
+    };
+  }, [ticketListDensityLevel]);
 
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
@@ -1221,9 +1266,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </div>
       </div>
       <div className="bg-white shadow rounded-lg">
-        <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
+        <div className={`sticky top-0 z-40 bg-white rounded-t-lg border-b border-gray-100 ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
             <BoardPicker
               id={`${id}-board-picker`}
               boards={boards}
@@ -1371,6 +1416,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               />
             </div>
 
+            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+
+            <div className="shrink-0">
+              <ViewDensityControl
+                idPrefix={`${id}-list-density`}
+                value={ticketListDensityLevel}
+                onChange={setTicketListDensityLevel}
+                step={50}
+                compactLabel="Compact"
+                spaciousLabel="Spacious"
+                decreaseTitle="Decrease ticket list spacing"
+                increaseTitle="Increase ticket list spacing"
+                resetTitle="Reset ticket list spacing"
+              />
+            </div>
+
             <Button
               variant="ghost"
               size="sm"
@@ -1385,7 +1446,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </ReflectionContainer>
         </div>
 
-        <div className="p-6">
+        <div className={densityClasses.bodyPadding}>
         {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
         {isLoadingMore ? (
           <Spinner size="md" className="h-32 w-full" />
@@ -1425,7 +1486,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               totalItems={totalCount}
               onItemsPerPageChange={onPageSizeChange}
               rowClassName={(record: ITicketListItem) =>
-                `cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
                   ? '!bg-blue-50'
                   : ''}`
               }
