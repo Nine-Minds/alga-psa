@@ -130,7 +130,7 @@
   {
     "id": "T015",
     "description": "Rapidly changing selected existing invoice does not leave stale detail data in preview",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F012"
