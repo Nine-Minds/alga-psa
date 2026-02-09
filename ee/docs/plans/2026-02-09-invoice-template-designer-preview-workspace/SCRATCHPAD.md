@@ -236,3 +236,6 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
 - (2026-02-09) T027 completed: debounce unit coverage confirms rapid edits do not trigger immediate unbounded compile/render calls.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`recomputes preview after metadata changes and debounces rapid edits`).
+- (2026-02-09) T028 completed: manual rerun test verifies pipeline reruns without model delta and sets `bypassCompileCache`.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`manual rerun retriggers pipeline without workspace delta and bypasses compile cache`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`

@@ -402,6 +402,23 @@ describe('DesignerVisualWorkspace', () => {
     expect(updatedField?.metadata?.bindingKey).toBe('customer.name');
   });
 
+  it('manual rerun retriggers pipeline without workspace delta and bypasses compile cache', async () => {
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
+
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls)
+    );
+
+    const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
+    expect(latestCall.bypassCompileCache).toBe(true);
+  });
+
   it('recomputes preview when layout structure changes affect rendered output', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');

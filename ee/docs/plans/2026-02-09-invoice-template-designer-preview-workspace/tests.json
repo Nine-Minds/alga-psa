@@ -252,7 +252,7 @@
   {
     "id": "T028",
     "description": "Manual rerun control triggers compile+render+verify even when no model delta is detected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
