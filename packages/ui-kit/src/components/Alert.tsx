@@ -2,7 +2,13 @@ import React from 'react';
 
 type Tone = 'info' | 'success' | 'warning' | 'danger';
 export type AlertProps = React.HTMLAttributes<HTMLDivElement> & {
+  /** Visual tone of the alert. Controls border, background, icon, and text colour.
+   * @default 'info'
+   */
   tone?: Tone;
+  /** Whether to display the tone-specific icon on the left.
+   * @default true
+   */
   showIcon?: boolean;
 };
 
@@ -81,6 +87,11 @@ function renderIcon(tone: Tone): React.ReactElement {
   }
 }
 
+/**
+ * Contextual alert banner with optional icon.
+ *
+ * Use `AlertTitle` and `AlertDescription` as children for structured content.
+ */
 export function Alert({ tone = 'info', showIcon = true, style, children, ...rest }: AlertProps) {
   const mergedStyle: React.CSSProperties = {
     display: 'flex',
@@ -110,10 +121,12 @@ export function Alert({ tone = 'info', showIcon = true, style, children, ...rest
   );
 }
 
+/** Bold title line inside an `Alert`. */
 export function AlertTitle({ style, ...rest }: React.HTMLAttributes<HTMLHeadingElement>) {
   return <div style={{ fontWeight: 600, marginBottom: 4, ...style }} {...rest} />;
 }
 
+/** Body text inside an `Alert`. */
 export function AlertDescription({ style, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return <div style={{ fontSize: 14, lineHeight: 1.5, ...style }} {...rest} />;
 }

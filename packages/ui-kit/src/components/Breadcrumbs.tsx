@@ -1,14 +1,22 @@
 import React from 'react';
 
 export interface BreadcrumbItem {
+  /** Text or node displayed for this breadcrumb segment. */
   label: React.ReactNode;
+  /** If provided, the breadcrumb renders as an anchor link. */
   href?: string;
+  /** Click handler. Used when `href` is not set. */
   onClick?: () => void;
 }
 
 export interface BreadcrumbsProps {
+  /** Ordered list of breadcrumb segments. The last item is rendered as plain text. */
   items: BreadcrumbItem[];
+  /** Custom separator node between items.
+   * @default '/'
+   */
   separator?: React.ReactNode;
+  /** Inline styles for the `<nav>` wrapper. */
   style?: React.CSSProperties;
 }
 
@@ -33,6 +41,7 @@ const lastItemStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
+/** Horizontal breadcrumb navigation trail. */
 export function Breadcrumbs({ items, separator = '/', style }: BreadcrumbsProps) {
   return (
     <nav aria-label="Breadcrumb" style={style}>

@@ -34,6 +34,7 @@ function extractThemeVariables(): Record<string, string> {
   return {
     // Primary (Purple)
     '--alga-primary': rgbToHex(getVar('--color-primary-500')),
+    '--alga-primary-foreground': '#ffffff',
     '--alga-primary-light': rgbToHex(getVar('--color-primary-400')),
     '--alga-primary-dark': rgbToHex(getVar('--color-primary-600')),
     '--alga-primary-50': rgbToHex(getVar('--color-primary-50')),
@@ -41,13 +42,15 @@ function extractThemeVariables(): Record<string, string> {
 
     // Secondary (Blue)
     '--alga-secondary': rgbToHex(getVar('--color-secondary-500')),
+    '--alga-secondary-foreground': '#ffffff',
     '--alga-secondary-light': rgbToHex(getVar('--color-secondary-400')),
 
     // Accent (Orange)
     '--alga-accent': rgbToHex(getVar('--color-accent-500')),
+    '--alga-accent-foreground': '#ffffff',
 
-    // Destructive (Orange - brand color for deletions)
-    '--alga-danger': rgbToHex(getVar('--color-accent-500')),
+    // Destructive
+    '--alga-danger': '#dc2626',
     '--alga-danger-dark': rgbToHex(getVar('--color-accent-600')),
 
     // Text colors
@@ -63,12 +66,19 @@ function extractThemeVariables(): Record<string, string> {
     '--alga-card-bg': rgbToHex(getVar('--color-border-50')),
     '--alga-muted': rgbToHex(getVar('--color-border-100')),
 
-    // Success/Warning (keeping standard colors)
-    '--alga-success': '#16a34a',
-    '--alga-warning': '#d97706',
+    // Soft variants (for outline/ghost/soft/dashed button hovers)
+    '--alga-primary-soft': rgbToHex(getVar('--color-primary-50')),
+    '--alga-primary-soft-fg': rgbToHex(getVar('--color-primary-600')),
+    '--alga-primary-soft-hover': rgbToHex(getVar('--color-primary-100')),
+    '--alga-primary-border': rgbToHex(getVar('--color-primary-400')),
+
+    // Success/Warning
+    '--alga-success': '#22c55e',
+    '--alga-warning': '#f59e0b',
 
     // Layout
     '--alga-radius': '8px',
+    '--alga-ring': '0 0% 0%',
   };
 }
 

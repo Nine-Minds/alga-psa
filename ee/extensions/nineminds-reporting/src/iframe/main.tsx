@@ -1134,7 +1134,6 @@ function ReportsList() {
       sortable: false,
       render: (row) => (
         <Button
-          variant="secondary"
           size="sm"
           onClick={() => setSelectedReport(row)}
         >
@@ -1148,7 +1147,7 @@ function ReportsList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Platform Reports</h2>
-        <Button variant="secondary" onClick={fetchReports}>
+        <Button variant="outline" onClick={fetchReports}>
           Refresh
         </Button>
       </div>
@@ -1628,7 +1627,7 @@ function CreateReport() {
         <Card style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ margin: 0 }}>Metrics</h3>
-            <Button type="button" variant="secondary" onClick={addMetric}>
+            <Button type="button" onClick={addMetric}>
               + Add Metric
             </Button>
           </div>
@@ -1821,7 +1820,6 @@ function CreateReport() {
                       <Text style={{ fontWeight: 500 }}>Joins</Text>
                       <Button
                         type="button"
-                        variant="secondary"
                         size="sm"
                         onClick={() => addJoin(index)}
                       >
@@ -3212,7 +3210,6 @@ function TenantManagementView() {
             <DropdownMenu
               trigger={
                 <Button
-                  variant="secondary"
                   size="sm"
                   disabled={actionInProgress === row.tenant}
                   style={{ minWidth: '80px' }}
@@ -3303,7 +3300,7 @@ function TenantManagementView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Tenant Management</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
+          <Button variant="outline" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
           <Button onClick={() => setShowCreateForm(true)}>
@@ -3918,7 +3915,7 @@ function AuditLogs() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Audit Logs</h2>
-        <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
+        <Button variant="outline" onClick={fetchLogs} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </Button>
       </div>
@@ -4308,7 +4305,7 @@ function EditReport({
       <Card style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ margin: 0 }}>Metrics</h3>
-          <Button type="button" variant="secondary" onClick={addMetric}>
+          <Button type="button" onClick={addMetric}>
             + Add Metric
           </Button>
         </div>
@@ -4501,7 +4498,6 @@ function EditReport({
                     <Text style={{ fontWeight: 500 }}>Joins</Text>
                     <Button
                       type="button"
-                      variant="secondary"
                       size="sm"
                       onClick={() => addJoin(index)}
                     >
@@ -4963,7 +4959,7 @@ function FeatureFlagsView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Feature Flags</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={fetchFlags} disabled={loading}>
+          <Button variant="outline" onClick={fetchFlags} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
           <Button onClick={() => setShowCreateForm(true)}>

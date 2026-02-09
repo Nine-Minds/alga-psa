@@ -1,18 +1,26 @@
 import React from 'react';
 
 export type ViewSwitcherOption<T extends string> = {
+  /** Unique identifier for this view. */
   value: T;
+  /** Human-readable label shown on the button. */
   label: string;
+  /** Optional icon component rendered before the label. */
   icon?: React.ComponentType<{ size?: number | string; style?: React.CSSProperties }>;
 };
 
 export type ViewSwitcherProps<T extends string> = {
+  /** Currently active view value. */
   currentView: T;
+  /** Callback fired when the user selects a different view. */
   onChange: (view: T) => void;
+  /** Available view options. */
   options: ViewSwitcherOption<T>[];
+  /** Inline styles for the outer container. */
   style?: React.CSSProperties;
 };
 
+/** Segmented button group for switching between views (e.g. list / grid). */
 export function ViewSwitcher<T extends string>({
   currentView,
   onChange,

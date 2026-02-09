@@ -1,6 +1,9 @@
 import React from 'react';
 
 export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
+  /** Colour scheme of the badge.
+   * @default 'default'
+   */
   tone?: 'default' | 'info' | 'success' | 'warning' | 'danger';
 };
 
@@ -12,6 +15,7 @@ const tones: Record<NonNullable<BadgeProps['tone']>, React.CSSProperties> = {
   danger: { background: '#fef2f2', color: '#991b1b', borderColor: 'var(--alga-danger, #dc2626)' },
 };
 
+/** Small pill-shaped label for status indicators and tags. */
 export function Badge({ tone = 'default', style, ...rest }: BadgeProps) {
   const merged: React.CSSProperties = {
     display: 'inline-block',

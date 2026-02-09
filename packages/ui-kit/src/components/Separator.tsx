@@ -1,10 +1,15 @@
 import React from 'react';
 
 export interface SeparatorProps {
+  /** Direction of the divider line.
+   * @default 'horizontal'
+   */
   orientation?: 'horizontal' | 'vertical';
+  /** Additional inline styles. */
   style?: React.CSSProperties;
 }
 
+/** Thin divider line for separating content sections. */
 export function Separator({ orientation = 'horizontal', style }: SeparatorProps) {
   const baseStyle: React.CSSProperties =
     orientation === 'horizontal'

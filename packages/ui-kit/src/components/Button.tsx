@@ -1,7 +1,13 @@
 import React from 'react';
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  /** Visual style of the button.
+   * @default 'primary'
+   */
   variant?: 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' | 'soft' | 'dashed';
+  /** Button size controlling padding and font size.
+   * @default 'md'
+   */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'icon';
 };
 
@@ -79,6 +85,7 @@ const hoverStyles: Record<NonNullable<ButtonProps['variant']>, React.CSSProperti
   dashed: { background: 'var(--alga-primary-soft-hover)' },
 };
 
+/** Themed button with multiple variants and sizes. Supports hover and focus-visible states. */
 export function Button({ variant = 'primary', size = 'md', style, disabled, onMouseEnter, onMouseLeave, onFocus, onBlur, ...rest }: ButtonProps) {
   const [hovered, setHovered] = React.useState(false);
   const [focusVisible, setFocusVisible] = React.useState(false);

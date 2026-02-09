@@ -1,5 +1,6 @@
 import React from 'react';
 
+/** Props for the {@link Card} component. Extends standard `<div>` attributes. */
 export type CardProps = React.HTMLAttributes<HTMLDivElement>;
 
 const baseStyle: React.CSSProperties = {
@@ -11,6 +12,7 @@ const baseStyle: React.CSSProperties = {
   padding: 16,
 };
 
+/** Bordered container with background, shadow, and rounded corners. */
 export function Card({ style, ...rest }: CardProps) {
   return <div style={{ ...baseStyle, ...style }} {...rest} />;
 }
