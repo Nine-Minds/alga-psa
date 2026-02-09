@@ -53,3 +53,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F004`: Lifted nested visual tab state into InvoiceTemplateEditor so Visual->Code->Visual returns to the prior nested tab.
 - (2026-02-09) Completed `F005`: Added reducer-driven preview session state for source kind, sample/invoice selection, and async loading/error state.
 - (2026-02-09) Completed `F006`: Created three curated sample preview scenarios with realistic headers, totals, and line-item data.
+- (2026-02-09) Completed `F007`: Added sample scenario selector UI that is conditionally shown for the Sample source.

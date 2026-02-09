@@ -55,7 +55,7 @@
   {
     "id": "F007",
     "description": "Add sample scenario selector UI shown when preview source is `Sample`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements"
