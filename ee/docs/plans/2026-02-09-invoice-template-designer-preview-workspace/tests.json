@@ -215,7 +215,7 @@
   {
     "id": "T024",
     "description": "Preview render path executes compiled Wasm via same runtime used for real invoice rendering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F033"
