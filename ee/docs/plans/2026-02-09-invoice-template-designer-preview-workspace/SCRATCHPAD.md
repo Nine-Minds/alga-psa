@@ -269,3 +269,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T040 completed: preview component test verifies pass badge and pass summary message when all constraints satisfy verification.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows pass verification badge when all layout constraints pass`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T041 completed: preview component test verifies issues badge and mismatch row rendering when verification detects failing constraints.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows issues verification badge when one or more constraints fail`).

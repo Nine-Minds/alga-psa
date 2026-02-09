@@ -372,7 +372,7 @@
   {
     "id": "T041",
     "description": "Preview UI displays issue badge when one or more constraints fail",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ],
