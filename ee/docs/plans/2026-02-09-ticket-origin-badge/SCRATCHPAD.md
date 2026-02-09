@@ -86,3 +86,7 @@
 - (2026-02-09) **F011 completed**: Rendered `TicketOriginBadge` in MSP ticket header (`packages/tickets/src/components/ticket/TicketDetails.tsx`) beside ticket number/response-state badge; origin is resolved with shared `getTicketOrigin`.
 - (2026-02-09) Validation command: `npx vitest run packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx` (fails in current workspace due unresolved legacy alias import `@alga-psa/db/models/user` from auth package).
 - (2026-02-09) **F012 completed**: Rendered `TicketOriginBadge` in client portal ticket details status row (`packages/client-portal/src/components/tickets/TicketDetails.tsx`), using shared resolver + translated labels.
+- (2026-02-09) **F013 completed**: Added English common locale keys under `server/public/locales/en/common.json`:
+  - `tickets.origin.internal`
+  - `tickets.origin.clientPortal`
+  - `tickets.origin.inboundEmail`

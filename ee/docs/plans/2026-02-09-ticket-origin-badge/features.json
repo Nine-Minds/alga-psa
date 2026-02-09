@@ -103,7 +103,7 @@
   {
     "id": "F013",
     "description": "Add English translation keys for ticket origin labels in common locale",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
