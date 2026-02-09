@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
+import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -93,19 +94,51 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   };
 };
 
-const getPreviewContent = (node: DesignerNode): React.ReactNode => {
+type PreviewContentResult = {
+  content: React.ReactNode;
+  isPlaceholder?: boolean;
+  singleLine?: boolean;
+};
+
+const placeholderPreviewClassName = 'block truncate text-[11px] font-normal text-slate-400/95 italic';
+
+const renderPlaceholderPreview = (text: string): React.ReactNode => (
+  <span className={placeholderPreviewClassName} title={text}>
+    {text}
+  </span>
+);
+
+const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
   const metadata = (node.metadata ?? {}) as Record<string, unknown>;
   switch (node.type) {
     case 'field': {
-      const bindingKey = typeof metadata.bindingKey === 'string' ? metadata.bindingKey : 'binding';
-      const placeholder =
-        typeof (metadata as { placeholder?: unknown }).placeholder === 'string'
-          ? (metadata as { placeholder: string }).placeholder
-          : '';
-      return placeholder ? `${bindingKey} · ${placeholder}` : `Field: ${bindingKey}`;
+      const preview = resolveFieldPreviewScaffold(node);
+      if (preview.isPlaceholder) {
+        return {
+          content: renderPlaceholderPreview(preview.text),
+          isPlaceholder: true,
+          singleLine: true,
+        };
+      }
+      return {
+        content: preview.text,
+        singleLine: true,
+      };
     }
-    case 'label':
-      return `Label: ${metadata.text ?? node.name}`;
+    case 'label': {
+      const preview = resolveLabelPreviewScaffold(node);
+      if (preview.isPlaceholder) {
+        return {
+          content: renderPlaceholderPreview(preview.text),
+          isPlaceholder: true,
+          singleLine: true,
+        };
+      }
+      return {
+        content: preview.text,
+        singleLine: true,
+      };
+    }
     case 'text': {
       const text = typeof metadata.text === 'string' ? metadata.text : node.name;
       const content = text.length > 0 ? text.slice(0, 140) : node.name;
@@ -113,29 +146,34 @@ const getPreviewContent = (node: DesignerNode): React.ReactNode => {
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
       if (parts.length === 1) {
-        return content;
+        return { content };
       }
       
-      return (
-        <span>
-          {parts.map((part, index) => {
-            if (part.startsWith('{{') && part.endsWith('}}')) {
-              return (
-                <span key={index} className="text-blue-600 bg-blue-50 px-1 rounded font-mono text-[10px] mx-0.5 border border-blue-100">
-                  {part}
-                </span>
-              );
-            }
-            return part;
-          })}
-        </span>
-      );
+      return {
+        content: (
+          <span>
+            {parts.map((part, index) => {
+              if (part.startsWith('{{') && part.endsWith('}}')) {
+                return (
+                  <span
+                    key={index}
+                    className="text-blue-600 bg-blue-50 px-1 rounded font-mono text-[10px] mx-0.5 border border-blue-100"
+                  >
+                    {part}
+                  </span>
+                );
+              }
+              return part;
+            })}
+          </span>
+        ),
+      };
     }
     case 'subtotal':
     case 'tax':
     case 'discount':
     case 'custom-total':
-      return `${metadata.label ?? node.name}: {${metadata.bindingKey ?? 'binding'}}`;
+      return { content: `${metadata.label ?? node.name}: {${metadata.bindingKey ?? 'binding'}}` };
     case 'table':
     case 'dynamic-table': {
       const columns = Array.isArray((metadata as { columns?: unknown }).columns)
@@ -148,24 +186,30 @@ const getPreviewContent = (node: DesignerNode): React.ReactNode => {
               .filter(Boolean)
               .join(' | ')
           : 'No columns configured';
-      return `Table · ${columnLabels}`;
+      return { content: `Table · ${columnLabels}` };
     }
     case 'action-button':
-      return metadata.label ? `Button: ${metadata.label}` : 'Button';
+      return { content: metadata.label ? `Button: ${metadata.label}` : 'Button' };
     case 'signature':
-      return metadata.signerLabel ? `Signature · ${metadata.signerLabel}` : 'Signature';
+      return { content: metadata.signerLabel ? `Signature · ${metadata.signerLabel}` : 'Signature' };
     case 'attachment-list':
-      return metadata.title ? `Attachments: ${metadata.title}` : 'Attachments';
+      return { content: metadata.title ? `Attachments: ${metadata.title}` : 'Attachments' };
     case 'totals':
-      return 'Totals Summary · Subtotal / Tax / Balance';
+      return { content: 'Totals Summary · Subtotal / Tax / Balance' };
     case 'divider':
-      return <div className="w-full h-px bg-slate-300 my-1" />;
+      return { content: <div className="w-full h-px bg-slate-300 my-1" /> };
     case 'spacer':
-      return <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">Spacer</div>;
+      return {
+        content: (
+          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
+            Spacer
+          </div>
+        ),
+      };
     case 'container':
-      return null; // Container renders children directly
+      return { content: null }; // Container renders children directly
     default:
-      return `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}`;
+      return { content: `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}` };
   }
 };
 
@@ -317,10 +361,12 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
             className={clsx(
               'text-[11px] text-slate-500',
               node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
-              node.type === 'spacer' && 'h-full p-0'
+              node.type === 'spacer' && 'h-full p-0',
+              previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+              previewContent.isPlaceholder && 'text-slate-400'
             )}
           >
-            {previewContent}
+            {previewContent.content}
           </div>
         </>
       )}
