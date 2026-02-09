@@ -221,3 +221,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T021 completed: cache test now asserts changed source hash keys produce cache misses/new artifacts (invalidation behavior).
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts` (`treats changed source hashes as cache misses requiring new artifacts`).
   - Validation command: `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts`
+- (2026-02-09) T022 completed: preview component test now asserts compile failure state renders actionable error + compiler detail text.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`displays actionable compile failure details in preview status panel`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`

@@ -326,6 +326,38 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
+  it('displays actionable compile failure details in preview status panel', async () => {
+    runAuthoritativeInvoiceTemplatePreviewMock.mockResolvedValueOnce({
+      success: false,
+      sourceHash: 'compile-error-hash',
+      generatedSource: '// broken generated source',
+      compile: {
+        status: 'error',
+        cacheHit: false,
+        diagnostics: [],
+        error: 'Preview AssemblyScript compilation failed.',
+        details: 'ERROR TS1005: ; expected',
+      },
+      render: {
+        status: 'idle',
+        html: null,
+        css: null,
+      },
+      verification: {
+        status: 'idle',
+        mismatches: [],
+      },
+    });
+
+    renderWorkspace('preview');
+
+    await waitFor(() => {
+      const compileError = document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-error\"]');
+      expect(compileError?.textContent).toContain('Preview AssemblyScript compilation failed.');
+      expect(compileError?.textContent).toContain('ERROR TS1005');
+    });
+  });
+
   it('clears selected existing invoice when reset action is used', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByText('Existing'));

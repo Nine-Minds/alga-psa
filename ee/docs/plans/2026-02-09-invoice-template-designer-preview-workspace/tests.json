@@ -196,7 +196,7 @@
   {
     "id": "T022",
     "description": "Compile failure state displays actionable error message in preview",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F021"
