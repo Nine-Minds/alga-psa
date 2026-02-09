@@ -282,3 +282,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T045 completed: synchronization test verifies Visual/Code switching keeps generated source aligned with GUI workspace metadata changes.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`keeps generated source synchronized with GUI model while switching Visual and Code`).
   - Validation command: `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`
+- (2026-02-09) T046 completed: hydration tests validate source-embedded and localStorage workspace restore paths remain functional with compiler-enabled preview.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`hydrates workspace from source-embedded designer state`, `hydrates workspace from localStorage fallback...`).

@@ -418,7 +418,7 @@
   {
     "id": "T046",
     "description": "Workspace hydration from source/localStorage remains functional with compiler-enabled preview",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ],
