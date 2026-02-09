@@ -202,3 +202,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts` (`converts workspace nodes into compiler IR with all supported node types`).
 - (2026-02-09) T012 completed: IR extraction test preserves parent-child hierarchy and layout metadata.
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts` (`preserves hierarchy and layout metadata for compiler consumers`).
+- (2026-02-09) T013 completed: deterministic codegen unit test confirms equivalent workspace inputs produce identical AssemblyScript output and hash.
+  - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`produces deterministic source for equivalent workspace models`).

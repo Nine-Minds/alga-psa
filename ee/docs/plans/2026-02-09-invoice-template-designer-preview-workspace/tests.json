@@ -113,7 +113,7 @@
   {
     "id": "T013",
     "description": "Equivalent workspace inputs produce deterministic AssemblyScript output text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F032"
