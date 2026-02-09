@@ -85,7 +85,7 @@
   {
     "id": "T010",
     "description": "Existing-invoice selector is shown while source is `Existing`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
