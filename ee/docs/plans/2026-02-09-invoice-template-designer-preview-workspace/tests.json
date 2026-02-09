@@ -233,7 +233,7 @@
   {
     "id": "T026",
     "description": "Label metadata text overrides generic label scaffold in preview",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017"

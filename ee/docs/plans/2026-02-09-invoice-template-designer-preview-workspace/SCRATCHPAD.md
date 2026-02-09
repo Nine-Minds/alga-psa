@@ -104,3 +104,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T023`: Preview panel uses designer page/frame scale conventions
 - (2026-02-09) Completed `T024`: Field binding resolution prefers real preview data value when available
 - (2026-02-09) Completed `T025`: Field binding resolution falls back to scaffold placeholder when value is missing
+- (2026-02-09) Completed `T026`: Label metadata text overrides generic label scaffold in preview
