@@ -469,7 +469,7 @@
   {
     "id": "T052",
     "description": "Documentation update includes preview workflow, source controls, and expected behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ],
