@@ -94,7 +94,7 @@
   {
     "id": "T011",
     "description": "Existing invoice search calls paginated fetch with status `all` and expected paging params",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
