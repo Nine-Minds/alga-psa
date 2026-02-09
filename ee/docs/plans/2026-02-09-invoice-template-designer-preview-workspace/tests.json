@@ -344,7 +344,7 @@
   {
     "id": "T038",
     "description": "Layout comparator fails when rendered geometry exceeds tolerance thresholds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F034"
