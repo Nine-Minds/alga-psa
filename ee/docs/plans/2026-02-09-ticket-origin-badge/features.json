@@ -97,7 +97,7 @@
   {
     "id": "F012",
     "description": "MSP getTicketById returns normalized ticket_origin for TicketDetails",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]

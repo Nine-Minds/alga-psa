@@ -147,3 +147,4 @@
 - (2026-02-09) **F009 completed (reconciliation pass)**: API create path writes ticket_origin=api
 - (2026-02-09) **F010 completed (reconciliation pass)**: Update shared TicketModel validation so ticket_origin is preserved and persisted
 - (2026-02-09) **F011 completed (reconciliation pass)**: Implement shared ticket origin normalization/resolver helper with legacy fallback for null historical rows
+- (2026-02-09) **F012 completed (reconciliation pass)**: MSP getTicketById returns normalized ticket_origin for TicketDetails
