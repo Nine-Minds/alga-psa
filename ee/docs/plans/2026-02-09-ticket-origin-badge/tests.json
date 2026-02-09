@@ -290,7 +290,7 @@
   {
     "id": "T070",
     "description": "Existing comment ResponseSourceBadge tests continue to pass after ticket-origin changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
