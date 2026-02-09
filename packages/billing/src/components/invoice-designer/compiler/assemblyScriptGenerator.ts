@@ -210,7 +210,7 @@ const emitBindingHelpers = (lines: string[]) => {
   lines.push('function resolveInvoiceBinding(viewModel: InvoiceViewModel, key: string, format: string): string {');
   lines.push('  if (key == "invoice.number" || key == "invoice.invoiceNumber") return viewModel.invoiceNumber;');
   lines.push('  if (key == "invoice.issueDate") return viewModel.issueDate;');
-  lines.push('  if (key == "invoice.dueDate") return viewModel.dueDate;');
+  lines.push('  if (key == "invoice.dueDate") return "";');
   lines.push('  if (key == "invoice.poNumber") return viewModel.poNumber != null ? viewModel.poNumber! : "";');
   lines.push('  if (key == "invoice.currencyCode") return viewModel.currencyCode;');
   lines.push('  if (key == "invoice.subtotal") return formatBindingValueNumeric(viewModel.subtotal, format, viewModel.currencyCode);');

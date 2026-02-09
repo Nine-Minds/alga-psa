@@ -155,3 +155,11 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) F030 completed by regression validation: existing workspace hydration + localStorage fallback behavior remains intact after authoritative preview pipeline integration (`InvoiceTemplateEditor.previewWorkspace.test.tsx` passing).
 - (2026-02-09) F031 implemented: added stable automation IDs for preview rerun control, compile/render/verify statuses, render output container/iframe, compile diagnostics list, and verification summary/mismatch report rows.
 - (2026-02-09) F032 completed: unit coverage added for IR extraction and deterministic AssemblyScript generation (`guiIr.test.ts`, `assemblyScriptGenerator.test.ts`).
+- (2026-02-09) F033 implemented: added integration parity test that compiles GUI-generated AssemblyScript, executes the compiled Wasm directly, then asserts `runAuthoritativeInvoiceTemplatePreview` returns identical HTML/CSS for the same template + invoice payload.
+  - Files: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`, `packages/billing/src/actions/invoiceTemplatePreview.ts`, `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts`
+  - Validation commands:
+    - `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`
+    - `pnpm vitest packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`
+    - `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.test.ts`
+  - Result: parity integration test passing; preview compile regression fixed by creating `temp_compile/preview/assembly` symlink so generated `../assembly/types` imports resolve in preview temp paths.
+  - Gotcha: generated binding helper referenced `viewModel.dueDate` which does not exist in runtime AssemblyScript `InvoiceViewModel`; adjusted generator fallback for `invoice.dueDate` to return empty string to preserve compileability.

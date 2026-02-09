@@ -127,7 +127,9 @@ const compilePreviewAssemblyScriptForTenant = async (
     const asmScriptProjectDir = resolveAssemblyScriptProjectDir();
     const assemblyDir = path.resolve(asmScriptProjectDir, 'assembly');
     const tempCompileDir = path.resolve(asmScriptProjectDir, 'temp_compile');
+    const previewRootDir = path.resolve(tempCompileDir, 'preview');
     const previewDir = path.resolve(tempCompileDir, 'preview', sanitizeForPath(tenant));
+    const previewAssemblyDir = path.resolve(previewRootDir, 'assembly');
     const fileToken = sanitizeForPath(input.sourceHash || uuidv4()).slice(0, 64) || uuidv4();
     const sourceFilePath = path.resolve(previewDir, `${fileToken}.ts`);
     const wasmOutputPath = path.resolve(previewDir, `${fileToken}.wasm`);
@@ -164,7 +166,9 @@ const compilePreviewAssemblyScriptForTenant = async (
       await fs.access(assemblyDir);
       await fs.mkdir(previewDir, { recursive: true });
       await fs.rm(tempAssemblyDir, { force: true, recursive: true });
+      await fs.rm(previewAssemblyDir, { force: true, recursive: true });
       await fs.symlink(assemblyDir, tempAssemblyDir, 'dir');
+      await fs.symlink(assemblyDir, previewAssemblyDir, 'dir');
       await fs.writeFile(sourceFilePath, input.source);
 
       const { stderr } = await execPromise(compileCommand);

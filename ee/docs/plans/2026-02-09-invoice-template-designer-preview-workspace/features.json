@@ -3,216 +3,310 @@
     "id": "F001",
     "description": "Add nested `Design` and `Preview` tabs inside `Visual` mode in `InvoiceTemplateEditor`",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F002",
     "description": "Preserve existing top-level `Visual` and `Code` editor behavior while adding preview workflow",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F003",
     "description": "Add preview session state model including compile/render/verify lifecycle statuses",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F004",
     "description": "Support preview data source toggle between `Sample` and `Existing`",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Users and Primary Flows"
+    ]
   },
   {
     "id": "F005",
     "description": "Provide curated sample invoice scenarios for preview without requiring existing invoices",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Users and Primary Flows"
+    ]
   },
   {
     "id": "F006",
     "description": "Implement existing-invoice searchable selector backed by tenant-scoped invoice queries",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
   },
   {
     "id": "F007",
     "description": "Fetch selected existing invoice details and normalize to renderer input model",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
   },
   {
     "id": "F008",
     "description": "Introduce GUI designer IR extraction from workspace nodes as compiler input",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F009",
     "description": "Implement deterministic AssemblyScript code generation from GUI IR",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F010",
     "description": "Generate field/table/totals binding logic in AssemblyScript output from GUI metadata",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F011",
     "description": "Generate layout/style logic in AssemblyScript output from GUI layout constraints",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F012",
     "description": "Emit compiler source maps/diagnostics metadata linking GUI nodes to generated AssemblyScript segments",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F013",
     "description": "Add transient compile action for preview that uses same AssemblyScript compiler options/path as production template compilation",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
   },
   {
     "id": "F014",
     "description": "Implement compile cache keyed by generated source hash to avoid redundant compilation",
     "implemented": true,
-    "prdRefs": ["Non-functional Requirements"]
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
   },
   {
     "id": "F015",
     "description": "Surface structured compile errors and warnings in preview UI",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Non-functional Requirements"
+    ]
   },
   {
     "id": "F016",
     "description": "Ensure preview compile path is side-effect free and does not write templates/invoices",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F017",
     "description": "Render preview via real invoice rendering runtime (Wasm execution + HTML/CSS render path)",
     "implemented": true,
-    "prdRefs": ["Summary", "Functional Requirements"]
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F018",
     "description": "Disallow designer-canvas placeholder renderer as authoritative preview output",
     "implemented": true,
-    "prdRefs": ["Summary", "Functional Requirements"]
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F019",
     "description": "Debounce preview compile+render pipeline while editing",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Non-functional Requirements"
+    ]
   },
   {
     "id": "F020",
     "description": "Add manual re-run action for compile/render/verification in preview",
     "implemented": true,
-    "prdRefs": ["Open Questions", "UX / UI Notes"]
+    "prdRefs": [
+      "Open Questions",
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F021",
     "description": "Implement loading, empty, and error UI states for data load, compile, render, and verification phases",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Non-functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Non-functional Requirements"
+    ]
   },
   {
     "id": "F022",
     "description": "Keep preview read-only with no drag/drop/resize/selection mutations",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Goals"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Goals"
+    ]
   },
   {
     "id": "F023",
     "description": "Derive expected layout constraints from GUI design state for verification",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F024",
     "description": "Collect rendered HTML layout geometry from authoritative preview output",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F025",
     "description": "Implement layout comparator with tolerance rules to detect mismatches between expected design constraints and rendered geometry",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Open Questions"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Open Questions"
+    ]
   },
   {
     "id": "F026",
     "description": "Display verification summary and mismatch details within preview UI",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F027",
     "description": "Expose explicit preview verification status (pass/issues) for current design+data selection",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F028",
     "description": "Ensure save flow persists compiler-generated AssemblyScript/Wasm logic used by preview",
     "implemented": true,
-    "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F029",
     "description": "Define and enforce GUI vs Code source-of-truth behavior for GUI-authored templates",
     "implemented": true,
-    "prdRefs": ["Open Questions", "Functional Requirements"]
+    "prdRefs": [
+      "Open Questions",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F030",
     "description": "Preserve designer workspace hydration/reset and unsaved state while running authoritative preview",
     "implemented": true,
-    "prdRefs": ["Rollout / Migration", "Functional Requirements"]
+    "prdRefs": [
+      "Rollout / Migration",
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F031",
     "description": "Add stable automation IDs for preview controls, status indicators, and verification report elements",
     "implemented": true,
-    "prdRefs": ["Functional Requirements"]
+    "prdRefs": [
+      "Functional Requirements"
+    ]
   },
   {
     "id": "F032",
     "description": "Add unit tests for IR extraction and deterministic AssemblyScript code generation",
     "implemented": true,
-    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F033",
     "description": "Add integration tests for preview compile+render parity with real invoice rendering runtime",
-    "implemented": false,
-    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F034",
     "description": "Add verification tests for layout comparator pass/fail behavior across known design fixtures",
     "implemented": false,
-    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F035",
     "description": "Add end-to-end tests for design -> preview -> verify -> save flow",
     "implemented": false,
-    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F036",
     "description": "Update billing template documentation to describe authoritative preview compiler pipeline and layout verification behavior",
     "implemented": false,
-    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
   }
 ]
