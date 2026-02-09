@@ -62,7 +62,7 @@
   {
     "id": "F008",
     "description": "Inbound email create path writes ticket_origin=inbound_email",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
