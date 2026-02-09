@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useReducer, useRef } from 'react';
+import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
+import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import { DesignerShell } from './DesignerShell';
-import { DesignCanvas } from './canvas/DesignCanvas';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
   createInitialPreviewSessionState,
@@ -72,19 +72,31 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   onVisualWorkspaceTabChange,
 }) => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const constraints = useInvoiceDesignerStore((state) => state.constraints);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
+  const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
   const showRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
 
   const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
+  const [authoritativePreview, setAuthoritativePreview] = useState<
+    Awaited<ReturnType<typeof runAuthoritativeInvoiceTemplatePreview>> | null
+  >(null);
+  const [manualRunNonce, setManualRunNonce] = useState(0);
   const debouncedSearchTerm = useDebouncedValue(previewState.invoiceSearchTerm, 300);
   const debouncedNodes = useDebouncedValue(nodes, 140);
   const detailRequestSequence = useRef(0);
+  const previewRunSequence = useRef(0);
+  const lastManualRunNonceRef = useRef(0);
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
   const previewData = previewState.sourceKind === 'sample' ? activeSample?.data ?? null : previewState.selectedInvoiceData;
+  const isPreviewRunning =
+    previewState.compileStatus === 'running' ||
+    previewState.renderStatus === 'running' ||
+    previewState.verifyStatus === 'running';
 
   useEffect(() => {
     if (previewState.sourceKind !== 'existing') {
@@ -161,6 +173,89 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         dispatch({ type: 'detail-load-error', error: message });
       });
   }, [previewState.selectedInvoiceId, previewState.sourceKind]);
+
+  useEffect(() => {
+    if (visualWorkspaceTab !== 'preview') {
+      return;
+    }
+
+    if (!previewData) {
+      setAuthoritativePreview(null);
+      dispatch({ type: 'pipeline-reset' });
+      return;
+    }
+
+    const requestId = ++previewRunSequence.current;
+    const bypassCompileCache = manualRunNonce !== lastManualRunNonceRef.current;
+    lastManualRunNonceRef.current = manualRunNonce;
+
+    dispatch({ type: 'pipeline-reset' });
+    dispatch({ type: 'pipeline-phase-start', phase: 'compile' });
+    dispatch({ type: 'pipeline-phase-start', phase: 'render' });
+    dispatch({ type: 'pipeline-phase-start', phase: 'verify' });
+
+    runAuthoritativeInvoiceTemplatePreview({
+      workspace: {
+        nodes: debouncedNodes,
+        constraints,
+        snapToGrid,
+        gridSize,
+        showGuides,
+        showRulers,
+        canvasScale,
+      },
+      invoiceData: previewData,
+      bypassCompileCache,
+    })
+      .then((result) => {
+        if (requestId !== previewRunSequence.current) {
+          return;
+        }
+
+        setAuthoritativePreview(result);
+
+        if (result.compile.status === 'error') {
+          dispatch({ type: 'pipeline-phase-error', phase: 'compile', error: result.compile.error ?? 'Compile failed.' });
+        } else if (result.compile.status === 'success') {
+          dispatch({ type: 'pipeline-phase-success', phase: 'compile' });
+        }
+
+        if (result.render.status === 'error') {
+          dispatch({ type: 'pipeline-phase-error', phase: 'render', error: result.render.error ?? 'Render failed.' });
+        } else if (result.render.status === 'success') {
+          dispatch({ type: 'pipeline-phase-success', phase: 'render' });
+        }
+
+        if (result.verification.status === 'error') {
+          dispatch({
+            type: 'pipeline-phase-error',
+            phase: 'verify',
+            error: result.verification.error ?? 'Verification failed.',
+          });
+        } else if (result.verification.status === 'pass' || result.verification.status === 'issues') {
+          dispatch({ type: 'pipeline-phase-success', phase: 'verify' });
+        }
+      })
+      .catch((error) => {
+        if (requestId !== previewRunSequence.current) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : 'Preview pipeline failed.';
+        setAuthoritativePreview(null);
+        dispatch({ type: 'pipeline-phase-error', phase: 'compile', error: message });
+      });
+  }, [
+    canvasScale,
+    constraints,
+    debouncedNodes,
+    gridSize,
+    manualRunNonce,
+    previewData,
+    showGuides,
+    showRulers,
+    snapToGrid,
+    visualWorkspaceTab,
+  ]);
 
   return (
     <Tabs
@@ -369,31 +464,173 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
           )}
         </div>
 
-        <div className="border rounded overflow-hidden bg-white" data-automation-id="invoice-designer-preview-canvas">
-          <DesignCanvas
-            nodes={debouncedNodes}
-            selectedNodeId={null}
-            showGuides={false}
-            showRulers={showRulers}
-            gridSize={gridSize}
-            canvasScale={canvasScale}
-            snapToGrid={snapToGrid}
-            guides={[]}
-            isDragActive={false}
-            forcedDropTarget={null}
-            droppableId="designer-preview-canvas"
-            onPointerLocationChange={() => {
-              // no-op in preview mode
-            }}
-            onNodeSelect={() => {
-              // no-op in preview mode
-            }}
-            onResize={() => {
-              // no-op in preview mode
-            }}
-            readOnly
-            previewData={previewData}
-          />
+        <div
+          className="rounded-md border border-slate-200 bg-white px-3 py-2 space-y-2"
+          data-automation-id="invoice-designer-preview-pipeline-status"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold">Compile</span>
+              <span
+                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
+                data-automation-id="invoice-designer-preview-compile-status"
+              >
+                {previewState.compileStatus}
+              </span>
+              <span className="font-semibold">Render</span>
+              <span
+                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
+                data-automation-id="invoice-designer-preview-render-status"
+              >
+                {previewState.renderStatus}
+              </span>
+              <span className="font-semibold">Verify</span>
+              <span
+                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
+                data-automation-id="invoice-designer-preview-verify-status"
+              >
+                {previewState.verifyStatus}
+              </span>
+              {authoritativePreview?.compile.status === 'success' && (
+                <span
+                  className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5"
+                  data-automation-id="invoice-designer-preview-compile-cache-hit"
+                >
+                  Cache: {authoritativePreview.compile.cacheHit ? 'Hit' : 'Miss'}
+                </span>
+              )}
+            </div>
+            <Button
+              id="invoice-designer-preview-rerun-button"
+              variant="outline"
+              size="sm"
+              disabled={!previewData || isPreviewRunning}
+              onClick={() => setManualRunNonce((value) => value + 1)}
+              data-automation-id="invoice-designer-preview-rerun"
+            >
+              Re-run
+            </Button>
+          </div>
+
+          {authoritativePreview?.compile.status === 'error' && (
+            <div
+              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 space-y-1"
+              data-automation-id="invoice-designer-preview-compile-error"
+            >
+              <p>{authoritativePreview.compile.error ?? 'Compilation failed.'}</p>
+              {authoritativePreview.compile.details && (
+                <p className="text-[11px] text-red-600">{authoritativePreview.compile.details}</p>
+              )}
+            </div>
+          )}
+
+          {authoritativePreview?.compile.diagnostics?.length > 0 && (
+            <ul
+              className="space-y-1 text-xs"
+              data-automation-id="invoice-designer-preview-compile-diagnostics-list"
+            >
+              {authoritativePreview.compile.diagnostics.map((diagnostic, index) => (
+                <li
+                  key={`${diagnostic.raw}-${index}`}
+                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900"
+                  data-automation-id="invoice-designer-preview-compile-diagnostic-item"
+                >
+                  <span className="font-semibold uppercase">{diagnostic.severity}</span>{' '}
+                  <span>{diagnostic.message}</span>
+                  {diagnostic.nodeId && <span className="text-amber-700"> (node: {diagnostic.nodeId})</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div
+          className="border rounded overflow-hidden bg-white min-h-[320px]"
+          data-automation-id="invoice-designer-preview-render-output"
+        >
+          {!previewData && (
+            <div className="p-4 text-sm text-slate-500" data-automation-id="invoice-designer-preview-empty-state">
+              Select sample or existing invoice data to generate an authoritative preview.
+            </div>
+          )}
+
+          {previewData && isPreviewRunning && (
+            <div className="p-4 text-sm text-slate-500" data-automation-id="invoice-designer-preview-loading-state">
+              Compiling and rendering preview...
+            </div>
+          )}
+
+          {previewData && authoritativePreview?.render.status === 'error' && (
+            <div
+              className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
+              data-automation-id="invoice-designer-preview-render-error"
+            >
+              {authoritativePreview.render.error ?? 'Preview rendering failed.'}
+            </div>
+          )}
+
+          {previewData && authoritativePreview?.render.status === 'success' && authoritativePreview.render.html && (
+            <iframe
+              title="Invoice Preview Output"
+              className="w-full min-h-[640px] border-0"
+              srcDoc={`<style>${authoritativePreview.render.css ?? ''}</style>${authoritativePreview.render.html}`}
+              data-automation-id="invoice-designer-preview-render-iframe"
+            />
+          )}
+        </div>
+
+        <div
+          className="rounded-md border border-slate-200 bg-white px-3 py-2 space-y-2"
+          data-automation-id="invoice-designer-preview-verification-summary"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">Layout Verification</p>
+            <span
+              className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs uppercase"
+              data-automation-id="invoice-designer-preview-verification-badge"
+            >
+              {authoritativePreview?.verification.status ?? 'idle'}
+            </span>
+          </div>
+
+          {authoritativePreview?.verification.status === 'error' && (
+            <p
+              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+              data-automation-id="invoice-designer-preview-verification-error"
+            >
+              {authoritativePreview.verification.error ?? 'Verification failed to execute.'}
+            </p>
+          )}
+
+          {authoritativePreview?.verification.mismatches?.length ? (
+            <ul
+              className="space-y-1"
+              data-automation-id="invoice-designer-preview-verification-mismatch-list"
+            >
+              {authoritativePreview.verification.mismatches.map((mismatch) => (
+                <li
+                  key={mismatch.constraintId}
+                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900"
+                  data-automation-id="invoice-designer-preview-verification-mismatch-item"
+                >
+                  <span className="font-semibold">{mismatch.constraintId}</span>{' '}
+                  <span>
+                    expected {mismatch.expected}, actual {mismatch.actual ?? 'missing'}, delta{' '}
+                    {mismatch.delta ?? 'n/a'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            authoritativePreview?.verification.status === 'pass' && (
+              <p
+                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800"
+                data-automation-id="invoice-designer-preview-verification-pass"
+              >
+                All layout constraints are within tolerance.
+              </p>
+            )
+          )}
         </div>
       </TabsContent>
     </Tabs>

@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Surface structured compile errors and warnings in preview UI",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
   },
   {

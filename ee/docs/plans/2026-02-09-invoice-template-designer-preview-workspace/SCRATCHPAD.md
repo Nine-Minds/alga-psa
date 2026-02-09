@@ -124,3 +124,6 @@ Authoritative preview for invoice template designer:
   - Cache controls exposed for tests via `__previewCompileCacheTestUtils`.
   - Validation command: `npx vitest run packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.test.ts`
   - Result: 5/5 tests passed.
+- (2026-02-09) F015 implemented: preview pipeline now surfaces structured compiler diagnostics (severity/message/node mapping) and compile error details in Preview UI status panel.
+  - Diagnostics come from AssemblyScript stderr parsing + GUI-node source map linking.
+  - UI automation IDs: `invoice-designer-preview-compile-error`, `invoice-designer-preview-compile-diagnostics-list`, `invoice-designer-preview-compile-diagnostic-item`.

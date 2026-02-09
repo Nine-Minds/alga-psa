@@ -10,6 +10,7 @@ import type { DesignerNode } from './state/designerStore';
 const fetchInvoicesPaginatedMock = vi.fn();
 const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
+const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesPaginated: (...args: unknown[]) => fetchInvoicesPaginatedMock(...args),
@@ -18,6 +19,11 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
 
 vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
   mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
+}));
+
+vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({
+  runAuthoritativeInvoiceTemplatePreview: (...args: unknown[]) =>
+    runAuthoritativeInvoiceTemplatePreviewMock(...args),
 }));
 
 vi.mock('./DesignerShell', () => ({
@@ -121,6 +127,7 @@ describe('DesignerVisualWorkspace', () => {
     fetchInvoicesPaginatedMock.mockReset();
     getInvoiceForRenderingMock.mockReset();
     mapDbInvoiceToWasmViewModelMock.mockReset();
+    runAuthoritativeInvoiceTemplatePreviewMock.mockReset();
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult());
     getInvoiceForRenderingMock.mockResolvedValue({ invoice_id: 'inv-1' });
     mapDbInvoiceToWasmViewModelMock.mockReturnValue({
@@ -136,6 +143,25 @@ describe('DesignerVisualWorkspace', () => {
       tax: 100,
       total: 1100,
     });
+    runAuthoritativeInvoiceTemplatePreviewMock.mockImplementation(async ({ invoiceData }: any) => ({
+      success: true,
+      sourceHash: 'source-hash',
+      generatedSource: '// generated',
+      compile: {
+        status: 'success',
+        cacheHit: false,
+        diagnostics: [],
+      },
+      render: {
+        status: 'success',
+        html: `<div>${invoiceData?.invoiceNumber ?? 'N/A'}</div>`,
+        css: '',
+      },
+      verification: {
+        status: 'pass',
+        mismatches: [],
+      },
+    }));
   });
 
   it('renders Design and Preview tabs with stable automation IDs', async () => {
@@ -313,7 +339,8 @@ describe('DesignerVisualWorkspace', () => {
   it('recomputes preview after metadata changes and debounces rapid edits', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
-    await waitFor(() => expect(screen.getByText('INV-2026-0147')).toBeTruthy());
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
     const nodeId = useInvoiceDesignerStore.getState().selectedNodeId;
     expect(nodeId).toBeTruthy();
@@ -323,18 +350,22 @@ describe('DesignerVisualWorkspace', () => {
     });
 
     // Debounce should delay preview refresh.
-    expect(screen.queryByText('Blue Harbor Dental')).toBeNull();
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBe(baselineCalls);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 220));
     });
-    expect(screen.getByText('Blue Harbor Dental')).toBeTruthy();
+
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls);
+    const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
+    const updatedField = latestCall.workspace.nodes.find((node: DesignerNode) => node.id === nodeId);
+    expect(updatedField?.metadata?.bindingKey).toBe('customer.name');
   });
 
   it('recomputes preview when layout structure changes affect rendered output', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
-    await waitFor(() => expect(screen.getAllByText('INV-2026-0147').length).toBeGreaterThan(0));
-    expect(screen.queryByText('Managed Endpoint Monitoring')).toBeNull();
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
     act(() => {
       const store = useInvoiceDesignerStore.getState();
@@ -371,8 +402,14 @@ describe('DesignerVisualWorkspace', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Managed Endpoint Monitoring')).toBeTruthy();
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls);
     }, { timeout: 2500 });
+    await waitFor(() => {
+      const hasTableNodeCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.some((call) =>
+        call[0].workspace.nodes.some((node: DesignerNode) => node.id === 'table-layout-change')
+      );
+      expect(hasTableNodeCall).toBe(true);
+    });
   });
 
   it('refreshes preview output when switching Sample -> Existing -> Sample', async () => {
@@ -392,12 +429,23 @@ describe('DesignerVisualWorkspace', () => {
     });
 
     renderWorkspace('preview');
-    await waitFor(() => expect(screen.getAllByText('INV-2026-0147').length).toBeGreaterThan(0));
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+      'INV-2026-0147'
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
     const select = await screen.findByLabelText('Select Invoice');
     fireEvent.change(select, { target: { value: 'inv-1' } });
-    await waitFor(() => expect(screen.getAllByText('INV-EXISTING-001').length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+        'INV-EXISTING-001'
+      )
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Sample' }));
-    await waitFor(() => expect(screen.getAllByText('INV-2026-0147').length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+        'INV-2026-0147'
+      )
+    );
   });
 });

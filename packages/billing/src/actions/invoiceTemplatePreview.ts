@@ -7,16 +7,32 @@ import path from 'path';
 import { promisify } from 'node:util';
 import { withAuth } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
   buildAssemblyScriptCompileCommand,
   resolveAssemblyScriptProjectDir,
 } from '../lib/invoice-template-compiler/assemblyScriptCompile';
+import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import { extractInvoiceDesignerIr } from '../components/invoice-designer/compiler/guiIr';
+import { generateAssemblyScriptFromIr } from '../components/invoice-designer/compiler/assemblyScriptGenerator';
+import {
+  linkDiagnosticsToGuiNodes,
+  parseAssemblyScriptDiagnostics,
+} from '../components/invoice-designer/compiler/diagnostics';
+import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
+import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
+import {
+  collectRenderedGeometryFromLayout,
+  compareLayoutConstraints,
+  extractExpectedLayoutConstraintsFromIr,
+} from '../lib/invoice-template-compiler/layoutVerification';
 
 const execPromise = promisify(exec);
 
 type PreviewCompileInput = {
   source: string;
   sourceHash: string;
+  bypassCache?: boolean;
 };
 
 type PreviewCompileSuccess = {
@@ -95,8 +111,10 @@ export const buildPreviewCompileCommand = (params: {
     baseDir: params.tempCompileDir,
   });
 
-export const compilePreviewAssemblyScript = withAuth(
-  async (_user, { tenant }, input: PreviewCompileInput): Promise<PreviewCompileResult> => {
+const compilePreviewAssemblyScriptForTenant = async (
+  tenant: string,
+  input: PreviewCompileInput
+): Promise<PreviewCompileResult> => {
     if (!input?.source || input.source.trim().length === 0) {
       return {
         success: false,
@@ -133,7 +151,7 @@ export const compilePreviewAssemblyScript = withAuth(
     });
 
     const cached = getCachedPreviewCompileArtifact(cacheKey);
-    if (cached) {
+    if (cached && !input.bypassCache) {
       return {
         success: true,
         wasmBinary: cached.wasmBinary,
@@ -179,6 +197,174 @@ export const compilePreviewAssemblyScript = withAuth(
         fs.rm(sourceFilePath, { force: true }),
         fs.rm(wasmOutputPath, { force: true }),
       ]).catch(() => undefined);
+    }
+};
+
+export const compilePreviewAssemblyScript = withAuth(
+  async (_user, { tenant }, input: PreviewCompileInput): Promise<PreviewCompileResult> =>
+    compilePreviewAssemblyScriptForTenant(tenant, input)
+);
+
+type AuthoritativePreviewInput = {
+  workspace: DesignerWorkspaceSnapshot;
+  invoiceData: WasmInvoiceViewModel | null;
+  bypassCompileCache?: boolean;
+  tolerancePx?: number;
+};
+
+type AuthoritativePreviewResult = {
+  success: boolean;
+  sourceHash: string | null;
+  generatedSource: string | null;
+  compile: {
+    status: 'idle' | 'success' | 'error';
+    cacheHit: boolean;
+    diagnostics: ReturnType<typeof linkDiagnosticsToGuiNodes>;
+    error?: string;
+    details?: string;
+  };
+  render: {
+    status: 'idle' | 'success' | 'error';
+    html: string | null;
+    css: string | null;
+    error?: string;
+  };
+  verification: {
+    status: 'idle' | 'pass' | 'issues' | 'error';
+    mismatches: ReturnType<typeof compareLayoutConstraints>['mismatches'];
+    error?: string;
+  };
+};
+
+export const runAuthoritativeInvoiceTemplatePreview = withAuth(
+  async (_user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+    if (!input?.workspace || !Array.isArray(input.workspace.nodes) || input.workspace.nodes.length === 0) {
+      return {
+        success: false,
+        sourceHash: null,
+        generatedSource: null,
+        compile: {
+          status: 'error',
+          cacheHit: false,
+          diagnostics: [],
+          error: 'Preview workspace is empty.',
+        },
+        render: { status: 'idle', html: null, css: null },
+        verification: { status: 'idle', mismatches: [] },
+      };
+    }
+
+    if (!input.invoiceData) {
+      return {
+        success: false,
+        sourceHash: null,
+        generatedSource: null,
+        compile: {
+          status: 'idle',
+          cacheHit: false,
+          diagnostics: [],
+        },
+        render: { status: 'idle', html: null, css: null },
+        verification: { status: 'idle', mismatches: [] },
+      };
+    }
+
+    const ir = extractInvoiceDesignerIr(input.workspace);
+    const generated = generateAssemblyScriptFromIr(ir);
+    const compileResult = await compilePreviewAssemblyScriptForTenant(tenant, {
+      source: generated.source,
+      sourceHash: generated.sourceHash,
+      bypassCache: input.bypassCompileCache,
+    });
+
+    if (!compileResult.success) {
+      const parsedDiagnostics = parseAssemblyScriptDiagnostics(compileResult.details ?? compileResult.error);
+      const linkedDiagnostics = linkDiagnosticsToGuiNodes(parsedDiagnostics, generated.sourceMap);
+      return {
+        success: false,
+        sourceHash: generated.sourceHash,
+        generatedSource: generated.source,
+        compile: {
+          status: 'error',
+          cacheHit: false,
+          diagnostics: linkedDiagnostics,
+          error: compileResult.error,
+          details: compileResult.details,
+        },
+        render: { status: 'idle', html: null, css: null },
+        verification: { status: 'idle', mismatches: [] },
+      };
+    }
+
+    try {
+      const renderedLayout = await executeWasmTemplate(input.invoiceData, compileResult.wasmBinary);
+      const renderedOutput = renderLayout(renderedLayout);
+      try {
+        const expectedConstraints = extractExpectedLayoutConstraintsFromIr(ir, input.tolerancePx ?? 2);
+        const renderedGeometry = collectRenderedGeometryFromLayout(renderedLayout);
+        const verification = compareLayoutConstraints(expectedConstraints, renderedGeometry);
+        return {
+          success: true,
+          sourceHash: generated.sourceHash,
+          generatedSource: generated.source,
+          compile: {
+            status: 'success',
+            cacheHit: compileResult.cacheHit,
+            diagnostics: [],
+          },
+          render: {
+            status: 'success',
+            html: renderedOutput.html,
+            css: renderedOutput.css,
+          },
+          verification: {
+            status: verification.status,
+            mismatches: verification.mismatches,
+          },
+        };
+      } catch (verificationError: any) {
+        return {
+          success: false,
+          sourceHash: generated.sourceHash,
+          generatedSource: generated.source,
+          compile: {
+            status: 'success',
+            cacheHit: compileResult.cacheHit,
+            diagnostics: [],
+          },
+          render: {
+            status: 'success',
+            html: renderedOutput.html,
+            css: renderedOutput.css,
+          },
+          verification: {
+            status: 'error',
+            mismatches: [],
+            error: verificationError?.message || String(verificationError),
+          },
+        };
+      }
+    } catch (renderError: any) {
+      return {
+        success: false,
+        sourceHash: generated.sourceHash,
+        generatedSource: generated.source,
+        compile: {
+          status: 'success',
+          cacheHit: compileResult.cacheHit,
+          diagnostics: [],
+        },
+        render: {
+          status: 'error',
+          html: null,
+          css: null,
+          error: renderError?.message || String(renderError),
+        },
+        verification: {
+          status: 'idle',
+          mismatches: [],
+        },
+      };
     }
   }
 );
