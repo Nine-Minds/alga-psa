@@ -178,3 +178,4 @@
 - (2026-02-09) **T033 completed (reconciliation pass)**: MSP getTicketById payload includes normalized ticket_origin for api ticket
 - (2026-02-09) **T034 completed (reconciliation pass)**: Client portal getClientTicketDetails payload includes normalized ticket_origin for internal ticket
 - (2026-02-09) **T035 completed (reconciliation pass)**: Client portal getClientTicketDetails payload includes normalized ticket_origin for client_portal ticket
+- (2026-02-09) **T036 completed (reconciliation pass)**: Client portal getClientTicketDetails payload includes normalized ticket_origin for inbound_email ticket

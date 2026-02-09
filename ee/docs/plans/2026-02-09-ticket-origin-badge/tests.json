@@ -185,7 +185,7 @@
   {
     "id": "T036",
     "description": "Client portal getClientTicketDetails payload includes normalized ticket_origin for inbound_email ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
