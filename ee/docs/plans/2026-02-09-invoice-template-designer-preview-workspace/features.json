@@ -91,7 +91,7 @@
   {
     "id": "F011",
     "description": "Normalize selected invoice detail into preview model shape via mapping utility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Functional Requirements"
