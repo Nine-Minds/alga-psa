@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Backfill marks unresolved legacy tickets as internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
