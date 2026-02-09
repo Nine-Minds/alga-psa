@@ -768,21 +768,8 @@ export default function TaskDocumentsSimple({
         />
       )}
 
-      {/* Click-outside catcher - portaled to document.body to intercept clicks outside drawer when there are unsaved changes */}
-      {/* z-[55] is between TaskForm (z-50) and drawer overlay (z-60), so drawer content remains clickable */}
-      {isDrawerOpen && hasUnsavedDocumentChanges && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[55]"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDiscardShouldCloseDrawer(true); // Click outside should close the drawer
-            setShowUnsavedChangesDialog(true);
-          }}
-        />,
-        document.body
-      )}
-
       {/* Document viewer/editor drawer */}
+      {/* Note: Click-outside is handled by the Drawer's overlay onClick → handleCloseDrawer */}
       <Drawer
         id="task-document-drawer"
         isOpen={isDrawerOpen}
