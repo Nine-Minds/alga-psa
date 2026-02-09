@@ -71,7 +71,7 @@
   {
     "id": "F009",
     "description": "API create path writes ticket_origin=api",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"

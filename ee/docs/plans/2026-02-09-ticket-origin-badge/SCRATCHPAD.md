@@ -144,3 +144,4 @@
 - (2026-02-09) **F006 completed (reconciliation pass)**: Internal MSP create path writes ticket_origin=internal
 - (2026-02-09) **F007 completed (reconciliation pass)**: Client portal create path writes ticket_origin=client_portal
 - (2026-02-09) **F008 completed (reconciliation pass)**: Inbound email create path writes ticket_origin=inbound_email
+- (2026-02-09) **F009 completed (reconciliation pass)**: API create path writes ticket_origin=api
