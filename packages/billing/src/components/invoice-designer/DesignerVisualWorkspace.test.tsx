@@ -482,6 +482,68 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
+  it('blocks drag-like interactions while in preview mode', async () => {
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+
+    const before = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+      id: node.id,
+      position: node.position,
+    }));
+
+    const previewSurface = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
+    expect(previewSurface).toBeTruthy();
+
+    fireEvent.mouseDown(previewSurface!, { clientX: 200, clientY: 200, buttons: 1 });
+    fireEvent.mouseMove(document, { clientX: 260, clientY: 260, buttons: 1 });
+    fireEvent.mouseUp(document);
+
+    const after = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+      id: node.id,
+      position: node.position,
+    }));
+    expect(after).toEqual(before);
+  });
+
+  it('blocks resize-like interactions while in preview mode', async () => {
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+
+    const before = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+      id: node.id,
+      size: node.size,
+    }));
+
+    const previewSurface = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
+    expect(previewSurface).toBeTruthy();
+
+    fireEvent.mouseDown(previewSurface!, { clientX: 300, clientY: 300, buttons: 1 });
+    fireEvent.mouseMove(document, { clientX: 360, clientY: 360, buttons: 1, shiftKey: true });
+    fireEvent.mouseUp(document);
+
+    const after = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+      id: node.id,
+      size: node.size,
+    }));
+    expect(after).toEqual(before);
+  });
+
+  it('ignores destructive keyboard shortcuts while in preview mode', async () => {
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+
+    const beforeIds = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => node.id).sort();
+
+    fireEvent.keyDown(window, { key: 'Delete' });
+    fireEvent.keyDown(window, { key: 'Backspace' });
+
+    const afterIds = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => node.id).sort();
+    expect(afterIds).toEqual(beforeIds);
+  });
+
   it('recomputes preview when layout structure changes affect rendered output', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');

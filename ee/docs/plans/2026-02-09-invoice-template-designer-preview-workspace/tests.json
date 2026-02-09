@@ -289,7 +289,7 @@
   {
     "id": "T032",
     "description": "Preview mode blocks drag operations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],

@@ -248,3 +248,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T031 completed: preview verification error state test asserts explicit error badge and message when verification execution fails.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows distinct verification error state when layout verification execution fails`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T032 completed: preview mode drag-like interaction test confirms node positions remain unchanged.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`blocks drag-like interactions while in preview mode`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
