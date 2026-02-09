@@ -64,7 +64,7 @@
   {
     "id": "F008",
     "description": "Add existing-invoice selector UI shown when preview source is `Existing`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements"
