@@ -19,6 +19,10 @@ import {
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import {
+  buildAssemblyScriptCompileCommand,
+  resolveAssemblyScriptProjectDir,
+} from '../lib/invoice-template-compiler/assemblyScriptCompile';
 
 export const getInvoiceTemplate = withAuth(async (
     user,
@@ -352,6 +356,18 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
 // Promisify exec for easier async/await usage
 const execPromise = promisify(exec);
 
+export const buildTenantTemplateCompileCommand = (params: {
+    tempCompileDir: string;
+    sourceFilePath: string;
+    wasmOutputPath: string;
+}) =>
+    buildAssemblyScriptCompileCommand({
+        workingDirectory: params.tempCompileDir,
+        sourceFilePath: params.sourceFilePath,
+        outFilePath: params.wasmOutputPath,
+        baseDir: params.tempCompileDir,
+    });
+
 // Define the structure for the input metadata (excluding source and wasm binary)
 type CompileTemplateMetadata = Omit<IInvoiceTemplate, 'tenant' | 'template_id' | 'assemblyScriptSource' | 'wasmBinary' | 'isStandard'> & {
     template_id?: string; // Allow optional template_id for updates
@@ -389,7 +405,7 @@ export const compileAndSaveTemplate = withAuth(async (
     const sanitizedTemplateId = templateId.replace(/[^a-zA-Z0-9_-]/g, '_');
     
     // Use the AssemblyScript project directory for compilation
-    const asmScriptProjectDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript');
+    const asmScriptProjectDir = resolveAssemblyScriptProjectDir();
     
     // Use the main assembly directory which has all the required helper files
     const assemblyDir = path.resolve(asmScriptProjectDir, 'assembly');
@@ -495,7 +511,11 @@ export const compileAndSaveTemplate = withAuth(async (
     
             // Run the compiler in the temp_compile directory, using the temporary source file
             // This ensures the relative imports like "../assembly/..." will work correctly
-            const compileCommand = `cd ${tempCompileDir} && npx asc ${sourceFilePath} --outFile ${wasmOutputPath} --runtime stub --debug --exportRuntime --transform json-as/transform --sourceMap --baseDir ${tempCompileDir}`;
+            const compileCommand = buildTenantTemplateCompileCommand({
+                tempCompileDir,
+                sourceFilePath,
+                wasmOutputPath,
+            });
     
             console.log(`Executing compile command: ${compileCommand}`); // Logging for debugging
     
@@ -1019,7 +1039,7 @@ export async function compileStandardTemplate(
 
     // Define paths relative to the assemblyscript directory
     // Corrected path: Removed 'server/' prefix assuming cwd is the server directory
-    const asmScriptProjectDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript');
+    const asmScriptProjectDir = resolveAssemblyScriptProjectDir();
     const standardDir = path.resolve(asmScriptProjectDir, 'standard');
     const sourceFilePath = path.resolve(standardDir, `${sanitizedCode}.ts`); // Source file *should* already exist here
     const wasmOutputPath = path.resolve(standardDir, `${sanitizedCode}.wasm`); // Output WASM in the same directory
@@ -1047,10 +1067,12 @@ export async function compileStandardTemplate(
              };
         }
 
-        // Compile the AssemblyScript source to Wasm using asc
-        // Run the command from the assemblyscript directory to handle relative imports correctly
-        // Command: npx asc standard/<code>.ts --outFile standard/<code>.wasm --runtime stub --debug --exportRuntime --transform json-as/transform --sourceMap --baseDir .
-        const compileCommand = `cd "${asmScriptProjectDir}" && npx asc standard/${sanitizedCode}.ts --outFile standard/${sanitizedCode}.wasm --runtime stub --debug --exportRuntime --transform json-as/transform --sourceMap --baseDir .`;
+        const compileCommand = buildAssemblyScriptCompileCommand({
+            workingDirectory: asmScriptProjectDir,
+            sourceFilePath,
+            outFilePath: wasmOutputPath,
+            baseDir: asmScriptProjectDir,
+        });
 
         console.log(`[compileStandardTemplate] Executing compile command: ${compileCommand}`);
 

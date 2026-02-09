@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Add transient compile action for preview that uses same AssemblyScript compiler options/path as production template compilation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
   },
   {

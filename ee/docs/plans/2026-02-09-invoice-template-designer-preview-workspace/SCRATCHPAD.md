@@ -114,3 +114,9 @@ Authoritative preview for invoice template designer:
   - Files: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts`, `packages/billing/src/components/invoice-designer/compiler/diagnostics.ts`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/diagnostics.test.ts packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
   - Result: 8/8 tests passed.
+- (2026-02-09) F013 implemented: introduced transient preview compile action and shared compile-command helper to keep preview and production on the same `asc` options path.
+  - Shared helper: `packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.ts`
+  - Preview compile action: `packages/billing/src/actions/invoiceTemplatePreview.ts`
+  - Production compile wiring updated in `packages/billing/src/actions/invoiceTemplates.ts` to use the shared command builder.
+  - Validation command: `npx vitest run packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`
+  - Result: 3/3 tests passed.
