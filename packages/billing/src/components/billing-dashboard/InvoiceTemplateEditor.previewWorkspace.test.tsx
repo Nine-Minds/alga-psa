@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
@@ -238,5 +238,34 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     const payload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
     expect(payload.assemblyScriptSource).toContain('export function generateLayout');
     expect(payload.assemblyScriptSource).not.toContain('// manually edited source should be ignored');
+  });
+
+  it('keeps generated source synchronized with GUI model while switching Visual and Code', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+    act(() => {
+      useInvoiceDesignerStore.getState().loadWorkspace(createWorkspaceWithField('field-sync'));
+    });
+
+    await waitFor(() => {
+      const editor = screen.getByTestId('monaco-mock') as HTMLTextAreaElement;
+      expect(editor.value).toContain('field-sync');
+    });
+
+    act(() => {
+      useInvoiceDesignerStore.getState().updateNodeMetadata('field-sync', {
+        bindingKey: 'customer.name',
+        format: 'text',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visual' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+    await waitFor(() =>
+      expect((screen.getByTestId('monaco-mock') as HTMLTextAreaElement).value).toContain('customer.name')
+    );
   });
 });

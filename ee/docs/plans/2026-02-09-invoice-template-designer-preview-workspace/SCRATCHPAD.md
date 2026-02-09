@@ -279,3 +279,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T044 completed: Code tab behavior test validates generated/read-only rule for GUI templates and ignores manual code edits on save.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`keeps Code tab generated/read-only for GUI templates`).
   - Validation command: `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`
+- (2026-02-09) T045 completed: synchronization test verifies Visual/Code switching keeps generated source aligned with GUI workspace metadata changes.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`keeps generated source synchronized with GUI model while switching Visual and Code`).
+  - Validation command: `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`

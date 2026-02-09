@@ -408,7 +408,7 @@
   {
     "id": "T045",
     "description": "Switching between Visual and Code does not desynchronize generated source and GUI model",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030"
