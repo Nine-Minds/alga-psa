@@ -201,7 +201,7 @@
   {
     "id": "F024",
     "description": "Keep existing workspace hydration/reset flows compatible with new preview mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Functional Requirements"

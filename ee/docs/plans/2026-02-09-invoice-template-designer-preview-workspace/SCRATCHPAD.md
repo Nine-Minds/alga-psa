@@ -70,3 +70,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F021`: Added debounced node updates in preview mode to reduce recompute churn during rapid editing.
 - (2026-02-09) Completed `F022`: Added readOnly canvas mode that disables drag, resize, selection mutation, and other editing affordances in preview.
 - (2026-02-09) Completed `F023`: Disabled design-time selection opacity deemphasis behavior in read-only preview mode.
+- (2026-02-09) Completed `F024`: Kept existing hydration/reset integration untouched while inserting preview workspace wrapper, preserving load semantics.
