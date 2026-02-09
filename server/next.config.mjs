@@ -259,6 +259,11 @@ const nextConfig = {
 	      '@alga-psa/client-portal/': '../packages/client-portal/src/',
 	      '@alga-psa/client-portal/actions': '../packages/client-portal/src/actions/index.ts',
 	      '@alga-psa/client-portal/components': '../packages/client-portal/src/components/index.ts',
+	      // Portal shared package
+	      '@alga-psa/portal-shared': '../packages/portal-shared/src',
+	      '@alga-psa/portal-shared/': '../packages/portal-shared/src/',
+	      '@alga-psa/portal-shared/actions': '../packages/portal-shared/src/actions/index.ts',
+	      '@alga-psa/portal-shared/types': '../packages/portal-shared/src/types/index.ts',
 	      // Media package
 	      '@alga-psa/media': '../packages/media/src',
 	      '@alga-psa/media/': '../packages/media/src/',
@@ -380,6 +385,7 @@ const nextConfig = {
 	    '@alga-psa/tenancy',
 	    '@alga-psa/integrations',
 	    '@alga-psa/client-portal',
+	    '@alga-psa/portal-shared',
 	    '@alga-psa/event-schemas',
 	    '@alga-psa/documents',
 	    '@alga-psa/media',
@@ -455,6 +461,7 @@ const nextConfig = {
       '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/src'),
+      '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/src'),
       '@alga-psa/media': path.join(__dirname, '../packages/media/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
