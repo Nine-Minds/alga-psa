@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
@@ -85,6 +85,9 @@ export default function TaskDocumentsSimple({
   // Pending mode is active when we don't have a taskId yet (task creation)
   const isPendingMode = !taskId;
 
+  // Stable unique ID for unsaved changes registration (consistent with codebase pattern)
+  const instanceId = useId();
+
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
   const [loading, setLoading] = useState(false);
   const [documentsLoaded, setDocumentsLoaded] = useState(!!initialDocuments);
@@ -139,7 +142,7 @@ export default function TaskDocumentsSimple({
   }, [isDrawerOpen, isCreatingNew, hasContentChanged, newDocumentName, isEditMode, selectedDocument, documentName]);
 
   // Register with unsaved changes context for navigation protection
-  useRegisterUnsavedChanges(`task-document-editor-${taskId || 'new'}`, hasUnsavedDocumentChanges);
+  useRegisterUnsavedChanges(`task-document-editor-${taskId || instanceId}`, hasUnsavedDocumentChanges);
 
   const fetchUser = async () => {
     if (currentUser) return currentUser;
