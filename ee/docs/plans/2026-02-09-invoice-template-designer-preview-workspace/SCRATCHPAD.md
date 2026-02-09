@@ -210,3 +210,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits field, table, and totals binding logic from GUI metadata`).
 - (2026-02-09) T016 completed: totals binding/formatting hooks are validated in codegen output assertions.
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits field, table, and totals binding logic from GUI metadata`).
+- (2026-02-09) T017 completed: layout/style declarations from GUI constraints are asserted in generated AssemblyScript output.
+  - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits layout/style declarations derived from node size, position, and layout metadata`).

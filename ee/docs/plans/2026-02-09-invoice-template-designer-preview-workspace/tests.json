@@ -150,7 +150,7 @@
   {
     "id": "T017",
     "description": "Code generation output includes style/layout declarations derived from GUI constraints",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
