@@ -198,3 +198,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`loads selected existing invoice detail and maps it for preview`).
 - (2026-02-09) T010 completed: invoice normalization unit test covers null/optional fields without crashes.
   - Evidence: `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` (`handles nullable/partial values safely`).
+- (2026-02-09) T011 completed: GUI compiler IR unit test covers supported node type conversion from workspace snapshot.
+  - Evidence: `packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts` (`converts workspace nodes into compiler IR with all supported node types`).

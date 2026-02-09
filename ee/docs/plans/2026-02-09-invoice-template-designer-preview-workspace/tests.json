@@ -95,7 +95,7 @@
   {
     "id": "T011",
     "description": "GUI workspace is converted into compiler IR containing all supported node types",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
