@@ -174,3 +174,4 @@
 - (2026-02-09) **T024 completed (reconciliation pass)**: Resolver handles unknown future origin values without crashing and returns safe fallback classification
 - (2026-02-09) **T030 completed (reconciliation pass)**: MSP getTicketById payload includes normalized ticket_origin for internal ticket
 - (2026-02-09) **T031 completed (reconciliation pass)**: MSP getTicketById payload includes normalized ticket_origin for client_portal ticket
+- (2026-02-09) **T032 completed (reconciliation pass)**: MSP getTicketById payload includes normalized ticket_origin for inbound_email ticket
