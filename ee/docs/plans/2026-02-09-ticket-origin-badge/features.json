@@ -122,7 +122,7 @@
   {
     "id": "F015",
     "description": "Render TicketOriginBadge in MSP TicketDetails header near ticket number and response state badge",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
