@@ -58,3 +58,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F009`: Wired existing-invoice list fetching to fetchInvoicesPaginated with search, status=all, and paging controls.
 - (2026-02-09) Completed `F010`: Hooked existing-invoice selection to getInvoiceForRendering detail fetch with in-flight request guarding.
 - (2026-02-09) Completed `F011`: Mapped fetched DB invoice detail payloads into Wasm preview model shape via mapDbInvoiceToWasmViewModel.
+- (2026-02-09) Completed `F012`: Implemented explicit loading, empty, and error states for existing invoice search and detail loading flows.

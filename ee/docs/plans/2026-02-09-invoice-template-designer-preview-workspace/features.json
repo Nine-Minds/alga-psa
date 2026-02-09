@@ -100,7 +100,7 @@
   {
     "id": "F012",
     "description": "Provide loading, empty, and error states for existing-invoice search and detail fetch",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Non-functional Requirements"
