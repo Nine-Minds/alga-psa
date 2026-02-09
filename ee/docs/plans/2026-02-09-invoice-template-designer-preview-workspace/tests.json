@@ -140,7 +140,7 @@
   {
     "id": "T016",
     "description": "Detail mapping converts DB invoice payload into preview model numeric/string types correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
