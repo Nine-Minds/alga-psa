@@ -35,7 +35,7 @@
   {
     "id": "F005",
     "description": "Keep ticket_origin storage extensible for future values (for example ai_agent) without schema redesign",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements > Functional Requirements"
