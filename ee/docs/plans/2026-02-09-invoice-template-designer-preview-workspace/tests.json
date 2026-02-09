@@ -363,7 +363,7 @@
   {
     "id": "T040",
     "description": "Preview UI displays pass badge when all layout constraints are satisfied",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ],

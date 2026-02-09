@@ -266,3 +266,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts` (`reports mismatches when rendered geometry exceeds tolerance`).
 - (2026-02-09) T039 completed: mismatch report assertions validate presence of constraint id plus expected/actual/delta/tolerance fields.
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`fails drifted design fixture with expected mismatch set`).
+- (2026-02-09) T040 completed: preview component test verifies pass badge and pass summary message when all constraints satisfy verification.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows pass verification badge when all layout constraints pass`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
