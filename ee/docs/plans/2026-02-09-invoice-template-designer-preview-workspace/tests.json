@@ -149,7 +149,7 @@
   {
     "id": "T017",
     "description": "Detail mapping handles nullable fields without crashing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
