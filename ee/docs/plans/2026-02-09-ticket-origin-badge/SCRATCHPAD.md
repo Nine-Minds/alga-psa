@@ -163,3 +163,4 @@
 - (2026-02-09) **T005 completed (reconciliation pass)**: Backfill marks unresolved legacy tickets as internal
 - (2026-02-09) **T006 completed (reconciliation pass)**: TicketOrigin typecheck accepts internal/client_portal/inbound_email/api and rejects invalid values
 - (2026-02-09) **T010 completed (reconciliation pass)**: MSP server action create path persists ticket_origin=internal
+- (2026-02-09) **T011 completed (reconciliation pass)**: Client portal create path persists ticket_origin=client_portal

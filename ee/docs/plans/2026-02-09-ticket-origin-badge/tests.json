@@ -60,7 +60,7 @@
   {
     "id": "T011",
     "description": "Client portal create path persists ticket_origin=client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F010"
