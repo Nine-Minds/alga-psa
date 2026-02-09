@@ -273,3 +273,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows issues verification badge when one or more constraints fail`).
 - (2026-02-09) T042 completed: editor integration test verifies save payload includes compiler-generated AssemblyScript source tied to current GUI workspace.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` and `InvoiceTemplateEditor.authoritativeFlow.test.tsx`.
+- (2026-02-09) T043 completed: save compile wiring test verifies source-present save path routes through compile-and-save flow that persists/recompiles wasm artifacts.
+  - Evidence: `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts` (`keeps save action wired to compile and persist wasm artifacts when source is present`).
+  - Validation command: `pnpm vitest packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`

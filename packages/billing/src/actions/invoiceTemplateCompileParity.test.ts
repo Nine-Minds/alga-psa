@@ -29,4 +29,14 @@ describe('invoice template compile parity wiring', () => {
     expect(previewCompileSource).not.toContain('withTransaction');
     expect(previewCompileSource).toContain("path.resolve(asmScriptProjectDir, 'temp_compile')");
   });
+
+  it('keeps save action wired to compile and persist wasm artifacts when source is present', () => {
+    const invoiceTemplatesSource = readRepoFile('packages/billing/src/actions/invoiceTemplates.ts');
+
+    expect(invoiceTemplatesSource).toContain('compileAndSaveTemplate(');
+    expect(invoiceTemplatesSource).toContain('templateToSaveWithoutFlags.assemblyScriptSource');
+    expect(invoiceTemplatesSource).toContain(
+      '(!templateToSaveWithoutFlags.wasmBinary || templateToSaveWithoutFlags.wasmBinary === null)'
+    );
+  });
 });

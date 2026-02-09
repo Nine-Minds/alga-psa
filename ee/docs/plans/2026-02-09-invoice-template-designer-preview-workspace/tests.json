@@ -390,7 +390,7 @@
   {
     "id": "T043",
     "description": "Save action persists compiled Wasm artifact from generated source (or recompiles equivalently)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ],
