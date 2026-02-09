@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Resolver classifies ticket as client_portal when creator user_type is client and no higher-precedence email signal exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
