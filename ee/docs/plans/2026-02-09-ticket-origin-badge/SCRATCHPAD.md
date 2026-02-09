@@ -137,3 +137,4 @@
 - (2026-02-09) **F017 completed**: Confirmed migration-free MVP via resolver derivation + migration scan test (`T070`).
 - (2026-02-09) **F018 completed**: Added automated coverage for resolver logic, action payloads, badge component, locales, TicketDetails surfaces, and flow sanity (`T001`–`T082` plan scope items now covered).
 - (2026-02-09) **F001 completed (reconciliation pass)**: Added `api` to canonical `TICKET_ORIGINS` and propagated canonical origin typing updates in `@alga-psa/types`.
+- (2026-02-09) **F002 completed (reconciliation pass)**: Add shared TicketOrigin type in @alga-psa/types and include api in the union

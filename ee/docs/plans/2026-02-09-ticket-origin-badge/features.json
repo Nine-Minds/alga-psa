@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Add shared TicketOrigin type in @alga-psa/types and include api in the union",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
