@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "Existing invoice selector queries paginated invoice list with tenant scope",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],

@@ -190,3 +190,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts` (`exports at least three unique scenarios`).
 - (2026-02-09) T006 completed: sample payload test enforces required renderer fields and numeric totals/amounts types.
   - Evidence: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts` (`provides required preview fields for each sample`).
+- (2026-02-09) T007 completed: existing-invoice selector test verifies paginated tenant invoice query calls are issued.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`calls paginated invoice search with status=all and query filters`).
