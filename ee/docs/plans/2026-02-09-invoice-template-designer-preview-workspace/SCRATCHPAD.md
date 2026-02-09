@@ -74,3 +74,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F025`: Preview flow only calls read-side invoice actions and client-side rendering logic, with no template/invoice write paths.
 - (2026-02-09) Completed `F026`: New-template preview defaults to sample source/scenario so preview works without tenant invoice history.
 - (2026-02-09) Completed `F027`: Added stable automation IDs for preview tabs, source toggles, selectors, pagination, and loading/error/empty states.
+- (2026-02-09) Completed `F028`: Added `previewSessionState` unit coverage for default state, source/selector transitions, and list/detail async state handling to lock preview session state behavior.
