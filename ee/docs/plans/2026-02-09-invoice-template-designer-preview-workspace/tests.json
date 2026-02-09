@@ -396,7 +396,7 @@
   {
     "id": "T044",
     "description": "Preview remains usable even when template name is empty prior to save validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ],
