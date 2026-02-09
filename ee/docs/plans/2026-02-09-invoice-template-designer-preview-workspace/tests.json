@@ -121,7 +121,7 @@
   {
     "id": "T014",
     "description": "Selecting an existing invoice triggers detail fetch via getInvoiceForRendering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],

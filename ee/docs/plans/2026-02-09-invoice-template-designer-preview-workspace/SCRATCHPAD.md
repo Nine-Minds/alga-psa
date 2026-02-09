@@ -92,3 +92,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T011`: Existing invoice search calls paginated fetch with status `all` and expected paging params
 - (2026-02-09) Completed `T012`: Existing invoice search applies query text filtering
 - (2026-02-09) Completed `T013`: Existing invoice search handles pagination transitions correctly
+- (2026-02-09) Completed `T014`: Selecting an existing invoice triggers detail fetch via getInvoiceForRendering
