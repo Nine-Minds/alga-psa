@@ -315,7 +315,7 @@
   {
     "id": "T035",
     "description": "Preview mode hides/blocks drag handles and resize affordances",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],
