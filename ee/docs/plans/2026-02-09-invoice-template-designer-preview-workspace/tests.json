@@ -378,7 +378,7 @@
   {
     "id": "T042",
     "description": "Preview interactions perform no invoice/template write operations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ],
