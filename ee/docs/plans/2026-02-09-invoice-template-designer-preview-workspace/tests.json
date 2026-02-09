@@ -75,7 +75,7 @@
   {
     "id": "T009",
     "description": "Existing-invoice selector is hidden while source is `Sample`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008"

@@ -87,3 +87,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T006`: Sample fixture module exports at least three scenarios with unique ids
 - (2026-02-09) Completed `T007`: Each sample fixture satisfies required preview model fields (header, totals, items)
 - (2026-02-09) Completed `T008`: Selecting a sample scenario updates active preview dataset
+- (2026-02-09) Completed `T009`: Existing-invoice selector is hidden while source is `Sample`
