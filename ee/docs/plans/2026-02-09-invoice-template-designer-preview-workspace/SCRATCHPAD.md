@@ -121,3 +121,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T040`: Workspace hydration from localStorage fallback still succeeds with preview feature enabled
 - (2026-02-09) Completed `T041`: Saving template while preview tab is active preserves existing save behavior and payload shape
 - (2026-02-09) Completed `T042`: Preview interactions perform no invoice/template write operations
+- (2026-02-09) Completed `T043`: New-template flow shows preview successfully without requiring existing invoices

@@ -387,7 +387,7 @@
   {
     "id": "T043",
     "description": "New-template flow shows preview successfully without requiring existing invoices",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ],
