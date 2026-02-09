@@ -196,3 +196,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`calls paginated invoice search with status=all and query filters`).
 - (2026-02-09) T009 completed: selecting an existing invoice triggers detail fetch and normalization before preview.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`loads selected existing invoice detail and maps it for preview`).
+- (2026-02-09) T010 completed: invoice normalization unit test covers null/optional fields without crashes.
+  - Evidence: `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` (`handles nullable/partial values safely`).

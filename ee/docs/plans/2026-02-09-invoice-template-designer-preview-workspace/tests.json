@@ -86,7 +86,7 @@
   {
     "id": "T010",
     "description": "Invoice payload normalization handles null/optional fields without crash",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ],
