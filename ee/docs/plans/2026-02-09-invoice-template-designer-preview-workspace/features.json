@@ -82,7 +82,7 @@
   {
     "id": "F010",
     "description": "Fetch selected existing invoice details through `getInvoiceForRendering`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Functional Requirements"

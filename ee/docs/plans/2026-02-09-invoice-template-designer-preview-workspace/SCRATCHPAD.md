@@ -56,3 +56,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F007`: Added sample scenario selector UI that is conditionally shown for the Sample source.
 - (2026-02-09) Completed `F008`: Added existing-invoice selector/search controls that are conditionally shown for the Existing source.
 - (2026-02-09) Completed `F009`: Wired existing-invoice list fetching to fetchInvoicesPaginated with search, status=all, and paging controls.
+- (2026-02-09) Completed `F010`: Hooked existing-invoice selection to getInvoiceForRendering detail fetch with in-flight request guarding.
