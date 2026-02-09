@@ -185,7 +185,7 @@
   {
     "id": "T021",
     "description": "Resetting existing invoice selection clears detail payload and rendered output",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],

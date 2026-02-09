@@ -99,3 +99,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T018`: Existing-invoice list loading state is visible while searching
 - (2026-02-09) Completed `T019`: Existing-invoice list empty state is shown when no results match
 - (2026-02-09) Completed `T020`: Existing-invoice fetch failures show recoverable error state
+- (2026-02-09) Completed `T021`: Resetting existing invoice selection clears detail payload and rendered output
