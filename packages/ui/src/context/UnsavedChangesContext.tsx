@@ -203,15 +203,22 @@ export function UnsavedChangesProvider({
   );
 }
 
+// No-op implementation for when provider is missing (allows graceful degradation)
+const noOpContext: UnsavedChangesContextType = {
+  setHasUnsavedChanges: () => {},
+  hasAnyUnsavedChanges: () => false,
+  confirmNavigation: (action) => { action(); return true; },
+  unregister: () => {},
+};
+
 /**
  * Hook to access the unsaved changes context
+ * Returns no-op implementation if provider is missing (graceful degradation for tests/isolated renders)
  */
 export function useUnsavedChanges() {
   const context = useContext(UnsavedChangesContext);
-  if (!context) {
-    throw new Error('useUnsavedChanges must be used within an UnsavedChangesProvider');
-  }
-  return context;
+  // Return no-op context if provider is missing (allows graceful degradation)
+  return context ?? noOpContext;
 }
 
 /**

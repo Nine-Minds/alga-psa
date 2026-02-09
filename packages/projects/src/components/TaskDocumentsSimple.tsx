@@ -117,6 +117,8 @@ export default function TaskDocumentsSimple({
 
   // Unsaved changes dialog
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  // Track whether discard should close drawer (true) or just exit edit mode (false)
+  const [discardShouldCloseDrawer, setDiscardShouldCloseDrawer] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -454,11 +456,27 @@ export default function TaskDocumentsSimple({
   // Handle drawer close with unsaved changes check
   const handleCloseDrawer = useCallback(() => {
     if (hasUnsavedDocumentChanges) {
+      setDiscardShouldCloseDrawer(true);
       setShowUnsavedChangesDialog(true);
     } else {
       executeDrawerClose();
     }
   }, [hasUnsavedDocumentChanges, executeDrawerClose]);
+
+  // Handle discard confirmation - either close drawer or exit edit mode based on context
+  const handleDiscardConfirm = useCallback(() => {
+    setShowUnsavedChangesDialog(false);
+    if (discardShouldCloseDrawer) {
+      executeDrawerClose();
+    } else {
+      // Just exit edit mode and reload original content
+      setIsEditMode(false);
+      setHasContentChanged(false);
+      if (selectedDocument) {
+        handleDocumentClick(selectedDocument);
+      }
+    }
+  }, [discardShouldCloseDrawer, executeDrawerClose, selectedDocument]);
 
   const handleDownload = async (e: React.MouseEvent, document: IDocument) => {
     e.stopPropagation();
@@ -757,6 +775,7 @@ export default function TaskDocumentsSimple({
           className="fixed inset-0 z-[55]"
           onClick={(e) => {
             e.stopPropagation();
+            setDiscardShouldCloseDrawer(true); // Click outside should close the drawer
             setShowUnsavedChangesDialog(true);
           }}
         />,
@@ -882,7 +901,23 @@ export default function TaskDocumentsSimple({
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button
                 id="task-document-cancel-btn"
-                onClick={handleCloseDrawer}
+                onClick={() => {
+                  if (isCreatingNew) {
+                    // For new documents, close drawer (with unsaved changes check)
+                    handleCloseDrawer();
+                  } else {
+                    // For existing documents, check for unsaved changes before exiting edit mode
+                    if (hasUnsavedDocumentChanges) {
+                      setDiscardShouldCloseDrawer(false); // Don't close drawer, just exit edit mode
+                      setShowUnsavedChangesDialog(true);
+                    } else {
+                      // No unsaved changes - exit edit mode and reload original content
+                      setIsEditMode(false);
+                      setHasContentChanged(false);
+                      handleDocumentClick(selectedDocument!);
+                    }
+                  }
+                }}
                 variant="outline"
               >
                 Cancel
@@ -992,7 +1027,7 @@ export default function TaskDocumentsSimple({
             id="task-document-unsaved-changes-dialog"
             isOpen={showUnsavedChangesDialog}
             onClose={() => setShowUnsavedChangesDialog(false)}
-            onConfirm={executeDrawerClose}
+            onConfirm={handleDiscardConfirm}
             title="Unsaved Changes"
             message="Are you sure you want to cancel? Any unsaved changes will be lost."
             confirmLabel="Discard changes"
