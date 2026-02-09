@@ -96,6 +96,21 @@ const TagDefinition = {
       .del();
   },
 
+  deleteOrphaned: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tagIds: string[]): Promise<number> => {
+    if (tagIds.length === 0) return 0;
+
+    return await knexOrTrx('tag_definitions')
+      .where('tenant', tenant)
+      .whereIn('tag_id', tagIds)
+      .whereNotExists(function() {
+        this.select(knexOrTrx.raw('1'))
+          .from('tag_mappings')
+          .where('tag_mappings.tenant', tenant)
+          .whereRaw('tag_mappings.tag_id = tag_definitions.tag_id');
+      })
+      .del();
+  },
+
   getOrCreate: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
