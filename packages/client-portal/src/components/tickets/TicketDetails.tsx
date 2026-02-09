@@ -5,7 +5,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
-import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
@@ -83,6 +84,12 @@ export function TicketDetails({
   // State for appointment requests
   const [appointments, setAppointments] = useState<ITicketAppointmentRequest[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
+  const ticketOriginLabels = useMemo(() => ({
+    internal: t('tickets.origin.internal', 'Created Internally'),
+    clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal'),
+    inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email'),
+  }), [t]);
 
   // Fetch appointment requests for this ticket
   useEffect(() => {
@@ -472,6 +479,11 @@ export function TicketDetails({
                     }}
                   />
                 )}
+                <TicketOriginBadge
+                  origin={ticketOrigin}
+                  labels={ticketOriginLabels}
+                  size="md"
+                />
               </div>
             </div>
 
