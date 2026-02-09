@@ -217,7 +217,7 @@
   {
     "id": "T042",
     "description": "TicketOriginBadge renders Created via Inbound Email label and data attribute for inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
