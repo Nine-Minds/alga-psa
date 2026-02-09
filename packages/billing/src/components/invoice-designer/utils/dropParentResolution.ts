@@ -7,6 +7,8 @@ const MIN_SECTION_INSERT_SPACE = 56;
 const MIN_SECTION_INNER_WIDTH = 72;
 const MIN_SECTION_INNER_HEIGHT = 48;
 const SEMANTIC_MATCH_BONUS = 320;
+const MAX_LOCAL_REFLOW_PIXELS = 240;
+const MAX_LOCAL_REFLOW_NODES = 3;
 
 const TABLE_SECTION_PATTERN = /\b(item|items|line item|line items|details|services)\b/i;
 const TOTALS_SECTION_PATTERN = /\b(total|totals|summary|payment)\b/i;
@@ -29,6 +31,32 @@ const getPracticalMinimumSizeForType = (type: DesignerComponentType): Size => {
       return { width: 180, height: 96 };
     default:
       return { width: MIN_SECTION_INNER_WIDTH, height: MIN_SECTION_INNER_HEIGHT };
+  }
+};
+
+const getReflowMinimumWidthForNode = (node: DesignerNode): number => {
+  switch (node.type) {
+    case 'signature':
+      return 180;
+    case 'action-button':
+      return 140;
+    case 'attachment-list':
+      return 180;
+    case 'table':
+    case 'dynamic-table':
+      return 260;
+    case 'totals':
+    case 'subtotal':
+    case 'tax':
+    case 'discount':
+    case 'custom-total':
+      return 180;
+    case 'section':
+    case 'column':
+    case 'container':
+      return 120;
+    default:
+      return 100;
   }
 };
 
@@ -344,4 +372,156 @@ export const findNearestSectionAncestor = (
     current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
   }
   return null;
+};
+
+const isDescendantOf = (nodeId: string, ancestorId: string, nodesById: Map<string, DesignerNode>) => {
+  let current = nodesById.get(nodeId) ?? null;
+  while (current) {
+    if (current.id === ancestorId) {
+      return true;
+    }
+    current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+  }
+  return false;
+};
+
+const findNearestCompatibleSelectedAncestor = (
+  selectedNodeId: string,
+  selectedSectionId: string,
+  componentType: DesignerComponentType,
+  nodesById: Map<string, DesignerNode>
+): DesignerNode | null => {
+  let current = nodesById.get(selectedNodeId) ?? null;
+  while (current) {
+    if (!isDescendantOf(current.id, selectedSectionId, nodesById)) {
+      break;
+    }
+    if (canNestWithinParent(componentType, current.type)) {
+      return current;
+    }
+    current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+  }
+  return null;
+};
+
+export type LocalReflowAdjustment = {
+  nodeId: string;
+  width: number;
+};
+
+const planRowLocalReflow = (
+  parent: DesignerNode,
+  nodesById: Map<string, DesignerNode>,
+  requiredWidth: number,
+  preserveNodeId?: string
+): LocalReflowAdjustment[] | null => {
+  if (parent.layout?.mode !== 'flex' || (parent.layout.direction ?? 'column') !== 'row') {
+    return null;
+  }
+
+  const children = getSectionChildNodes(parent, nodesById);
+  const gap = Math.max(0, parent.layout.gap ?? 0);
+  const { width: innerWidth } = getNodeInnerSize(parent);
+  const currentUsed = children.reduce((sum, child) => sum + child.size.width, 0) + (children.length > 1 ? gap * (children.length - 1) : 0);
+  const additionalGap = children.length > 0 ? gap : 0;
+  const deficit = Math.max(0, currentUsed + requiredWidth + additionalGap - innerWidth);
+  if (deficit <= 0) {
+    return [];
+  }
+  if (deficit > MAX_LOCAL_REFLOW_PIXELS) {
+    return null;
+  }
+
+  const candidates = children
+    .filter((child) => child.id !== preserveNodeId)
+    .map((child) => {
+      const minWidth = getReflowMinimumWidthForNode(child);
+      return {
+        nodeId: child.id,
+        currentWidth: child.size.width,
+        shrinkable: Math.max(0, child.size.width - minWidth),
+      };
+    })
+    .filter((candidate) => candidate.shrinkable > 0)
+    .sort((a, b) => b.shrinkable - a.shrinkable)
+    .slice(0, MAX_LOCAL_REFLOW_NODES);
+
+  let remaining = deficit;
+  const adjustments: LocalReflowAdjustment[] = [];
+  for (const candidate of candidates) {
+    if (remaining <= 0) {
+      break;
+    }
+    const shrinkBy = Math.min(remaining, candidate.shrinkable);
+    if (shrinkBy <= 0) {
+      continue;
+    }
+    adjustments.push({
+      nodeId: candidate.nodeId,
+      width: candidate.currentWidth - shrinkBy,
+    });
+    remaining -= shrinkBy;
+  }
+
+  return remaining <= 0 ? adjustments : null;
+};
+
+type ForceSelectedInsertionParams = {
+  selectedNodeId: string | null;
+  pageNode: DesignerNode;
+  nodesById: Map<string, DesignerNode>;
+  componentType: DesignerComponentType;
+  desiredSize?: Size;
+};
+
+type ForceSelectedInsertionPlan =
+  | { ok: true; parentId: string; reflowAdjustments: LocalReflowAdjustment[] }
+  | { ok: false; message: string };
+
+export const planForceSelectedInsertion = ({
+  selectedNodeId,
+  pageNode,
+  nodesById,
+  componentType,
+  desiredSize,
+}: ForceSelectedInsertionParams): ForceSelectedInsertionPlan | null => {
+  const selectedSectionId = findNearestSectionAncestor(selectedNodeId, nodesById);
+  if (!selectedSectionId) {
+    return null;
+  }
+  const selectedSection = nodesById.get(selectedSectionId);
+  if (!selectedSection || selectedSection.type !== 'section' || selectedSection.parentId !== pageNode.id) {
+    return {
+      ok: false,
+      message: 'Selected section is unavailable. Re-select a section and try again.',
+    };
+  }
+
+  const requiredWidth = Math.max(getPracticalMinimumSizeForType(componentType).width, desiredSize?.width ?? 0);
+  const candidateParents: DesignerNode[] = [];
+
+  if (selectedNodeId) {
+    const nearestCompatible = findNearestCompatibleSelectedAncestor(selectedNodeId, selectedSection.id, componentType, nodesById);
+    if (nearestCompatible) {
+      candidateParents.push(nearestCompatible);
+    }
+  }
+  if (canNestWithinParent(componentType, selectedSection.type)) {
+    candidateParents.push(selectedSection);
+  }
+
+  for (const candidate of candidateParents) {
+    if (canParentFitComponent(candidate, componentType, nodesById, desiredSize)) {
+      return { ok: true, parentId: candidate.id, reflowAdjustments: [] };
+    }
+    const adjustments = planRowLocalReflow(candidate, nodesById, requiredWidth, selectedNodeId ?? undefined);
+    if (adjustments) {
+      return { ok: true, parentId: candidate.id, reflowAdjustments: adjustments };
+    }
+  }
+
+  return {
+    ok: false,
+    message: 'No room in the selected section. Resize or clear space, then try again.',
+  };
 };

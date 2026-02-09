@@ -24,6 +24,7 @@ import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import {
   findNearestSectionAncestor,
+  planForceSelectedInsertion,
   resolvePreferredParentFromSelection,
   resolveSectionParentForInsertion,
 } from './utils/dropParentResolution';
@@ -66,7 +67,7 @@ type DropFeedback = {
 };
 
 type ComponentDropResolution =
-  | { ok: true; parentId: string; notice?: string }
+  | { ok: true; parentId: string; notice?: string; reflowAdjustments?: Array<{ nodeId: string; width: number }> }
   | { ok: false; message: string };
 
 type ComponentInsertOptions = {
@@ -398,6 +399,28 @@ export const DesignerShell: React.FC = () => {
       }
 
       if (!dropNode && pageNode) {
+        const forcePlan = planForceSelectedInsertion({
+          selectedNodeId: liveSelectedNodeId,
+          pageNode,
+          nodesById,
+          componentType,
+          desiredSize: componentDefinition?.defaultSize,
+        });
+        if (forcePlan) {
+          if (!forcePlan.ok) {
+            return { ok: false, message: forcePlan.message };
+          }
+          return {
+            ok: true,
+            parentId: forcePlan.parentId,
+            reflowAdjustments: forcePlan.reflowAdjustments,
+            notice:
+              forcePlan.reflowAdjustments.length > 0
+                ? 'Inserted in selected section with local reflow.'
+                : undefined,
+          };
+        }
+
         const preferredParent = resolvePreferredParentFromSelection({
           selectedNodeId: liveSelectedNodeId,
           pageNode,
@@ -516,6 +539,24 @@ export const DesignerShell: React.FC = () => {
         return false;
       }
 
+      if (resolution.reflowAdjustments && resolution.reflowAdjustments.length > 0) {
+        const nodesById = new Map(useInvoiceDesignerStore.getState().nodes.map((node) => [node.id, node]));
+        resolution.reflowAdjustments.forEach((adjustment) => {
+          const node = nodesById.get(adjustment.nodeId);
+          if (!node) {
+            return;
+          }
+          updateNodeSize(
+            adjustment.nodeId,
+            {
+              width: Math.max(1, adjustment.width),
+              height: node.size.height,
+            },
+            false
+          );
+        });
+      }
+
       const def = getDefinition(componentType);
       const defaultMetadata = def ? buildDefaultMetadata(componentType, def.defaultMetadata) : undefined;
       const existingNodeIds = new Set(useInvoiceDesignerStore.getState().nodes.map((node) => node.id));
@@ -542,7 +583,7 @@ export const DesignerShell: React.FC = () => {
       }
       return true;
     },
-    [addNode, getDefaultInsertionPoint, recordDropResult, resolveComponentDropParent, showDropFeedback]
+    [addNode, getDefaultInsertionPoint, recordDropResult, resolveComponentDropParent, showDropFeedback, updateNodeSize]
   );
 
   const insertPresetWithResolution = useCallback(

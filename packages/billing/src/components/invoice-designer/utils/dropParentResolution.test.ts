@@ -4,6 +4,7 @@ import type { DesignerNode } from '../state/designerStore';
 import {
   chooseBestSectionForInsertion,
   findNearestSectionAncestor,
+  planForceSelectedInsertion,
   resolvePreferredParentFromSelection,
   resolveSectionParentForInsertion,
 } from './dropParentResolution';
@@ -601,5 +602,133 @@ describe('dropParentResolution', () => {
     });
 
     expect(picked?.id).toBe('notes-container');
+  });
+
+  it('plans local row reflow inside selected section before inserting', () => {
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      childIds: ['footer'],
+      allowedChildren: ['section'],
+    });
+    const footer = createNode({
+      id: 'footer',
+      type: 'section',
+      name: 'Footer',
+      parentId: 'page',
+      size: { width: 736, height: 200 },
+      childIds: ['notes', 'totals-area'],
+      layout: {
+        mode: 'flex',
+        direction: 'row',
+        gap: 20,
+        padding: 20,
+        justify: 'space-between',
+        align: 'start',
+        sizing: 'hug',
+      },
+    });
+    const notes = createNode({
+      id: 'notes',
+      type: 'container',
+      parentId: 'footer',
+      size: { width: 140, height: 160 },
+      childIds: ['notes-label'],
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 8,
+        padding: 0,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fill',
+      },
+    });
+    const notesLabel = createNode({
+      id: 'notes-label',
+      type: 'label',
+      parentId: 'notes',
+      size: { width: 100, height: 24 },
+    });
+    const totalsArea = createNode({
+      id: 'totals-area',
+      type: 'container',
+      parentId: 'footer',
+      size: { width: 376, height: 150 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 8,
+        padding: 0,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+
+    const nodesById = new Map(
+      [page, footer, notes, notesLabel, totalsArea].map(
+        (node) => [node.id, node] satisfies [string, DesignerNode]
+      )
+    );
+
+    const plan = planForceSelectedInsertion({
+      selectedNodeId: 'notes-label',
+      pageNode: page,
+      nodesById,
+      componentType: 'signature',
+      desiredSize: { width: 320, height: 120 },
+    });
+
+    expect(plan && plan.ok).toBe(true);
+    if (!plan || !plan.ok) {
+      return;
+    }
+    expect(plan.parentId).toBe('footer');
+    expect(plan.reflowAdjustments.length).toBeGreaterThan(0);
+  });
+
+  it('blocks selected section insertion when local reflow limits are exceeded', () => {
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      childIds: ['footer'],
+      allowedChildren: ['section'],
+    });
+    const footer = createNode({
+      id: 'footer',
+      type: 'section',
+      name: 'Footer',
+      parentId: 'page',
+      size: { width: 520, height: 200 },
+      childIds: ['a', 'b', 'c'],
+      layout: {
+        mode: 'flex',
+        direction: 'row',
+        gap: 20,
+        padding: 20,
+        justify: 'space-between',
+        align: 'start',
+        sizing: 'hug',
+      },
+    });
+    const a = createNode({ id: 'a', type: 'totals', parentId: 'footer', size: { width: 160, height: 120 } });
+    const b = createNode({ id: 'b', type: 'totals', parentId: 'footer', size: { width: 160, height: 120 } });
+    const c = createNode({ id: 'c', type: 'totals', parentId: 'footer', size: { width: 160, height: 120 } });
+
+    const nodesById = new Map([page, footer, a, b, c].map((node) => [node.id, node] satisfies [string, DesignerNode]));
+
+    const plan = planForceSelectedInsertion({
+      selectedNodeId: 'a',
+      pageNode: page,
+      nodesById,
+      componentType: 'signature',
+      desiredSize: { width: 320, height: 120 },
+    });
+
+    expect(plan).toEqual({
+      ok: false,
+      message: 'No room in the selected section. Resize or clear space, then try again.',
+    });
   });
 });
