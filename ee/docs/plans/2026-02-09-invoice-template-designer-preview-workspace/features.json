@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Preserve unsaved designer workspace state when toggling between `Design` and `Preview`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"
