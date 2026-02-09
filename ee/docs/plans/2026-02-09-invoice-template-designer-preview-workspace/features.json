@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Debounce preview compile+render pipeline while editing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
   },
   {
