@@ -73,3 +73,7 @@
 - (2026-02-09) **F005 completed**: Added explicit source-hint mapping in resolver (`email`, `inbound_email`, `client_portal`, `web_app`, `api`, `manual`, `worker`, `workflow`) with canonical outputs (`inbound_email`, `client_portal`, `internal`).
 - (2026-02-09) **F006 completed**: Resolver falls through to creator user type (`creator_user_type` / `entered_by_user_type` / `user_type`) and classifies `client` creators as `client_portal` when no higher-priority signal applies.
 - (2026-02-09) **F007 completed**: Resolver default return is `internal`, providing deterministic legacy fallback when email/source/creator signals are absent or unknown.
+- (2026-02-09) **F008 completed**: Updated `packages/tickets/src/actions/ticketActions.ts#getTicketById` to:
+  - join creator user (`u_creator.user_type as entered_by_user_type`),
+  - derive `ticket_origin` via `getTicketOrigin(ticket)`,
+  - include `ticket_origin` on `DetailedTicket` payload returned to MSP details UI.
