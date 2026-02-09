@@ -432,7 +432,7 @@
   {
     "id": "T048",
     "description": "Unit tests verify preview source-state reducer/selectors for all transitions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ],

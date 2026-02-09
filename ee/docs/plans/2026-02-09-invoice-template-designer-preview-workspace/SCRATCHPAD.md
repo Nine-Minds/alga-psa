@@ -126,3 +126,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T045`: Preview tab and design tab expose stable automation IDs
 - (2026-02-09) Completed `T046`: Preview source toggle and sample selector expose stable automation IDs
 - (2026-02-09) Completed `T047`: Existing invoice selector and empty/error states expose stable automation IDs
+- (2026-02-09) Completed `T048`: Unit tests verify preview source-state reducer/selectors for all transitions
