@@ -220,4 +220,23 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     expect(screen.getByTestId('designer-visual-workspace-tab').textContent).toBe('preview');
     expect(screen.queryByText('Template name is required.')).toBeNull();
   });
+
+  it('keeps Code tab generated/read-only for GUI templates', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+    expect(
+      document.querySelector('[data-automation-id=\"invoice-template-editor-code-readonly-alert\"]')
+    ).toBeTruthy();
+
+    const editor = screen.getByTestId('monaco-mock');
+    fireEvent.change(editor, { target: { value: '// manually edited source should be ignored' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalled());
+    const payload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
+    expect(payload.assemblyScriptSource).toContain('export function generateLayout');
+    expect(payload.assemblyScriptSource).not.toContain('// manually edited source should be ignored');
+  });
 });

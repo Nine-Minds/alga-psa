@@ -276,3 +276,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T043 completed: save compile wiring test verifies source-present save path routes through compile-and-save flow that persists/recompiles wasm artifacts.
   - Evidence: `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts` (`keeps save action wired to compile and persist wasm artifacts when source is present`).
   - Validation command: `pnpm vitest packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`
+- (2026-02-09) T044 completed: Code tab behavior test validates generated/read-only rule for GUI templates and ignores manual code edits on save.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`keeps Code tab generated/read-only for GUI templates`).
+  - Validation command: `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`

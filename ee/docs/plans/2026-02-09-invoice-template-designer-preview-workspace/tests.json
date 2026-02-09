@@ -399,7 +399,7 @@
   {
     "id": "T044",
     "description": "Code tab behavior for GUI templates follows defined source-of-truth rule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ],
