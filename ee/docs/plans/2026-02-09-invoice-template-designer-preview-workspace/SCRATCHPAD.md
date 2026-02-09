@@ -150,3 +150,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) F028 implemented: GUI-template save now compiles workspace snapshot to IR/AssemblyScript and persists generated source (with embedded designer state marker), ensuring save path aligns with preview source generation.
   - Validation command: `npx vitest run packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
   - Result: 12/12 tests passed.
+- (2026-02-09) F029 implemented: codified source-of-truth rule for GUI templates as “Visual is authoritative, Code is generated read-only view.”
+  - Code tab now shows generated source and blocks direct edits when GUI designer flag is enabled.

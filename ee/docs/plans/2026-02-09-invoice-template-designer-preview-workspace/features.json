@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Define and enforce GUI vs Code source-of-truth behavior for GUI-authored templates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Functional Requirements"]
   },
   {

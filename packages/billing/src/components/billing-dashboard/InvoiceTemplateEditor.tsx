@@ -1,7 +1,7 @@
 'use client'
 
 // server/src/components/billing-dashboard/InvoiceTemplateEditor.tsx
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef
+import React, { useState, useEffect, useRef, useMemo } from 'react'; // Added useRef
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardContent, CardFooter } from '@alga-psa/ui/components/Card';
@@ -45,9 +45,47 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
   const designerResetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
   const designerExportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
+  const designerNodes = useInvoiceDesignerStore((state) => state.nodes);
+  const designerConstraints = useInvoiceDesignerStore((state) => state.constraints);
+  const designerSnapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
+  const designerGridSize = useInvoiceDesignerStore((state) => state.gridSize);
+  const designerShowGuides = useInvoiceDesignerStore((state) => state.showGuides);
+  const designerShowRulers = useInvoiceDesignerStore((state) => state.showRulers);
+  const designerCanvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
 
   const canUseDesigner = guiDesignerEnabled && !guiDesignerLoading && !guiDesignerError;
+  const generatedCodeViewSource = useMemo(() => {
+    if (!canUseDesigner) {
+      return null;
+    }
+
+    try {
+      const workspace = {
+        nodes: designerNodes,
+        constraints: designerConstraints,
+        snapToGrid: designerSnapToGrid,
+        gridSize: designerGridSize,
+        showGuides: designerShowGuides,
+        showRulers: designerShowRulers,
+        canvasScale: designerCanvasScale,
+      };
+      const ir = extractInvoiceDesignerIr(workspace);
+      const generated = generateAssemblyScriptFromIr(ir);
+      return upsertInvoiceDesignerStateInSource(generated.source, workspace);
+    } catch {
+      return null;
+    }
+  }, [
+    canUseDesigner,
+    designerCanvasScale,
+    designerConstraints,
+    designerGridSize,
+    designerNodes,
+    designerShowGuides,
+    designerShowRulers,
+    designerSnapToGrid,
+  ]);
 
   // Effect for fetching template data
   useEffect(() => {
@@ -325,19 +363,31 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                  </div>
                </TabsContent>
                <TabsContent value="code" className="pt-4">
+                 {canUseDesigner && (
+                   <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
+                     <AlertDescription>
+                       Code view is generated from Visual workspace state and is read-only while GUI designer is enabled.
+                     </AlertDescription>
+                   </Alert>
+                 )}
                  <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">AssemblyScript Source</label>
                  <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
                    <Editor
                      height={editorHeight}
                      defaultLanguage="typescript"
-                     value={template?.assemblyScriptSource || ''}
-                     onChange={(value) => setTemplate(prev => ({ ...prev, assemblyScriptSource: value || '' }))}
+                     value={canUseDesigner ? (generatedCodeViewSource ?? template?.assemblyScriptSource ?? '') : (template?.assemblyScriptSource || '')}
+                     onChange={(value) => {
+                       if (canUseDesigner) {
+                         return;
+                       }
+                       setTemplate(prev => ({ ...prev, assemblyScriptSource: value || '' }));
+                     }}
                      options={{
                        minimap: { enabled: true },
                        scrollBeyondLastLine: false,
                        automaticLayout: true,
                        fontSize: 14,
-                       readOnly: isLoading
+                       readOnly: isLoading || canUseDesigner
                      }}
                      theme="vs-dark"
                    />
