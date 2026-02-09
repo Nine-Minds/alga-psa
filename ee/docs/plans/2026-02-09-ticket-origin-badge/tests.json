@@ -51,7 +51,7 @@
   {
     "id": "T010",
     "description": "MSP server action create path persists ticket_origin=internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F010"
