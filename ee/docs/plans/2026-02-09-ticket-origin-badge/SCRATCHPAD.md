@@ -96,3 +96,9 @@
   - `Created via Client Portal`
   - `Created via Inbound Email`
   across component defaults + English locale keys.
+- (2026-02-09) Added resolver unit tests `packages/tickets/src/lib/__tests__/ticketOrigin.test.ts` covering `T001`–`T010`.
+- (2026-02-09) Added type-contract test `packages/types/src/interfaces/ticket.interface.typecheck.test.ts` for `T011`.
+- (2026-02-09) Validation commands:
+  - `npx vitest run packages/tickets/src/lib/__tests__/ticketOrigin.test.ts` ✅
+  - `npx vitest run packages/types/src/interfaces/ticket.interface.typecheck.test.ts` ✅
+  - Note: running Vitest in parallel processes with coverage caused transient `server/coverage/.tmp/coverage-0.json` ENOENT; rerunning sequentially passed.
