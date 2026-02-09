@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Newly inserted tickets default ticket_origin to internal when not explicitly provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
