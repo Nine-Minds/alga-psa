@@ -119,3 +119,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T038`: Preview mode does not apply design-time selection opacity deemphasis
 - (2026-02-09) Completed `T039`: Workspace hydration from source-embedded designer state still succeeds with preview feature enabled
 - (2026-02-09) Completed `T040`: Workspace hydration from localStorage fallback still succeeds with preview feature enabled
+- (2026-02-09) Completed `T041`: Saving template while preview tab is active preserves existing save behavior and payload shape

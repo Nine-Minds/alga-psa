@@ -369,7 +369,7 @@
   {
     "id": "T041",
     "description": "Saving template while preview tab is active preserves existing save behavior and payload shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ],
