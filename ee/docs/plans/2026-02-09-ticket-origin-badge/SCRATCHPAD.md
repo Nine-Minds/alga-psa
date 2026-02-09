@@ -181,3 +181,4 @@
 - (2026-02-09) **T036 completed (reconciliation pass)**: Client portal getClientTicketDetails payload includes normalized ticket_origin for inbound_email ticket
 - (2026-02-09) **T037 completed (reconciliation pass)**: Client portal getClientTicketDetails payload includes normalized ticket_origin for api ticket
 - (2026-02-09) **T040 completed (reconciliation pass)**: TicketOriginBadge renders Created Internally label and data attribute for internal
+- (2026-02-09) **T041 completed (reconciliation pass)**: TicketOriginBadge renders Created via Client Portal label and data attribute for client_portal

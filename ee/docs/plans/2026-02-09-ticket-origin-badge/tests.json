@@ -209,7 +209,7 @@
   {
     "id": "T041",
     "description": "TicketOriginBadge renders Created via Client Portal label and data attribute for client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
