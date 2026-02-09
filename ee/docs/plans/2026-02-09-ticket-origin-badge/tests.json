@@ -87,7 +87,7 @@
   {
     "id": "T014",
     "description": "Workflow/automation ticket creation without explicit origin persists internal default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F010"
