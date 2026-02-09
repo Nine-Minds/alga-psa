@@ -8,7 +8,7 @@
     "type": "iframe",
     "entry": "ui/index.html",
     "hooks": {
-      "appMenu": { "label": "Nine Minds Reporting" }
+      "appMenu": { "label": "NineMinds Control Panel" }
     }
   },
   "precompiled": {
