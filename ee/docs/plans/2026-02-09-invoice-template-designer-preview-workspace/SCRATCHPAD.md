@@ -69,3 +69,8 @@ Authoritative preview for invoice template designer:
   - Evidence file: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx`
   - Validation command: `npx vitest run packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`
   - Result: 6/6 tests passed.
+- (2026-02-09) F003 implemented: preview session state now models compile/render/verify lifecycle phases with explicit `idle|running|success|error` status and per-phase error fields.
+  - Rationale: later preview orchestration can dispatch phase transitions without overloading invoice list/detail loading flags.
+  - Files: `packages/billing/src/components/invoice-designer/preview/previewSessionState.ts`, `packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+  - Result: 19/19 tests passed.

@@ -2,6 +2,8 @@ import type { InvoiceViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
 import { DEFAULT_PREVIEW_SAMPLE_ID } from './sampleScenarios';
 
 export type PreviewSourceKind = 'sample' | 'existing';
+export type PreviewPipelinePhase = 'compile' | 'render' | 'verify';
+export type PreviewPipelinePhaseStatus = 'idle' | 'running' | 'success' | 'error';
 
 export type PreviewSessionState = {
   sourceKind: PreviewSourceKind;
@@ -18,6 +20,12 @@ export type PreviewSessionState = {
   isInvoiceDetailLoading: boolean;
   invoiceDetailError: string | null;
   selectedInvoiceData: WasmInvoiceViewModel | null;
+  compileStatus: PreviewPipelinePhaseStatus;
+  compileError: string | null;
+  renderStatus: PreviewPipelinePhaseStatus;
+  renderError: string | null;
+  verifyStatus: PreviewPipelinePhaseStatus;
+  verifyError: string | null;
 };
 
 type PreviewSessionAction =
@@ -40,7 +48,38 @@ type PreviewSessionAction =
   | { type: 'clear-existing-invoice' }
   | { type: 'detail-load-start' }
   | { type: 'detail-load-success'; payload: WasmInvoiceViewModel }
-  | { type: 'detail-load-error'; error: string };
+  | { type: 'detail-load-error'; error: string }
+  | { type: 'pipeline-phase-start'; phase: PreviewPipelinePhase }
+  | { type: 'pipeline-phase-success'; phase: PreviewPipelinePhase }
+  | { type: 'pipeline-phase-error'; phase: PreviewPipelinePhase; error: string }
+  | { type: 'pipeline-reset' };
+
+const setPhaseStatus = (
+  state: PreviewSessionState,
+  phase: PreviewPipelinePhase,
+  status: PreviewPipelinePhaseStatus,
+  error: string | null
+): PreviewSessionState => {
+  if (phase === 'compile') {
+    return {
+      ...state,
+      compileStatus: status,
+      compileError: error,
+    };
+  }
+  if (phase === 'render') {
+    return {
+      ...state,
+      renderStatus: status,
+      renderError: error,
+    };
+  }
+  return {
+    ...state,
+    verifyStatus: status,
+    verifyError: error,
+  };
+};
 
 export const createInitialPreviewSessionState = (): PreviewSessionState => ({
   sourceKind: 'sample',
@@ -57,6 +96,12 @@ export const createInitialPreviewSessionState = (): PreviewSessionState => ({
   isInvoiceDetailLoading: false,
   invoiceDetailError: null,
   selectedInvoiceData: null,
+  compileStatus: 'idle',
+  compileError: null,
+  renderStatus: 'idle',
+  renderError: null,
+  verifyStatus: 'idle',
+  verifyError: null,
 });
 
 export const previewSessionReducer = (
@@ -145,6 +190,22 @@ export const previewSessionReducer = (
         isInvoiceDetailLoading: false,
         invoiceDetailError: action.error,
         selectedInvoiceData: null,
+      };
+    case 'pipeline-phase-start':
+      return setPhaseStatus(state, action.phase, 'running', null);
+    case 'pipeline-phase-success':
+      return setPhaseStatus(state, action.phase, 'success', null);
+    case 'pipeline-phase-error':
+      return setPhaseStatus(state, action.phase, 'error', action.error);
+    case 'pipeline-reset':
+      return {
+        ...state,
+        compileStatus: 'idle',
+        compileError: null,
+        renderStatus: 'idle',
+        renderError: null,
+        verifyStatus: 'idle',
+        verifyError: null,
       };
     default:
       return state;

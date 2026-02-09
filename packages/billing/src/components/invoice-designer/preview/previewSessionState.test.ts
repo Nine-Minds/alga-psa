@@ -14,6 +14,12 @@ describe('previewSessionState', () => {
     expect(state.isInvoiceDetailLoading).toBe(false);
     expect(state.invoiceListError).toBeNull();
     expect(state.invoiceDetailError).toBeNull();
+    expect(state.compileStatus).toBe('idle');
+    expect(state.renderStatus).toBe('idle');
+    expect(state.verifyStatus).toBe('idle');
+    expect(state.compileError).toBeNull();
+    expect(state.renderError).toBeNull();
+    expect(state.verifyError).toBeNull();
   });
 
   it('supports source and selector transitions', () => {
@@ -62,5 +68,34 @@ describe('previewSessionState', () => {
     state = previewSessionReducer(state, { type: 'detail-load-error', error: 'Boom' });
     expect(state.isInvoiceDetailLoading).toBe(false);
     expect(state.invoiceDetailError).toBe('Boom');
+  });
+
+  it('tracks compile/render/verify lifecycle statuses', () => {
+    let state = createInitialPreviewSessionState();
+
+    state = previewSessionReducer(state, { type: 'pipeline-phase-start', phase: 'compile' });
+    expect(state.compileStatus).toBe('running');
+    expect(state.compileError).toBeNull();
+
+    state = previewSessionReducer(state, { type: 'pipeline-phase-success', phase: 'compile' });
+    expect(state.compileStatus).toBe('success');
+
+    state = previewSessionReducer(state, { type: 'pipeline-phase-start', phase: 'render' });
+    state = previewSessionReducer(state, { type: 'pipeline-phase-error', phase: 'render', error: 'Render failed' });
+    expect(state.renderStatus).toBe('error');
+    expect(state.renderError).toBe('Render failed');
+
+    state = previewSessionReducer(state, { type: 'pipeline-phase-start', phase: 'verify' });
+    state = previewSessionReducer(state, { type: 'pipeline-phase-success', phase: 'verify' });
+    expect(state.verifyStatus).toBe('success');
+    expect(state.verifyError).toBeNull();
+
+    state = previewSessionReducer(state, { type: 'pipeline-reset' });
+    expect(state.compileStatus).toBe('idle');
+    expect(state.renderStatus).toBe('idle');
+    expect(state.verifyStatus).toBe('idle');
+    expect(state.compileError).toBeNull();
+    expect(state.renderError).toBeNull();
+    expect(state.verifyError).toBeNull();
   });
 });
