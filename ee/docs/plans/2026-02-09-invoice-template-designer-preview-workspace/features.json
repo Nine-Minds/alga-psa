@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Introduce GUI designer IR extraction from workspace nodes as compiler input",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

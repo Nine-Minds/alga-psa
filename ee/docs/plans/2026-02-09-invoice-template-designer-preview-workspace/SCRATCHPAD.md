@@ -91,3 +91,8 @@ Authoritative preview for invoice template designer:
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/lib/adapters/invoiceAdapters.test.ts`
   - Result: 17/17 tests passed.
   - Gotcha: running multiple `vitest` processes in parallel with coverage can race on `server/coverage/.tmp`; run related test files in a single `vitest run` invocation instead.
+- (2026-02-09) F008 implemented: added compiler IR extraction module that converts workspace nodes into deterministic flat/tree IR with normalized metadata and canonicalized constraints.
+  - Rationale: GUI compiler stages need stable node ordering and predictable metadata shape to produce deterministic codegen output.
+  - Files: `packages/billing/src/components/invoice-designer/compiler/guiIr.ts`, `packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
+  - Result: 2/2 tests passed.
