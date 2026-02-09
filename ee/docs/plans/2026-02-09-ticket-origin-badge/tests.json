@@ -161,7 +161,7 @@
   {
     "id": "T033",
     "description": "MSP getTicketById payload includes normalized ticket_origin for api ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
