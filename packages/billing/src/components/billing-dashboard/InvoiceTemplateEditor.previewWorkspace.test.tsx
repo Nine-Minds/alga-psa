@@ -11,14 +11,23 @@ import type { DesignerWorkspaceSnapshot } from '../invoice-designer/state/design
 const pushMock = vi.fn();
 const getInvoiceTemplateMock = vi.fn();
 const saveInvoiceTemplateMock = vi.fn();
+let searchParamsState = new URLSearchParams();
+const featureFlagState: { enabled: boolean; loading: boolean; error: string | null } = {
+  enabled: true,
+  loading: false,
+  error: null,
+};
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => ({ toString: () => '' }),
+  useSearchParams: () => ({
+    toString: () => searchParamsState.toString(),
+    get: (key: string) => searchParamsState.get(key),
+  }),
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+  useFeatureFlag: () => featureFlagState,
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplates', () => ({
@@ -115,6 +124,10 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     installLocalStorageMock();
     Object.defineProperty(window, 'atob', { value: undefined, configurable: true });
     Object.defineProperty(window, 'btoa', { value: undefined, configurable: true });
+    searchParamsState = new URLSearchParams();
+    featureFlagState.enabled = true;
+    featureFlagState.loading = false;
+    featureFlagState.error = null;
     pushMock.mockReset();
     getInvoiceTemplateMock.mockReset();
     saveInvoiceTemplateMock.mockReset();
@@ -238,6 +251,28 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     const payload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
     expect(payload.assemblyScriptSource).toContain('export function generateLayout');
     expect(payload.assemblyScriptSource).not.toContain('// manually edited source should be ignored');
+  });
+
+  it('enables visual designer in local QA via forceInvoiceDesigner=1 when feature flag is off', async () => {
+    featureFlagState.enabled = false;
+    searchParamsState = new URLSearchParams('forceInvoiceDesigner=1');
+
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    expect(
+      document.querySelector('[data-automation-id=\"invoice-template-editor-local-designer-override\"]')
+    ).toBeTruthy();
+  });
+
+  it('keeps production behavior when feature flag is off and no override is set', async () => {
+    featureFlagState.enabled = false;
+
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+
+    await waitFor(() => expect(screen.getByTestId('monaco-mock')).toBeTruthy());
+    expect(screen.queryByTestId('designer-visual-workspace')).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Visual' })).toBeNull();
   });
 
   it('keeps generated source synchronized with GUI model while switching Visual and Code', async () => {

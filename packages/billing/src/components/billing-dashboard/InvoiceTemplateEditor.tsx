@@ -53,8 +53,20 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const designerShowRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const designerCanvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
+  const forceLocalDesignerOverride = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    const hostname = window.location.hostname;
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+    if (!isLocalHost) {
+      return false;
+    }
+    const override = searchParams?.get('forceInvoiceDesigner');
+    return override === '1' || override === 'true';
+  }, [searchParams]);
 
-  const canUseDesigner = guiDesignerEnabled && !guiDesignerLoading && !guiDesignerError;
+  const canUseDesigner = forceLocalDesignerOverride || (guiDesignerEnabled && !guiDesignerLoading && !guiDesignerError);
   const generatedCodeViewSource = useMemo(() => {
     if (!canUseDesigner) {
       return null;
@@ -355,6 +367,13 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                      Invoice output remains driven by the AssemblyScript template.
                    </AlertDescription>
                  </Alert>
+                 {forceLocalDesignerOverride && !guiDesignerEnabled && (
+                   <Alert variant="info" data-automation-id="invoice-template-editor-local-designer-override">
+                     <AlertDescription>
+                       Local QA override active via <code>forceInvoiceDesigner=1</code>.
+                     </AlertDescription>
+                   </Alert>
+                 )}
                  <div className="border rounded overflow-hidden bg-white" id="invoice-template-visual-designer">
                    <DesignerVisualWorkspace
                      visualWorkspaceTab={visualWorkspaceTab}

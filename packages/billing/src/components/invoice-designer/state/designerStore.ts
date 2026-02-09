@@ -5,6 +5,7 @@ import { solveConstraints } from '../utils/constraintSolver';
 import { getDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS, getPresetById, LayoutPresetConstraintDefinition } from '../constants/presets';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { supportsAspectRatioLock } from '../utils/aspectRatio';
 import { clampPositionToParent } from '../utils/layout';
 import { canNestWithinParent, getAllowedChildrenForType, getAllowedParentsForType } from './hierarchy';
 
@@ -160,6 +161,7 @@ const generateId = () =>
     : Math.random().toString(36).slice(2);
 const snapToGridValue = (value: number, gridSize: number) => Math.round(value / gridSize) * gridSize;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const MEDIA_NODE_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'qr']);
 
 const getPracticalMinimumSizeForType = (type: DesignerComponentType): Size => {
   switch (type) {
@@ -202,6 +204,50 @@ const clampNodeSizeToPracticalMinimum = (type: DesignerComponentType, size: Size
   };
 };
 
+const getNodeParentInnerBounds = (node: Pick<DesignerNode, 'parentId'>, nodesById: Map<string, DesignerNode>) => {
+  const parent = node.parentId ? nodesById.get(node.parentId) : undefined;
+  if (!parent) {
+    return {
+      x: 0,
+      y: 0,
+      width: Math.max(1, DESIGNER_CANVAS_BOUNDS.width),
+      height: Math.max(1, DESIGNER_CANVAS_BOUNDS.height),
+    };
+  }
+
+  const padding = parent.layout?.mode === 'flex' ? Math.max(0, parent.layout.padding ?? 0) : 0;
+  const hugExpandsHeight = parent.layout?.mode === 'flex' && parent.layout.sizing === 'hug' && parent.layout.direction === 'column';
+  const hugExpandsWidth = parent.layout?.mode === 'flex' && parent.layout.sizing === 'hug' && parent.layout.direction === 'row';
+  return {
+    x: padding,
+    y: padding,
+    width: Math.max(
+      1,
+      hugExpandsWidth ? DESIGNER_CANVAS_BOUNDS.width - padding * 2 : parent.size.width - padding * 2
+    ),
+    height: Math.max(
+      1,
+      hugExpandsHeight ? DESIGNER_CANVAS_BOUNDS.height - padding * 2 : parent.size.height - padding * 2
+    ),
+  };
+};
+
+const clampNodeSizeToParentBounds = (
+  node: DesignerNode,
+  size: Size,
+  nodesById: Map<string, DesignerNode>
+): Size => {
+  const minimum = getPracticalMinimumSizeForType(node.type);
+  const bounds = getNodeParentInnerBounds(node, nodesById);
+  const safeWidth = Number.isFinite(size.width) ? size.width : minimum.width;
+  const safeHeight = Number.isFinite(size.height) ? size.height : minimum.height;
+
+  return {
+    width: clamp(safeWidth, Math.min(minimum.width, bounds.width), bounds.width),
+    height: clamp(safeHeight, Math.min(minimum.height, bounds.height), bounds.height),
+  };
+};
+
 const cloneMetadata = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object') {
     return {};
@@ -221,19 +267,21 @@ const normalizeResolvedNodes = (nodes: DesignerNode[]): DesignerNode[] => {
     }
 
     const minimum = getPracticalMinimumSizeForType(node.type);
-    const width = Math.max(minimum.width, Number.isFinite(node.size.width) ? node.size.width : minimum.width);
-    const height = Math.max(minimum.height, Number.isFinite(node.size.height) ? node.size.height : minimum.height);
-    const normalizedSize = { width, height };
-    const normalizedBaseSize = node.baseSize ? clampNodeSizeToPracticalMinimum(node.type, node.baseSize) : node.baseSize;
+    const rawSize = {
+      width: Number.isFinite(node.size.width) ? node.size.width : minimum.width,
+      height: Number.isFinite(node.size.height) ? node.size.height : minimum.height,
+    };
+    const normalizedSize = clampNodeSizeToParentBounds(node, rawSize, nodesById);
+    const normalizedBaseSize = node.baseSize
+      ? clampNodeSizeToParentBounds(node, node.baseSize, nodesById)
+      : node.baseSize;
 
-    const parent = node.parentId ? nodesById.get(node.parentId) : undefined;
-    const maxWidth = Math.max(1, parent?.size.width ?? DESIGNER_CANVAS_BOUNDS.width);
-    const maxHeight = Math.max(1, parent?.size.height ?? DESIGNER_CANVAS_BOUNDS.height);
-    const maxX = Math.max(0, maxWidth - width);
-    const maxY = Math.max(0, maxHeight - height);
+    const parentBounds = getNodeParentInnerBounds(node, nodesById);
+    const maxX = Math.max(parentBounds.x, parentBounds.x + parentBounds.width - normalizedSize.width);
+    const maxY = Math.max(parentBounds.y, parentBounds.y + parentBounds.height - normalizedSize.height);
     const normalizedPosition = {
-      x: clamp(Number.isFinite(node.position.x) ? node.position.x : 0, 0, maxX),
-      y: clamp(Number.isFinite(node.position.y) ? node.position.y : 0, 0, maxY),
+      x: clamp(Number.isFinite(node.position.x) ? node.position.x : parentBounds.x, parentBounds.x, maxX),
+      y: clamp(Number.isFinite(node.position.y) ? node.position.y : parentBounds.y, parentBounds.y, maxY),
     };
 
     if (
@@ -465,10 +513,11 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
         // Use baseSize as the starting point for calculations (if available), falling back to current size
         let newWidth = child.baseSize?.width ?? child.size.width;
         let newHeight = child.baseSize?.height ?? child.size.height;
+        const shouldStretchCrossAxis = align === 'stretch' && !MEDIA_NODE_TYPES.has(child.type);
 
         if (direction === 'column') {
           // Cross axis: Width
-          if (childLayout.sizing === 'fill' || align === 'stretch') {
+          if (childLayout.sizing === 'fill' || shouldStretchCrossAxis) {
             newWidth = Math.max(0, node.size.width - padding * 2);
           }
           // Main axis: Height
@@ -478,7 +527,7 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
         } else {
           // Row
           // Cross axis: Height
-          if (childLayout.sizing === 'fill' || align === 'stretch') {
+          if (childLayout.sizing === 'fill' || shouldStretchCrossAxis) {
             newHeight = Math.max(0, node.size.height - padding * 2);
           }
           // Main axis: Width
@@ -628,8 +677,10 @@ export const __designerLayoutTestUtils = {
 
 // Wrapper to combine Constraint Solver + Auto Layout
 const resolveLayout = (nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
+  const normalizedInput = normalizeResolvedNodes(nodes);
+
   // 1. Run Auto-Layout (Flex) to establish base positions
-  const layoutNodes = computeLayout(nodes);
+  const layoutNodes = computeLayout(normalizedInput);
   
   // 2. Run Constraint Solver (Cassowary) for any specific overrides or "Canvas" mode internal constraints
   // Note: If everything is Flex, we might not need Cassowary as heavily.
@@ -1017,12 +1068,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     updateNodeSize: (id, size, commit = true) => {
       set((state) => {
-        // Update both size and baseSize (persisting user preference), with practical minimum size clamps.
+        const nodesById = new Map(state.nodes.map((node) => [node.id, node]));
+        // Update both size and baseSize (persisting user preference), clamping to parent bounds first
+        // so constraint resolution does not receive unsatisfiable oversized dimensions.
         const nodes = state.nodes.map((node) => {
           if (node.id !== id) {
             return node;
           }
-          const clamped = clampNodeSizeToPracticalMinimum(node.type, size);
+          const clamped = clampNodeSizeToParentBounds(node, size, nodesById);
           return { ...node, size: clamped, baseSize: clamped };
         });
         if (!commit) {
@@ -1132,12 +1185,15 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       set((state) => {
         const constraintId = `aspect-${nodeId}`;
         const hasConstraint = state.constraints.some((constraint) => constraint.id === constraintId);
+        const node = state.nodes.find((candidate) => candidate.id === nodeId);
+        if (!node) {
+          return state;
+        }
         let constraints = state.constraints;
         if (hasConstraint) {
           constraints = state.constraints.filter((constraint) => constraint.id !== constraintId);
         } else {
-          const node = state.nodes.find((candidate) => candidate.id === nodeId);
-          if (!node || node.size.height === 0) {
+          if (!supportsAspectRatioLock(node.type) || node.size.height === 0) {
             return state;
           }
           constraints = [

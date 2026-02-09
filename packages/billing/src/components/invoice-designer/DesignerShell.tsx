@@ -17,7 +17,7 @@ import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
-import type { DesignerComponentType, DesignerConstraint, DesignerNode, Point } from './state/designerStore';
+import type { DesignerComponentType, DesignerConstraint, DesignerNode, Point, Size } from './state/designerStore';
 import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, calculateGuides, clampPositionToParent } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
@@ -32,6 +32,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
+import { supportsAspectRatioLock } from './utils/aspectRatio';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -157,6 +158,8 @@ const buildDescendantPositionMap = (rootId: string, allNodes: DesignerNode[]) =>
 
 const getPracticalMinimumSizeForType = (type: DesignerComponentType): { width: number; height: number } => {
   switch (type) {
+    case 'section':
+      return { width: 160, height: 96 };
     case 'field':
       return { width: 120, height: 40 };
     case 'label':
@@ -183,6 +186,73 @@ const getPracticalMinimumSizeForType = (type: DesignerComponentType): { width: n
       return { width: 72, height: 24 };
   }
 };
+
+const getSectionFitSizeFromChildren = (
+  section: DesignerNode,
+  nodesById: Map<string, DesignerNode>
+): Size | null => {
+  const sectionChildren = section.childIds
+    .map((childId) => nodesById.get(childId))
+    .filter((node): node is DesignerNode => Boolean(node));
+
+  if (sectionChildren.length === 0) {
+    return null;
+  }
+
+  const padding = section.layout?.mode === 'flex' ? Math.max(0, section.layout.padding ?? 0) : 0;
+  const furthestRight = sectionChildren.reduce((max, child) => {
+    const right = Math.max(0, child.position.x) + Math.max(0, child.size.width);
+    return right > max ? right : max;
+  }, 0);
+  const furthestBottom = sectionChildren.reduce((max, child) => {
+    const bottom = Math.max(0, child.position.y) + Math.max(0, child.size.height);
+    return bottom > max ? bottom : max;
+  }, 0);
+  const minimum = getPracticalMinimumSizeForType('section');
+
+  return {
+    width: Math.max(minimum.width, Math.ceil(furthestRight + padding)),
+    height: Math.max(minimum.height, Math.ceil(furthestBottom + padding)),
+  };
+};
+
+type SectionFitIntent = { status: 'no-children' } | { status: 'already-fitted' } | { status: 'fit-needed'; size: Size };
+
+const sizesAreEffectivelyEqual = (left: Size, right: Size) =>
+  Math.abs(left.width - right.width) < 0.5 && Math.abs(left.height - right.height) < 0.5;
+
+const getSectionFitIntent = (
+  section: DesignerNode,
+  nodesById: Map<string, DesignerNode>
+): SectionFitIntent => {
+  const fittedSize = getSectionFitSizeFromChildren(section, nodesById);
+  if (!fittedSize) {
+    return { status: 'no-children' };
+  }
+  if (sizesAreEffectivelyEqual(section.size, fittedSize)) {
+    return { status: 'already-fitted' };
+  }
+  return { status: 'fit-needed', size: fittedSize };
+};
+
+const resolveNearestAncestorSection = (
+  nodeId: string | null,
+  nodesById: Map<string, DesignerNode>
+): DesignerNode | null => {
+  const sectionId = findNearestSectionAncestor(nodeId, nodesById);
+  if (!sectionId) {
+    return null;
+  }
+  const sectionNode = nodesById.get(sectionId);
+  return sectionNode?.type === 'section' ? sectionNode : null;
+};
+
+const wasSizeConstrainedFromDraft = (draft: Size, resolved: Size) => !sizesAreEffectivelyEqual(draft, resolved);
+
+const getSectionFitNoopMessage = (section: DesignerNode) =>
+  section.layout?.sizing === 'fill'
+    ? 'Section is already fitted in Fill mode. Switch section sizing to Fixed to shrink dimensions.'
+    : 'Section is already fitted.';
 
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -221,6 +291,20 @@ export const DesignerShell: React.FC = () => {
   const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
   const setLayoutMode = useInvoiceDesignerStore((state) => state.setLayoutMode);
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
+  const canLockAspectRatio = selectedNode ? supportsAspectRatioLock(selectedNode.type) : false;
+  const selectedMediaParentSection = useMemo(() => {
+    if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
+      return null;
+    }
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
+    return resolveNearestAncestorSection(selectedNode.id, nodesById);
+  }, [nodes, selectedNode]);
+  const selectedSectionFitSize = useMemo(() => {
+    if (!selectedNode || selectedNode.type !== 'section') {
+      return null;
+    }
+    return getSectionFitSizeFromChildren(selectedNode, new Map(nodes.map((node) => [node.id, node])));
+  }, [nodes, selectedNode]);
 
   useDesignerShortcuts();
 
@@ -1192,6 +1276,63 @@ export const DesignerShell: React.FC = () => {
       );
     }
 
+    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
+      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Media</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Source URL</label>
+            <Input
+              id="designer-media-src"
+              value={metadata.src ?? metadata.url ?? ''}
+              onChange={(event) => applyMetadata({ src: event.target.value, url: event.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Alt text</label>
+            <Input
+              id="designer-media-alt"
+              value={metadata.alt ?? ''}
+              onChange={(event) => applyMetadata({ alt: event.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Fit mode</label>
+            <select
+              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+              value={fitMode}
+              onChange={(event) => applyMetadata({ fitMode: event.target.value, fit: event.target.value })}
+            >
+              <option value="contain">Contain</option>
+              <option value="cover">Cover</option>
+              <option value="fill">Fill</option>
+            </select>
+          </div>
+          <div className="pt-2 border-t border-slate-100 space-y-1">
+            <Button
+              id="designer-fit-parent-section-to-media"
+              variant="outline"
+              onClick={fitParentSectionFromMedia}
+              disabled={!selectedMediaParentSection}
+            >
+              Fit Parent Section to Media
+            </Button>
+            {selectedMediaParentSection ? (
+              <p className="text-[11px] text-slate-500">
+                Reflows <span className="font-medium text-slate-600">{selectedMediaParentSection.name}</span> to remove extra whitespace.
+                {selectedMediaParentSection.layout?.sizing === 'fill' && (
+                  <> In Fill mode, this will switch section sizing to Fixed before fitting.</>
+                )}
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">This media block is not inside a section.</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -1387,11 +1528,101 @@ export const DesignerShell: React.FC = () => {
     setPropertyDraft((prev) => ({ ...prev, [name]: Number(value) }));
   };
 
+  const runSectionFitAction = useCallback(
+    (
+      sectionId: string | null,
+      options?: { missingSectionMessage?: string; autoSwitchFillToFixed?: boolean }
+    ) => {
+      const missingSectionMessage = options?.missingSectionMessage ?? 'Select a section to fit.';
+      const autoSwitchFillToFixed = options?.autoSwitchFillToFixed ?? true;
+      if (!sectionId) {
+        showDropFeedback('info', missingSectionMessage);
+        return;
+      }
+
+      let state = useInvoiceDesignerStore.getState();
+      let nodesById = new Map(state.nodes.map((node) => [node.id, node]));
+      let section = nodesById.get(sectionId);
+      if (!section || section.type !== 'section') {
+        showDropFeedback('info', missingSectionMessage);
+        return;
+      }
+
+      let switchedFromFill = false;
+      if (autoSwitchFillToFixed && section.layout?.mode === 'flex' && section.layout.sizing === 'fill') {
+        setLayoutMode(section.id, 'flex', { sizing: 'fixed' });
+        switchedFromFill = true;
+        state = useInvoiceDesignerStore.getState();
+        nodesById = new Map(state.nodes.map((node) => [node.id, node]));
+        const refreshed = nodesById.get(section.id);
+        if (refreshed && refreshed.type === 'section') {
+          section = refreshed;
+        }
+      }
+
+      const intent = getSectionFitIntent(section, nodesById);
+      if (intent.status === 'no-children') {
+        showDropFeedback('info', 'Section has no child content to fit.');
+        return;
+      }
+      if (intent.status === 'already-fitted') {
+        showDropFeedback('info', getSectionFitNoopMessage(section));
+        return;
+      }
+
+      const beforeSize = section.size;
+      updateNodeSize(section.id, intent.size, true);
+      const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === section.id);
+      if (!afterSection || sizesAreEffectivelyEqual(beforeSize, afterSection.size)) {
+        showDropFeedback('info', getSectionFitNoopMessage(section));
+        return;
+      }
+      showDropFeedback(
+        'info',
+        switchedFromFill
+          ? 'Section switched to Fixed sizing and fitted to contents.'
+          : 'Section fitted to contents.'
+      );
+    },
+    [setLayoutMode, showDropFeedback, updateNodeSize]
+  );
+
   const commitPropertyChanges = () => {
     if (!selectedNodeId) return;
     setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
     updateNodeSize(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
+
+    const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
+    if (!resolvedNode) {
+      return;
+    }
+
+    const draftSize = {
+      width: Number.isFinite(propertyDraft.width) ? propertyDraft.width : resolvedNode.size.width,
+      height: Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
+    };
+    if (wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
+      if (aspectConstraint) {
+        showDropFeedback('info', 'Size constrained by aspect ratio lock. Disable "Lock aspect ratio" to resize freely.');
+      } else {
+        showDropFeedback('info', 'Size constrained to valid bounds.');
+      }
+    }
   };
+
+  const fitSelectedSectionToContents = useCallback(() => {
+    const sectionId = selectedNode?.type === 'section' ? selectedNode.id : null;
+    runSectionFitAction(sectionId, {
+      missingSectionMessage: 'Select a section to fit.',
+      autoSwitchFillToFixed: false,
+    });
+  }, [runSectionFitAction, selectedNode]);
+
+  const fitParentSectionFromMedia = useCallback(() => {
+    runSectionFitAction(selectedMediaParentSection?.id ?? null, {
+      missingSectionMessage: 'This media block is not inside a section.',
+    });
+  }, [runSectionFitAction, selectedMediaParentSection]);
 
   return (
     <div className="flex flex-col h-full border border-slate-200 rounded-lg overflow-hidden">
@@ -1543,22 +1774,43 @@ export const DesignerShell: React.FC = () => {
                 </div>
               )}
               {renderLayoutInspector()}
-              <div className="pt-2 border-t border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Lock aspect ratio</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300"
-                    checked={Boolean(aspectConstraint)}
-                    onChange={() => toggleAspectRatioLock(selectedNode.id)}
-                  />
+              {(canLockAspectRatio || aspectConstraint) && (
+                <div className="pt-2 border-t border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Lock aspect ratio</span>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      checked={Boolean(aspectConstraint)}
+                      onChange={() => toggleAspectRatioLock(selectedNode.id)}
+                    />
+                  </div>
+                  {aspectConstraint && (
+                    <p className="text-[11px] text-slate-500">
+                      Preserves width/height ratio ≈ {aspectConstraint.ratio.toFixed(2)}
+                    </p>
+                  )}
+                  {!canLockAspectRatio && aspectConstraint && (
+                    <p className="text-[11px] text-amber-700">
+                      This node type is best resized freely. Turn this off if dimensions keep snapping.
+                    </p>
+                  )}
                 </div>
-                {aspectConstraint && (
-                  <p className="text-[11px] text-slate-500">
-                    Preserves width/height ratio ≈ {aspectConstraint.ratio.toFixed(2)}
-                  </p>
-                )}
-              </div>
+              )}
+              {selectedNode.type === 'section' && (
+                <div className="space-y-1">
+                  <Button
+                    id="designer-fit-section-to-contents"
+                    variant="outline"
+                    onClick={fitSelectedSectionToContents}
+                  >
+                    Fit Section to Contents
+                  </Button>
+                  {!selectedSectionFitSize && (
+                    <p className="text-[11px] text-slate-500">Section has no child content to fit.</p>
+                  )}
+                </div>
+              )}
               {renderMetadataInspector()}
               <Button id="designer-inspector-apply" variant="outline" onClick={commitPropertyChanges}>
                 Apply
@@ -1717,6 +1969,15 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
     </div>
   );
 };
+
+export const __designerShellTestUtils = {
+  getSectionFitSizeFromChildren,
+  getSectionFitIntent,
+  resolveNearestAncestorSection,
+  wasSizeConstrainedFromDraft,
+  getSectionFitNoopMessage,
+};
+
 const createLocalId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 

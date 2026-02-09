@@ -2,6 +2,7 @@ import * as kiwi from 'kiwi.js';
 
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import type { DesignerConstraint, DesignerNode, ConstraintStrength } from '../state/designerStore';
+import { supportsAspectRatioLock } from './aspectRatio';
 
 const DEFAULT_STRENGTH = kiwi.Strength.required;
 
@@ -70,6 +71,7 @@ export const solveConstraints = (
   try {
     const solver = new kiwi.Solver();
     const variableMap = new Map<string, VariableBundle>();
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
 
     nodes.forEach((node) => {
       const x = new kiwi.Variable(`${node.id}-x`);
@@ -162,7 +164,8 @@ export const solveConstraints = (
         }
         case 'aspect-ratio': {
           const nodeVars = variableMap.get(constraint.nodeId);
-          if (!nodeVars) return;
+          const targetNode = nodesById.get(constraint.nodeId);
+          if (!nodeVars || !targetNode || !supportsAspectRatioLock(targetNode.type)) return;
           const expr = new kiwi.Expression(nodeVars.width).minus(
             new kiwi.Expression([constraint.ratio, nodeVars.height])
           );

@@ -17,7 +17,7 @@ const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => ({ toString: () => '' }),
+  useSearchParams: () => ({ toString: () => '', get: () => null }),
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
