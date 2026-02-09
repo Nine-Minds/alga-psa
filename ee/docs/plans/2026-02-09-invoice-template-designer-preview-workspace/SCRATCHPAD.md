@@ -163,3 +163,7 @@ Authoritative preview for invoice template designer:
     - `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.test.ts`
   - Result: parity integration test passing; preview compile regression fixed by creating `temp_compile/preview/assembly` symlink so generated `../assembly/types` imports resolve in preview temp paths.
   - Gotcha: generated binding helper referenced `viewModel.dueDate` which does not exist in runtime AssemblyScript `InvoiceViewModel`; adjusted generator fallback for `invoice.dueDate` to return empty string to preserve compileability.
+- (2026-02-09) F034 implemented: added fixture-based verification tests that assert pass/fail comparator behavior against known aligned/drifted design fixtures.
+  - Files: `packages/billing/src/lib/invoice-template-compiler/__fixtures__/layoutVerificationFixtures.ts`, `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`
+  - Validation command: `pnpm vitest packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`
+  - Result: 4/4 tests passed; failing fixture asserts deterministic mismatch ids (`totals:x`, `totals:y`, `totals:width`, `totals:height`) and mismatch payload shape.
