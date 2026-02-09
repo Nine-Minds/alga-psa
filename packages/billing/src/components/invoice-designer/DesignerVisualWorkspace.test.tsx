@@ -376,6 +376,41 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
+  it('shows distinct verification error state when layout verification execution fails', async () => {
+    runAuthoritativeInvoiceTemplatePreviewMock.mockResolvedValueOnce({
+      success: false,
+      sourceHash: 'verify-error-hash',
+      generatedSource: '// generated',
+      compile: {
+        status: 'success',
+        cacheHit: false,
+        diagnostics: [],
+      },
+      render: {
+        status: 'success',
+        html: '<div>Preview</div>',
+        css: '',
+      },
+      verification: {
+        status: 'error',
+        mismatches: [],
+        error: 'Verification engine failed to evaluate constraints.',
+      },
+    });
+
+    renderWorkspace('preview');
+
+    await waitFor(() => {
+      const verificationError = document.querySelector(
+        '[data-automation-id=\"invoice-designer-preview-verification-error\"]'
+      );
+      expect(verificationError?.textContent).toContain('Verification engine failed to evaluate constraints.');
+      expect(
+        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
+      ).toContain('error');
+    });
+  });
+
   it('clears selected existing invoice when reset action is used', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByText('Existing'));

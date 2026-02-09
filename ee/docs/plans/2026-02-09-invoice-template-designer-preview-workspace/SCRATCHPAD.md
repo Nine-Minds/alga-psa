@@ -245,3 +245,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T030 completed: preview UI test verifies explicit empty state when no preview data is selected (Existing source with no invoice selected).
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows preview empty state when no preview data is selected`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T031 completed: preview verification error state test asserts explicit error badge and message when verification execution fails.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows distinct verification error state when layout verification execution fails`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`

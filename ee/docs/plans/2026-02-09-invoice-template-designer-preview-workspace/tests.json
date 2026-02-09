@@ -279,7 +279,7 @@
   {
     "id": "T031",
     "description": "Preview shows distinct verification-error state when layout check fails to execute",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F026"
