@@ -123,3 +123,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T042`: Preview interactions perform no invoice/template write operations
 - (2026-02-09) Completed `T043`: New-template flow shows preview successfully without requiring existing invoices
 - (2026-02-09) Completed `T044`: Preview remains usable even when template name is empty prior to save validation
+- (2026-02-09) Completed `T045`: Preview tab and design tab expose stable automation IDs

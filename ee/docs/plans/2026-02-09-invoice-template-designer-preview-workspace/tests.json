@@ -405,7 +405,7 @@
   {
     "id": "T045",
     "description": "Preview tab and design tab expose stable automation IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ],
