@@ -261,7 +261,7 @@
   {
     "id": "T029",
     "description": "Preview shows loading indicator during compile/render lifecycle",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],

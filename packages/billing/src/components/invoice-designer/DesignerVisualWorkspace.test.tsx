@@ -419,6 +419,25 @@ describe('DesignerVisualWorkspace', () => {
     expect(latestCall.bypassCompileCache).toBe(true);
   });
 
+  it('shows loading indicator while compile/render pipeline is in flight', async () => {
+    runAuthoritativeInvoiceTemplatePreviewMock.mockImplementationOnce(
+      () => new Promise(() => undefined)
+    );
+
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-loading-state\"]')).toBeTruthy();
+      expect(
+        document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-status\"]')?.textContent
+      ).toContain('running');
+      expect(
+        document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')?.textContent
+      ).toContain('running');
+    });
+  });
+
   it('recomputes preview when layout structure changes affect rendered output', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
