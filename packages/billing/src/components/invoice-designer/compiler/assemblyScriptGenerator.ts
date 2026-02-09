@@ -285,11 +285,49 @@ const resolveRenderableTotalBindingKey = (node: InvoiceDesignerIrTreeNode): stri
   normalizeTotalBindingKey(node, asTrimmedString(asRecord(node.metadata).bindingKey)) ||
   resolveTotalBindingFallback(node);
 
-const resolveLayoutStyleArgs = (node: InvoiceDesignerIrTreeNode) => ({
+const resolveNormalizedMarginTop = (
+  node: InvoiceDesignerIrTreeNode,
+  nodesById: Map<string, InvoiceDesignerIrTreeNode>
+): number => {
+  const rawY = Math.round(node.position.y);
+  if (!node.parentId) {
+    return rawY;
+  }
+
+  const parent = nodesById.get(node.parentId);
+  if (!parent || parent.layout?.mode !== 'flex') {
+    return rawY;
+  }
+
+  const parentPadding = Math.max(0, Math.round(parent.layout?.padding ?? 0));
+  if (parent.layout.direction === 'row') {
+    return rawY - parentPadding;
+  }
+
+  const siblingIds = parent.childIds;
+  const siblingIndex = siblingIds.indexOf(node.id);
+  if (siblingIndex <= 0) {
+    return rawY - parentPadding;
+  }
+
+  const previousSiblingId = siblingIds[siblingIndex - 1];
+  const previousSibling = nodesById.get(previousSiblingId);
+  if (!previousSibling) {
+    return rawY - parentPadding;
+  }
+
+  const previousSiblingBottom = Math.round(previousSibling.position.y) + Math.round(previousSibling.size.height);
+  return rawY - previousSiblingBottom;
+};
+
+const resolveLayoutStyleArgs = (
+  node: InvoiceDesignerIrTreeNode,
+  nodesById: Map<string, InvoiceDesignerIrTreeNode>
+) => ({
   width: Math.max(1, Math.round(node.size.width)),
   height: Math.max(1, Math.round(node.size.height)),
   x: Math.max(0, Math.round(node.position.x)),
-  y: Math.max(0, Math.round(node.position.y)),
+  y: resolveNormalizedMarginTop(node, nodesById),
   gap: Math.max(0, Math.round(node.layout?.gap ?? 0)),
   padding: Math.max(0, Math.round(node.layout?.padding ?? 0)),
   align: node.layout?.align ?? 'start',
@@ -298,8 +336,12 @@ const resolveLayoutStyleArgs = (node: InvoiceDesignerIrTreeNode) => ({
   sizing: node.layout?.sizing ?? 'fixed',
 });
 
-const emitLayoutStyleCall = (node: InvoiceDesignerIrTreeNode, lines: string[]) => {
-  const args = resolveLayoutStyleArgs(node);
+const emitLayoutStyleCall = (
+  node: InvoiceDesignerIrTreeNode,
+  lines: string[],
+  nodesById: Map<string, InvoiceDesignerIrTreeNode>
+) => {
+  const args = resolveLayoutStyleArgs(node, nodesById);
   lines.push(`  // layout-mode:${args.mode}; sizing:${args.sizing}`);
   lines.push(
     `  applyGeneratedLayoutStyle(node, ${args.width}, ${args.height}, ${args.x}, ${args.y}, ${args.gap}, ${args.padding}, "${args.align}", "${args.justify}");`
@@ -331,8 +373,7 @@ const emitLayoutHelpers = (lines: string[]) => {
   lines.push('  if (justify == "space-between") {');
   lines.push('    style.borderBottom = "0px";');
   lines.push('  }');
-  lines.push('  // Height is persisted as a zero-width border marker for deterministic output.');
-  lines.push('  style.borderTop = height.toString() + "px solid transparent";');
+  lines.push('  style.height = height.toString() + "px";');
   lines.push('  node.style = style;');
   lines.push('}');
   lines.push('');
@@ -387,7 +428,8 @@ const emitBindingHelpers = (lines: string[]) => {
 const emitNodeFactory = (
   node: InvoiceDesignerIrTreeNode,
   lines: string[],
-  sourceMap: InvoiceDesignerSourceMapEntry[]
+  sourceMap: InvoiceDesignerSourceMapEntry[],
+  nodesById: Map<string, InvoiceDesignerIrTreeNode>
 ) => {
   const symbol = makeNodeSymbol(node.id);
   const startLine = lines.length + 1;
@@ -404,7 +446,7 @@ const emitNodeFactory = (
     } else {
       lines.push('  const node = new SectionElement(children);');
     }
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -421,7 +463,7 @@ const emitNodeFactory = (
     lines.push('  const node = new ColumnElement(children);');
     const span = Number(asRecord(node.metadata).span);
     lines.push(`  node.span = ${Number.isFinite(span) && span > 0 ? Math.floor(span) : 1};`);
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -475,7 +517,7 @@ const emitNodeFactory = (
       lines.push(`  children.push(${makeNodeSymbol(childNode.id)}(viewModel));`);
     });
     lines.push('  const node = new SectionElement(children);');
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -491,7 +533,7 @@ const emitNodeFactory = (
     lines.push(
       `  const node = new ImageElement("${escapeSourceString(src)}", "${escapeSourceString(alt)}");`
     );
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -507,7 +549,7 @@ const emitNodeFactory = (
       ? `resolveInvoiceBinding(viewModel, "${escapeSourceString(bindingKey)}", "${escapeSourceString(format)}")`
       : `"${escapeSourceString(node.name)}"`;
     lines.push(`  const node = new TextElement(${textExpr});`);
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -527,7 +569,7 @@ const emitNodeFactory = (
     lines.push(
       `  const node = new TextElement(${contentExpr});`
     );
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -561,7 +603,7 @@ const emitNodeFactory = (
       const content = pickRenderableLiteral(explicitText, node.name);
       lines.push(`  const node = new TextElement("${escapeSourceString(content)}");`);
     }
-    emitLayoutStyleCall(node, lines);
+    emitLayoutStyleCall(node, lines, nodesById);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -578,7 +620,7 @@ const emitNodeFactory = (
   } else {
     lines.push(`  const node = new TextElement("${escapeSourceString(text.content)}");`);
   }
-  emitLayoutStyleCall(node, lines);
+  emitLayoutStyleCall(node, lines, nodesById);
   lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
   lines.push('  return node;');
   lines.push('}');
@@ -603,6 +645,7 @@ export const generateAssemblyScriptFromIr = (
   const lines: string[] = [];
   const sourceMap: InvoiceDesignerSourceMapEntry[] = [];
   const treeNodes = collectTreeNodes(ir.tree);
+  const nodesById = new Map(treeNodes.map((node) => [node.id, node]));
 
   lines.push('import { JSON } from "json-as";');
   lines.push(
@@ -613,7 +656,7 @@ export const generateAssemblyScriptFromIr = (
   emitBindingHelpers(lines);
 
   treeNodes.forEach((node) => {
-    emitNodeFactory(node, lines, sourceMap);
+    emitNodeFactory(node, lines, sourceMap, nodesById);
     lines.push('');
   });
 

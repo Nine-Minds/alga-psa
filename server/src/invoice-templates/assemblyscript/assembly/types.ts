@@ -63,6 +63,7 @@ export abstract class LayoutElement {
 @json
 export class ElementStyle {
   width: string | null = null;
+  height: string | null = null;
   textAlign: string | null = null;
   fontWeight: string | null = null;
   marginTop: string | null = null;
@@ -82,6 +83,11 @@ export class ElementStyle {
     if (this.width != null) {
       if (!isFirst) json += ", ";
       json += `"width": "${this.width!}"`;
+      isFirst = false;
+    }
+    if (this.height != null) {
+      if (!isFirst) json += ", ";
+      json += `"height": "${this.height!}"`;
       isFirst = false;
     }
     if (this.textAlign != null) {

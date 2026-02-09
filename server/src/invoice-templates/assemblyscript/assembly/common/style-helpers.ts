@@ -3,6 +3,7 @@ import { LayoutElement, ElementStyle } from "../types";
 // Helper class for partial style definitions
 export class PartialStyle {
   width: string | null = null;
+  height: string | null = null;
   textAlign: string | null = null;
   fontWeight: string | null = null;
   marginTop: string | null = null;
@@ -20,6 +21,7 @@ export class PartialStyle {
 export function instantiateStyle(partial: PartialStyle): ElementStyle {
   const style = new ElementStyle();
   style.width = partial.width;
+  style.height = partial.height;
   style.textAlign = partial.textAlign;
   style.fontWeight = partial.fontWeight;
   style.marginTop = partial.marginTop;

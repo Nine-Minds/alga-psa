@@ -229,7 +229,7 @@ describe('layoutVerification', () => {
     expect(byId.get('field-a:containment-x')?.category).toBe('containment');
     expect(byId.get('field-a:alignment-x')?.category).toBe('alignment');
     expect(byId.get('field-b:spacing-y')?.category).toBe('spacing');
-    expect(byId.get('field-b:spacing-y')?.expected).toBe(76);
+    expect(byId.get('field-b:spacing-y')?.expected).toBe(16);
   });
 
   it('omits derived spacing/alignment constraints when node positions are intentionally manual', () => {

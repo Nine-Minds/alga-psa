@@ -235,9 +235,11 @@ describe('generateAssemblyScriptFromIr', () => {
     const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
 
     expect(generated.source).toContain('function applyGeneratedLayoutStyle');
+    expect(generated.source).toContain('style.height = height.toString() + "px";');
+    expect(generated.source).not.toContain('style.borderTop = height.toString() + "px solid transparent";');
     expect(generated.source).toContain('layout-mode:flex; sizing:hug');
     expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 640, 300, 32, 48, 14, 20, "center", "space-between")');
-    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, 12, 16, 0, 0, "start", "start")');
+    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, 12, -4, 0, 0, "start", "start")');
   });
 
   it('matches deterministic golden snapshots for representative design fixtures', () => {
