@@ -252,7 +252,7 @@
   {
     "id": "T028",
     "description": "Totals components degrade gracefully when one or more totals are absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ],
