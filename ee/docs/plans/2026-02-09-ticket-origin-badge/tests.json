@@ -242,7 +242,7 @@
   {
     "id": "T050",
     "description": "MSP TicketDetails renders API origin badge when ticket_origin=api",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
