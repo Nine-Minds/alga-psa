@@ -25,6 +25,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/media/package.json ./packages/media/
 COPY packages/types/package.json ./packages/types/
+COPY packages/ui/package.json ./packages/ui/
 
 # Install dependencies for required workspaces (shared, worker, server, and required @alga-psa/* deps)
 # Skip puppeteer Chrome download to save disk space
@@ -36,7 +37,8 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/db \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/media \
-  --workspace=@alga-psa/types
+  --workspace=@alga-psa/types \
+  --workspace=@alga-psa/ui
 
 # Copy source code for shared + server workspaces
 COPY shared/ ./shared/

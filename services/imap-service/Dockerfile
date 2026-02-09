@@ -23,6 +23,15 @@ COPY shared/ ./shared/
 COPY server/ ./server/
 COPY packages/ ./packages/
 
+WORKDIR /app/packages/core
+RUN npm run build && tsc-alias -p tsconfig.json -f --resolve-full-paths
+
+WORKDIR /app/packages/db
+RUN npm run build && tsc-alias -p tsconfig.json -f --resolve-full-paths
+
+WORKDIR /app/packages/event-schemas
+RUN npm run build
+
 WORKDIR /app/shared
 RUN npm run build
 

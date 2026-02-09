@@ -63,6 +63,9 @@ wait_for_postgres() {
 
     # Store credentials before logging
     export PGPASSWORD="$db_password"
+    export DB_PASSWORD_HOCUSPOCUS="$db_password"
+    export DB_USER_HOCUSPOCUS="$db_user"
+    export DB_NAME_HOCUSPOCUS="$db_name"
 
     # Get DB host from environment or default
     local db_host=${DB_HOST:-postgres}
