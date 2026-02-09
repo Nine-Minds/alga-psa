@@ -151,7 +151,7 @@
   {
     "id": "F018",
     "description": "Render totals components from selected preview invoice amounts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
