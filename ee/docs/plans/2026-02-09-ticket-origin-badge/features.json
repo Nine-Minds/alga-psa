@@ -113,7 +113,7 @@
   {
     "id": "F014",
     "description": "Add shared TicketOriginBadge component with internal/client_portal/inbound_email/api variants and unknown fallback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"

@@ -149,3 +149,4 @@
 - (2026-02-09) **F011 completed (reconciliation pass)**: Implement shared ticket origin normalization/resolver helper with legacy fallback for null historical rows
 - (2026-02-09) **F012 completed (reconciliation pass)**: MSP getTicketById returns normalized ticket_origin for TicketDetails
 - (2026-02-09) **F013 completed (reconciliation pass)**: Client portal getClientTicketDetails returns normalized ticket_origin for TicketDetails
+- (2026-02-09) **F014 completed (reconciliation pass)**: Add shared TicketOriginBadge component with internal/client_portal/inbound_email/api variants and unknown fallback
