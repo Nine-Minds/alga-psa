@@ -723,10 +723,16 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       const scheduleId = typeof stripeSubscription.schedule === 'string'
         ? stripeSubscription.schedule
         : stripeSubscription.schedule.id;
-      logger.info(
-        `[cancelSubscriptionAction] Releasing subscription schedule ${scheduleId} before cancellation`
-      );
-      await stripe.subscriptionSchedules.release(scheduleId);
+      try {
+        logger.info(
+          `[cancelSubscriptionAction][tenant=${session.user.tenant}] Releasing subscription schedule ${scheduleId} before cancellation`
+        );
+        await stripe.subscriptionSchedules.release(scheduleId);
+      } catch (releaseError) {
+        throw new Error(
+          `Failed to release subscription schedule ${scheduleId}: ${releaseError instanceof Error ? releaseError.message : String(releaseError)}`
+        );
+      }
     }
 
     const updatedSubscription = await stripe.subscriptions.update(
@@ -749,7 +755,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       });
 
     logger.info(
-      `[cancelSubscriptionAction] Subscription ${subscription.stripe_subscription_external_id} set to cancel at period end for tenant ${session.user.tenant}`
+      `[cancelSubscriptionAction][tenant=${session.user.tenant}] Subscription ${subscription.stripe_subscription_external_id} set to cancel at period end`
     );
 
     return {
