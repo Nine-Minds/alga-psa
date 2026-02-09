@@ -117,7 +117,7 @@
   {
     "id": "F014",
     "description": "Implement dedicated Preview panel component for the invoice designer visual workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Functional Requirements"
