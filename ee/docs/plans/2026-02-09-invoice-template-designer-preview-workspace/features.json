@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Ensure save flow persists compiler-generated AssemblyScript/Wasm logic used by preview",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {

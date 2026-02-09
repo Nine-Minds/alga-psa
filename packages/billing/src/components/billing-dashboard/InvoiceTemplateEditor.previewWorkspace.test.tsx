@@ -202,6 +202,8 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       template_id: 'tpl-1',
     });
     expect(typeof payload.assemblyScriptSource).toBe('string');
+    expect(payload.assemblyScriptSource).toContain('export function generateLayout');
+    expect(payload.assemblyScriptSource).toContain('ALGA_INVOICE_DESIGNER_STATE_V1');
   });
 
   it('does not trigger save writes from preview interactions alone', async () => {

@@ -20,6 +20,8 @@ import {
   getInvoiceDesignerLocalStorageKey,
   upsertInvoiceDesignerStateInSource,
 } from '../invoice-designer/utils/persistence';
+import { extractInvoiceDesignerIr } from '../invoice-designer/compiler/guiIr';
+import { generateAssemblyScriptFromIr } from '../invoice-designer/compiler/assemblyScriptGenerator';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
@@ -187,8 +189,15 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
           }
         }
 
-        if (typeof dataToSave.assemblyScriptSource === 'string' && dataToSave.assemblyScriptSource.trim().length > 0) {
-          dataToSave.assemblyScriptSource = upsertInvoiceDesignerStateInSource(dataToSave.assemblyScriptSource, workspace);
+        try {
+          const ir = extractInvoiceDesignerIr(workspace);
+          const generated = generateAssemblyScriptFromIr(ir);
+          dataToSave.assemblyScriptSource = upsertInvoiceDesignerStateInSource(generated.source, workspace);
+        } catch (compilerError) {
+          const message = compilerError instanceof Error ? compilerError.message : 'Unknown compiler error';
+          setError(`Failed to generate template source from visual workspace: ${message}`);
+          setIsLoading(false);
+          return;
         }
       }
 

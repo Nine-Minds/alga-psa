@@ -147,3 +147,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) F025 implemented: comparator (`compareLayoutConstraints`) evaluates expected-vs-actual geometry with configurable tolerance and emits structured mismatch deltas.
 - (2026-02-09) F026 implemented: Preview tab now renders verification summary block and mismatch list UI (`invoice-designer-preview-verification-summary`, `...-mismatch-list`, `...-mismatch-item`).
 - (2026-02-09) F027 implemented: verification result now surfaces explicit `pass`/`issues` badge state on each preview run.
+- (2026-02-09) F028 implemented: GUI-template save now compiles workspace snapshot to IR/AssemblyScript and persists generated source (with embedded designer state marker), ensuring save path aligns with preview source generation.
+  - Validation command: `npx vitest run packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
+  - Result: 12/12 tests passed.
