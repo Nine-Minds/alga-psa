@@ -128,7 +128,7 @@
   {
     "id": "T024",
     "description": "Resolver handles unknown future origin values without crashing and returns safe fallback classification",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F011"
