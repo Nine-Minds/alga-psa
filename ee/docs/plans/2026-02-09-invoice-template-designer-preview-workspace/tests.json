@@ -459,7 +459,7 @@
   {
     "id": "T051",
     "description": "Integration test covers switching Sample -> Existing -> Sample and correct output refresh",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031"

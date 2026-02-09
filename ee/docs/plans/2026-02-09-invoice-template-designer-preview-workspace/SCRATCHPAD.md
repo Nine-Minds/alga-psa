@@ -129,3 +129,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T048`: Unit tests verify preview source-state reducer/selectors for all transitions
 - (2026-02-09) Completed `T049`: Integration test covers end-to-end Design -> Preview -> Design workflow with preserved edits
 - (2026-02-09) Completed `T050`: Integration test covers Existing source selection and preview update after detail fetch
+- (2026-02-09) Completed `T051`: Integration test covers switching Sample -> Existing -> Sample and correct output refresh
