@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Users } from 'lucide-react';
 import {
@@ -211,17 +212,15 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Status',
             dataIndex: 'approval_status',
             width: '20%',
-            render: (status) => (
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                status === 'APPROVED'
-                  ? 'bg-green-100 text-green-800'
-                  : status === 'SUBMITTED'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {status}
-              </span>
-            )
+            render: (status) => {
+              const badgeMap: Record<string, { className: string; label: string }> = {
+                SUBMITTED: { className: 'bg-secondary-100 text-secondary-800', label: 'Submitted' },
+                APPROVED: { className: 'bg-green-100 text-green-800', label: 'Approved' },
+                CHANGES_REQUESTED: { className: 'bg-orange-100 text-orange-800', label: 'Changes Requested' },
+              };
+              const config = badgeMap[status] ?? { className: 'bg-gray-100 text-gray-800', label: status };
+              return <Badge className={`${config.className} py-1`}>{config.label}</Badge>;
+            }
           },
           {
             title: 'Actions',
