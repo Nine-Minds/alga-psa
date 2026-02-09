@@ -66,3 +66,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F017`: Kept scaffold placeholder resolution for missing bound values so previews remain legible with sparse data.
 - (2026-02-09) Completed `F018`: Updated totals/totals-row preview rendering to show selected invoice subtotal/tax/total values.
 - (2026-02-09) Completed `F019`: Updated table and dynamic-table preview rendering to display selected invoice line items with empty-state fallback.
+- (2026-02-09) Completed `F020`: Preview canvas now recomputes from current workspace nodes so metadata/layout edits are reflected in preview.

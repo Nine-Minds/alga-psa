@@ -167,7 +167,7 @@
   {
     "id": "F020",
     "description": "Recompute preview output when designer workspace nodes or relevant metadata changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"
