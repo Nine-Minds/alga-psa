@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Implement existing-invoice searchable selector backed by tenant-scoped invoice queries",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
   },
   {

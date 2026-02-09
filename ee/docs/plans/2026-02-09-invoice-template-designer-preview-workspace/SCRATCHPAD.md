@@ -82,3 +82,7 @@ Authoritative preview for invoice template designer:
   - Evidence file: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.ts`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts`
   - Result: 2/2 tests passed.
+- (2026-02-09) F006 completed by verification: Existing source selector queries invoice pages, supports search term filtering, and exposes pagination controls in preview workspace.
+  - Evidence file: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+  - Result: 15/15 tests passed.
