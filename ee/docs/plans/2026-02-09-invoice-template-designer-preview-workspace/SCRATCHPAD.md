@@ -145,3 +145,4 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) F023 implemented: expected verification constraints are derived from GUI compiler IR via `extractExpectedLayoutConstraintsFromIr` (x/y/width/height constraint set per node).
 - (2026-02-09) F024 implemented: rendered geometry extraction (`collectRenderedGeometryFromLayout`) collects normalized x/y/width/height metrics from authoritative render output element styles by node id.
 - (2026-02-09) F025 implemented: comparator (`compareLayoutConstraints`) evaluates expected-vs-actual geometry with configurable tolerance and emits structured mismatch deltas.
+- (2026-02-09) F026 implemented: Preview tab now renders verification summary block and mismatch list UI (`invoice-designer-preview-verification-summary`, `...-mismatch-list`, `...-mismatch-item`).
