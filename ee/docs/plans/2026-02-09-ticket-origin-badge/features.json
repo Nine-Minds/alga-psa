@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Implement shared getTicketOrigin resolver helper with deterministic precedence rules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
