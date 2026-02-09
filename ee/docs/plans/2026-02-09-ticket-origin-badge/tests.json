@@ -68,49 +68,49 @@
   {
     "id": "T020",
     "description": "MSP getTicketById response includes derived ticket_origin",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T021",
     "description": "MSP getTicketById classifies inbound_email when email_metadata exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F004"]
   },
   {
     "id": "T022",
     "description": "MSP getTicketById classifies client_portal when creator is a client user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F006"]
   },
   {
     "id": "T023",
     "description": "MSP getTicketById classifies internal for unresolved records",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F007"]
   },
   {
     "id": "T024",
     "description": "Client portal getClientTicketDetails response includes derived ticket_origin",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T025",
     "description": "Client portal getClientTicketDetails classifies inbound_email when email_metadata exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F004"]
   },
   {
     "id": "T026",
     "description": "Client portal getClientTicketDetails classifies client_portal when creator is client user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F006"]
   },
   {
     "id": "T027",
     "description": "Client portal getClientTicketDetails classifies internal for unresolved records",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F007"]
   },
   {

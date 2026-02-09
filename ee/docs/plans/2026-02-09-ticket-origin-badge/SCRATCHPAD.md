@@ -102,3 +102,9 @@
   - `npx vitest run packages/tickets/src/lib/__tests__/ticketOrigin.test.ts` ✅
   - `npx vitest run packages/types/src/interfaces/ticket.interface.typecheck.test.ts` ✅
   - Note: running Vitest in parallel processes with coverage caused transient `server/coverage/.tmp/coverage-0.json` ENOENT; rerunning sequentially passed.
+- (2026-02-09) Added MSP action tests `packages/tickets/src/actions/ticketActions.ticketOrigin.test.ts` for `T020`–`T023`.
+- (2026-02-09) Added client portal action tests `packages/client-portal/src/actions/client-portal-actions/client-tickets.ticketOrigin.test.ts` for `T024`–`T027`.
+- (2026-02-09) Validation commands:
+  - `npx vitest run packages/tickets/src/actions/ticketActions.ticketOrigin.test.ts` ✅
+  - `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.ticketOrigin.test.ts` ✅
+  - Note: same transient coverage tmp-folder ENOENT can appear when running concurrent Vitest processes; sequential rerun passes.
