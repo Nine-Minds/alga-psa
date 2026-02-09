@@ -141,6 +141,59 @@ const resolveTotalLabelFallback = (node: InvoiceDesignerIrTreeNode): string => {
   return node.name;
 };
 
+const resolveLayoutStyleArgs = (node: InvoiceDesignerIrTreeNode) => ({
+  width: Math.max(1, Math.round(node.size.width)),
+  height: Math.max(1, Math.round(node.size.height)),
+  x: Math.max(0, Math.round(node.position.x)),
+  y: Math.max(0, Math.round(node.position.y)),
+  gap: Math.max(0, Math.round(node.layout?.gap ?? 0)),
+  padding: Math.max(0, Math.round(node.layout?.padding ?? 0)),
+  align: node.layout?.align ?? 'start',
+  justify: node.layout?.justify ?? 'start',
+  mode: node.layout?.mode ?? 'canvas',
+  sizing: node.layout?.sizing ?? 'fixed',
+});
+
+const emitLayoutStyleCall = (node: InvoiceDesignerIrTreeNode, lines: string[]) => {
+  const args = resolveLayoutStyleArgs(node);
+  lines.push(`  // layout-mode:${args.mode}; sizing:${args.sizing}`);
+  lines.push(
+    `  applyGeneratedLayoutStyle(node, ${args.width}, ${args.height}, ${args.x}, ${args.y}, ${args.gap}, ${args.padding}, "${args.align}", "${args.justify}");`
+  );
+};
+
+const emitLayoutHelpers = (lines: string[]) => {
+  lines.push(
+    'function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string): void {'
+  );
+  lines.push('  const style = new ElementStyle();');
+  lines.push('  style.width = width.toString() + "px";');
+  lines.push('  style.paddingLeft = x.toString() + "px";');
+  lines.push('  style.marginTop = y.toString() + "px";');
+  lines.push('  if (padding > 0) {');
+  lines.push('    const px = padding.toString() + "px";');
+  lines.push('    style.paddingTop = px;');
+  lines.push('    style.paddingBottom = px;');
+  lines.push('  }');
+  lines.push('  if (gap > 0) {');
+  lines.push('    style.marginBottom = gap.toString() + "px";');
+  lines.push('  }');
+  lines.push('  if (align == "center") {');
+  lines.push('    style.textAlign = "center";');
+  lines.push('  }');
+  lines.push('  if (align == "end") {');
+  lines.push('    style.textAlign = "right";');
+  lines.push('  }');
+  lines.push('  if (justify == "space-between") {');
+  lines.push('    style.borderBottom = "0px";');
+  lines.push('  }');
+  lines.push('  // Height is persisted as a zero-width border marker for deterministic output.');
+  lines.push('  style.borderTop = height.toString() + "px solid transparent";');
+  lines.push('  node.style = style;');
+  lines.push('}');
+  lines.push('');
+};
+
 const emitBindingHelpers = (lines: string[]) => {
   lines.push('function formatCurrencyMinorUnits(value: f64, currencyCode: string): string {');
   lines.push('  const major = value / 100.0;');
@@ -203,6 +256,7 @@ const emitNodeFactory = (
     } else {
       lines.push('  const node = new SectionElement(children);');
     }
+    emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -219,6 +273,7 @@ const emitNodeFactory = (
     lines.push('  const node = new ColumnElement(children);');
     const span = Number(asRecord(node.metadata).span);
     lines.push(`  node.span = ${Number.isFinite(span) && span > 0 ? Math.floor(span) : 1};`);
+    emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -272,6 +327,7 @@ const emitNodeFactory = (
       lines.push(`  children.push(${makeNodeSymbol(childNode.id)}(viewModel));`);
     });
     lines.push('  const node = new SectionElement(children);');
+    emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -287,6 +343,7 @@ const emitNodeFactory = (
     lines.push(
       `  const node = new ImageElement("${escapeSourceString(src)}", "${escapeSourceString(alt)}");`
     );
+    emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -302,6 +359,7 @@ const emitNodeFactory = (
       ? `resolveInvoiceBinding(viewModel, "${escapeSourceString(bindingKey)}", "${escapeSourceString(format)}")`
       : `"${escapeSourceString(node.name)}"`;
     lines.push(`  const node = new TextElement(${textExpr});`);
+    emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -320,6 +378,7 @@ const emitNodeFactory = (
         bindingKey
       )}", "${escapeSourceString(format)}"));`
     );
+    emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -336,6 +395,7 @@ const emitNodeFactory = (
   } else {
     lines.push(`  const node = new TextElement("${escapeSourceString(text.content)}");`);
   }
+  emitLayoutStyleCall(node, lines);
   lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
   lines.push('  return node;');
   lines.push('}');
@@ -363,9 +423,10 @@ export const generateAssemblyScriptFromIr = (
 
   lines.push('import { JSON } from "json-as";');
   lines.push(
-    'import { InvoiceViewModel, InvoiceItem, LayoutElement, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";'
+    'import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";'
   );
   lines.push('');
+  emitLayoutHelpers(lines);
   emitBindingHelpers(lines);
 
   treeNodes.forEach((node) => {

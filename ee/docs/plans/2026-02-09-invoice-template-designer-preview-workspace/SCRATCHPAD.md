@@ -106,3 +106,7 @@ Authoritative preview for invoice template designer:
   - Totals bindings: totals rows/containers emit subtotal/tax/total expressions from invoice model.
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
   - Result: 5/5 tests passed.
+- (2026-02-09) F011 implemented: generator emits layout/style declarations from GUI node geometry + layout metadata through deterministic `applyGeneratedLayoutStyle(...)` calls.
+  - Includes width/height markers, position-derived spacing, and layout align/justify hints.
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
+  - Result: 6/6 tests passed.

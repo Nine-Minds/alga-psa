@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Generate layout/style logic in AssemblyScript output from GUI layout constraints",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

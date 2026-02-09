@@ -116,4 +116,36 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).toContain('resolveItemBinding(viewModel, rowItem, "item.total", "currency")');
     expect(generated.source).toContain('Amount Due: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")');
   });
+
+  it('emits layout/style declarations derived from node size, position, and layout metadata', () => {
+    const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
+    const pageNode = createNode('page', 'page', 'doc', { childIds: ['section-1'] });
+    const sectionNode = createNode('section-1', 'section', 'page', {
+      position: { x: 32, y: 48 },
+      size: { width: 640, height: 300 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 14,
+        padding: 20,
+        justify: 'space-between',
+        align: 'center',
+        sizing: 'hug',
+      },
+      childIds: ['field-1'],
+    });
+    const fieldNode = createNode('field-1', 'field', 'section-1', {
+      position: { x: 12, y: 16 },
+      size: { width: 320, height: 48 },
+      metadata: { bindingKey: 'invoice.number' },
+    });
+
+    const workspace = createWorkspace([documentNode, pageNode, sectionNode, fieldNode]);
+    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
+
+    expect(generated.source).toContain('function applyGeneratedLayoutStyle');
+    expect(generated.source).toContain('layout-mode:flex; sizing:hug');
+    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 640, 300, 32, 48, 14, 20, "center", "space-between")');
+    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, 12, 16, 0, 0, "start", "start")');
+  });
 });
