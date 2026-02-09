@@ -201,7 +201,7 @@
   {
     "id": "T040",
     "description": "TicketOriginBadge renders Created Internally label and data attribute for internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
