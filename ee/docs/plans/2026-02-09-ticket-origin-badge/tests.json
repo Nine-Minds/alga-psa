@@ -298,7 +298,7 @@
   {
     "id": "T071",
     "description": "Existing response-state badge behavior remains unchanged in MSP and client portal ticket details",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

@@ -192,3 +192,4 @@
 - (2026-02-09) **T060 completed (reconciliation pass)**: English common locale includes ticket origin keys for internal/client_portal/inbound_email/api/other
 - (2026-02-09) **T061 completed (reconciliation pass)**: English clientPortal locale includes ticket origin keys for internal/client_portal/inbound_email/api/other
 - (2026-02-09) **T070 completed (reconciliation pass)**: Existing comment ResponseSourceBadge tests continue to pass after ticket-origin changes
+- (2026-02-09) **T071 completed (reconciliation pass)**: Existing response-state badge behavior remains unchanged in MSP and client portal ticket details
