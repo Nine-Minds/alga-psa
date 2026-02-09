@@ -228,7 +228,7 @@
   {
     "id": "F027",
     "description": "Add stable automation IDs for preview tabs, source controls, selectors, and empty/error states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
