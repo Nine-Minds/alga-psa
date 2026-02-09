@@ -1,18 +1,32 @@
 import React from 'react';
 
 export type RadioOption = {
+  /** Option value submitted on selection. */
   value: string;
+  /** Display label. */
   label: string;
+  /** Disable this individual option. */
   disabled?: boolean;
 };
 
 export type RadioGroupProps = {
+  /** Available radio options. */
   options: RadioOption[];
+  /** Currently selected value. */
   value?: string;
+  /** Callback fired when the selection changes. */
   onChange?: (value: string) => void;
+  /** HTML `name` attribute shared by all radio inputs. Auto-generated if omitted. */
   name?: string;
+  /** Disable all options in the group. */
   disabled?: boolean;
+  /** Layout direction of the radio items.
+   * @default 'vertical'
+   */
   orientation?: 'horizontal' | 'vertical';
+  /** Size preset controlling radio circle and label font size.
+   * @default 'md'
+   */
   size?: 'sm' | 'md' | 'lg';
 };
 
@@ -22,6 +36,7 @@ const sizeMap = {
   lg: { radio: 20, dot: 10, fontSize: 16, gap: 10 },
 };
 
+/** Group of mutually exclusive radio buttons. */
 export function RadioGroup({
   options,
   value,

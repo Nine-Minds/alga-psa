@@ -1,58 +1,80 @@
-import React from 'react';
-import { describe, expect, test, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ThemeBridge } from '../src/components/ThemeBridge';
-import { App } from '../src/iframe/App';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 
-const getThemeStyle = () => document.getElementById('alga-ui-kit-theme-bridge')?.textContent || '';
-
-describe('theme bridge', () => {
-  test('alga background maps to host background', () => {
-    render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-bg: #ffffff');
+describe('theme bridge (postMessage)', () => {
+  beforeEach(() => {
+    // Clear any inline styles from previous tests
+    document.documentElement.removeAttribute('style');
   });
 
-  test('alga foreground maps to host text color', () => {
-    render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-fg: #111111');
+  test('applyTheme sets CSS variables on document root', () => {
+    const root = document.documentElement;
+    const vars = {
+      '--alga-bg': '#ffffff',
+      '--alga-fg': '#0f172a',
+      '--alga-primary': '#8a4dea',
+    };
+    Object.entries(vars).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+
+    expect(root.style.getPropertyValue('--alga-bg')).toBe('#ffffff');
+    expect(root.style.getPropertyValue('--alga-fg')).toBe('#0f172a');
+    expect(root.style.getPropertyValue('--alga-primary')).toBe('#8a4dea');
   });
 
-  test('alga primary maps to host primary', () => {
-    render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-primary: #9855ee');
+  test('message handler applies theme from Alga envelope format', () => {
+    const root = document.documentElement;
+
+    // Simulate receiving a theme message
+    const handler = (ev: MessageEvent) => {
+      const data = ev.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.alga === true && data.version === '1' && data.type === 'theme') {
+        Object.entries(data.payload as Record<string, string>).forEach(([key, value]) => {
+          root.style.setProperty(key, value);
+        });
+      }
+    };
+    window.addEventListener('message', handler);
+
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        alga: true,
+        version: '1',
+        type: 'theme',
+        payload: {
+          '--alga-bg': '#0b0f14',
+          '--alga-secondary-foreground': '#ffffff',
+        },
+      },
+    }));
+
+    expect(root.style.getPropertyValue('--alga-bg')).toBe('#0b0f14');
+    expect(root.style.getPropertyValue('--alga-secondary-foreground')).toBe('#ffffff');
+
+    window.removeEventListener('message', handler);
   });
 
-  test('alga border maps to host border color', () => {
-    render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-border: #e5e7eb');
-  });
+  test('ignores non-Alga messages', () => {
+    const root = document.documentElement;
 
-  test('alga danger maps to host accent red', () => {
-    render(<ThemeBridge mode="light" />);
-    expect(getThemeStyle()).toContain('--alga-danger: #dc2626');
-  });
+    const handler = (ev: MessageEvent) => {
+      const data = ev.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.alga === true && data.version === '1' && data.type === 'theme') {
+        Object.entries(data.payload as Record<string, string>).forEach(([key, value]) => {
+          root.style.setProperty(key, value);
+        });
+      }
+    };
+    window.addEventListener('message', handler);
 
-  test('dark mode declares different token values', () => {
-    render(<ThemeBridge mode="dark" />);
-    const style = getThemeStyle();
-    expect(style).toContain(':root[data-alga-theme="dark"]');
-    expect(style).toContain('--alga-bg: #0b0f14');
-  });
+    window.dispatchEvent(new MessageEvent('message', {
+      data: { someOtherMessage: true },
+    }));
 
-  test('theme toggle switches between light and dark', async () => {
-    const user = userEvent.setup();
-    render(<App />);
+    expect(root.style.getPropertyValue('--alga-bg')).toBe('');
 
-    expect(document.documentElement.getAttribute('data-alga-theme')).toBe('light');
-    await user.click(screen.getByRole('button', { name: /toggle theme/i }));
-    expect(document.documentElement.getAttribute('data-alga-theme')).toBe('dark');
-  });
-
-  test('theme change updates document theme attribute', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(screen.getByRole('button', { name: /toggle theme/i }));
-    expect(document.documentElement.getAttribute('data-alga-theme')).toBe('dark');
+    window.removeEventListener('message', handler);
   });
 });

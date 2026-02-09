@@ -1,9 +1,7 @@
 import React from 'react';
 import {
-  Button,
   Tabs,
 } from '@alga/ui-kit';
-import { ThemeBridge, ThemeMode } from '../components/ThemeBridge';
 import { ButtonDemo } from '../demos/ButtonDemo';
 import { InputDemo } from '../demos/InputDemo';
 import { SelectDemo } from '../demos/SelectDemo';
@@ -56,14 +54,7 @@ const contentStyle: React.CSSProperties = {
   padding: '20px',
 };
 
-const themeToggleStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-};
-
 export function App() {
-  const [mode, setMode] = React.useState<ThemeMode>('light');
 
   const tabs = [
     {
@@ -143,18 +134,8 @@ export function App() {
 
   return (
     <div style={pageStyle}>
-      <ThemeBridge mode={mode} />
       <header style={headerStyle}>
         <strong style={{ fontSize: 18 }}>UI Kit Showcase</strong>
-        <div style={themeToggleStyle}>
-          <span style={{ color: 'var(--alga-muted-fg)' }}>{mode === 'light' ? 'Light' : 'Dark'} mode</span>
-          <Button
-            variant="secondary"
-            onClick={() => setMode((prev) => (prev === 'light' ? 'dark' : 'light'))}
-          >
-            Toggle Theme
-          </Button>
-        </div>
       </header>
       <main style={contentStyle}>
         <Tabs tabs={tabs} defaultActiveKey="core" />
