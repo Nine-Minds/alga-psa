@@ -210,7 +210,7 @@
   {
     "id": "F025",
     "description": "Guarantee preview interactions perform no template or invoice persistence writes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Non-functional Requirements"
