@@ -184,7 +184,7 @@
   {
     "id": "F022",
     "description": "Enforce read-only behavior in preview mode (no drag/drop/resize/delete/select mutations)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"
