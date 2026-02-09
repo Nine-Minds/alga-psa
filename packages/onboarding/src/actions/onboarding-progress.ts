@@ -30,6 +30,7 @@ export interface OnboardingStepServerState {
   progressValue?: number | null;
   meta?: Record<string, unknown>;
   substeps?: OnboardingSubstepServerState[];
+  dismissed?: boolean;
 }
 
 export interface OnboardingProgressResponse {
