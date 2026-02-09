@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Add shared TicketOrigin type to @alga-psa/types for ticket-level origin",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]

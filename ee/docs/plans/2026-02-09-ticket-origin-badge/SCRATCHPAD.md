@@ -67,3 +67,4 @@
   - `TICKET_ORIGINS.CLIENT_PORTAL = 'client_portal'`
   - `TICKET_ORIGINS.INBOUND_EMAIL = 'inbound_email'`
 - (2026-02-09) Validation command: `npx vitest run packages/types/src/interfaces/barrel.test.ts` (fails due to pre-existing unrelated `tax.interfaces` barrel mismatch).
+- (2026-02-09) **F002 completed**: Added shared `TicketOrigin` union type and `ITicket.ticket_origin?: TicketOrigin` in `packages/types/src/interfaces/ticket.interfaces.ts` for ticket-level origin typing across packages.

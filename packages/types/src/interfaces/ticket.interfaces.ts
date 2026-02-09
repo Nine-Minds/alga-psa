@@ -20,6 +20,9 @@ export const TICKET_ORIGINS = {
   INBOUND_EMAIL: 'inbound_email',
 } as const;
 
+export type TicketOrigin =
+  (typeof TICKET_ORIGINS)[keyof typeof TICKET_ORIGINS];
+
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
   master_ticket_id?: string | null;
@@ -51,6 +54,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
   // Response state tracking (who needs to respond next)
   response_state?: TicketResponseState;
+  // Derived ticket creation origin signal for UI display.
+  ticket_origin?: TicketOrigin;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
