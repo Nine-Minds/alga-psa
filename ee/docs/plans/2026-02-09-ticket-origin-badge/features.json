@@ -80,7 +80,7 @@
   {
     "id": "F010",
     "description": "Update shared TicketModel validation so ticket_origin is preserved and persisted",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]

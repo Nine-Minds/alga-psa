@@ -145,3 +145,4 @@
 - (2026-02-09) **F007 completed (reconciliation pass)**: Client portal create path writes ticket_origin=client_portal
 - (2026-02-09) **F008 completed (reconciliation pass)**: Inbound email create path writes ticket_origin=inbound_email
 - (2026-02-09) **F009 completed (reconciliation pass)**: API create path writes ticket_origin=api
+- (2026-02-09) **F010 completed (reconciliation pass)**: Update shared TicketModel validation so ticket_origin is preserved and persisted
