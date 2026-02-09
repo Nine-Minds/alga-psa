@@ -142,3 +142,4 @@
 - (2026-02-09) **F004 completed (reconciliation pass)**: Backfill existing tickets.ticket_origin using legacy signals (email_metadata, creator user_type, fallback internal)
 - (2026-02-09) **F005 completed (reconciliation pass)**: Keep ticket_origin storage extensible for future values (for example ai_agent) without schema redesign
 - (2026-02-09) **F006 completed (reconciliation pass)**: Internal MSP create path writes ticket_origin=internal
+- (2026-02-09) **F007 completed (reconciliation pass)**: Client portal create path writes ticket_origin=client_portal

@@ -53,7 +53,7 @@
   {
     "id": "F007",
     "description": "Client portal create path writes ticket_origin=client_portal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
