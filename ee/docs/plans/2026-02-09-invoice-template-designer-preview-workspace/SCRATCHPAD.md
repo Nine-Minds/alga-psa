@@ -83,3 +83,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-workspace/tests.json ee/docs/plans/2026-02-09-invoice-template-designer-preview-workspace/SCRATCHPAD.md packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx && git commit -m "test(T001): cover visual workspace design and preview tabs"- (2026-02-09) Completed `T002`: Visual editor defaults to `Design` on initial load
 - (2026-02-09) Completed `T003`: Switching `Design` -> `Preview` -> `Design` preserves unsaved workspace state
 - (2026-02-09) Completed `T004`: Switching `Visual` -> `Code` -> `Visual` does not break nested tab state
+- (2026-02-09) Completed `T005`: Preview state initializes with valid defaults (source, selection ids, loading/error)

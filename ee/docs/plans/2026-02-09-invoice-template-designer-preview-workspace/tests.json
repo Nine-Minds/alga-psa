@@ -39,7 +39,7 @@
   {
     "id": "T005",
     "description": "Preview state initializes with valid defaults (source, selection ids, loading/error)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
