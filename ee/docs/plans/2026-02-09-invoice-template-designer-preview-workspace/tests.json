@@ -213,7 +213,7 @@
   {
     "id": "T024",
     "description": "Field binding resolution prefers real preview data value when available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F029"
