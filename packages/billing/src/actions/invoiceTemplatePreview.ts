@@ -26,6 +26,10 @@ import {
   compareLayoutConstraints,
   extractExpectedLayoutConstraintsFromIr,
 } from '../lib/invoice-template-compiler/layoutVerification';
+import {
+  getCachedPreviewCompileArtifact,
+  setCachedPreviewCompileArtifact,
+} from './invoiceTemplatePreviewCache';
 
 const execPromise = promisify(exec);
 
@@ -52,14 +56,6 @@ type PreviewCompileFailure = {
 type PreviewCompileResult = PreviewCompileSuccess | PreviewCompileFailure;
 
 const sanitizeForPath = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '_');
-const PREVIEW_COMPILE_CACHE_LIMIT = 32;
-
-type PreviewCompileCacheEntry = {
-  wasmBinary: Buffer;
-  compileCommand: string;
-};
-
-const previewCompileCache = new Map<string, PreviewCompileCacheEntry>();
 
 const resolveCacheKey = (input: PreviewCompileInput): string => {
   const normalizedHash = sanitizeForPath(input.sourceHash || '').slice(0, 96);
@@ -68,38 +64,7 @@ const resolveCacheKey = (input: PreviewCompileInput): string => {
   }
   return `inline_${sanitizeForPath(input.source).slice(0, 96)}`;
 };
-
-const getCachedPreviewCompileArtifact = (cacheKey: string): PreviewCompileCacheEntry | null => {
-  const existing = previewCompileCache.get(cacheKey);
-  if (!existing) {
-    return null;
-  }
-
-  // Maintain LRU ordering by reinserting hits.
-  previewCompileCache.delete(cacheKey);
-  previewCompileCache.set(cacheKey, existing);
-  return existing;
-};
-
-const setCachedPreviewCompileArtifact = (cacheKey: string, value: PreviewCompileCacheEntry) => {
-  previewCompileCache.set(cacheKey, value);
-  while (previewCompileCache.size > PREVIEW_COMPILE_CACHE_LIMIT) {
-    const oldestKey = previewCompileCache.keys().next().value;
-    if (!oldestKey) {
-      break;
-    }
-    previewCompileCache.delete(oldestKey);
-  }
-};
-
-export const __previewCompileCacheTestUtils = {
-  clear: () => previewCompileCache.clear(),
-  size: () => previewCompileCache.size,
-  get: (key: string) => previewCompileCache.get(key) ?? null,
-  set: (key: string, value: PreviewCompileCacheEntry) => setCachedPreviewCompileArtifact(key, value),
-};
-
-export const buildPreviewCompileCommand = (params: {
+const buildPreviewCompileCommand = (params: {
   tempCompileDir: string;
   sourceFilePath: string;
   wasmOutputPath: string;

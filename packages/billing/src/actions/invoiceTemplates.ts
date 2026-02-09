@@ -356,7 +356,7 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
 // Promisify exec for easier async/await usage
 const execPromise = promisify(exec);
 
-export const buildTenantTemplateCompileCommand = (params: {
+const buildTenantTemplateCompileCommand = (params: {
     tempCompileDir: string;
     sourceFilePath: string;
     wasmOutputPath: string;

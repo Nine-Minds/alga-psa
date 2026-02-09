@@ -4,7 +4,7 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
 }));
 
-import { __previewCompileCacheTestUtils } from './invoiceTemplatePreview';
+import { __previewCompileCacheTestUtils } from './invoiceTemplatePreviewCache';
 
 describe('invoiceTemplatePreview compile cache', () => {
   beforeEach(() => {

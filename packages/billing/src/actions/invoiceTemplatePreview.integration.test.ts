@@ -7,8 +7,8 @@ import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
 import {
   compilePreviewAssemblyScript,
   runAuthoritativeInvoiceTemplatePreview,
-  __previewCompileCacheTestUtils,
 } from './invoiceTemplatePreview';
+import { __previewCompileCacheTestUtils } from './invoiceTemplatePreviewCache';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
