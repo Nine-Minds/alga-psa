@@ -46,12 +46,8 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   }
 
   if (node.type === 'field') {
-    const bindingKey =
-      asTrimmedString(metadata.bindingKey) ||
-      asTrimmedString(metadata.binding) ||
-      asTrimmedString(metadata.path);
     return {
-      content: bindingKey ? `{{${bindingKey}}}` : node.name,
+      content: node.name,
       variant: null,
     };
   }
@@ -116,6 +112,77 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   };
 };
 
+const resolveFieldBindingKey = (node: InvoiceDesignerIrTreeNode): string =>
+  asTrimmedString(asRecord(node.metadata).bindingKey) ||
+  asTrimmedString(asRecord(node.metadata).binding) ||
+  asTrimmedString(asRecord(node.metadata).path);
+
+const resolveFieldFormat = (node: InvoiceDesignerIrTreeNode): string => {
+  const format = asTrimmedString(asRecord(node.metadata).format).toLowerCase();
+  if (format === 'currency' || format === 'number' || format === 'date') {
+    return format;
+  }
+  return 'text';
+};
+
+const resolveTotalBindingFallback = (node: InvoiceDesignerIrTreeNode): string => {
+  if (node.type === 'subtotal') return 'invoice.subtotal';
+  if (node.type === 'tax') return 'invoice.tax';
+  if (node.type === 'discount') return 'invoice.discount';
+  if (node.type === 'custom-total') return 'invoice.total';
+  return 'invoice.total';
+};
+
+const resolveTotalLabelFallback = (node: InvoiceDesignerIrTreeNode): string => {
+  if (node.type === 'subtotal') return 'Subtotal';
+  if (node.type === 'tax') return 'Tax';
+  if (node.type === 'discount') return 'Discount';
+  if (node.type === 'custom-total') return 'Total';
+  return node.name;
+};
+
+const emitBindingHelpers = (lines: string[]) => {
+  lines.push('function formatCurrencyMinorUnits(value: f64, currencyCode: string): string {');
+  lines.push('  const major = value / 100.0;');
+  lines.push('  return currencyCode + " " + major.toString();');
+  lines.push('}');
+  lines.push('');
+  lines.push('function formatBindingValueNumeric(value: f64, format: string, currencyCode: string): string {');
+  lines.push('  if (format == "currency") {');
+  lines.push('    return formatCurrencyMinorUnits(value, currencyCode);');
+  lines.push('  }');
+  lines.push('  return value.toString();');
+  lines.push('}');
+  lines.push('');
+  lines.push('function resolveInvoiceBinding(viewModel: InvoiceViewModel, key: string, format: string): string {');
+  lines.push('  if (key == "invoice.number" || key == "invoice.invoiceNumber") return viewModel.invoiceNumber;');
+  lines.push('  if (key == "invoice.issueDate") return viewModel.issueDate;');
+  lines.push('  if (key == "invoice.dueDate") return viewModel.dueDate;');
+  lines.push('  if (key == "invoice.poNumber") return viewModel.poNumber != null ? viewModel.poNumber! : "";');
+  lines.push('  if (key == "invoice.currencyCode") return viewModel.currencyCode;');
+  lines.push('  if (key == "invoice.subtotal") return formatBindingValueNumeric(viewModel.subtotal, format, viewModel.currencyCode);');
+  lines.push('  if (key == "invoice.tax") return formatBindingValueNumeric(viewModel.tax, format, viewModel.currencyCode);');
+  lines.push('  if (key == "invoice.total") return formatBindingValueNumeric(viewModel.total, format, viewModel.currencyCode);');
+  lines.push('  if (key == "invoice.discount") return "0";');
+  lines.push('  if (key == "customer.name") return viewModel.customer != null ? viewModel.customer!.name : "";');
+  lines.push('  if (key == "customer.address") return viewModel.customer != null ? viewModel.customer!.address : "";');
+  lines.push('  if (key == "tenant.name") return viewModel.tenantClient != null && viewModel.tenantClient!.name != null ? viewModel.tenantClient!.name! : "";');
+  lines.push('  if (key == "tenant.address") return viewModel.tenantClient != null && viewModel.tenantClient!.address != null ? viewModel.tenantClient!.address! : "";');
+  lines.push('  return "";');
+  lines.push('}');
+  lines.push('');
+  lines.push('function resolveItemBinding(viewModel: InvoiceViewModel, item: InvoiceItem, key: string, format: string): string {');
+  lines.push('  if (key == "item.id") return item.id;');
+  lines.push('  if (key == "item.description") return item.description;');
+  lines.push('  if (key == "item.quantity") return formatBindingValueNumeric(item.quantity, format, viewModel.currencyCode);');
+  lines.push('  if (key == "item.unitPrice") return formatBindingValueNumeric(item.unitPrice, format, viewModel.currencyCode);');
+  lines.push('  if (key == "item.total") return formatBindingValueNumeric(item.total, format, viewModel.currencyCode);');
+  lines.push('  if (key == "item.category") return item.category != null ? item.category! : "";');
+  lines.push('  return resolveInvoiceBinding(viewModel, key, format);');
+  lines.push('}');
+  lines.push('');
+};
+
 const emitNodeFactory = (
   node: InvoiceDesignerIrTreeNode,
   lines: string[],
@@ -166,15 +233,40 @@ const emitNodeFactory = (
     if (node.type === 'table' || node.type === 'dynamic-table') {
       lines.push('  children.push(new TextElement("Table"));');
       const columns = Array.isArray(metadata.columns) ? (metadata.columns as Array<Record<string, unknown>>) : [];
-      columns.slice(0, 4).forEach((column) => {
+      const resolvedColumns =
+        columns.length > 0
+          ? columns
+          : [
+              { header: 'Description', key: 'item.description', type: 'text' },
+              { header: 'Qty', key: 'item.quantity', type: 'number' },
+              { header: 'Rate', key: 'item.unitPrice', type: 'currency' },
+              { header: 'Amount', key: 'item.total', type: 'currency' },
+            ];
+      resolvedColumns.slice(0, 4).forEach((column) => {
         const header = asTrimmedString(column.header) || asTrimmedString(column.key) || 'Column';
         lines.push(`  children.push(new TextElement("${escapeSourceString(header)}"));`);
       });
+      lines.push('  for (let itemIndex = 0; itemIndex < viewModel.items.length; itemIndex++) {');
+      lines.push('    const rowItem = viewModel.items[itemIndex];');
+      resolvedColumns.slice(0, 4).forEach((column) => {
+        const key = asTrimmedString(column.key) || 'item.description';
+        const format = asTrimmedString(column.type) || 'text';
+        lines.push(
+          `    children.push(new TextElement(resolveItemBinding(viewModel, rowItem, "${escapeSourceString(
+            key
+          )}", "${escapeSourceString(format)}")));`
+        );
+      });
+      lines.push('  }');
     } else {
       lines.push('  children.push(new TextElement("Totals"));');
-      lines.push('  children.push(new TextElement("Subtotal"));');
-      lines.push('  children.push(new TextElement("Tax"));');
-      lines.push('  children.push(new TextElement("Total"));');
+      lines.push(
+        '  children.push(new TextElement("Subtotal: " + resolveInvoiceBinding(viewModel, "invoice.subtotal", "currency")));'
+      );
+      lines.push('  children.push(new TextElement("Tax: " + resolveInvoiceBinding(viewModel, "invoice.tax", "currency")));');
+      lines.push(
+        '  children.push(new TextElement("Total: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")));'
+      );
     }
     node.children.forEach((childNode) => {
       lines.push(`  children.push(${makeNodeSymbol(childNode.id)}(viewModel));`);
@@ -194,6 +286,39 @@ const emitNodeFactory = (
     const alt = asTrimmedString(metadata.alt) || node.name || 'Image';
     lines.push(
       `  const node = new ImageElement("${escapeSourceString(src)}", "${escapeSourceString(alt)}");`
+    );
+    lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
+    lines.push('  return node;');
+    lines.push('}');
+    const endLine = lines.length;
+    sourceMap.push({ nodeId: node.id, symbol, startLine, endLine });
+    return;
+  }
+
+  if (node.type === 'field') {
+    const bindingKey = resolveFieldBindingKey(node);
+    const format = resolveFieldFormat(node);
+    const textExpr = bindingKey
+      ? `resolveInvoiceBinding(viewModel, "${escapeSourceString(bindingKey)}", "${escapeSourceString(format)}")`
+      : `"${escapeSourceString(node.name)}"`;
+    lines.push(`  const node = new TextElement(${textExpr});`);
+    lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
+    lines.push('  return node;');
+    lines.push('}');
+    const endLine = lines.length;
+    sourceMap.push({ nodeId: node.id, symbol, startLine, endLine });
+    return;
+  }
+
+  if (node.type === 'subtotal' || node.type === 'tax' || node.type === 'discount' || node.type === 'custom-total') {
+    const metadata = asRecord(node.metadata);
+    const label = asTrimmedString(metadata.label) || resolveTotalLabelFallback(node);
+    const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalBindingFallback(node);
+    const format = resolveFieldFormat(node);
+    lines.push(
+      `  const node = new TextElement("${escapeSourceString(label)}: " + resolveInvoiceBinding(viewModel, "${escapeSourceString(
+        bindingKey
+      )}", "${escapeSourceString(format)}"));`
     );
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
@@ -238,9 +363,10 @@ export const generateAssemblyScriptFromIr = (
 
   lines.push('import { JSON } from "json-as";');
   lines.push(
-    'import { InvoiceViewModel, LayoutElement, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";'
+    'import { InvoiceViewModel, InvoiceItem, LayoutElement, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";'
   );
   lines.push('');
+  emitBindingHelpers(lines);
 
   treeNodes.forEach((node) => {
     emitNodeFactory(node, lines, sourceMap);

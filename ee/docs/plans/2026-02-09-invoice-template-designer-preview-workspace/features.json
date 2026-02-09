@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Generate field/table/totals binding logic in AssemblyScript output from GUI metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

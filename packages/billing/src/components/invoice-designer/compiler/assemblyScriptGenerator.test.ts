@@ -88,4 +88,32 @@ describe('generateAssemblyScriptFromIr', () => {
       expect(entry.symbol).toContain('createNode_');
     });
   });
+
+  it('emits field, table, and totals binding logic from GUI metadata', () => {
+    const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
+    const pageNode = createNode('page', 'page', 'doc', { childIds: ['field-1', 'table-1', 'totals-row-1'] });
+    const fieldNode = createNode('field-1', 'field', 'page', {
+      metadata: { bindingKey: 'customer.name', format: 'text' },
+    });
+    const tableNode = createNode('table-1', 'table', 'page', {
+      metadata: {
+        columns: [
+          { header: 'Description', key: 'item.description', type: 'text' },
+          { header: 'Amount', key: 'item.total', type: 'currency' },
+        ],
+      },
+    });
+    const totalsRowNode = createNode('totals-row-1', 'custom-total', 'page', {
+      metadata: { label: 'Amount Due', bindingKey: 'invoice.total', format: 'currency' },
+    });
+    const workspace = createWorkspace([documentNode, pageNode, fieldNode, tableNode, totalsRowNode]);
+
+    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
+
+    expect(generated.source).toContain('function resolveInvoiceBinding');
+    expect(generated.source).toContain('resolveInvoiceBinding(viewModel, "customer.name", "text")');
+    expect(generated.source).toContain('function resolveItemBinding');
+    expect(generated.source).toContain('resolveItemBinding(viewModel, rowItem, "item.total", "currency")');
+    expect(generated.source).toContain('Amount Due: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")');
+  });
 });

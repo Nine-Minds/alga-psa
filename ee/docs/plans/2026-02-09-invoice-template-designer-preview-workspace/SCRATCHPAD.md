@@ -100,3 +100,9 @@ Authoritative preview for invoice template designer:
   - Files: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts`, `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
   - Result: 4/4 tests passed.
+- (2026-02-09) F010 implemented: generator now emits binding helper functions and node-level binding expressions for field/table/totals metadata.
+  - Field bindings: `resolveInvoiceBinding(...)` emitted from `bindingKey` + `format`.
+  - Table bindings: per-column row emission uses `resolveItemBinding(...)`.
+  - Totals bindings: totals rows/containers emit subtotal/tax/total expressions from invoice model.
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
+  - Result: 5/5 tests passed.
