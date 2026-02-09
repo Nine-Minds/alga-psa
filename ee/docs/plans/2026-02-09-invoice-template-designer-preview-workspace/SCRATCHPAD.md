@@ -51,3 +51,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F002`: Defaulted the nested visual workspace state to Design while preserving top-level Visual/Code tabs.
 - (2026-02-09) Completed `F003`: Design/Preview toggling now keeps workspace data in the shared designer store so unsaved node edits persist.
 - (2026-02-09) Completed `F004`: Lifted nested visual tab state into InvoiceTemplateEditor so Visual->Code->Visual returns to the prior nested tab.
+- (2026-02-09) Completed `F005`: Added reducer-driven preview session state for source kind, sample/invoice selection, and async loading/error state.

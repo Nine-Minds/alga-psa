@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "Add preview session state model (source kind, selected sample id, selected invoice id, loading/error flags)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
