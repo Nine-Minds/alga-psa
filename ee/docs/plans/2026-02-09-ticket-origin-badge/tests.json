@@ -258,7 +258,7 @@
   {
     "id": "T052",
     "description": "Client portal TicketDetails renders API origin badge when ticket_origin=api",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
