@@ -18,39 +18,13 @@ import {
   removeRoleFromUser,
   getRoles
 } from '@alga-psa/auth/actions';
-
-// Dynamic imports to avoid circular dependency (clients -> client-portal -> clients)
-// TODO: Consolidate after circular dependency is resolved
-type InvitationHistoryItem = {
-  invitation_id: string;
-  email: string;
-  created_at: string | Date;
-  expires_at: string | Date;
-  status: 'pending' | 'accepted' | 'expired' | 'revoked';
-  used_at?: string | Date | null;
-};
-
-const getClientPortalModule = () => '@alga-psa/' + 'client-portal/actions';
-
-const sendPortalInvitation = async (contactId: string): Promise<{ success: boolean; message?: string; invitation?: any }> => {
-  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
-  return mod.sendPortalInvitation(contactId);
-};
-
-const getPortalInvitations = async (contactId: string): Promise<InvitationHistoryItem[]> => {
-  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
-  return mod.getPortalInvitations(contactId);
-};
-
-const revokePortalInvitation = async (invitationId: string): Promise<{ success: boolean; message?: string }> => {
-  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
-  return mod.revokePortalInvitation(invitationId);
-};
-
-const updateClientUser = async (userId: string, data: { is_inactive?: boolean }): Promise<{ success: boolean; message?: string }> => {
-  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
-  return mod.updateClientUser(userId, data);
-};
+import {
+  sendPortalInvitation,
+  getPortalInvitations,
+  revokePortalInvitation,
+  updateClientUser
+} from '../../actions/contact-actions/portalInvitationBridgeActions';
+import type { InvitationHistoryItem } from '@alga-psa/portal-shared/types';
 import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 
@@ -147,7 +121,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: "Error",
-          description: result.message || "Failed to send invitation",
+          description: result.error || result.message || "Failed to send invitation",
           variant: "destructive"
         });
       }
@@ -178,7 +152,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: "Error",
-          description: result.message || "Failed to revoke invitation",
+          description: result.error || "Failed to revoke invitation",
           variant: "destructive"
         });
       }
@@ -217,7 +191,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: "Error",
-          description: result.message || "Failed to resend invitation",
+          description: result.error || result.message || "Failed to resend invitation",
           variant: "destructive"
         });
       }
@@ -637,4 +611,3 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     </div>
   );
 }
-
