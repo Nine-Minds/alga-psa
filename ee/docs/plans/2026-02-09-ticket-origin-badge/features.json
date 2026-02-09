@@ -146,7 +146,7 @@
   {
     "id": "F018",
     "description": "Preserve existing comment response-source badge behavior with no regression",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals"
     ]
