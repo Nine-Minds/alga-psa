@@ -243,7 +243,7 @@
   {
     "id": "T027",
     "description": "Rapid design edits trigger debounced compile+render runs rather than immediate unbounded recompiles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],

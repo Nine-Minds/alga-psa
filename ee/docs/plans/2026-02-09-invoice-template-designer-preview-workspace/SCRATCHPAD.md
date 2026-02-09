@@ -234,3 +234,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T026 completed: preview component test verifies authoritative iframe output is used in preview mode and design-canvas shell is not used as authoritative output.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`uses authoritative preview output surface instead of design-canvas scaffolds`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T027 completed: debounce unit coverage confirms rapid edits do not trigger immediate unbounded compile/render calls.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`recomputes preview after metadata changes and debounces rapid edits`).
