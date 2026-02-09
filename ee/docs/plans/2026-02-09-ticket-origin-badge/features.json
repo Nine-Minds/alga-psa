@@ -154,7 +154,7 @@
   {
     "id": "F019",
     "description": "Preserve existing response-state badge behavior with no regression",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals"
     ]

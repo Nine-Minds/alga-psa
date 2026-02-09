@@ -154,3 +154,4 @@
 - (2026-02-09) **F016 completed (reconciliation pass)**: Render TicketOriginBadge in client portal TicketDetails header/status area
 - (2026-02-09) **F017 completed (reconciliation pass)**: Add locale keys for ticket origin labels including Created via API
 - (2026-02-09) **F018 completed (reconciliation pass)**: Preserve existing comment response-source badge behavior with no regression
+- (2026-02-09) **F019 completed (reconciliation pass)**: Preserve existing response-state badge behavior with no regression
