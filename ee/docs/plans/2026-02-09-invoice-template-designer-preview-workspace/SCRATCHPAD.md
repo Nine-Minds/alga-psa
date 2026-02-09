@@ -173,3 +173,7 @@ Authoritative preview for invoice template designer:
     - `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx`
     - `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
   - Result: 25/25 tests passed across the combined editor + visual workspace integration suite.
+- (2026-02-09) F036 implemented: updated billing invoice template documentation to describe the authoritative preview compiler/runtime pipeline, compile cache behavior, diagnostics/verification semantics, and GUI save alignment with generated source.
+  - File: `docs/billing/invoice_templates.md`
+  - Validation command: `rg -n "authoritative|layout verification|GUI -> IR|runAuthoritativeInvoiceTemplatePreview" docs/billing/invoice_templates.md`
+  - Result: documentation now reflects implemented `GUI -> IR -> AssemblyScript -> Wasm -> render -> verify` preview flow and explicitly documents read-only/no-write preview guarantees.

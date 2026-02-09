@@ -304,7 +304,7 @@
   {
     "id": "F036",
     "description": "Update billing template documentation to describe authoritative preview compiler pipeline and layout verification behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]

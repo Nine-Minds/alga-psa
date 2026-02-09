@@ -20,6 +20,10 @@ Templates are written in **AssemblyScript**, a subset of TypeScript that compile
 - [InvoiceTemplateEditor.tsx](../server/src/components/billing-dashboard/InvoiceTemplateEditor.tsx) - Template editor UI
 - [wasm-executor.ts](../server/src/lib/invoice-renderer/wasm-executor.ts) - Wasm execution
 - [layout-renderer.ts](../server/src/lib/invoice-renderer/layout-renderer.ts) - Layout to HTML/CSS conversion
+- [invoiceTemplatePreview.ts](../packages/billing/src/actions/invoiceTemplatePreview.ts) - Authoritative preview orchestration (GUI -> AS -> Wasm -> render -> verify)
+- [guiIr.ts](../packages/billing/src/components/invoice-designer/compiler/guiIr.ts) - GUI workspace to compiler IR extraction
+- [assemblyScriptGenerator.ts](../packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts) - Deterministic AssemblyScript generation
+- [layoutVerification.ts](../packages/billing/src/lib/invoice-template-compiler/layoutVerification.ts) - Expected-vs-rendered layout verification
 
 ## 2. Architecture
 
@@ -85,19 +89,28 @@ Located under `server/src/components/billing-dashboard/`.
 When the `invoice-template-gui-designer` feature flag is enabled and the editor is in the `Visual` tab, a second-level workspace toggle is shown:
 
 *   `Design`: The interactive designer canvas (`DesignerShell`).
-*   `Preview`: A read-only preview canvas (`DesignCanvas` in read-only mode) using the current unsaved workspace state.
+*   `Preview`: A read-only authoritative render panel using the same runtime pipeline used for real invoice rendering.
 
 Preview behavior:
 
 *   **Data sources:** Users can switch between:
     *   `Sample` scenarios (curated fixtures, no server round-trip after app load).
     *   `Existing` invoices (tenant-scoped search + detail fetch).
+*   **Authoritative pipeline (no placeholder renderer):**
+    1.  Workspace state is converted into compiler IR (`extractInvoiceDesignerIr`).
+    2.  IR is deterministically generated into AssemblyScript (`generateAssemblyScriptFromIr`).
+    3.  Generated AssemblyScript is compiled with the shared AssemblyScript compiler path/options used by template compilation.
+    4.  Compiled Wasm is executed through `executeWasmTemplate`.
+    5.  Resulting layout is converted to HTML/CSS via `renderLayout`.
+    6.  Layout verification compares expected constraints (from IR) vs rendered geometry and reports `pass` / `issues` / `error`.
+*   **Compile cache:** Preview compile uses a source-hash keyed in-memory LRU cache to avoid recompiling unchanged generated source. Manual re-run bypasses cache.
 *   **Existing invoice flow:** Uses:
     *   `fetchInvoicesPaginated` for search/list/pagination.
     *   `getInvoiceForRendering` for selected invoice detail.
     *   `mapDbInvoiceToWasmViewModel` for preview-model normalization.
+*   **Diagnostics and status:** Preview surfaces compile/render/verify phase status, compiler diagnostics mapped back to GUI nodes, render errors, and verification mismatch details.
 *   **Read-only safety:** Preview mode disables drag/select/resize mutation affordances and does not trigger template or invoice writes.
-*   **Fallback behavior:** Bound values resolve from selected preview data first, then fall back to existing scaffold placeholders when data is missing.
+*   **Fallback behavior:** Bound values resolve from selected preview data first. Preview output itself is always authoritative runtime HTML/CSS (not design-canvas scaffolds).
 *   **Automation IDs:** Preview tabs/controls/states expose stable `data-automation-id` selectors (tab triggers, source controls, selectors, loading/empty/error states, pagination controls).
 
 ### 3.4. `BillingDashboard.tsx`
@@ -132,6 +145,13 @@ These Next.js Server Actions handle the core logic for managing invoice template
     4.  The returned `LayoutElement` data structure is then passed to the `renderLayout` function from `layout-renderer.ts`.
     5.  `renderLayout` converts the data structure into HTML and CSS.
     6.  Returns the final rendered output (e.g., HTML/CSS for PDF generation).
+*   **`runAuthoritativeInvoiceTemplatePreview({ workspace, invoiceData, ... })`:**
+    1.  Converts GUI workspace into compiler IR.
+    2.  Generates deterministic AssemblyScript source + source hash + node source map.
+    3.  Compiles to Wasm using shared compile command flags/path.
+    4.  Executes Wasm and renders HTML/CSS via the standard runtime pipeline.
+    5.  Runs layout verification (`extractExpectedLayoutConstraintsFromIr` + `collectRenderedGeometryFromLayout` + `compareLayoutConstraints`).
+    6.  Returns structured compile/render/verification status and diagnostics. No invoice/template writes occur in this action.
 *   **`compileStandardTemplate(templateCode)`:** Compiles a specific standard template identified by its `standard_invoice_template_code`. Reads the source from disk (`server/src/invoice-templates/assemblyscript/standard/`), compiles it, calculates the SHA, and updates the corresponding record in the `standard_invoice_templates` table with the new `wasmBinary`, `sha`, and `updated_at` timestamp. Used during startup sync.
 
 ### Additional Actions (Not Yet Fully Implemented)
@@ -254,8 +274,16 @@ A process runs at server startup to ensure the `standard_invoice_templates` tabl
     2.  Navigates to `InvoiceTemplateEditor.tsx` with existing data loaded via `getInvoiceTemplate`.
     3.  User modifies name or source.
     4.  User clicks "Save".
-    5.  `compileAndSaveTemplate` action runs: compiles source, calculates SHA, updates existing record in `invoice_templates`.
-    6.  User is redirected back to `InvoiceTemplates.tsx`.
+    5.  If GUI designer is enabled, save first regenerates AssemblyScript from the current workspace (same compiler source path used by preview), embeds workspace snapshot marker (`ALGA_INVOICE_DESIGNER_STATE_V1`), then persists through existing template save flow.
+    6.  `compileAndSaveTemplate` action runs: compiles source, calculates SHA, updates existing record in `invoice_templates`.
+    7.  User is redirected back to `InvoiceTemplates.tsx`.
+*   **Design -> Preview -> Verify -> Save (GUI flow):**
+    1.  User edits workspace in `Visual > Design`.
+    2.  User opens `Visual > Preview`.
+    3.  System runs authoritative preview pipeline (GUI -> IR -> AssemblyScript -> Wasm -> HTML/CSS).
+    4.  UI shows compile/render/verify statuses and verification summary (`pass` or `issues` with mismatch rows).
+    5.  User optionally changes preview data source (`Sample` / `Existing`) and re-runs.
+    6.  On save, generated source from current GUI workspace is persisted, keeping preview and saved template logic aligned.
 *   **Set Default Template:**
     1.  User clicks "Set as Default" for a custom template in `InvoiceTemplates.tsx`.
     2.  `setDefaultTemplate` action runs: upserts the tenant-scoped record in `invoice_template_assignments` and, when applicable, mirrors the selection in `invoice_templates.is_default`.
