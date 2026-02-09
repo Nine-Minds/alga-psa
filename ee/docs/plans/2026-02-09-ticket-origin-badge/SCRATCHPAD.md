@@ -72,3 +72,4 @@
 - (2026-02-09) **F004 completed**: `getTicketOrigin` now gives highest precedence to `email_metadata` presence and classifies as `inbound_email` before any source/user-type checks.
 - (2026-02-09) **F005 completed**: Added explicit source-hint mapping in resolver (`email`, `inbound_email`, `client_portal`, `web_app`, `api`, `manual`, `worker`, `workflow`) with canonical outputs (`inbound_email`, `client_portal`, `internal`).
 - (2026-02-09) **F006 completed**: Resolver falls through to creator user type (`creator_user_type` / `entered_by_user_type` / `user_type`) and classifies `client` creators as `client_portal` when no higher-priority signal applies.
+- (2026-02-09) **F007 completed**: Resolver default return is `internal`, providing deterministic legacy fallback when email/source/creator signals are absent or unknown.

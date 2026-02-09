@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Resolver falls back to internal for unresolved or legacy records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
