@@ -159,3 +159,4 @@
 - (2026-02-09) **T001 completed (reconciliation pass)**: Migration adds tickets.ticket_origin column successfully in existing DB
 - (2026-02-09) **T002 completed (reconciliation pass)**: Newly inserted tickets default ticket_origin to internal when not explicitly provided
 - (2026-02-09) **T003 completed (reconciliation pass)**: Backfill marks tickets with email_metadata as inbound_email
+- (2026-02-09) **T004 completed (reconciliation pass)**: Backfill marks tickets created by client users as client_portal when no email_metadata

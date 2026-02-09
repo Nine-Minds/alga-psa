@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "Backfill marks tickets created by client users as client_portal when no email_metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
