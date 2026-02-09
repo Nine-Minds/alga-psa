@@ -186,3 +186,4 @@
 - (2026-02-09) **T043 completed (reconciliation pass)**: TicketOriginBadge renders Created via API label and data attribute for api
 - (2026-02-09) **T044 completed (reconciliation pass)**: TicketOriginBadge renders safe fallback label for unknown future origin value
 - (2026-02-09) **T050 completed (reconciliation pass)**: MSP TicketDetails renders API origin badge when ticket_origin=api
+- (2026-02-09) **T051 completed (reconciliation pass)**: MSP TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)
