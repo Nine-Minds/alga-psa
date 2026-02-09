@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Add manual re-run action for compile/render/verification in preview",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "UX / UI Notes"]
   },
   {

@@ -136,3 +136,4 @@ Authoritative preview for invoice template designer:
   - UI now renders real output in `invoice-designer-preview-render-iframe`.
 - (2026-02-09) F018 implemented: removed `DesignCanvas` preview rendering from Preview tab; authoritative output now comes from server-rendered HTML/CSS iframe only.
 - (2026-02-09) F019 implemented: authoritative preview run effect is driven by debounced workspace nodes (`useDebouncedValue(nodes, 140)`), preventing unbounded compile/render churn during rapid edits.
+- (2026-02-09) F020 implemented: Preview status panel includes manual `Re-run` control (`invoice-designer-preview-rerun`) that retriggers compile/render/verify and bypasses compile cache on demand.
