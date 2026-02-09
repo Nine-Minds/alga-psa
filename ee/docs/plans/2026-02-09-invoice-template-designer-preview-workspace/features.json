@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Add stable automation IDs for preview controls, status indicators, and verification report elements",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
