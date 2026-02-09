@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Render preview via real invoice rendering runtime (Wasm execution + HTML/CSS render path)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Functional Requirements"]
   },
   {

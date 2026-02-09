@@ -129,3 +129,8 @@ Authoritative preview for invoice template designer:
   - UI automation IDs: `invoice-designer-preview-compile-error`, `invoice-designer-preview-compile-diagnostics-list`, `invoice-designer-preview-compile-diagnostic-item`.
 - (2026-02-09) F016 completed by implementation review: preview compile/render action path (`invoiceTemplatePreview.ts`) is transient-only and performs no invoice/template DB writes.
   - The pipeline uses temp files + wasm execution/rendering only, and does not import tenant DB helpers (`createTenantKnex`, `withTransaction`) in preview action module.
+- (2026-02-09) F017 implemented: preview now runs authoritative runtime path in `runAuthoritativeInvoiceTemplatePreview`:
+  1. GUI workspace -> IR -> AssemblyScript source
+  2. AssemblyScript -> Wasm compile (`compilePreviewAssemblyScript`)
+  3. Wasm execution (`executeWasmTemplate`) + HTML/CSS rendering (`renderLayout`)
+  - UI now renders real output in `invoice-designer-preview-render-iframe`.
