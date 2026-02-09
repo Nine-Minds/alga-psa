@@ -1,0 +1,276 @@
+[
+  {
+    "id": "F001",
+    "description": "Add secondary `Design` / `Preview` tabs inside the existing `Visual` tab of `InvoiceTemplateEditor`",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Default Visual mode to `Design` and keep top-level `Visual`/`Code` behavior unchanged",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Preserve unsaved designer workspace state when toggling between `Design` and `Preview`",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Ensure `Code` tab interoperability remains intact with new Visual sub-tab state",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add preview session state model (source kind, selected sample id, selected invoice id, loading/error flags)",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Create curated sample invoice fixture set with at least three scenarios for preview",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add sample scenario selector UI shown when preview source is `Sample`",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add existing-invoice selector UI shown when preview source is `Existing`",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Wire existing-invoice selector list to paginated invoice search using `fetchInvoicesPaginated`",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Fetch selected existing invoice details through `getInvoiceForRendering`",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Normalize selected invoice detail into preview model shape via mapping utility",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Provide loading, empty, and error states for existing-invoice search and detail fetch",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Add clear/reset action for existing-invoice selection",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement dedicated Preview panel component for the invoice designer visual workflow",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Render preview within the same page/frame scale conventions used by the design canvas",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Resolve designer field bindings from selected preview data before applying scaffolds",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Retain placeholder scaffold fallback when bound data is missing",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Render totals components from selected preview invoice amounts",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Render table and dynamic-table components from selected preview invoice line items",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Recompute preview output when designer workspace nodes or relevant metadata changes",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Debounce preview recomputation to avoid excessive rendering while actively editing",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Enforce read-only behavior in preview mode (no drag/drop/resize/delete/select mutations)",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Isolate preview mode from selection-opacity deemphasis logic used during design editing",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Keep existing workspace hydration/reset flows compatible with new preview mode",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Guarantee preview interactions perform no template or invoice persistence writes",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Support `new template` flow by defaulting preview to sample data without requiring existing invoices",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add stable automation IDs for preview tabs, source controls, selectors, and empty/error states",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Add unit coverage for preview source-state transitions and selector behavior",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Add unit coverage for binding resolution precedence (real data over scaffold fallback)",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Add integration/component coverage for Design/Preview toggle and unsaved-state preservation",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Add integration coverage for existing-invoice search/select/detail preview flow",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Document the new designer preview workflow and controls in billing template docs",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

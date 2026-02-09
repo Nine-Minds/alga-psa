@@ -13,7 +13,7 @@ import BackNav from '@alga-psa/ui/components/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
-import { DesignerShell } from '../invoice-designer/DesignerShell';
+import { DesignerVisualWorkspace } from '../invoice-designer/DesignerVisualWorkspace';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
 import {
   extractInvoiceDesignerStateFromSource,
@@ -39,6 +39,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const editorContainerRef = useRef<HTMLDivElement>(null); // Ref for editor container
   const [editorHeight, setEditorHeight] = useState<string | number>('320px'); // Default height (like h-80)
   const [editorTab, setEditorTab] = useState<'visual' | 'code'>('code');
+  const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<'design' | 'preview'>('design');
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
   const designerResetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
   const designerExportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
@@ -308,7 +309,10 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                    </AlertDescription>
                  </Alert>
                  <div className="border rounded overflow-hidden bg-white" id="invoice-template-visual-designer">
-                   <DesignerShell />
+                   <DesignerVisualWorkspace
+                     visualWorkspaceTab={visualWorkspaceTab}
+                     onVisualWorkspaceTabChange={setVisualWorkspaceTab}
+                   />
                  </div>
                </TabsContent>
                <TabsContent value="code" className="pt-4">

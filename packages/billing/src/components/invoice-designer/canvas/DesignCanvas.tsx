@@ -1,10 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import clsx from 'clsx';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
+import {
+  formatBoundValue,
+  normalizeFieldFormat,
+  resolveFieldPreviewValue,
+  resolveInvoiceBindingRawValue,
+  resolveTableItemBindingRawValue,
+} from '../preview/previewBindings';
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -21,6 +29,8 @@ interface DesignCanvasProps {
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  readOnly?: boolean;
+  previewData?: WasmInvoiceViewModel | null;
 }
 
 const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
@@ -36,6 +46,9 @@ interface CanvasNodeProps {
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
+  readOnly: boolean;
+  previewData: WasmInvoiceViewModel | null;
+  applySelectionDeemphasis: boolean;
 }
 
 type SectionSemanticCue = {
@@ -243,7 +256,10 @@ const resolveTotalsRowAmountFallback = (type: 'subtotal' | 'tax' | 'discount' | 
   }
 };
 
-const resolveTotalsRowPreviewModel = (node: DesignerNode): TotalsRowPreviewModel => {
+const resolveTotalsRowPreviewModel = (
+  node: DesignerNode,
+  previewData: WasmInvoiceViewModel | null = null
+): TotalsRowPreviewModel => {
   if (!isTotalsRowType(node.type)) {
     return {
       label: node.name,
@@ -257,7 +273,14 @@ const resolveTotalsRowPreviewModel = (node: DesignerNode): TotalsRowPreviewModel
   const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
   const label = asTrimmedString(metadata.label) || asTrimmedString(node.name) || fallbackLabel;
   const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
+  const format = normalizeFieldFormat(metadata.format ?? 'currency');
+  const boundValue = formatBoundValue(
+    resolveInvoiceBindingRawValue(previewData, bindingKey),
+    format,
+    previewData?.currencyCode ?? 'USD'
+  );
   const previewValue =
+    boundValue ||
     asTrimmedString(metadata.previewValue) ||
     asTrimmedString(metadata.sampleValue) ||
     resolveTotalsRowAmountFallback(node.type);
@@ -271,10 +294,104 @@ const resolveTotalsRowPreviewModel = (node: DesignerNode): TotalsRowPreviewModel
   };
 };
 
-const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
+const renderTablePreview = (
+  node: DesignerNode,
+  metadata: Record<string, unknown>,
+  previewData: WasmInvoiceViewModel | null
+): React.ReactNode => {
+  const columns = Array.isArray((metadata as { columns?: unknown }).columns)
+    ? (metadata as { columns: Array<Record<string, unknown>> }).columns
+    : [];
+  const rows = previewData?.items ?? [];
+
+  if (rows.length === 0) {
+    return <span className="text-slate-400 italic">No line items</span>;
+  }
+
+  const resolvedColumns =
+    columns.length > 0
+      ? columns
+      : [
+          { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text' },
+          { id: 'col-qty', header: 'Qty', key: 'item.quantity', type: 'number' },
+          { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency' },
+          { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency' },
+        ];
+
+  return (
+    <div className="h-full overflow-hidden text-[10px] text-slate-700">
+      <div className="grid grid-cols-4 gap-2 border-b border-slate-200 pb-1 font-semibold uppercase tracking-wide text-slate-500">
+        {resolvedColumns.slice(0, 4).map((column) => (
+          <span key={String(column.id ?? column.key ?? 'column')} className="truncate">
+            {String(column.header ?? column.key ?? 'Column')}
+          </span>
+        ))}
+      </div>
+      <div className="space-y-1 pt-1">
+        {rows.slice(0, 5).map((item) => (
+          <div key={item.id} className="grid grid-cols-4 gap-2">
+            {resolvedColumns.slice(0, 4).map((column) => {
+              const key = asTrimmedString(column.key);
+              const type = normalizeFieldFormat(column.type);
+              const rawValue = resolveTableItemBindingRawValue(previewData, item, key);
+              const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
+              return (
+                <span key={`${item.id}-${String(column.id ?? key)}`} className="truncate">
+                  {text}
+                </span>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      {rows.length > 5 && <div className="pt-1 text-[10px] text-slate-400">+{rows.length - 5} more rows</div>}
+    </div>
+  );
+};
+
+const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): React.ReactNode => {
+  const currencyCode = previewData?.currencyCode ?? 'USD';
+  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? '$0.00';
+  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? '$0.00';
+  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode) ?? '$0.00';
+  return (
+    <div className="space-y-1 text-[11px]">
+      <div className="flex items-center justify-between text-slate-600">
+        <span>Subtotal</span>
+        <span className="tabular-nums font-medium">{subtotal}</span>
+      </div>
+      <div className="flex items-center justify-between text-slate-600">
+        <span>Tax</span>
+        <span className="tabular-nums font-medium">{tax}</span>
+      </div>
+      <div className="flex items-center justify-between border-t border-slate-300 pt-1 font-semibold text-slate-900">
+        <span>Total</span>
+        <span className="tabular-nums">{total}</span>
+      </div>
+    </div>
+  );
+};
+
+const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null): PreviewContentResult => {
   const metadata = (node.metadata ?? {}) as Record<string, unknown>;
   switch (node.type) {
     case 'field': {
+      const bindingKey =
+        asTrimmedString(metadata.bindingKey) ||
+        asTrimmedString(metadata.binding) ||
+        asTrimmedString(metadata.key) ||
+        asTrimmedString(metadata.path);
+      const boundValue = resolveFieldPreviewValue({
+        invoice: previewData,
+        bindingKey,
+        format: metadata.format,
+      });
+      if (boundValue) {
+        return {
+          content: boundValue,
+          singleLine: true,
+        };
+      }
       const preview = resolveFieldPreviewScaffold(node);
       if (preview.isPlaceholder) {
         return {
@@ -336,7 +453,7 @@ const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
     case 'tax':
     case 'discount':
     case 'custom-total': {
-      const totalsRow = resolveTotalsRowPreviewModel(node);
+      const totalsRow = resolveTotalsRowPreviewModel(node, previewData);
       return {
         content: (
           <div className="flex h-full flex-col justify-between gap-1">
@@ -380,17 +497,9 @@ const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
     }
     case 'table':
     case 'dynamic-table': {
-      const columns = Array.isArray((metadata as { columns?: unknown }).columns)
-        ? (metadata as { columns: Array<Record<string, unknown>> }).columns
-        : [];
-      const columnLabels =
-        columns.length > 0
-          ? columns
-              .map((column) => column.header ?? column.key ?? 'column')
-              .filter(Boolean)
-              .join(' | ')
-          : 'No columns configured';
-      return { content: `Table · ${columnLabels}` };
+      return {
+        content: renderTablePreview(node, metadata, previewData),
+      };
     }
     case 'action-button':
       return { content: metadata.label ? `Button: ${metadata.label}` : 'Button' };
@@ -399,7 +508,7 @@ const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
     case 'attachment-list':
       return { content: metadata.title ? `Attachments: ${metadata.title}` : 'Attachments' };
     case 'totals':
-      return { content: 'Totals Summary · Subtotal / Tax / Balance' };
+      return { content: renderTotalsSummaryPreview(previewData) };
     case 'divider':
       return { content: <div className="w-full h-px bg-slate-300 my-1" /> };
     case 'spacer':
@@ -428,9 +537,13 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   onResize,
   renderChildren,
   childExtents,
+  readOnly,
+  previewData,
+  applySelectionDeemphasis,
 }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `node-${node.id}`,
+    disabled: readOnly,
     data: {
       nodeId: node.id,
     },
@@ -438,7 +551,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   const isContainer = node.allowedChildren.length > 0;
   const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
     id: `droppable-${node.id}`,
-    disabled: !isContainer,
+    disabled: !isContainer || readOnly,
     data: isContainer
       ? {
           nodeId: node.id,
@@ -487,13 +600,16 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   );
 
   const draggablePointerDown = listeners?.onPointerDown;
-  const previewContent = useMemo(() => getPreviewContent(node), [node]);
+  const previewContent = useMemo(() => getPreviewContent(node, previewData), [node, previewData]);
   const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
   const pointerDownSelectedRef = useRef(false);
   const pointerMovedRef = useRef(false);
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
+    if (readOnly) {
+      return;
+    }
     pointerDownPositionRef.current = { x: event.clientX, y: event.clientY };
     pointerDownSelectedRef.current = isSelected;
     pointerMovedRef.current = false;
@@ -502,6 +618,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   };
 
   const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly) {
+      return;
+    }
     if (pointerMovedRef.current) {
       return;
     }
@@ -512,6 +631,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   };
 
   const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly) {
+      return;
+    }
     if (!pointerMovedRef.current) {
       pointerMovedRef.current = hasMovedBeyondThreshold(pointerDownPositionRef.current, {
         x: event.clientX,
@@ -528,6 +650,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
 
   const handleNodeClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
+    if (readOnly) {
+      return;
+    }
     const shouldDeselect = shouldToggleSelectionOff(pointerDownSelectedRef.current, pointerMovedRef.current);
     pointerDownPositionRef.current = null;
     pointerDownSelectedRef.current = false;
@@ -538,6 +663,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   };
 
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (readOnly) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
@@ -578,16 +706,16 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
         isSelected && 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500',
         ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
           'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
-        shouldDeemphasize && 'opacity-65',
+        shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
         isDragging && 'opacity-80'
       )}
-      {...listeners}
+      {...(readOnly ? {} : listeners)}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onClick={handleNodeClick}
-      {...attributes}
+      {...(readOnly ? {} : attributes)}
     >
       {isContainer ? (
         <div className="relative w-full h-full">
@@ -637,7 +765,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           </>
         )
       )}
-      {node.allowResize !== false && (
+      {!readOnly && node.allowResize !== false && (
         <div
           role="button"
           tabIndex={0}
@@ -664,6 +792,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  readOnly = false,
+  previewData = null,
 }) => {
   const artboardRef = useRef<HTMLDivElement>(null);
   const documentNode = useMemo(() => nodes.find((node) => node.parentId === null), [nodes]);
@@ -726,12 +856,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   }, [nodes]);
 
   const hasActiveRenderableSelection = useMemo(
-    () => hasRenderableActiveSelection(nodes, selectedNodeId),
-    [nodes, selectedNodeId]
+    () => (readOnly ? false : hasRenderableActiveSelection(nodes, selectedNodeId)),
+    [nodes, readOnly, selectedNodeId]
   );
   const selectionContextNodeIds = useMemo(
-    () => collectSelectionContextNodeIds(nodes, selectedNodeId),
-    [nodes, selectedNodeId]
+    () => (readOnly ? new Set<string>() : collectSelectionContextNodeIds(nodes, selectedNodeId)),
+    [nodes, readOnly, selectedNodeId]
   );
 
   const renderNodeTree = useCallback((parentId: string) => {
@@ -751,6 +881,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           onResize={onResize}
           renderChildren={renderNodeTree}
           childExtents={childExtentsMap.get(node.id)}
+          readOnly={readOnly}
+          previewData={previewData}
+          applySelectionDeemphasis={!readOnly}
         />
       ));
   }, [
@@ -761,6 +894,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     isDragActive,
     onNodeSelect,
     onResize,
+    previewData,
+    readOnly,
     selectionContextNodeIds,
     selectedNodeId,
   ]);
@@ -770,6 +905,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 
   const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly) {
+      return;
+    }
     if (!artboardRef.current) {
       return;
     }
@@ -781,14 +919,27 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     onPointerLocationChange({ x, y });
   };
 
-  const handlePointerLeave = () => onPointerLocationChange(null);
+  const handlePointerLeave = () => {
+    if (!readOnly) {
+      onPointerLocationChange(null);
+    }
+  };
 
   useEffect(() => {
-    onPointerLocationChange(null);
-  }, [canvasScale, snapToGrid, gridSize, onPointerLocationChange]);
+    if (!readOnly) {
+      onPointerLocationChange(null);
+    }
+  }, [canvasScale, snapToGrid, gridSize, onPointerLocationChange, readOnly]);
 
   return (
-    <div className="relative flex-1 overflow-auto bg-slate-100" onClick={() => onNodeSelect(null)}>
+    <div
+      className="relative flex-1 overflow-auto bg-slate-100"
+      onClick={() => {
+        if (!readOnly) {
+          onNodeSelect(null);
+        }
+      }}
+    >
       {showRulers && (
         <>
           <div className="absolute top-0 left-12 right-0 h-8 bg-white border-b border-slate-200 flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
@@ -821,7 +972,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           onPointerLeave={handlePointerLeave}
           onClick={(e) => {
             e.stopPropagation();
-            onNodeSelect(null);
+            if (!readOnly) {
+              onNodeSelect(null);
+            }
           }}
         >
           <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
