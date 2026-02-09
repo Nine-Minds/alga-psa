@@ -307,7 +307,7 @@
   {
     "id": "T034",
     "description": "Preview mode ignores destructive shortcuts (delete/backspace)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],

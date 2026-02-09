@@ -253,3 +253,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
 - (2026-02-09) T033 completed: preview mode resize-like interaction test confirms node sizes remain unchanged.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`blocks resize-like interactions while in preview mode`).
+- (2026-02-09) T034 completed: preview mode keyboard shortcut test confirms delete/backspace do not remove workspace nodes.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`ignores destructive keyboard shortcuts while in preview mode`).
