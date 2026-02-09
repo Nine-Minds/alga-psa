@@ -260,7 +260,7 @@
   {
     "id": "F031",
     "description": "Add integration coverage for existing-invoice search/select/detail preview flow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]
