@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Backfill marks tickets with email_metadata as inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
