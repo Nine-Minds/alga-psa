@@ -1,0 +1,71 @@
+import React from 'react';
+
+export type ThemeMode = 'light' | 'dark';
+
+const STYLE_ID = 'alga-ui-kit-theme-bridge';
+
+const themeCss = `
+:root {
+  --alga-bg: #ffffff;
+  --alga-fg: #0f172a;
+  --alga-muted: #f5f5f7;
+  --alga-muted-fg: #4b5563;
+  --alga-primary: #8a4dea;
+  --alga-primary-foreground: #ffffff;
+  --alga-primary-light: #dcc5fb;
+  --alga-secondary: #40cff9;
+  --alga-secondary-foreground: #ffffff;
+  --alga-border: #e2e8f0;
+  --alga-ring: 0 0% 0%;
+  --alga-radius: 8px;
+  --alga-accent: #ff9c30;
+  --alga-accent-foreground: #ffffff;
+  --alga-primary-soft: #f6f0fe;
+  --alga-primary-soft-fg: #6e3dbb;
+  --alga-primary-soft-hover: #ede2fd;
+  --alga-primary-border: #caa8f9;
+  --alga-danger: #dc2626;
+  --alga-warning: #f59e0b;
+  --alga-success: #22c55e;
+}
+
+:root[data-alga-theme="dark"] {
+  --alga-bg: #0b0f14;
+  --alga-fg: #e5e7eb;
+  --alga-muted: #0f1720;
+  --alga-muted-fg: #9ca3af;
+  --alga-primary: #8a4dea;
+  --alga-primary-foreground: #ffffff;
+  --alga-primary-light: #6036a4;
+  --alga-secondary: #40cff9;
+  --alga-secondary-foreground: #ffffff;
+  --alga-border: #1f2937;
+  --alga-ring: 0 0% 98%;
+  --alga-accent: #ffa645;
+  --alga-accent-foreground: #ffffff;
+  --alga-primary-soft: #522e8c;
+  --alga-primary-soft-fg: #b891f5;
+  --alga-primary-soft-hover: #6036a4;
+  --alga-primary-border: #7c45d3;
+  --alga-danger: #ef4444;
+  --alga-warning: #f59e0b;
+  --alga-success: #22c55e;
+}
+`;
+
+export function ThemeBridge({ mode }: { mode: ThemeMode }) {
+  React.useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-alga-theme', mode);
+
+    let style = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = STYLE_ID;
+      style.textContent = themeCss;
+      document.head.appendChild(style);
+    }
+  }, [mode]);
+
+  return null;
+}
