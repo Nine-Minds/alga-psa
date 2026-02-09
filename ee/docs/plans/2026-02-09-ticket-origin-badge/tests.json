@@ -104,7 +104,7 @@
   {
     "id": "T021",
     "description": "Resolver maps null legacy row with email_metadata to inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
