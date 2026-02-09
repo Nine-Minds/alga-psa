@@ -236,6 +236,15 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
+  it('shows preview empty state when no preview data is selected', async () => {
+    renderWorkspace('preview');
+    fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-empty-state\"]')).toBeTruthy();
+    });
+  });
+
   it('calls paginated invoice search with status=all and query filters', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));

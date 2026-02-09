@@ -270,7 +270,7 @@
   {
     "id": "T030",
     "description": "Preview shows empty state when no preview data is selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],

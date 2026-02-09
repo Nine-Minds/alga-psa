@@ -242,3 +242,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T029 completed: pipeline in-flight test asserts preview loading indicator and running compile/render statuses are shown.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows loading indicator while compile/render pipeline is in flight`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T030 completed: preview UI test verifies explicit empty state when no preview data is selected (Existing source with no invoice selected).
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows preview empty state when no preview data is selected`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
