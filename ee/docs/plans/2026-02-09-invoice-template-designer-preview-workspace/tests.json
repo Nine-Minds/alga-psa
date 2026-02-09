@@ -441,7 +441,7 @@
   {
     "id": "T049",
     "description": "Integration test covers end-to-end Design -> Preview -> Design workflow with preserved edits",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ],
