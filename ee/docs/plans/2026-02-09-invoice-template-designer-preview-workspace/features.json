@@ -268,7 +268,7 @@
   {
     "id": "F032",
     "description": "Document the new designer preview workflow and controls in billing template docs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]

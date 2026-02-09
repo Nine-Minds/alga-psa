@@ -80,7 +80,27 @@ Located under `server/src/components/billing-dashboard/`.
     *   **Timestamp Display:** Shows "Created At" and "Last Updated At" timestamps in the `CardFooter`.
 *   **Relevant Props/State:** Receives `templateId` (if editing), fetches template data using `getInvoiceTemplate`, manages template state (`name`, `assemblyScriptSource`), handles save/cancel logic, manages editor height.
 
-### 3.3. `BillingDashboard.tsx`
+### 3.3. Visual Designer Preview Workspace (`DesignerVisualWorkspace.tsx`)
+
+When the `invoice-template-gui-designer` feature flag is enabled and the editor is in the `Visual` tab, a second-level workspace toggle is shown:
+
+*   `Design`: The interactive designer canvas (`DesignerShell`).
+*   `Preview`: A read-only preview canvas (`DesignCanvas` in read-only mode) using the current unsaved workspace state.
+
+Preview behavior:
+
+*   **Data sources:** Users can switch between:
+    *   `Sample` scenarios (curated fixtures, no server round-trip after app load).
+    *   `Existing` invoices (tenant-scoped search + detail fetch).
+*   **Existing invoice flow:** Uses:
+    *   `fetchInvoicesPaginated` for search/list/pagination.
+    *   `getInvoiceForRendering` for selected invoice detail.
+    *   `mapDbInvoiceToWasmViewModel` for preview-model normalization.
+*   **Read-only safety:** Preview mode disables drag/select/resize mutation affordances and does not trigger template or invoice writes.
+*   **Fallback behavior:** Bound values resolve from selected preview data first, then fall back to existing scaffold placeholders when data is missing.
+*   **Automation IDs:** Preview tabs/controls/states expose stable `data-automation-id` selectors (tab triggers, source controls, selectors, loading/empty/error states, pagination controls).
+
+### 3.4. `BillingDashboard.tsx`
 
 *   **Purpose:** Acts as the main container for billing-related sections, including Invoice Templates.
 *   **Key Features:**
