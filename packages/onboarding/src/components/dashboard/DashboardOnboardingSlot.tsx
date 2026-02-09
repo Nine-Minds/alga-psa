@@ -1,6 +1,9 @@
 import DashboardOnboardingSection from './DashboardOnboardingSection';
-import { getOnboardingProgressAction } from '@alga-psa/onboarding/actions';
-import type { OnboardingStepServerState } from '@alga-psa/onboarding/actions';
+import {
+  getDismissedDashboardOnboardingSteps,
+  getOnboardingProgressAction,
+} from '@alga-psa/onboarding/actions';
+import type { OnboardingStepId, OnboardingStepServerState } from '@alga-psa/onboarding/actions';
 
 interface OnboardingProgressSummary {
   completed: number;
@@ -11,15 +14,19 @@ interface OnboardingProgressSummary {
 
 export async function DashboardOnboardingSlot() {
   try {
-    const onboardingProgress = await getOnboardingProgressAction();
-    const summary = buildSummary(onboardingProgress.steps);
+    const [onboardingProgress, dismissedStepIds] = await Promise.all([
+      getOnboardingProgressAction(),
+      getDismissedDashboardOnboardingSteps(),
+    ]);
+    const steps = applyDismissedState(onboardingProgress.steps, dismissedStepIds);
+    const summary = buildSummary(steps);
 
     const className = summary.allComplete ? 'order-last' : undefined;
 
     return (
       <DashboardOnboardingSection
-        steps={onboardingProgress.steps}
-        summary={summary}
+        steps={steps}
+        initialDismissedStepIds={dismissedStepIds}
         className={className}
       />
     );
@@ -27,6 +34,29 @@ export async function DashboardOnboardingSlot() {
     console.error('Failed to load onboarding progress for dashboard:', error);
     return null;
   }
+}
+
+function applyDismissedState(
+  steps: OnboardingStepServerState[],
+  dismissedStepIds: OnboardingStepId[]
+): OnboardingStepServerState[] {
+  const dismissedSet = new Set<OnboardingStepId>(dismissedStepIds);
+
+  return steps.map((step) => {
+    if (!dismissedSet.has(step.id)) {
+      return {
+        ...step,
+        dismissed: false,
+      };
+    }
+
+    return {
+      ...step,
+      dismissed: true,
+      status: 'complete',
+      blocker: null,
+    };
+  });
 }
 
 function buildSummary(steps: OnboardingStepServerState[]): OnboardingProgressSummary {
