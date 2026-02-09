@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -39,7 +39,6 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/users/actions';
-import { createTenantKnex } from '@alga-psa/db';
 
 interface TicketConversationProps {
   id?: string;
@@ -99,6 +98,58 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
 
+  // Track if tab change was triggered by toggle (vs direct tab click)
+  const tabChangeFromToggle = useRef(false);
+
+  // Auto-sync toggles with active tab
+  // - Tab clicks: mutually exclusive (turn other OFF)
+  // - Toggle clicks: preserve other toggle (tracked via ref)
+  // - All Comments: leave toggles as-is
+  useEffect(() => {
+    const internalLabel = t('tickets.conversation.internal', 'Internal');
+    const resolutionLabel = t('tickets.conversation.resolution', 'Resolution');
+    const allCommentsLabel = t('tickets.conversation.allComments', 'All Comments');
+
+    // All Comments tab - leave toggles as-is
+    if (activeTab === allCommentsLabel) {
+      return;
+    }
+
+    // Check if this tab change was triggered by a toggle
+    const fromToggle = tabChangeFromToggle.current;
+    // Reset immediately
+    tabChangeFromToggle.current = false;
+
+    if (!hideInternalTab) {
+      // MSP Portal
+      if (activeTab === internalLabel) {
+        setIsInternalToggle(true);
+        // Only turn off Resolution if this was a direct tab click (not from toggle)
+        if (!fromToggle) {
+          setIsResolutionToggle(false);
+        }
+      } else if (activeTab === resolutionLabel) {
+        setIsResolutionToggle(true);
+        // Only turn off Internal if this was a direct tab click (not from toggle)
+        if (!fromToggle) {
+          setIsInternalToggle(false);
+        }
+      } else {
+        // Client tab - both toggles off
+        setIsInternalToggle(false);
+        setIsResolutionToggle(false);
+      }
+    } else {
+      // Client Portal: only handle resolution tab
+      if (activeTab === resolutionLabel) {
+        setIsResolutionToggle(true);
+      } else {
+        setIsResolutionToggle(false);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, hideInternalTab]);
+
   const handleAddCommentClick = () => {
     setShowEditor(true);
   };
@@ -138,12 +189,44 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const toggleCommentOrder = () => {
     setReverseOrder(!reverseOrder);
   };
-  // Removed renderButtonBar function as it's no longer needed
-  const handleAddNewComment = async () => {
-    if (hideInternalTab) {
-      await onAddNewComment(false, isResolutionToggle);
+
+  // Handle internal toggle change - sync tab accordingly
+  const handleInternalToggleChange = (checked: boolean) => {
+    setIsInternalToggle(checked);
+    if (checked) {
+      // Turn ON Internal → go to Internal tab, preserve Resolution toggle
+      tabChangeFromToggle.current = true;
+      onTabChange(t('tickets.conversation.internal', 'Internal'));
     } else {
-      await onAddNewComment(isInternalToggle, isResolutionToggle);
+      // Turn OFF Internal
+      if (isResolutionToggle) {
+        // Resolution still ON → switch to Resolution tab
+        tabChangeFromToggle.current = true;
+        onTabChange(t('tickets.conversation.resolution', 'Resolution'));
+      } else {
+        // Both OFF → switch to Client tab
+        onTabChange(t('tickets.conversation.client', 'Client'));
+      }
+    }
+  };
+
+  // Handle resolution toggle change - sync tab accordingly
+  const handleResolutionToggleChange = (checked: boolean) => {
+    setIsResolutionToggle(checked);
+    if (checked) {
+      // Turn ON Resolution → go to Resolution tab, preserve Internal toggle
+      tabChangeFromToggle.current = true;
+      onTabChange(t('tickets.conversation.resolution', 'Resolution'));
+    } else {
+      // Turn OFF Resolution
+      if (isInternalToggle) {
+        // Internal still ON → switch to Internal tab
+        tabChangeFromToggle.current = true;
+        onTabChange(t('tickets.conversation.internal', 'Internal'));
+      } else {
+        // Both OFF → switch to Client tab
+        onTabChange(t('tickets.conversation.client', 'Client'));
+      }
     }
   };
 
@@ -387,9 +470,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                       <Switch
                         id={`${compId}-internal-toggle`}
                         checked={isInternalToggle}
-                        onCheckedChange={setIsInternalToggle}
+                        onCheckedChange={handleInternalToggleChange}
                       />
-                      <Label htmlFor={`${id}-internal-toggle`}>
+                      <Label htmlFor={`${compId}-internal-toggle`}>
                         {isInternalToggle ? t('tickets.conversation.markedAsInternal', 'Marked as Internal') : t('tickets.conversation.markAsInternal', 'Mark as Internal')}
                       </Label>
                     </div>
@@ -398,9 +481,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     <Switch
                       id={`${compId}-resolution-toggle`}
                       checked={isResolutionToggle}
-                      onCheckedChange={setIsResolutionToggle}
+                      onCheckedChange={handleResolutionToggleChange}
                     />
-                    <Label htmlFor={`${id}-resolution-toggle`}>
+                    <Label htmlFor={`${compId}-resolution-toggle`}>
                       {isResolutionToggle ? t('tickets.conversation.markedAsResolution', 'Marked as Resolution') : t('tickets.conversation.markAsResolution', 'Mark as Resolution')}
                     </Label>
                   </div>
@@ -439,6 +522,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <CustomTabs
           tabs={tabContent}
           defaultTab={hideInternalTab ? t('tickets.conversation.allComments', 'All Comments') : t('tickets.conversation.client', 'Client')}
+          value={activeTab}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
           extraContent={

@@ -235,7 +235,7 @@ export const CustomTabs = ({
           allTabs.map((tab, index): React.JSX.Element => {
             const IconComponent = tab.icon;
             const hasIcon = !!IconComponent;
-            const iconClassName = hasIcon 
+            const iconClassName = hasIcon
               ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
               : '';
             return (
