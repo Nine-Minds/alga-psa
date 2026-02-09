@@ -45,4 +45,56 @@ describe('DesignCanvas renderable selection state', () => {
     ];
     expect(__designCanvasSelectionTestUtils.hasRenderableActiveSelection(nodes, 'section-1')).toBe(true);
   });
+
+  it('treats tiny pointer movement as a click for deselection toggles', () => {
+    expect(
+      __designCanvasSelectionTestUtils.hasMovedBeyondThreshold(
+        { x: 100, y: 100 },
+        { x: 102, y: 101 }
+      )
+    ).toBe(false);
+  });
+
+  it('treats larger pointer movement as drag to avoid accidental deselection', () => {
+    expect(
+      __designCanvasSelectionTestUtils.hasMovedBeyondThreshold(
+        { x: 100, y: 100 },
+        { x: 108, y: 104 }
+      )
+    ).toBe(true);
+  });
+
+  it('does not toggle selection off when pointer down started on an unselected node', () => {
+    expect(__designCanvasSelectionTestUtils.shouldToggleSelectionOff(false, false)).toBe(false);
+  });
+
+  it('toggles selection off for click on already selected node', () => {
+    expect(__designCanvasSelectionTestUtils.shouldToggleSelectionOff(true, false)).toBe(true);
+  });
+
+  it('does not toggle selection off after drag movement even if node was selected', () => {
+    expect(__designCanvasSelectionTestUtils.shouldToggleSelectionOff(true, true)).toBe(false);
+  });
+
+  it('keeps selected node context (ancestors and descendants) out of deemphasis', () => {
+    const nodes = [
+      createNode({ id: 'doc', type: 'document', parentId: null }),
+      createNode({ id: 'page', type: 'page', parentId: 'doc' }),
+      createNode({ id: 'section-a', type: 'section', parentId: 'page' }),
+      createNode({ id: 'field-a', type: 'field', parentId: 'section-a' }),
+      createNode({ id: 'section-b', type: 'section', parentId: 'page' }),
+      createNode({ id: 'field-b', type: 'field', parentId: 'section-b' }),
+    ];
+    const selectionContext = __designCanvasSelectionTestUtils.collectSelectionContextNodeIds(nodes, 'field-a');
+
+    expect(selectionContext.has('field-a')).toBe(true);
+    expect(selectionContext.has('section-a')).toBe(true);
+    expect(selectionContext.has('page')).toBe(true);
+    expect(selectionContext.has('doc')).toBe(true);
+    expect(selectionContext.has('section-b')).toBe(false);
+    expect(selectionContext.has('field-b')).toBe(false);
+
+    expect(__designCanvasSelectionTestUtils.shouldDeemphasizeNode(true, true, false)).toBe(false);
+    expect(__designCanvasSelectionTestUtils.shouldDeemphasizeNode(true, false, false)).toBe(true);
+  });
 });

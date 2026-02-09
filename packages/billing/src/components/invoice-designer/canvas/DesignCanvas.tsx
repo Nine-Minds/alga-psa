@@ -28,10 +28,11 @@ const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 interface CanvasNodeProps {
   node: DesignerNode;
   isSelected: boolean;
+  isInSelectionContext: boolean;
   hasActiveSelection: boolean;
   isDragActive: boolean;
   forcedDropTarget: string | 'canvas' | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
@@ -125,6 +126,78 @@ const hasRenderableActiveSelection = (nodes: DesignerNode[], selectedNodeId: str
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
   return isRenderableCanvasNode(selectedNode);
 };
+
+const collectSelectionContextNodeIds = (nodes: DesignerNode[], selectedNodeId: string | null): Set<string> => {
+  const contextIds = new Set<string>();
+  if (!selectedNodeId) {
+    return contextIds;
+  }
+
+  const nodesById = new Map(nodes.map((node) => [node.id, node] as const));
+  const selectedNode = nodesById.get(selectedNodeId);
+  if (!selectedNode || !isRenderableCanvasNode(selectedNode)) {
+    return contextIds;
+  }
+
+  const childrenByParent = new Map<string, string[]>();
+  nodes.forEach((node) => {
+    if (!node.parentId) {
+      return;
+    }
+    const existing = childrenByParent.get(node.parentId);
+    if (existing) {
+      existing.push(node.id);
+    } else {
+      childrenByParent.set(node.parentId, [node.id]);
+    }
+  });
+
+  // Keep selected node and all ancestors fully opaque.
+  let current: DesignerNode | undefined = selectedNode;
+  while (current) {
+    contextIds.add(current.id);
+    current = current.parentId ? nodesById.get(current.parentId) : undefined;
+  }
+
+  // Keep selected node subtree fully opaque.
+  const stack = [selectedNode.id];
+  while (stack.length > 0) {
+    const parentId = stack.pop();
+    if (!parentId) {
+      continue;
+    }
+    const childIds = childrenByParent.get(parentId) ?? [];
+    childIds.forEach((childId) => {
+      if (contextIds.has(childId)) {
+        return;
+      }
+      contextIds.add(childId);
+      stack.push(childId);
+    });
+  }
+
+  return contextIds;
+};
+
+const hasMovedBeyondThreshold = (
+  start: { x: number; y: number } | null,
+  current: { x: number; y: number },
+  threshold = 3
+): boolean => {
+  if (!start) {
+    return false;
+  }
+  return Math.abs(current.x - start.x) > threshold || Math.abs(current.y - start.y) > threshold;
+};
+
+const shouldToggleSelectionOff = (wasSelectedOnPointerDown: boolean, pointerMoved: boolean): boolean =>
+  wasSelectedOnPointerDown && !pointerMoved;
+
+const shouldDeemphasizeNode = (
+  hasActiveSelection: boolean,
+  isInSelectionContext: boolean,
+  isDragging: boolean
+): boolean => hasActiveSelection && !isInSelectionContext && !isDragging;
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -347,6 +420,7 @@ const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
 const CanvasNode: React.FC<CanvasNodeProps> = ({
   node,
   isSelected,
+  isInSelectionContext,
   hasActiveSelection,
   isDragActive,
   forcedDropTarget,
@@ -395,9 +469,11 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
-  const shouldDeemphasize = hasActiveSelection && !isSelected && !isDragging;
+  const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
   const isTotalsRow = isTotalsRowType(node.type);
+  const isInlineFieldLike = node.type === 'field' || node.type === 'label';
+  const isCompactLeaf = isTotalsRow || isInlineFieldLike;
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -412,11 +488,53 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
 
   const draggablePointerDown = listeners?.onPointerDown;
   const previewContent = useMemo(() => getPreviewContent(node), [node]);
+  const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerDownSelectedRef = useRef(false);
+  const pointerMovedRef = useRef(false);
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
+    pointerDownPositionRef.current = { x: event.clientX, y: event.clientY };
+    pointerDownSelectedRef.current = isSelected;
+    pointerMovedRef.current = false;
     onSelect(node.id);
     draggablePointerDown?.(event);
+  };
+
+  const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (pointerMovedRef.current) {
+      return;
+    }
+    pointerMovedRef.current = hasMovedBeyondThreshold(pointerDownPositionRef.current, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (!pointerMovedRef.current) {
+      pointerMovedRef.current = hasMovedBeyondThreshold(pointerDownPositionRef.current, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+  };
+
+  const handlePointerCancel: React.PointerEventHandler<HTMLDivElement> = () => {
+    pointerDownPositionRef.current = null;
+    pointerDownSelectedRef.current = false;
+    pointerMovedRef.current = false;
+  };
+
+  const handleNodeClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    event.stopPropagation();
+    const shouldDeselect = shouldToggleSelectionOff(pointerDownSelectedRef.current, pointerMovedRef.current);
+    pointerDownPositionRef.current = null;
+    pointerDownSelectedRef.current = false;
+    pointerMovedRef.current = false;
+    if (shouldDeselect) {
+      onSelect(null);
+    }
   };
 
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -465,7 +583,10 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       )}
       {...listeners}
       onPointerDown={handlePointerDown}
-      onClick={(e) => e.stopPropagation()}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onClick={handleNodeClick}
       {...attributes}
     >
       {isContainer ? (
@@ -484,12 +605,12 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           </div>
         </div>
       ) : (
-        isTotalsRow ? (
+        isCompactLeaf ? (
           <div
             className={clsx(
               'h-full text-[11px] text-slate-500',
-              'p-1.5 whitespace-pre-wrap',
-              node.type === 'spacer' && 'h-full p-0',
+              isTotalsRow ? 'p-1.5 whitespace-pre-wrap' : 'px-2 py-1.5 flex items-center',
+              isInlineFieldLike && 'bg-slate-50/60',
               previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
               previewContent.isPlaceholder && 'text-slate-400'
             )}
@@ -608,6 +729,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     () => hasRenderableActiveSelection(nodes, selectedNodeId),
     [nodes, selectedNodeId]
   );
+  const selectionContextNodeIds = useMemo(
+    () => collectSelectionContextNodeIds(nodes, selectedNodeId),
+    [nodes, selectedNodeId]
+  );
 
   const renderNodeTree = useCallback((parentId: string) => {
     const children = childrenMap.get(parentId) ?? [];
@@ -618,6 +743,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
           isSelected={selectedNodeId === node.id}
+          isInSelectionContext={selectionContextNodeIds.has(node.id)}
           hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
           forcedDropTarget={forcedDropTarget}
@@ -635,6 +761,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     isDragActive,
     onNodeSelect,
     onResize,
+    selectionContextNodeIds,
     selectedNodeId,
   ]);
 
@@ -729,6 +856,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 export const __designCanvasSelectionTestUtils = {
   isRenderableCanvasNode,
   hasRenderableActiveSelection,
+  collectSelectionContextNodeIds,
+  hasMovedBeyondThreshold,
+  shouldToggleSelectionOff,
+  shouldDeemphasizeNode,
 };
 
 export const __designCanvasPreviewTestUtils = {

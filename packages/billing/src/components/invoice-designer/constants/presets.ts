@@ -422,7 +422,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 300, height: 100 },
         name: 'Brand Area',
-        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'center', align: 'start', sizing: 'fixed' }
+        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'start', align: 'start', sizing: 'fill' }
       },
       {
         key: 'header-logo',
@@ -437,25 +437,25 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         type: 'container',
         parentKey: 'header-section',
         offset: { x: 0, y: 0 },
-        size: { width: 300, height: 100 },
+        size: { width: 320, height: 100 },
         name: 'Invoice Details',
-        layout: { mode: 'flex', direction: 'column', gap: 4, padding: 0, justify: 'center', align: 'end', sizing: 'fixed' }
+        layout: { mode: 'flex', direction: 'row', gap: 12, padding: 0, justify: 'end', align: 'center', sizing: 'fixed' }
       },
       {
         key: 'lbl-invoice',
         type: 'label',
         parentKey: 'header-right',
         offset: { x: 0, y: 0 },
-        size: { width: 150, height: 32 },
-        name: 'INVOICE Label'
+        size: { width: 96, height: 32 },
+        name: 'Invoice Number Label'
       },
       {
         key: 'field-inv-num',
         type: 'field',
         parentKey: 'header-right',
         offset: { x: 0, y: 0 },
-        size: { width: 150, height: 32 },
-        name: 'Invoice #'
+        size: { width: 212, height: 40 },
+        name: 'Invoice Number'
       },
       
       // --- Billing Section ---

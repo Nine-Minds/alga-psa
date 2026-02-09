@@ -5,6 +5,7 @@ export const useDesignerShortcuts = () => {
   const undo = useInvoiceDesignerStore((state) => state.undo);
   const redo = useInvoiceDesignerStore((state) => state.redo);
   const deleteSelectedNode = useInvoiceDesignerStore((state) => state.deleteSelectedNode);
+  const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
@@ -36,6 +37,13 @@ export const useDesignerShortcuts = () => {
         }
         return;
       }
+      if (event.key === 'Escape') {
+        if (selectedNodeId) {
+          event.preventDefault();
+          selectNode(null);
+        }
+        return;
+      }
       if (selectedNodeId && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
         const delta = snapToGrid ? gridSize : 4;
@@ -57,5 +65,5 @@ export const useDesignerShortcuts = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelectedNode, gridSize, moveNode, redo, selectedNodeId, snapToGrid, undo]);
+  }, [deleteSelectedNode, gridSize, moveNode, redo, selectNode, selectedNodeId, snapToGrid, undo]);
 };
