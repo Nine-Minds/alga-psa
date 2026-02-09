@@ -360,7 +360,7 @@
   {
     "id": "T040",
     "description": "Workspace hydration from localStorage fallback still succeeds with preview feature enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ],
