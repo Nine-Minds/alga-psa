@@ -261,7 +261,7 @@
   {
     "id": "T029",
     "description": "Table components render all invoice line items from preview dataset",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],

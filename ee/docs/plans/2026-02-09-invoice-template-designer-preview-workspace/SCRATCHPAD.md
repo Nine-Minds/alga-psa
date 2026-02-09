@@ -107,3 +107,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T026`: Label metadata text overrides generic label scaffold in preview
 - (2026-02-09) Completed `T027`: Totals components display subtotal/tax/grand-total from selected preview data
 - (2026-02-09) Completed `T028`: Totals components degrade gracefully when one or more totals are absent
+- (2026-02-09) Completed `T029`: Table components render all invoice line items from preview dataset
