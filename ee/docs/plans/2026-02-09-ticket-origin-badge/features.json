@@ -76,7 +76,7 @@
   {
     "id": "F010",
     "description": "Add shared TicketOriginBadge component in @alga-psa/tickets/components with three origin states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
