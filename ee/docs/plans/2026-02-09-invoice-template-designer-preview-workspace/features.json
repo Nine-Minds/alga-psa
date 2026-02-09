@@ -73,7 +73,7 @@
   {
     "id": "F009",
     "description": "Wire existing-invoice selector list to paginated invoice search using `fetchInvoicesPaginated`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Functional Requirements"
