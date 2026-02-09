@@ -76,3 +76,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F027`: Added stable automation IDs for preview tabs, source toggles, selectors, pagination, and loading/error/empty states.
 - (2026-02-09) Completed `F028`: Added `previewSessionState` unit coverage for default state, source/selector transitions, and list/detail async state handling to lock preview session state behavior.
 - (2026-02-09) Completed `F029`: Added preview-binding unit tests to verify real bound data wins and unresolved bindings return `null` for scaffold fallback paths.
+- (2026-02-09) Completed `F030`: Added workspace/editor integration tests covering Design->Preview->Design and Visual->Code->Visual loops while preserving unsaved workspace and nested tab state.

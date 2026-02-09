@@ -252,7 +252,7 @@
   {
     "id": "F030",
     "description": "Add integration/component coverage for Design/Preview toggle and unsaved-state preservation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]
