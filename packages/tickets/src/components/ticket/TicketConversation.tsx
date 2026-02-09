@@ -100,35 +100,53 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
   // Track if tab change was triggered by toggle (vs direct tab click)
   const tabChangeFromToggle = useRef(false);
+  // Track the last activeTab to detect actual changes
+  const prevActiveTab = useRef(activeTab);
+
+  // Stable tab identifiers (not translated) for comparison
+  const TAB_IDS = {
+    internal: 'Internal',
+    resolution: 'Resolution',
+    client: 'Client',
+    allComments: 'All Comments'
+  };
+
+  // Helper to match activeTab against stable IDs (handles translations)
+  const matchesTab = (tab: string, id: string): boolean => {
+    // Match against both the ID and the translated version
+    const translated = t(`tickets.conversation.${id.toLowerCase().replace(' ', '')}`, id);
+    return tab === id || tab === translated;
+  };
 
   // Auto-sync toggles with active tab
   // - Tab clicks: mutually exclusive (turn other OFF)
   // - Toggle clicks: preserve other toggle (tracked via ref)
   // - All Comments: leave toggles as-is
   useEffect(() => {
-    const internalLabel = t('tickets.conversation.internal', 'Internal');
-    const resolutionLabel = t('tickets.conversation.resolution', 'Resolution');
-    const allCommentsLabel = t('tickets.conversation.allComments', 'All Comments');
+    // Always reset the ref at the start to prevent stale state
+    const fromToggle = tabChangeFromToggle.current;
+    tabChangeFromToggle.current = false;
+
+    // Only process if activeTab actually changed
+    if (activeTab === prevActiveTab.current) {
+      return;
+    }
+    prevActiveTab.current = activeTab;
 
     // All Comments tab - leave toggles as-is
-    if (activeTab === allCommentsLabel) {
+    if (matchesTab(activeTab, TAB_IDS.allComments)) {
       return;
     }
 
-    // Check if this tab change was triggered by a toggle
-    const fromToggle = tabChangeFromToggle.current;
-    // Reset immediately
-    tabChangeFromToggle.current = false;
-
     if (!hideInternalTab) {
       // MSP Portal
-      if (activeTab === internalLabel) {
+      if (matchesTab(activeTab, TAB_IDS.internal)) {
         setIsInternalToggle(true);
         // Only turn off Resolution if this was a direct tab click (not from toggle)
         if (!fromToggle) {
           setIsResolutionToggle(false);
         }
-      } else if (activeTab === resolutionLabel) {
+      } else if (matchesTab(activeTab, TAB_IDS.resolution)) {
         setIsResolutionToggle(true);
         // Only turn off Internal if this was a direct tab click (not from toggle)
         if (!fromToggle) {
@@ -141,14 +159,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       }
     } else {
       // Client Portal: only handle resolution tab
-      if (activeTab === resolutionLabel) {
+      if (matchesTab(activeTab, TAB_IDS.resolution)) {
         setIsResolutionToggle(true);
       } else {
         setIsResolutionToggle(false);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, hideInternalTab]);
+  }, [activeTab, hideInternalTab, t]);
 
   const handleAddCommentClick = () => {
     setShowEditor(true);
