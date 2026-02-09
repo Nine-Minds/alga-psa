@@ -176,7 +176,7 @@
   {
     "id": "F021",
     "description": "Debounce preview recomputation to avoid excessive rendering while actively editing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements"
     ]
