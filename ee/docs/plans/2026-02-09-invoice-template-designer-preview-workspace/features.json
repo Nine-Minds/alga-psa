@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Emit compiler source maps/diagnostics metadata linking GUI nodes to generated AssemblyScript segments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

@@ -110,3 +110,7 @@ Authoritative preview for invoice template designer:
   - Includes width/height markers, position-derived spacing, and layout align/justify hints.
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
   - Result: 6/6 tests passed.
+- (2026-02-09) F012 implemented: added per-node source map segments in codegen plus diagnostics parser/linker that maps AssemblyScript compile errors back to GUI node IDs.
+  - Files: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts`, `packages/billing/src/components/invoice-designer/compiler/diagnostics.ts`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/diagnostics.test.ts packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
+  - Result: 8/8 tests passed.
