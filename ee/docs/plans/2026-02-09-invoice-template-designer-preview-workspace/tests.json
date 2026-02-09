@@ -206,7 +206,7 @@
   {
     "id": "T023",
     "description": "Preview compile action performs no invoice/template DB writes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],

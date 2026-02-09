@@ -20,4 +20,13 @@ describe('invoice template compile parity wiring', () => {
       expect(flag.length).toBeGreaterThan(0);
     });
   });
+
+  it('keeps preview compile path side-effect free from invoice/template persistence helpers', () => {
+    const previewCompileSource = readRepoFile('packages/billing/src/actions/invoiceTemplatePreview.ts');
+
+    expect(previewCompileSource).not.toContain('saveInvoiceTemplate(');
+    expect(previewCompileSource).not.toContain('createTenantKnex');
+    expect(previewCompileSource).not.toContain('withTransaction');
+    expect(previewCompileSource).toContain("path.resolve(asmScriptProjectDir, 'temp_compile')");
+  });
 });

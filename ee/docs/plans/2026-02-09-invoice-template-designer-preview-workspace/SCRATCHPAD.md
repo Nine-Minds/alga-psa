@@ -224,3 +224,6 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T022 completed: preview component test now asserts compile failure state renders actionable error + compiler detail text.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`displays actionable compile failure details in preview status panel`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T023 completed: compile parity suite now enforces preview compile action has no template/invoice persistence helper dependencies.
+  - Evidence: `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts` (`keeps preview compile path side-effect free from invoice/template persistence helpers`).
+  - Validation command: `pnpm vitest packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`
