@@ -86,3 +86,8 @@ Authoritative preview for invoice template designer:
   - Evidence file: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
   - Result: 15/15 tests passed.
+- (2026-02-09) F007 completed by verification: selected existing invoice details are fetched and normalized with `mapDbInvoiceToWasmViewModel` before use in preview bindings.
+  - Evidence files: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`, `packages/billing/src/lib/adapters/invoiceAdapters.ts`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/lib/adapters/invoiceAdapters.test.ts`
+  - Result: 17/17 tests passed.
+  - Gotcha: running multiple `vitest` processes in parallel with coverage can race on `server/coverage/.tmp`; run related test files in a single `vitest run` invocation instead.

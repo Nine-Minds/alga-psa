@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Fetch selected existing invoice details and normalize to renderer input model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
   },
   {
