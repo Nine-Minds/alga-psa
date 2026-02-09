@@ -27,7 +27,7 @@
   {
     "id": "F004",
     "description": "Backfill existing tickets.ticket_origin using legacy signals (email_metadata, creator user_type, fallback internal)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]

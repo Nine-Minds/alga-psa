@@ -139,3 +139,4 @@
 - (2026-02-09) **F001 completed (reconciliation pass)**: Added `api` to canonical `TICKET_ORIGINS` and propagated canonical origin typing updates in `@alga-psa/types`.
 - (2026-02-09) **F002 completed (reconciliation pass)**: Add shared TicketOrigin type in @alga-psa/types and include api in the union
 - (2026-02-09) **F003 completed (reconciliation pass)**: Add tickets.ticket_origin persisted column (text) via migration
+- (2026-02-09) **F004 completed (reconciliation pass)**: Backfill existing tickets.ticket_origin using legacy signals (email_metadata, creator user_type, fallback internal)
