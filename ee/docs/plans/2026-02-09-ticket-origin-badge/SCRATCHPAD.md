@@ -69,3 +69,4 @@
 - (2026-02-09) Validation command: `npx vitest run packages/types/src/interfaces/barrel.test.ts` (fails due to pre-existing unrelated `tax.interfaces` barrel mismatch).
 - (2026-02-09) **F002 completed**: Added shared `TicketOrigin` union type and `ITicket.ticket_origin?: TicketOrigin` in `packages/types/src/interfaces/ticket.interfaces.ts` for ticket-level origin typing across packages.
 - (2026-02-09) **F003 completed**: Added shared resolver `getTicketOrigin` in `packages/tickets/src/lib/ticketOrigin.ts` and exported it via `packages/tickets/src/lib/index.ts`. Resolver precedence is explicit and deterministic: `email_metadata` -> source hint mapping -> creator user type -> internal fallback.
+- (2026-02-09) **F004 completed**: `getTicketOrigin` now gives highest precedence to `email_metadata` presence and classifies as `inbound_email` before any source/user-type checks.

@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Resolver classifies ticket as inbound_email when email_metadata is present",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
