@@ -158,7 +158,7 @@
   {
     "id": "T018",
     "description": "Existing-invoice list loading state is visible while searching",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],

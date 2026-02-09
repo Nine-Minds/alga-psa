@@ -96,3 +96,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T015`: Rapidly changing selected existing invoice does not leave stale detail data in preview
 - (2026-02-09) Completed `T016`: Detail mapping converts DB invoice payload into preview model numeric/string types correctly
 - (2026-02-09) Completed `T017`: Detail mapping handles nullable fields without crashing
+- (2026-02-09) Completed `T018`: Existing-invoice list loading state is visible while searching
