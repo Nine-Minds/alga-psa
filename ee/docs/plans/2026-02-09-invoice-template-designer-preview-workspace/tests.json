@@ -103,7 +103,7 @@
   {
     "id": "T012",
     "description": "Existing invoice search applies query text filtering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
