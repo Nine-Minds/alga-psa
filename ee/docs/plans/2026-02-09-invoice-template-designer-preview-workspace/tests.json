@@ -29,7 +29,7 @@
   {
     "id": "T004",
     "description": "Switching preview source Sample<->Existing updates state without losing current design draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",

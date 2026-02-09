@@ -414,6 +414,7 @@ describe('DesignerVisualWorkspace', () => {
 
   it('refreshes preview output when switching Sample -> Existing -> Sample', async () => {
     seedBoundField('invoice.number');
+    const baselineNodeIds = useInvoiceDesignerStore.getState().nodes.map((node) => node.id);
     mapDbInvoiceToWasmViewModelMock.mockReturnValue({
       invoiceNumber: 'INV-EXISTING-001',
       issueDate: '2026-02-01',
@@ -447,5 +448,6 @@ describe('DesignerVisualWorkspace', () => {
         'INV-2026-0147'
       )
     );
+    expect(useInvoiceDesignerStore.getState().nodes.map((node) => node.id)).toEqual(baselineNodeIds);
   });
 });

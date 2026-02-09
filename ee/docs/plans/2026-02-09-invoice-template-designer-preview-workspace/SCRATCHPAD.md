@@ -183,3 +183,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`preserves nested visual workspace state when switching Visual -> Code -> Visual`).
 - (2026-02-09) T003 completed: preview session reducer initializes compile/render/verify lifecycle statuses to idle.
   - Evidence: `packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts` (`initializes with sample source and idle pipeline statuses`).
+- (2026-02-09) T004 completed: source switching test now explicitly verifies Sample<->Existing toggles do not drop current design workspace nodes.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`refreshes preview output when switching Sample -> Existing -> Sample`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
