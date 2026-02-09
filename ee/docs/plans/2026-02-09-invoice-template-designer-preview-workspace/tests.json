@@ -104,7 +104,7 @@
   {
     "id": "T012",
     "description": "IR extraction preserves parent-child hierarchy and layout metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
