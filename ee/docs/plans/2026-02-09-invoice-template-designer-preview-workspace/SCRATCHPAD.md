@@ -177,3 +177,5 @@ Authoritative preview for invoice template designer:
   - File: `docs/billing/invoice_templates.md`
   - Validation command: `rg -n "authoritative|layout verification|GUI -> IR|runAuthoritativeInvoiceTemplatePreview" docs/billing/invoice_templates.md`
   - Result: documentation now reflects implemented `GUI -> IR -> AssemblyScript -> Wasm -> render -> verify` preview flow and explicitly documents read-only/no-write preview guarantees.
+- (2026-02-09) T001 completed: component coverage verifies nested `Design` and `Preview` tabs render under `Visual` workspace.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`renders Design and Preview tabs with stable automation IDs`).
