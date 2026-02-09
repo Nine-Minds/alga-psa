@@ -463,7 +463,7 @@
   {
     "id": "T051",
     "description": "Integration tests prove preview render output parity with real runtime for same generated template and invoice data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ],

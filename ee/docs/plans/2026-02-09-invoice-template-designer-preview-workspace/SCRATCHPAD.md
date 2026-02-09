@@ -294,3 +294,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T050 completed: added deterministic compiler golden snapshot test for representative fixtures (simple field/label and table+totals layouts).
   - Files: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`, snapshot artifact in `__snapshots__`.
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
+- (2026-02-09) T051 completed: integration parity test proves preview output equals real runtime output for same generated template and invoice input.
+  - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`.
