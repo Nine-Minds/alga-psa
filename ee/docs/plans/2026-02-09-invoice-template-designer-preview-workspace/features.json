@@ -295,7 +295,7 @@
   {
     "id": "F035",
     "description": "Add end-to-end tests for design -> preview -> verify -> save flow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Acceptance Criteria (Definition of Done)"

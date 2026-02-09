@@ -167,3 +167,9 @@ Authoritative preview for invoice template designer:
   - Files: `packages/billing/src/lib/invoice-template-compiler/__fixtures__/layoutVerificationFixtures.ts`, `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`
   - Validation command: `pnpm vitest packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`
   - Result: 4/4 tests passed; failing fixture asserts deterministic mismatch ids (`totals:x`, `totals:y`, `totals:width`, `totals:height`) and mismatch payload shape.
+- (2026-02-09) F035 implemented: added editor-level end-to-end flow tests that cover `design edit -> authoritative preview -> verification -> save` and existing-invoice preview refresh in one integrated harness.
+  - File: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx`
+  - Validation commands:
+    - `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx`
+    - `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+  - Result: 25/25 tests passed across the combined editor + visual workspace integration suite.
