@@ -208,3 +208,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits field, table, and totals binding logic from GUI metadata`).
 - (2026-02-09) T015 completed: codegen test covers table/dynamic row binding emission via item binding helper calls.
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits field, table, and totals binding logic from GUI metadata`).
+- (2026-02-09) T016 completed: totals binding/formatting hooks are validated in codegen output assertions.
+  - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits field, table, and totals binding logic from GUI metadata`).

@@ -141,7 +141,7 @@
   {
     "id": "T016",
     "description": "Code generation output includes totals calculations/formatting hooks",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
