@@ -156,3 +156,4 @@
 - (2026-02-09) **F018 completed (reconciliation pass)**: Preserve existing comment response-source badge behavior with no regression
 - (2026-02-09) **F019 completed (reconciliation pass)**: Preserve existing response-state badge behavior with no regression
 - (2026-02-09) **F020 completed (reconciliation pass)**: Add automated tests for persistence, backfill, resolver logic, API distinction, and both TicketDetails surfaces
+- (2026-02-09) **T001 completed (reconciliation pass)**: Migration adds tickets.ticket_origin column successfully in existing DB
