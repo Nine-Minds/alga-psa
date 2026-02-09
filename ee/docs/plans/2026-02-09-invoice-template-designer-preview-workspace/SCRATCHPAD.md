@@ -194,3 +194,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`calls paginated invoice search with status=all and query filters`).
 - (2026-02-09) T008 completed: existing selector integration test verifies search term filtering drives invoice query input.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`calls paginated invoice search with status=all and query filters`).
+- (2026-02-09) T009 completed: selecting an existing invoice triggers detail fetch and normalization before preview.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`loads selected existing invoice detail and maps it for preview`).
