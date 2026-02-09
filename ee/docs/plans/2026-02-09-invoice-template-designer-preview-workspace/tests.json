@@ -234,7 +234,7 @@
   {
     "id": "T026",
     "description": "Preview does not use design-canvas scaffold renderer for authoritative output",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ],

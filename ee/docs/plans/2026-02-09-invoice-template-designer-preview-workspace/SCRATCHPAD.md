@@ -231,3 +231,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`.
 - (2026-02-09) T025 completed: integration parity test asserts preview render returns HTML/CSS contract identical to direct renderLayout output for same runtime layout.
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (`expect(actionResult.render.html).toBe(directRender.html)` / CSS parity assertion).
+- (2026-02-09) T026 completed: preview component test verifies authoritative iframe output is used in preview mode and design-canvas shell is not used as authoritative output.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`uses authoritative preview output surface instead of design-canvas scaffolds`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`

@@ -192,6 +192,15 @@ describe('DesignerVisualWorkspace', () => {
     expect(afterCount).toBe(beforeCount);
   });
 
+  it('uses authoritative preview output surface instead of design-canvas scaffolds', async () => {
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    expect(screen.queryByText('Designer Shell')).toBeNull();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-iframe\"]')).toBeTruthy();
+  });
+
   it('updates sample scenario selection while in Sample source mode', async () => {
     renderWorkspace('preview');
     const select = screen.getByLabelText('Sample Scenario') as HTMLSelectElement;
