@@ -138,7 +138,7 @@
   {
     "id": "F017",
     "description": "Add locale keys for ticket origin labels including Created via API",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]

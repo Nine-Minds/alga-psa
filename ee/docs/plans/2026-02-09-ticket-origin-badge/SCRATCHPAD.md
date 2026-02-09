@@ -152,3 +152,4 @@
 - (2026-02-09) **F014 completed (reconciliation pass)**: Add shared TicketOriginBadge component with internal/client_portal/inbound_email/api variants and unknown fallback
 - (2026-02-09) **F015 completed (reconciliation pass)**: Render TicketOriginBadge in MSP TicketDetails header near ticket number and response state badge
 - (2026-02-09) **F016 completed (reconciliation pass)**: Render TicketOriginBadge in client portal TicketDetails header/status area
+- (2026-02-09) **F017 completed (reconciliation pass)**: Add locale keys for ticket origin labels including Created via API
