@@ -109,7 +109,7 @@
   {
     "id": "F013",
     "description": "Add clear/reset action for existing-invoice selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
