@@ -251,3 +251,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T032 completed: preview mode drag-like interaction test confirms node positions remain unchanged.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`blocks drag-like interactions while in preview mode`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T033 completed: preview mode resize-like interaction test confirms node sizes remain unchanged.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`blocks resize-like interactions while in preview mode`).
