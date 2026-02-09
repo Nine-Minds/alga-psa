@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Support preview data source toggle between `Sample` and `Existing`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
   },
   {

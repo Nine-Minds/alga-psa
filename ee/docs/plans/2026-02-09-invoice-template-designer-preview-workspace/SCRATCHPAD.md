@@ -74,3 +74,7 @@ Authoritative preview for invoice template designer:
   - Files: `packages/billing/src/components/invoice-designer/preview/previewSessionState.ts`, `packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
   - Result: 19/19 tests passed.
+- (2026-02-09) F004 completed by verification: preview supports `Sample`/`Existing` source toggling through explicit control state in `DesignerVisualWorkspace`.
+  - Evidence file: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+  - Result: 15/15 tests passed.
