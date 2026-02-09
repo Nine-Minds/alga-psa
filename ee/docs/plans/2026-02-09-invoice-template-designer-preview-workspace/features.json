@@ -143,7 +143,7 @@
   {
     "id": "F017",
     "description": "Retain placeholder scaffold fallback when bound data is missing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
