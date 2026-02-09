@@ -72,3 +72,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F023`: Disabled design-time selection opacity deemphasis behavior in read-only preview mode.
 - (2026-02-09) Completed `F024`: Kept existing hydration/reset integration untouched while inserting preview workspace wrapper, preserving load semantics.
 - (2026-02-09) Completed `F025`: Preview flow only calls read-side invoice actions and client-side rendering logic, with no template/invoice write paths.
+- (2026-02-09) Completed `F026`: New-template preview defaults to sample source/scenario so preview works without tenant invoice history.
