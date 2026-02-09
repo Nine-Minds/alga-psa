@@ -204,3 +204,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts` (`preserves hierarchy and layout metadata for compiler consumers`).
 - (2026-02-09) T013 completed: deterministic codegen unit test confirms equivalent workspace inputs produce identical AssemblyScript output and hash.
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`produces deterministic source for equivalent workspace models`).
+- (2026-02-09) T014 completed: codegen test covers field binding logic emission for supported field metadata bindings.
+  - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits field, table, and totals binding logic from GUI metadata`).

@@ -123,7 +123,7 @@
   {
     "id": "T014",
     "description": "Code generation output includes field binding logic for supported field nodes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
