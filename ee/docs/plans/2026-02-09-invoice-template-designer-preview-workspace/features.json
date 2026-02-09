@@ -135,7 +135,7 @@
   {
     "id": "F016",
     "description": "Resolve designer field bindings from selected preview data before applying scaffolds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]

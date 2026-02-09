@@ -62,3 +62,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F013`: Added clear action that resets selected existing invoice and clears mapped detail preview state.
 - (2026-02-09) Completed `F014`: Implemented dedicated preview workspace UI inside the invoice designer visual workflow shell.
 - (2026-02-09) Completed `F015`: Rendered preview on DesignCanvas with the same artboard/ruler/canvas-scale conventions as design mode.
+- (2026-02-09) Completed `F016`: Updated preview rendering to resolve field and totals bindings from selected preview dataset before scaffold fallback.
