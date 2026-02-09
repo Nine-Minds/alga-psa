@@ -187,7 +187,7 @@
   {
     "id": "T021",
     "description": "Compile cache invalidates and recompiles when generated source changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],

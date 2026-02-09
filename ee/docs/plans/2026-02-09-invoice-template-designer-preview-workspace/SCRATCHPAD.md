@@ -218,3 +218,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`.
 - (2026-02-09) T020 completed: compile cache unit test verifies cached artifacts are reused for unchanged source hashes.
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts` (`stores and retrieves entries by source hash key`).
+- (2026-02-09) T021 completed: cache test now asserts changed source hash keys produce cache misses/new artifacts (invalidation behavior).
+  - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts` (`treats changed source hashes as cache misses requiring new artifacts`).
+  - Validation command: `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts`
