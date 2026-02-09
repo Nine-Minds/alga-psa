@@ -508,7 +508,7 @@
   {
     "id": "T056",
     "description": "Documentation is updated to describe GUI compiler pipeline and verification semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ],

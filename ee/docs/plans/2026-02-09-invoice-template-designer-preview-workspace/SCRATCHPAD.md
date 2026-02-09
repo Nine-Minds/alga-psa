@@ -304,3 +304,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (`covers design edit -> authoritative preview -> verification -> save`).
 - (2026-02-09) T055 completed: editor-level e2e test covers existing invoice selection and authoritative preview update path.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (`updates authoritative preview when switching to existing invoice data`).
+- (2026-02-09) T056 completed: billing invoice template documentation now describes authoritative preview compiler/runtime pipeline and verification semantics.
+  - Evidence: `docs/billing/invoice_templates.md` authoritative preview sections.
