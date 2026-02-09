@@ -14,6 +14,7 @@ import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -233,7 +234,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.*',
           's.name as status_name',
           'p.priority_name',
-          'p.color as priority_color'
+          'p.color as priority_color',
+          'u_creator.user_type as entered_by_user_type'
         )
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')
@@ -242,6 +244,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .leftJoin('priorities as p', function() {
           this.on('t.priority_id', '=', 'p.priority_id')
               .andOn('t.tenant', '=', 'p.tenant');
+        })
+        .leftJoin('users as u_creator', function() {
+          this.on('t.entered_by', '=', 'u_creator.user_id')
+              .andOn('t.tenant', '=', 'u_creator.tenant');
         })
         .where({
           't.ticket_id': ticketId,
@@ -359,8 +365,11 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       }
     }), {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
+    const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
+
     return {
-      ...result.ticket,
+      ...ticketWithoutCreatorType,
+      ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,

@@ -77,3 +77,8 @@
   - join creator user (`u_creator.user_type as entered_by_user_type`),
   - derive `ticket_origin` via `getTicketOrigin(ticket)`,
   - include `ticket_origin` on `DetailedTicket` payload returned to MSP details UI.
+- (2026-02-09) **F009 completed**: Updated `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts#getClientTicketDetails` to:
+  - join creator user type (`u_creator.user_type as entered_by_user_type`),
+  - derive `ticket_origin` with shared `getTicketOrigin`,
+  - return sanitized ticket payload with `ticket_origin` for client portal details.
+- (2026-02-09) Validation command: `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts` (fails in existing test mock with `Unexpected table: tickets`; unrelated to origin derivation path).

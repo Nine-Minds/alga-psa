@@ -67,7 +67,7 @@
   {
     "id": "F009",
     "description": "Client portal getClientTicketDetails action returns derived ticket_origin for TicketDetails consumption",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
