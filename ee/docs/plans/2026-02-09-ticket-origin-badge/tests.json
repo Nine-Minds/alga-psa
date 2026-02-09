@@ -69,7 +69,7 @@
   {
     "id": "T012",
     "description": "Inbound email create path persists ticket_origin=inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F010"
