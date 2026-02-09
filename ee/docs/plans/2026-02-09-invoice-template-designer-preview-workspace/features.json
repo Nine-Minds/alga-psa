@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Expose explicit preview verification status (pass/issues) for current design+data selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
   },
   {
