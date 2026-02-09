@@ -178,7 +178,7 @@
   {
     "id": "T020",
     "description": "Compile cache reuses artifacts when generated source hash is unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],

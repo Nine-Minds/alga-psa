@@ -216,3 +216,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/diagnostics.test.ts`.
 - (2026-02-09) T019 completed: compile parity integration test validates preview compile path reuses shared AssemblyScript flags/options helper used by production compile.
   - Evidence: `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`.
+- (2026-02-09) T020 completed: compile cache unit test verifies cached artifacts are reused for unchanged source hashes.
+  - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts` (`stores and retrieves entries by source hash key`).
