@@ -130,7 +130,7 @@
   {
     "id": "F016",
     "description": "Render TicketOriginBadge in client portal TicketDetails header/status area",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
