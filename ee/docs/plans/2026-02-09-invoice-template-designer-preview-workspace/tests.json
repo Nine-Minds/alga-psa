@@ -454,7 +454,7 @@
   {
     "id": "T050",
     "description": "Unit suite includes deterministic compiler golden tests for representative design fixtures",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ],

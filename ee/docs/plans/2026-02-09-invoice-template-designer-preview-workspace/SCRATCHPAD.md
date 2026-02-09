@@ -291,3 +291,6 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
 - (2026-02-09) T049 completed: verification issues test now asserts mismatch list and mismatch item automation IDs are present.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows issues verification badge when one or more constraints fail`).
+- (2026-02-09) T050 completed: added deterministic compiler golden snapshot test for representative fixtures (simple field/label and table+totals layouts).
+  - Files: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`, snapshot artifact in `__snapshots__`.
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`

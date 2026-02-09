@@ -148,4 +148,45 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 640, 300, 32, 48, 14, 20, "center", "space-between")');
     expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, 12, 16, 0, 0, "start", "start")');
   });
+
+  it('matches deterministic golden snapshots for representative design fixtures', () => {
+    const fixtureSimple = createWorkspace([
+      createNode('doc', 'document', null, { childIds: ['page'] }),
+      createNode('page', 'page', 'doc', { childIds: ['field-1', 'label-1'] }),
+      createNode('field-1', 'field', 'page', { metadata: { bindingKey: 'invoice.number', format: 'text' } }),
+      createNode('label-1', 'label', 'page', { metadata: { text: 'Invoice #' } }),
+    ]);
+    const fixtureTableTotals = createWorkspace([
+      createNode('doc', 'document', null, { childIds: ['page'] }),
+      createNode('page', 'page', 'doc', { childIds: ['table-1', 'totals-1'] }),
+      createNode('table-1', 'table', 'page', {
+        metadata: {
+          columns: [
+            { header: 'Desc', key: 'item.description', type: 'text' },
+            { header: 'Amount', key: 'item.total', type: 'currency' },
+          ],
+        },
+      }),
+      createNode('totals-1', 'custom-total', 'page', {
+        metadata: { label: 'Amount Due', bindingKey: 'invoice.total', format: 'currency' },
+      }),
+    ]);
+
+    const golden = [
+      {
+        name: 'simple-field-label',
+        generated: generateAssemblyScriptFromIr(extractInvoiceDesignerIr(fixtureSimple)),
+      },
+      {
+        name: 'table-and-total',
+        generated: generateAssemblyScriptFromIr(extractInvoiceDesignerIr(fixtureTableTotals)),
+      },
+    ].map((entry) => ({
+      name: entry.name,
+      sourceHash: entry.generated.sourceHash,
+      sourcePreview: entry.generated.source.split('\n').slice(0, 20).join('\n'),
+    }));
+
+    expect(golden).toMatchSnapshot();
+  });
 });

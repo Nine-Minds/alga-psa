@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateAssemblyScriptFromIr > matches deterministic golden snapshots for representative design fixtures 1`] = `
+[
+  {
+    "name": "simple-field-label",
+    "sourceHash": "fnv1a32-b546623b",
+    "sourcePreview": "import { JSON } from "json-as";
+import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
+
+function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string): void {
+  const style = new ElementStyle();
+  style.width = width.toString() + "px";
+  style.paddingLeft = x.toString() + "px";
+  style.marginTop = y.toString() + "px";
+  if (padding > 0) {
+    const px = padding.toString() + "px";
+    style.paddingTop = px;
+    style.paddingBottom = px;
+  }
+  if (gap > 0) {
+    style.marginBottom = gap.toString() + "px";
+  }
+  if (align == "center") {
+    style.textAlign = "center";
+  }
+  if (align == "end") {",
+  },
+  {
+    "name": "table-and-total",
+    "sourceHash": "fnv1a32-a207a4c9",
+    "sourcePreview": "import { JSON } from "json-as";
+import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
+
+function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string): void {
+  const style = new ElementStyle();
+  style.width = width.toString() + "px";
+  style.paddingLeft = x.toString() + "px";
+  style.marginTop = y.toString() + "px";
+  if (padding > 0) {
+    const px = padding.toString() + "px";
+    style.paddingTop = px;
+    style.paddingBottom = px;
+  }
+  if (gap > 0) {
+    style.marginBottom = gap.toString() + "px";
+  }
+  if (align == "center") {
+    style.textAlign = "center";
+  }
+  if (align == "end") {",
+  },
+]
+`;
