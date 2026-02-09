@@ -193,7 +193,7 @@
   {
     "id": "F023",
     "description": "Isolate preview mode from selection-opacity deemphasis logic used during design editing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
