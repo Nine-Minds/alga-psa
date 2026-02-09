@@ -96,3 +96,7 @@ Authoritative preview for invoice template designer:
   - Files: `packages/billing/src/components/invoice-designer/compiler/guiIr.ts`, `packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts`
   - Result: 2/2 tests passed.
+- (2026-02-09) F009 implemented: added deterministic AssemblyScript generator for GUI IR with stable node factory symbol emission and deterministic source hash output.
+  - Files: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts`, `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/compiler/guiIr.test.ts packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
+  - Result: 4/4 tests passed.

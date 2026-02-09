@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Implement deterministic AssemblyScript code generation from GUI IR",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
