@@ -244,7 +244,7 @@
   {
     "id": "F029",
     "description": "Add unit coverage for binding resolution precedence (real data over scaffold fallback)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]
