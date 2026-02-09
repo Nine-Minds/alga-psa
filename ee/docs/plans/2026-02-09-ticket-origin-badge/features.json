@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Resolver maps known source hints (email/client_portal/web_app/api/etc.) to canonical origin",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
