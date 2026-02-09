@@ -334,7 +334,7 @@
   {
     "id": "T037",
     "description": "Layout comparator passes when rendered geometry is within configured tolerance thresholds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F034"

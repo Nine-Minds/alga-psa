@@ -260,3 +260,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`
 - (2026-02-09) T036 completed: geometry collector coverage verifies normalized bounding-box metrics are produced from rendered layout style fields.
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts` (pass/fail fixtures call `collectRenderedGeometryFromLayout` before comparison).
+- (2026-02-09) T037 completed: layout comparator pass behavior is validated for geometry within tolerance.
+  - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts` (`passes when rendered geometry stays within tolerance`).
