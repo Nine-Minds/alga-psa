@@ -325,7 +325,7 @@
   {
     "id": "T036",
     "description": "Rendered geometry collector produces normalized bounding boxes for relevant rendered elements",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ],

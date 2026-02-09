@@ -258,3 +258,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T035 completed: constraint extraction now emits categorized spacing/alignment/sizing/containment constraints for flex-layout parent/child relationships.
   - Files: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.ts`, `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts`
   - Validation command: `pnpm vitest packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`
+- (2026-02-09) T036 completed: geometry collector coverage verifies normalized bounding-box metrics are produced from rendered layout style fields.
+  - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts` (pass/fail fixtures call `collectRenderedGeometryFromLayout` before comparison).
