@@ -194,7 +194,7 @@
   {
     "id": "T022",
     "description": "Preview panel renders with selected sample data in default flow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F026"
