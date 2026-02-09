@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Provide curated sample invoice scenarios for preview without requiring existing invoices",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
   },
   {

@@ -78,3 +78,7 @@ Authoritative preview for invoice template designer:
   - Evidence file: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
   - Result: 15/15 tests passed.
+- (2026-02-09) F005 completed by verification: curated sample scenario catalog is present and wired as default preview source.
+  - Evidence file: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.ts`
+  - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts`
+  - Result: 2/2 tests passed.
