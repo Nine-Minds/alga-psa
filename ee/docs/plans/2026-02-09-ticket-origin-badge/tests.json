@@ -140,85 +140,85 @@
   {
     "id": "T040",
     "description": "MSP TicketDetails renders ticket origin badge when origin is inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T041",
     "description": "MSP TicketDetails renders ticket origin badge when origin is client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T042",
     "description": "MSP TicketDetails renders internal badge fallback for unresolved/legacy records",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F007"]
   },
   {
     "id": "T043",
     "description": "Client portal TicketDetails renders origin badge when origin is inbound_email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T044",
     "description": "Client portal TicketDetails renders origin badge when origin is client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T045",
     "description": "Client portal TicketDetails renders internal badge fallback for unresolved/legacy records",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F007"]
   },
   {
     "id": "T050",
     "description": "English common locale includes ticket origin label keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T051",
     "description": "English clientPortal locale includes ticket origin label keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T060",
     "description": "CommentItem ResponseSourceBadge behavior remains unchanged after ticket-origin badge changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T061",
     "description": "ResponseStateBadge behavior in both TicketDetails views remains unchanged after origin badge insertion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T070",
     "description": "No new migration is required for MVP; feature works with existing ticket/user fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
     "id": "T080",
     "description": "End-to-end sanity: new MSP-created ticket displays internal origin badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F018"]
   },
   {
     "id": "T081",
     "description": "End-to-end sanity: new client-portal-created ticket displays client_portal badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F012", "F018"]
   },
   {
     "id": "T082",
     "description": "End-to-end sanity: new inbound-email-created ticket displays inbound_email badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F012", "F018"]
   }
 ]

@@ -127,7 +127,7 @@
   {
     "id": "F016",
     "description": "Preserve existing per-comment ResponseSourceBadge behavior with no regression",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals",
       "Requirements > Functional Requirements"
@@ -136,7 +136,7 @@
   {
     "id": "F017",
     "description": "Ship MVP without mandatory DB migration by deriving ticket_origin from existing ticket/user fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Non-functional Requirements"
@@ -145,7 +145,7 @@
   {
     "id": "F018",
     "description": "Add automated tests for resolver logic, server-action payloads, badge component, and both TicketDetails surfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]

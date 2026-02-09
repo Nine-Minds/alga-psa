@@ -110,3 +110,20 @@
   - Note: same transient coverage tmp-folder ENOENT can appear when running concurrent Vitest processes; sequential rerun passes.
 - (2026-02-09) Added badge render contract tests `packages/tickets/src/components/TicketOriginBadge.render.test.tsx` for `T030`–`T033`.
 - (2026-02-09) Validation command: `npx vitest run packages/tickets/src/components/TicketOriginBadge.render.test.tsx` ✅
+- (2026-02-09) Replaced blocked JSdom TicketDetails render tests (module alias resolution issue on `@alga-psa/db/models/user`) with deterministic contract tests:
+  - `packages/tickets/src/components/ticket/TicketDetails.originBadge.contract.test.ts` (`T040`, `T041`, `T042`, MSP side of `T061`)
+  - `packages/client-portal/src/components/tickets/TicketDetails.originBadge.contract.test.ts` (`T043`, `T044`, `T045`, client portal side of `T061`)
+- (2026-02-09) Added locale key tests `packages/tickets/src/lib/__tests__/ticketOriginLocales.test.ts` (`T050`, `T051`).
+- (2026-02-09) Added migration posture test `packages/tickets/src/lib/__tests__/ticketOriginMigration.test.ts` (`T070`).
+- (2026-02-09) Added flow sanity tests `packages/tickets/src/lib/__tests__/ticketOriginFlowSanity.test.tsx` (`T080`, `T081`, `T082`).
+- (2026-02-09) Regression validation reused existing comment-source suite `packages/tickets/src/components/ResponseSourceBadge.render.test.tsx` for `T060`.
+- (2026-02-09) Validation commands for this batch (all passed):
+  - `npx vitest run --coverage.enabled=false packages/tickets/src/lib/__tests__/ticketOriginLocales.test.ts`
+  - `npx vitest run --coverage.enabled=false packages/tickets/src/components/ticket/TicketDetails.originBadge.contract.test.ts`
+  - `npx vitest run --coverage.enabled=false packages/client-portal/src/components/tickets/TicketDetails.originBadge.contract.test.ts`
+  - `npx vitest run --coverage.enabled=false packages/tickets/src/lib/__tests__/ticketOriginMigration.test.ts`
+  - `npx vitest run --coverage.enabled=false packages/tickets/src/lib/__tests__/ticketOriginFlowSanity.test.tsx`
+  - `npx vitest run --coverage.enabled=false packages/tickets/src/components/ResponseSourceBadge.render.test.tsx`
+- (2026-02-09) **F016 completed**: Verified no regressions for comment/source and response-state badges via existing and new regression/contract tests (`T060`, `T061`).
+- (2026-02-09) **F017 completed**: Confirmed migration-free MVP via resolver derivation + migration scan test (`T070`).
+- (2026-02-09) **F018 completed**: Added automated coverage for resolver logic, action payloads, badge component, locales, TicketDetails surfaces, and flow sanity (`T001`–`T082` plan scope items now covered).
