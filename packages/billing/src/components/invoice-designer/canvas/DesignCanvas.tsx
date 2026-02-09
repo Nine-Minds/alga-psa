@@ -108,6 +108,17 @@ const renderPlaceholderPreview = (text: string): React.ReactNode => (
   </span>
 );
 
+const isRenderableCanvasNode = (node: DesignerNode | null | undefined): boolean =>
+  Boolean(node && node.type !== 'document' && node.type !== 'page');
+
+const hasRenderableActiveSelection = (nodes: DesignerNode[], selectedNodeId: string | null): boolean => {
+  if (!selectedNodeId) {
+    return false;
+  }
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+  return isRenderableCanvasNode(selectedNode);
+};
+
 const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
   const metadata = (node.metadata ?? {}) as Record<string, unknown>;
   switch (node.type) {
@@ -458,6 +469,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     return map;
   }, [nodes]);
 
+  const hasActiveRenderableSelection = useMemo(
+    () => hasRenderableActiveSelection(nodes, selectedNodeId),
+    [nodes, selectedNodeId]
+  );
+
   const renderNodeTree = useCallback((parentId: string) => {
     const children = childrenMap.get(parentId) ?? [];
     return children
@@ -467,7 +483,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
           isSelected={selectedNodeId === node.id}
-          hasActiveSelection={selectedNodeId !== null}
+          hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
@@ -476,7 +492,16 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           childExtents={childExtentsMap.get(node.id)}
         />
       ));
-  }, [childExtentsMap, childrenMap, forcedDropTarget, isDragActive, onNodeSelect, onResize, selectedNodeId]);
+  }, [
+    childExtentsMap,
+    childrenMap,
+    forcedDropTarget,
+    hasActiveRenderableSelection,
+    isDragActive,
+    onNodeSelect,
+    onResize,
+    selectedNodeId,
+  ]);
 
   const rootParentId = (defaultPageNode ?? documentNode)?.id;
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
@@ -521,8 +546,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           ref={setArtboardNodeRef}
           className={clsx(
             'relative mx-auto rounded-lg border border-slate-300 shadow-inner bg-white',
-            ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500',
-            selectedNodeId === rootParentId && 'ring-2 ring-blue-400'
+            ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500'
           )}
           data-designer-canvas="true"
           style={{ 
@@ -535,9 +559,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           onPointerLeave={handlePointerLeave}
           onClick={(e) => {
             e.stopPropagation();
-            if (rootParentId) {
-              onNodeSelect(rootParentId);
-            }
+            onNodeSelect(null);
           }}
         >
           <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
@@ -567,4 +589,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       </div>
     </div>
   );
+};
+
+export const __designCanvasSelectionTestUtils = {
+  isRenderableCanvasNode,
+  hasRenderableActiveSelection,
 };
