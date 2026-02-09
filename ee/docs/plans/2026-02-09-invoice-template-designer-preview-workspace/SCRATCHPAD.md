@@ -134,3 +134,4 @@ Authoritative preview for invoice template designer:
   2. AssemblyScript -> Wasm compile (`compilePreviewAssemblyScript`)
   3. Wasm execution (`executeWasmTemplate`) + HTML/CSS rendering (`renderLayout`)
   - UI now renders real output in `invoice-designer-preview-render-iframe`.
+- (2026-02-09) F018 implemented: removed `DesignCanvas` preview rendering from Preview tab; authoritative output now comes from server-rendered HTML/CSS iframe only.

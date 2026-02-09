@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Disallow designer-canvas placeholder renderer as authoritative preview output",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Functional Requirements"]
   },
   {
