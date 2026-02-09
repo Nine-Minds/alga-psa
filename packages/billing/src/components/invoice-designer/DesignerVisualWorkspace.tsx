@@ -221,13 +221,16 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                   <label htmlFor="preview-existing-search" className="text-xs font-semibold text-slate-700">
                     Search Existing Invoices
                   </label>
-                  <Input
-                    id="preview-existing-search"
-                    value={previewState.invoiceSearchTerm}
-                    onChange={(event) => dispatch({ type: 'set-search-term', value: event.target.value })}
-                    placeholder="Search by invoice number or client..."
-                    data-automation-id="invoice-designer-preview-existing-search"
-                  />
+                  <div data-automation-id="invoice-designer-preview-existing-search">
+                    <Input
+                      id="preview-existing-search"
+                      aria-label="Search Existing Invoices"
+                      value={previewState.invoiceSearchTerm}
+                      onChange={(event) => dispatch({ type: 'set-search-term', value: event.target.value })}
+                      placeholder="Search by invoice number or client..."
+                      data-automation-id="invoice-designer-preview-existing-search-input"
+                    />
+                  </div>
                 </div>
                 <Button
                   id="invoice-designer-preview-existing-clear-button"

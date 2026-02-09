@@ -177,6 +177,21 @@ describe('DesignerVisualWorkspace', () => {
     ).toContain('Large invoice');
   });
 
+  it('exposes stable automation IDs for source and selector controls', async () => {
+    renderWorkspace('preview');
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-source-toggle\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-source-sample\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-source-existing\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-sample-select\"]')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+    await waitFor(() => {
+      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-search\"]')).toBeTruthy();
+      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-select\"]')).toBeTruthy();
+      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-clear\"]')).toBeTruthy();
+    });
+  });
+
   it('hides existing-invoice controls in Sample mode and shows them in Existing mode', async () => {
     renderWorkspace('preview');
     expect(screen.queryByPlaceholderText('Search by invoice number or client...')).toBeNull();
@@ -313,6 +328,51 @@ describe('DesignerVisualWorkspace', () => {
       await new Promise((resolve) => setTimeout(resolve, 220));
     });
     expect(screen.getByText('Blue Harbor Dental')).toBeTruthy();
+  });
+
+  it('recomputes preview when layout structure changes affect rendered output', async () => {
+    seedBoundField('invoice.number');
+    renderWorkspace('preview');
+    await waitFor(() => expect(screen.getAllByText('INV-2026-0147').length).toBeGreaterThan(0));
+    expect(screen.queryByText('Managed Endpoint Monitoring')).toBeNull();
+
+    act(() => {
+      const store = useInvoiceDesignerStore.getState();
+      const workspace = store.exportWorkspace();
+      const pageNode = workspace.nodes.find((node) => node.type === 'page');
+      if (!pageNode) {
+        return;
+      }
+      const tableNode: DesignerNode = {
+        id: 'table-layout-change',
+        type: 'table',
+        name: 'Items Table',
+        position: { x: 32, y: 120 },
+        size: { width: 420, height: 180 },
+        canRotate: false,
+        allowResize: true,
+        rotation: 0,
+        metadata: {
+          columns: [{ id: 'desc', header: 'Description', key: 'item.description', type: 'text' }],
+        },
+        parentId: pageNode.id,
+        childIds: [],
+        allowedChildren: [],
+      };
+
+      store.loadWorkspace({
+        ...workspace,
+        nodes: workspace.nodes
+          .map((node) =>
+            node.id === pageNode.id ? { ...node, childIds: [...node.childIds, tableNode.id] } : node
+          )
+          .concat(tableNode),
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Managed Endpoint Monitoring')).toBeTruthy();
+    }, { timeout: 2500 });
   });
 
   it('refreshes preview output when switching Sample -> Existing -> Sample', async () => {
