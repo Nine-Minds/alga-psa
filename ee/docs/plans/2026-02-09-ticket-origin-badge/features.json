@@ -1,0 +1,153 @@
+[
+  {
+    "id": "F001",
+    "description": "Define canonical ticket origin values: internal, client_portal, inbound_email",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add shared TicketOrigin type to @alga-psa/types for ticket-level origin",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement shared getTicketOrigin resolver helper with deterministic precedence rules",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Resolver classifies ticket as inbound_email when email_metadata is present",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Resolver maps known source hints (email/client_portal/web_app/api/etc.) to canonical origin",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Resolver classifies ticket as client_portal when creator user_type is client and no higher-precedence email signal exists",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Resolver falls back to internal for unresolved or legacy records",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "MSP getTicketById action returns derived ticket_origin for TicketDetails consumption",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Client portal getClientTicketDetails action returns derived ticket_origin for TicketDetails consumption",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Add shared TicketOriginBadge component in @alga-psa/tickets/components with three origin states",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Render TicketOriginBadge in MSP TicketDetails header near ticket number/response state",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Render TicketOriginBadge in client portal TicketDetails header/status area",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Add English translation keys for ticket origin labels in common locale",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Add English translation keys for ticket origin labels in clientPortal locale",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Badge copy clearly distinguishes Created Internally vs Created via Client Portal vs Created via Inbound Email",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Preserve existing per-comment ResponseSourceBadge behavior with no regression",
+    "implemented": false,
+    "prdRefs": [
+      "Non-goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Ship MVP without mandatory DB migration by deriving ticket_origin from existing ticket/user fields",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add automated tests for resolver logic, server-action payloads, badge component, and both TicketDetails surfaces",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

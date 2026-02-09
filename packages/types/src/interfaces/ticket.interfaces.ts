@@ -14,6 +14,12 @@ import { IDocument } from './document.interface';
  */
 export type TicketResponseState = 'awaiting_client' | 'awaiting_internal' | null;
 
+export const TICKET_ORIGINS = {
+  INTERNAL: 'internal',
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+} as const;
+
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
   master_ticket_id?: string | null;
