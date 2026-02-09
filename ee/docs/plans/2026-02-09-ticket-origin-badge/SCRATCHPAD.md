@@ -91,3 +91,8 @@
   - `tickets.origin.clientPortal`
   - `tickets.origin.inboundEmail`
 - (2026-02-09) **F014 completed**: Added matching English client portal locale keys under `server/public/locales/en/clientPortal.json` for `tickets.origin.internal|clientPortal|inboundEmail`.
+- (2026-02-09) **F015 completed**: Final badge copy now consistently uses:
+  - `Created Internally`
+  - `Created via Client Portal`
+  - `Created via Inbound Email`
+  across component defaults + English locale keys.

@@ -119,7 +119,7 @@
   {
     "id": "F015",
     "description": "Badge copy clearly distinguishes Created Internally vs Created via Client Portal vs Created via Inbound Email",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
