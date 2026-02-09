@@ -112,7 +112,7 @@
   {
     "id": "T022",
     "description": "Resolver maps null legacy row with creator user_type client to client_portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
