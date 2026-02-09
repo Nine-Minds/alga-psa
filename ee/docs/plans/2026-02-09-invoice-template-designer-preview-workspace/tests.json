@@ -176,7 +176,7 @@
   {
     "id": "T020",
     "description": "Existing-invoice fetch failures show recoverable error state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],
