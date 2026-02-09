@@ -266,7 +266,7 @@
   {
     "id": "T053",
     "description": "Client portal TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
