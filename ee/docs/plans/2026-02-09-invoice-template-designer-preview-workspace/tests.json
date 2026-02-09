@@ -481,7 +481,7 @@
   {
     "id": "T053",
     "description": "Layout verification test fixture fails with expected mismatch set when render diverges from design",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ],

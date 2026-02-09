@@ -298,3 +298,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`.
 - (2026-02-09) T052 completed: aligned layout fixture integration test verifies verification pass behavior when design/render geometry match.
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`passes aligned design fixture within tolerance`).
+- (2026-02-09) T053 completed: drifted layout fixture integration test verifies expected mismatch set when rendered output diverges.
+  - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`fails drifted design fixture with expected mismatch set`).
