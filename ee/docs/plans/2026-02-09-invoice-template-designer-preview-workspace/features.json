@@ -46,7 +46,7 @@
   {
     "id": "F006",
     "description": "Create curated sample invoice fixture set with at least three scenarios for preview",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Functional Requirements"
