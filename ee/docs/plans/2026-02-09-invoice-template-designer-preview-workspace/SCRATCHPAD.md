@@ -192,3 +192,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts` (`provides required preview fields for each sample`).
 - (2026-02-09) T007 completed: existing-invoice selector test verifies paginated tenant invoice query calls are issued.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`calls paginated invoice search with status=all and query filters`).
+- (2026-02-09) T008 completed: existing selector integration test verifies search term filtering drives invoice query input.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`calls paginated invoice search with status=all and query filters`).

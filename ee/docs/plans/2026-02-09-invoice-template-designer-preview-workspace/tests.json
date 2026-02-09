@@ -68,7 +68,7 @@
   {
     "id": "T008",
     "description": "Existing invoice selector supports search term filtering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
