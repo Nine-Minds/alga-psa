@@ -88,7 +88,7 @@
   {
     "id": "F011",
     "description": "Implement shared ticket origin normalization/resolver helper with legacy fallback for null historical rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Requirements > Non-functional Requirements"
