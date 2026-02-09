@@ -48,7 +48,7 @@
   {
     "id": "T006",
     "description": "Sample fixture module exports at least three scenarios with unique ids",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],

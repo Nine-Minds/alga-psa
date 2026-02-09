@@ -84,3 +84,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T003`: Switching `Design` -> `Preview` -> `Design` preserves unsaved workspace state
 - (2026-02-09) Completed `T004`: Switching `Visual` -> `Code` -> `Visual` does not break nested tab state
 - (2026-02-09) Completed `T005`: Preview state initializes with valid defaults (source, selection ids, loading/error)
+- (2026-02-09) Completed `T006`: Sample fixture module exports at least three scenarios with unique ids
