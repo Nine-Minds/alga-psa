@@ -159,7 +159,7 @@
   {
     "id": "T018",
     "description": "Compiler diagnostics map generated errors back to source GUI node ids when available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F015"
