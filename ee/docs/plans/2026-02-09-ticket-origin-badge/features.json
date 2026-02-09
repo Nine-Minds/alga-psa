@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Add tickets.ticket_origin persisted column (text) via migration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Rollout / Migration"
