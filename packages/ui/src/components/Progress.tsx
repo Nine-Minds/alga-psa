@@ -20,6 +20,8 @@ interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPr
   indeterminate?: boolean;
   /** Label display mode */
   label?: ProgressLabel;
+  /** Show diagonal striped pattern on the indicator */
+  striped?: boolean;
 }
 
 const sizeClasses: Record<ProgressSize, string> = {
@@ -49,6 +51,24 @@ const indeterminateKeyframes = `
 }
 `;
 
+const stripedKeyframes = `
+@keyframes progress-striped {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 1rem 0;
+  }
+}
+`;
+
+const stripedStyle: React.CSSProperties = {
+  backgroundImage:
+    'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent)',
+  backgroundSize: '1rem 1rem',
+  animation: 'progress-striped 1s linear infinite',
+};
+
 function Progress({
   value = 0,
   max = 100,
@@ -59,13 +79,14 @@ function Progress({
   color = 'default',
   indeterminate = false,
   label = 'none',
+  striped = false,
   ...props
 }: ProgressProps) {
   const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
   const displayPercentage = Math.round(percentage);
 
   const rootClassName = cn(
-    'relative w-full overflow-hidden rounded-full bg-secondary-100',
+    'relative w-full overflow-hidden rounded-full bg-muted',
     sizeClasses[size],
     className
   );
@@ -97,26 +118,32 @@ function Progress({
   }
 
   const bar = (
-    <ProgressPrimitive.Root
-      ref={ref}
-      className={rootClassName}
-      {...props}
-    >
-      <ProgressPrimitive.Indicator
-        className={cn(
-          'h-full w-full flex-1 transition-all relative',
-          indicatorColor,
-          indicatorClassName
-        )}
-        style={{ transform: `translateX(-${100 - percentage}%)` }}
+    <>
+      {striped && <style>{stripedKeyframes}</style>}
+      <ProgressPrimitive.Root
+        ref={ref}
+        className={rootClassName}
+        {...props}
       >
-        {label === 'inside' && (
-          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium leading-none text-white">
-            {displayPercentage}%
-          </span>
-        )}
-      </ProgressPrimitive.Indicator>
-    </ProgressPrimitive.Root>
+        <ProgressPrimitive.Indicator
+          className={cn(
+            'h-full w-full flex-1 transition-all relative',
+            indicatorColor,
+            indicatorClassName
+          )}
+          style={{
+            transform: `translateX(-${100 - percentage}%)`,
+            ...(striped ? stripedStyle : undefined),
+          }}
+        >
+          {label === 'inside' && (
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium leading-none text-white">
+              {displayPercentage}%
+            </span>
+          )}
+        </ProgressPrimitive.Indicator>
+      </ProgressPrimitive.Root>
+    </>
   );
 
   if (label === 'outside') {

@@ -2,35 +2,6 @@ import React from 'react';
 import { Progress, Stack, Text } from '@alga/ui-kit';
 import { DemoSection } from '../components/DemoSection';
 
-function StripedProgress({ value }: { value: number }) {
-  const percentage = Math.min(100, Math.max(0, value));
-  return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <Progress value={percentage} animated />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          height: 8,
-          borderRadius: 999,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          style={{
-            width: `${percentage}%`,
-            height: '100%',
-            backgroundImage:
-              'repeating-linear-gradient(45deg, rgba(255,255,255,0.25) 0, rgba(255,255,255,0.25) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px)',
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
 export function ProgressDemo() {
   return (
     <DemoSection title="Progress" description="Progress indicators with value, size, colors, labels, and indeterminate mode.">
@@ -71,7 +42,7 @@ export function ProgressDemo() {
           <Text weight={600}>Animated and Striped</Text>
           <Stack gap={8} style={{ marginTop: 8, maxWidth: 320 }}>
             <Progress value={70} animated showLabel />
-            <StripedProgress value={60} />
+            <Progress value={60} striped showLabel />
           </Stack>
         </div>
         <div>

@@ -17,6 +17,8 @@ export type ProgressProps = {
   animated?: boolean;
   /** Indeterminate state (loading with unknown progress) */
   indeterminate?: boolean;
+  /** Show diagonal striped pattern on the indicator */
+  striped?: boolean;
   /** Additional styles */
   style?: React.CSSProperties;
 };
@@ -34,10 +36,14 @@ const variants = {
   danger: 'var(--alga-danger, #dc2626)',
 };
 
-const indeterminateKeyframes = `
+const keyframes = `
 @keyframes progress-indeterminate {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
+}
+@keyframes progress-striped {
+  0% { background-position: 0 0; }
+  100% { background-position: 1rem 0; }
 }
 `;
 
@@ -47,7 +53,7 @@ if (typeof document !== 'undefined') {
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
-    style.textContent = indeterminateKeyframes;
+    style.textContent = keyframes;
     document.head.appendChild(style);
   }
 }
@@ -61,6 +67,7 @@ export function Progress({
   labelPosition = 'outside',
   animated = false,
   indeterminate = false,
+  striped = false,
   style,
 }: ProgressProps) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
@@ -93,6 +100,14 @@ export function Progress({
     ...(indeterminate
       ? {
           animation: 'progress-indeterminate 1.5s ease-in-out infinite',
+        }
+      : {}),
+    ...(striped
+      ? {
+          backgroundImage:
+            'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent)',
+          backgroundSize: '1rem 1rem',
+          animation: 'progress-striped 1s linear infinite',
         }
       : {}),
   };
