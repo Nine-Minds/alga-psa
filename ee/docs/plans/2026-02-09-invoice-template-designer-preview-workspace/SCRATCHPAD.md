@@ -284,3 +284,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`
 - (2026-02-09) T046 completed: hydration tests validate source-embedded and localStorage workspace restore paths remain functional with compiler-enabled preview.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`hydrates workspace from source-embedded designer state`, `hydrates workspace from localStorage fallback...`).
+- (2026-02-09) T047 completed: automation ID coverage verifies preview source and selector controls expose stable selectors.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`exposes stable automation IDs for source and selector controls`).

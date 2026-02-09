@@ -427,7 +427,7 @@
   {
     "id": "T047",
     "description": "Preview controls expose stable automation IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],
