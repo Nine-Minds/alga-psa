@@ -279,7 +279,7 @@
   {
     "id": "T031",
     "description": "Dynamic-table components render preview rows from selected invoice items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
