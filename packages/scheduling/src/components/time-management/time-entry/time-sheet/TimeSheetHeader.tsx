@@ -52,6 +52,8 @@ export function TimeSheetHeader({
     viewMode = 'grid',
     onViewModeChange
 }: TimeSheetHeaderProps): React.JSX.Element {
+    // Badge colors match contract status badges (Contracts.tsx renderStatusBadge),
+    // TimeSheetApproval.tsx statusConfig, and ManagerApprovalDashboard.tsx badgeMap
     const statusBadgeConfig: Record<string, { className: string; label: string }> = {
         DRAFT: { className: 'bg-gray-100 text-gray-800', label: 'In Progress' },
         SUBMITTED: { className: 'bg-secondary-100 text-secondary-800', label: 'Submitted' },

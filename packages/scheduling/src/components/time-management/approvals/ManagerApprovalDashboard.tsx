@@ -212,6 +212,8 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Status',
             dataIndex: 'approval_status',
             width: '20%',
+            // Badge colors match contract status badges (Contracts.tsx renderStatusBadge)
+            // and TimeSheetApproval.tsx statusConfig
             render: (status) => {
               const badgeMap: Record<string, { className: string; label: string }> = {
                 SUBMITTED: { className: 'bg-secondary-100 text-secondary-800', label: 'Submitted' },

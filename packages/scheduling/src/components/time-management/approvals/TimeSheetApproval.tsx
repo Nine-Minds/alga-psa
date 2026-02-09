@@ -40,6 +40,11 @@ interface StatusIconProps {
   status: TimeSheetStatus;
 }
 
+// Badge color pattern matches contract status badges in:
+// - packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx (renderStatusBadge)
+// - packages/billing/src/components/billing-dashboard/contracts/ContractHeader.tsx
+// - packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx
+// Submitted uses secondary CSS vars to stay distinct from the primary "Current" badge in TimePeriodList.
 const statusConfig: Record<string, { icon: typeof Check; iconColor: string; label: string; badgeClassName: string }> = {
   SUBMITTED: { icon: Send, iconColor: 'text-secondary-600', label: 'Submitted', badgeClassName: 'bg-secondary-100 text-secondary-800' },
   APPROVED: { icon: Check, iconColor: 'text-green-800', label: 'Approved', badgeClassName: 'bg-green-100 text-green-800' },
