@@ -141,3 +141,4 @@ Authoritative preview for invoice template designer:
   - Data load states for existing invoice list/detail (existing behavior retained)
   - Pipeline states for compile/render/verify (`invoice-designer-preview-*-status`)
   - Render empty/loading/error panels and verification error banner
+- (2026-02-09) F022 implemented: preview rendering surface is now isolated `iframe` output with no designer interaction hooks (drag, resize, select) wired in Preview mode.

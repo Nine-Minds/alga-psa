@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Keep preview read-only with no drag/drop/resize/selection mutations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Goals"]
   },
   {
