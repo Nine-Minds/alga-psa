@@ -9,6 +9,7 @@ export type ExpectedLayoutConstraint = {
   metric: LayoutMetric;
   expected: number;
   tolerance: number;
+  category?: 'position' | 'sizing' | 'spacing' | 'alignment' | 'containment';
 };
 
 export type RenderedGeometry = {
@@ -90,16 +91,20 @@ export const extractExpectedLayoutConstraintsFromIr = (
   tolerance = 2
 ): ExpectedLayoutConstraint[] => {
   const constraints: ExpectedLayoutConstraint[] = [];
+  const byId = new Map(ir.flatNodes.map((node) => [node.id, node]));
 
   ir.flatNodes
     .filter((node) => node.type !== 'document')
     .forEach((node) => {
+      const parent = node.parentId ? byId.get(node.parentId) : null;
+
       constraints.push({
         id: `${node.id}:x`,
         nodeId: node.id,
         metric: 'x',
         expected: node.position.x,
         tolerance,
+        category: 'position',
       });
       constraints.push({
         id: `${node.id}:y`,
@@ -107,6 +112,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
         metric: 'y',
         expected: node.position.y,
         tolerance,
+        category: 'position',
       });
       constraints.push({
         id: `${node.id}:width`,
@@ -114,6 +120,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
         metric: 'width',
         expected: node.size.width,
         tolerance,
+        category: 'sizing',
       });
       constraints.push({
         id: `${node.id}:height`,
@@ -121,7 +128,105 @@ export const extractExpectedLayoutConstraintsFromIr = (
         metric: 'height',
         expected: node.size.height,
         tolerance,
+        category: 'sizing',
       });
+
+      if (parent?.layout?.mode === 'flex') {
+        const parentPadding = Math.max(0, parent.layout.padding ?? 0);
+        const maxX = Math.max(0, parent.size.width - parentPadding - node.size.width);
+        const maxY = Math.max(0, parent.size.height - parentPadding - node.size.height);
+        const boundedX = Math.min(Math.max(node.position.x, parentPadding), maxX);
+        const boundedY = Math.min(Math.max(node.position.y, parentPadding), maxY);
+
+        constraints.push({
+          id: `${node.id}:containment-x`,
+          nodeId: node.id,
+          metric: 'x',
+          expected: boundedX,
+          tolerance,
+          category: 'containment',
+        });
+        constraints.push({
+          id: `${node.id}:containment-y`,
+          nodeId: node.id,
+          metric: 'y',
+          expected: boundedY,
+          tolerance,
+          category: 'containment',
+        });
+
+        const parentChildren = parent.childIds;
+        const currentIndex = parentChildren.indexOf(node.id);
+        if (currentIndex > 0) {
+          const previousSibling = byId.get(parentChildren[currentIndex - 1]);
+          if (previousSibling) {
+            const gap = Math.max(0, parent.layout.gap ?? 0);
+            if (parent.layout.direction === 'column') {
+              constraints.push({
+                id: `${node.id}:spacing-y`,
+                nodeId: node.id,
+                metric: 'y',
+                expected: previousSibling.position.y + previousSibling.size.height + gap,
+                tolerance,
+                category: 'spacing',
+              });
+            } else {
+              constraints.push({
+                id: `${node.id}:spacing-x`,
+                nodeId: node.id,
+                metric: 'x',
+                expected: previousSibling.position.x + previousSibling.size.width + gap,
+                tolerance,
+                category: 'spacing',
+              });
+            }
+          }
+        }
+
+        if (parent.layout.direction === 'column') {
+          const innerWidth = Math.max(1, parent.size.width - parentPadding * 2);
+          if (parent.layout.align === 'center') {
+            constraints.push({
+              id: `${node.id}:alignment-x`,
+              nodeId: node.id,
+              metric: 'x',
+              expected: parentPadding + (innerWidth - node.size.width) / 2,
+              tolerance,
+              category: 'alignment',
+            });
+          } else if (parent.layout.align === 'end') {
+            constraints.push({
+              id: `${node.id}:alignment-x`,
+              nodeId: node.id,
+              metric: 'x',
+              expected: Math.max(parentPadding, parent.size.width - parentPadding - node.size.width),
+              tolerance,
+              category: 'alignment',
+            });
+          }
+        } else {
+          const innerHeight = Math.max(1, parent.size.height - parentPadding * 2);
+          if (parent.layout.align === 'center') {
+            constraints.push({
+              id: `${node.id}:alignment-y`,
+              nodeId: node.id,
+              metric: 'y',
+              expected: parentPadding + (innerHeight - node.size.height) / 2,
+              tolerance,
+              category: 'alignment',
+            });
+          } else if (parent.layout.align === 'end') {
+            constraints.push({
+              id: `${node.id}:alignment-y`,
+              nodeId: node.id,
+              metric: 'y',
+              expected: Math.max(parentPadding, parent.size.height - parentPadding - node.size.height),
+              tolerance,
+              category: 'alignment',
+            });
+          }
+        }
+      }
     });
 
   return constraints;

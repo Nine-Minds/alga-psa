@@ -255,3 +255,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`blocks resize-like interactions while in preview mode`).
 - (2026-02-09) T034 completed: preview mode keyboard shortcut test confirms delete/backspace do not remove workspace nodes.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`ignores destructive keyboard shortcuts while in preview mode`).
+- (2026-02-09) T035 completed: constraint extraction now emits categorized spacing/alignment/sizing/containment constraints for flex-layout parent/child relationships.
+  - Files: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.ts`, `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts`
+  - Validation command: `pnpm vitest packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts`

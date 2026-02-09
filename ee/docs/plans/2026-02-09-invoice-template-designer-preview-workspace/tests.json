@@ -316,7 +316,7 @@
   {
     "id": "T035",
     "description": "Expected layout constraints extraction covers spacing/alignment/sizing/containment fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ],
