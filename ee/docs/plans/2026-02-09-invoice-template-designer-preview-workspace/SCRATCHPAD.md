@@ -181,3 +181,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`renders Design and Preview tabs with stable automation IDs`).
 - (2026-02-09) T002 completed: top-level `Visual`/`Code` tab behavior remains intact with preview workflow additions.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`preserves nested visual workspace state when switching Visual -> Code -> Visual`).
+- (2026-02-09) T003 completed: preview session reducer initializes compile/render/verify lifecycle statuses to idle.
+  - Evidence: `packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts` (`initializes with sample source and idle pipeline statuses`).

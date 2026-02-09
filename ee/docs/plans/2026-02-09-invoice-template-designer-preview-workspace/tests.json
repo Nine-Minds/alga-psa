@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "Preview session state initializes with idle compile/render/verify statuses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ],
