@@ -67,6 +67,8 @@ export class ElementStyle {
   textAlign: string | null = null;
   fontWeight: string | null = null;
   marginTop: string | null = null;
+  marginLeft: string | null = null;
+  marginRight: string | null = null;
   paddingLeft: string | null = null;
   paddingRight: string | null = null;
   paddingTop: string | null = null;
@@ -103,6 +105,16 @@ export class ElementStyle {
     if (this.marginTop != null) {
       if (!isFirst) json += ", ";
       json += `"marginTop": "${this.marginTop!}"`;
+      isFirst = false;
+    }
+    if (this.marginLeft != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginLeft": "${this.marginLeft!}"`;
+      isFirst = false;
+    }
+    if (this.marginRight != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginRight": "${this.marginRight!}"`;
       isFirst = false;
     }
     if (this.paddingLeft != null) {

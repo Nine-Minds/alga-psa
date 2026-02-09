@@ -118,6 +118,10 @@ describe('generateAssemblyScriptFromIr', () => {
     );
     expect(generated.source).toContain('resolveInvoiceBinding(viewModel, "customer.name", "text")');
     expect(generated.source).toContain('function resolveItemBinding');
+    expect(generated.source).toContain('const headerRow = new RowElement(headerCells);');
+    expect(generated.source).toContain('const row = new RowElement(rowCells);');
+    expect(generated.source).toContain('headerRowStyle.marginBottom = "0px";');
+    expect(generated.source).toContain('rowStyle.marginBottom = "0px";');
     expect(generated.source).toContain('if (key == "item.rate") return formatBindingValueNumeric(item.unitPrice, format, viewModel.currencyCode);');
     expect(generated.source).toContain('resolveItemBinding(viewModel, rowItem, "item.total", "currency")');
     expect(generated.source).toContain('Amount Due: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")');
@@ -235,11 +239,14 @@ describe('generateAssemblyScriptFromIr', () => {
     const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
 
     expect(generated.source).toContain('function applyGeneratedLayoutStyle');
+    expect(generated.source).toContain('style.marginLeft = x.toString() + "px";');
+    expect(generated.source).not.toContain('style.paddingLeft = x.toString() + "px";');
+    expect(generated.source).toContain('style.paddingRight = px;');
     expect(generated.source).toContain('style.height = height.toString() + "px";');
     expect(generated.source).not.toContain('style.borderTop = height.toString() + "px solid transparent";');
     expect(generated.source).toContain('layout-mode:flex; sizing:hug');
     expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 640, 300, 32, 48, 14, 20, "center", "space-between")');
-    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, 12, -4, 0, 0, "start", "start")');
+    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, -8, -4, 0, 0, "start", "start")');
   });
 
   it('matches deterministic golden snapshots for representative design fixtures', () => {

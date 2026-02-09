@@ -4,51 +4,51 @@ exports[`generateAssemblyScriptFromIr > matches deterministic golden snapshots f
 [
   {
     "name": "simple-field-label",
-    "sourceHash": "fnv1a32-d762a465",
+    "sourceHash": "fnv1a32-7b2d3f03",
     "sourcePreview": "import { JSON } from "json-as";
-import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
+import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, RowElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
 
 function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string): void {
   const style = new ElementStyle();
   style.width = width.toString() + "px";
-  style.paddingLeft = x.toString() + "px";
+  style.marginLeft = x.toString() + "px";
   style.marginTop = y.toString() + "px";
   if (padding > 0) {
     const px = padding.toString() + "px";
     style.paddingTop = px;
+    style.paddingRight = px;
     style.paddingBottom = px;
+    style.paddingLeft = px;
   }
   if (gap > 0) {
     style.marginBottom = gap.toString() + "px";
   }
   if (align == "center") {
-    style.textAlign = "center";
-  }
-  if (align == "end") {",
+    style.textAlign = "center";",
   },
   {
     "name": "table-and-total",
-    "sourceHash": "fnv1a32-f66ae7bf",
+    "sourceHash": "fnv1a32-b15fc6e0",
     "sourcePreview": "import { JSON } from "json-as";
-import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
+import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, RowElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
 
 function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string): void {
   const style = new ElementStyle();
   style.width = width.toString() + "px";
-  style.paddingLeft = x.toString() + "px";
+  style.marginLeft = x.toString() + "px";
   style.marginTop = y.toString() + "px";
   if (padding > 0) {
     const px = padding.toString() + "px";
     style.paddingTop = px;
+    style.paddingRight = px;
     style.paddingBottom = px;
+    style.paddingLeft = px;
   }
   if (gap > 0) {
     style.marginBottom = gap.toString() + "px";
   }
   if (align == "center") {
-    style.textAlign = "center";
-  }
-  if (align == "end") {",
+    style.textAlign = "center";",
   },
 ]
 `;

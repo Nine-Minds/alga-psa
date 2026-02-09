@@ -128,11 +128,17 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
       | null;
     expect(renderedPageStyle).toBeTruthy();
     expect(renderedPageStyle?.height).toBe('1056px');
+    expect(renderedPageStyle?.paddingTop).toBe('24px');
+    expect(renderedPageStyle?.paddingRight).toBe('24px');
+    expect(renderedPageStyle?.paddingBottom).toBe('24px');
+    expect(renderedPageStyle?.paddingLeft).toBe('24px');
+    expect(renderedPageStyle?.marginLeft).toBe('0px');
     expect(renderedPageStyle?.borderTop).toBeUndefined();
     expect(renderedFieldStyle).toBeTruthy();
     expect(renderedFieldStyle?.width).toBe('220px');
     expect(renderedFieldStyle?.height).toBe('48px');
-    expect(renderedFieldStyle?.paddingLeft).toBe('24px');
+    expect(renderedFieldStyle?.marginLeft).toBe('0px');
+    expect(renderedFieldStyle?.paddingLeft).toBeUndefined();
     expect(renderedFieldStyle?.marginTop).toBe('0px');
     expect(renderedFieldStyle?.borderTop).toBeUndefined();
 

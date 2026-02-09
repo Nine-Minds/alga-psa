@@ -7,6 +7,8 @@ export class PartialStyle {
   textAlign: string | null = null;
   fontWeight: string | null = null;
   marginTop: string | null = null;
+  marginLeft: string | null = null;
+  marginRight: string | null = null;
   paddingLeft: string | null = null;
   paddingRight: string | null = null;
   paddingTop: string | null = null;
@@ -25,6 +27,8 @@ export function instantiateStyle(partial: PartialStyle): ElementStyle {
   style.textAlign = partial.textAlign;
   style.fontWeight = partial.fontWeight;
   style.marginTop = partial.marginTop;
+  style.marginLeft = partial.marginLeft;
+  style.marginRight = partial.marginRight;
   style.paddingLeft = partial.paddingLeft;
   style.paddingRight = partial.paddingRight;
   style.paddingTop = partial.paddingTop;

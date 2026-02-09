@@ -285,6 +285,41 @@ const resolveRenderableTotalBindingKey = (node: InvoiceDesignerIrTreeNode): stri
   normalizeTotalBindingKey(node, asTrimmedString(asRecord(node.metadata).bindingKey)) ||
   resolveTotalBindingFallback(node);
 
+const resolveNormalizedMarginLeft = (
+  node: InvoiceDesignerIrTreeNode,
+  nodesById: Map<string, InvoiceDesignerIrTreeNode>
+): number => {
+  const rawX = Math.round(node.position.x);
+  if (!node.parentId) {
+    return rawX;
+  }
+
+  const parent = nodesById.get(node.parentId);
+  if (!parent || parent.layout?.mode !== 'flex') {
+    return rawX;
+  }
+
+  const parentPadding = Math.max(0, Math.round(parent.layout?.padding ?? 0));
+  if (parent.layout.direction === 'column') {
+    return rawX - parentPadding;
+  }
+
+  const siblingIds = parent.childIds;
+  const siblingIndex = siblingIds.indexOf(node.id);
+  if (siblingIndex <= 0) {
+    return rawX - parentPadding;
+  }
+
+  const previousSiblingId = siblingIds[siblingIndex - 1];
+  const previousSibling = nodesById.get(previousSiblingId);
+  if (!previousSibling) {
+    return rawX - parentPadding;
+  }
+
+  const previousSiblingRight = Math.round(previousSibling.position.x) + Math.round(previousSibling.size.width);
+  return rawX - previousSiblingRight;
+};
+
 const resolveNormalizedMarginTop = (
   node: InvoiceDesignerIrTreeNode,
   nodesById: Map<string, InvoiceDesignerIrTreeNode>
@@ -326,7 +361,7 @@ const resolveLayoutStyleArgs = (
 ) => ({
   width: Math.max(1, Math.round(node.size.width)),
   height: Math.max(1, Math.round(node.size.height)),
-  x: Math.max(0, Math.round(node.position.x)),
+  x: resolveNormalizedMarginLeft(node, nodesById),
   y: resolveNormalizedMarginTop(node, nodesById),
   gap: Math.max(0, Math.round(node.layout?.gap ?? 0)),
   padding: Math.max(0, Math.round(node.layout?.padding ?? 0)),
@@ -354,12 +389,14 @@ const emitLayoutHelpers = (lines: string[]) => {
   );
   lines.push('  const style = new ElementStyle();');
   lines.push('  style.width = width.toString() + "px";');
-  lines.push('  style.paddingLeft = x.toString() + "px";');
+  lines.push('  style.marginLeft = x.toString() + "px";');
   lines.push('  style.marginTop = y.toString() + "px";');
   lines.push('  if (padding > 0) {');
   lines.push('    const px = padding.toString() + "px";');
   lines.push('    style.paddingTop = px;');
+  lines.push('    style.paddingRight = px;');
   lines.push('    style.paddingBottom = px;');
+  lines.push('    style.paddingLeft = px;');
   lines.push('  }');
   lines.push('  if (gap > 0) {');
   lines.push('    style.marginBottom = gap.toString() + "px";');
@@ -476,7 +513,6 @@ const emitNodeFactory = (
     lines.push('  const children = new Array<LayoutElement>();');
     const metadata = asRecord(node.metadata);
     if (node.type === 'table' || node.type === 'dynamic-table') {
-      lines.push('  children.push(new TextElement("Table"));');
       const columns = Array.isArray(metadata.columns) ? (metadata.columns as Array<Record<string, unknown>>) : [];
       const resolvedColumns =
         columns.length > 0
@@ -487,21 +523,35 @@ const emitNodeFactory = (
               { header: 'Rate', key: 'item.unitPrice', type: 'currency' },
               { header: 'Amount', key: 'item.total', type: 'currency' },
             ];
+      lines.push('  const headerCells = new Array<LayoutElement>();');
       resolvedColumns.slice(0, 4).forEach((column) => {
         const header = asTrimmedString(column.header) || asTrimmedString(column.key) || 'Column';
-        lines.push(`  children.push(new TextElement("${escapeSourceString(header)}"));`);
+        lines.push(
+          `  headerCells.push(new ColumnElement([new TextElement("${escapeSourceString(header)}", "label")]));`
+        );
       });
+      lines.push('  const headerRow = new RowElement(headerCells);');
+      lines.push('  const headerRowStyle = new ElementStyle();');
+      lines.push('  headerRowStyle.marginBottom = "0px";');
+      lines.push('  headerRow.style = headerRowStyle;');
+      lines.push('  children.push(headerRow);');
       lines.push('  for (let itemIndex = 0; itemIndex < viewModel.items.length; itemIndex++) {');
       lines.push('    const rowItem = viewModel.items[itemIndex];');
+      lines.push('    const rowCells = new Array<LayoutElement>();');
       resolvedColumns.slice(0, 4).forEach((column) => {
         const key = asTrimmedString(column.key) || 'item.description';
         const format = asTrimmedString(column.type) || 'text';
         lines.push(
-          `    children.push(new TextElement(resolveItemBinding(viewModel, rowItem, "${escapeSourceString(
+          `    rowCells.push(new ColumnElement([new TextElement(resolveItemBinding(viewModel, rowItem, "${escapeSourceString(
             key
-          )}", "${escapeSourceString(format)}")));`
+          )}", "${escapeSourceString(format)}"))]));`
         );
       });
+      lines.push('    const row = new RowElement(rowCells);');
+      lines.push('    const rowStyle = new ElementStyle();');
+      lines.push('    rowStyle.marginBottom = "0px";');
+      lines.push('    row.style = rowStyle;');
+      lines.push('    children.push(row);');
       lines.push('  }');
     } else {
       lines.push('  children.push(new TextElement("Totals"));');
@@ -649,7 +699,7 @@ export const generateAssemblyScriptFromIr = (
 
   lines.push('import { JSON } from "json-as";');
   lines.push(
-    'import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";'
+    'import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, RowElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";'
   );
   lines.push('');
   emitLayoutHelpers(lines);

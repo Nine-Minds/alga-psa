@@ -63,6 +63,41 @@ const gatherLayoutChildren = (node: LayoutElement): LayoutElement[] => {
 
 type IrFlatNode = InvoiceDesignerCompilerIr['flatNodes'][number];
 
+const resolveNormalizedXExpectation = (
+  node: IrFlatNode,
+  byId: Map<string, IrFlatNode>,
+  absoluteX: number
+): number => {
+  if (!node.parentId) {
+    return Math.round(absoluteX);
+  }
+
+  const parent = byId.get(node.parentId);
+  if (!parent || parent.layout?.mode !== 'flex') {
+    return Math.round(absoluteX);
+  }
+
+  const parentPadding = Math.max(0, Math.round(parent.layout.padding ?? 0));
+  if (parent.layout.direction === 'column') {
+    return Math.round(absoluteX) - parentPadding;
+  }
+
+  const siblingIds = parent.childIds;
+  const siblingIndex = siblingIds.indexOf(node.id);
+  if (siblingIndex <= 0) {
+    return Math.round(absoluteX) - parentPadding;
+  }
+
+  const previousSibling = byId.get(siblingIds[siblingIndex - 1]);
+  if (!previousSibling) {
+    return Math.round(absoluteX) - parentPadding;
+  }
+
+  const previousSiblingRight =
+    Math.round(previousSibling.position.x) + Math.round(previousSibling.size.width);
+  return Math.round(absoluteX) - previousSiblingRight;
+};
+
 const resolveNormalizedYExpectation = (
   node: IrFlatNode,
   byId: Map<string, IrFlatNode>,
@@ -109,7 +144,7 @@ export const collectRenderedGeometryFromLayout = (
       const height = parsePixelValue(style.height) ?? parsePixelValue(style.borderTop);
       geometryByNode[element.id] = {
         nodeId: element.id,
-        x: parsePixelValue(style.paddingLeft) ?? parsePixelValue(style.marginLeft),
+        x: parsePixelValue(style.marginLeft) ?? parsePixelValue(style.paddingLeft),
         y: parsePixelValue(style.marginTop),
         width: parsePixelValue(style.width),
         height,
@@ -160,7 +195,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
         id: `${node.id}:x`,
         nodeId: node.id,
         metric: 'x',
-        expected: node.position.x,
+        expected: resolveNormalizedXExpectation(node, byId, node.position.x),
         tolerance,
         category: 'position',
       });
@@ -201,7 +236,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
             id: `${node.id}:containment-x`,
             nodeId: node.id,
             metric: 'x',
-            expected: boundedX,
+            expected: resolveNormalizedXExpectation(node, byId, boundedX),
             tolerance,
             category: 'containment',
           });
@@ -242,7 +277,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
                   id: `${node.id}:spacing-x`,
                   nodeId: node.id,
                   metric: 'x',
-                  expected: expectedSpacingX,
+                  expected: resolveNormalizedXExpectation(node, byId, expectedSpacingX),
                   tolerance,
                   category: 'spacing',
                 });
@@ -261,7 +296,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
                 id: `${node.id}:alignment-x`,
                 nodeId: node.id,
                 metric: 'x',
-                expected: expectedAlignmentX,
+                expected: resolveNormalizedXExpectation(node, byId, expectedAlignmentX),
                 tolerance,
                 category: 'alignment',
               });
@@ -274,7 +309,7 @@ export const extractExpectedLayoutConstraintsFromIr = (
                 id: `${node.id}:alignment-x`,
                 nodeId: node.id,
                 metric: 'x',
-                expected: expectedAlignmentX,
+                expected: resolveNormalizedXExpectation(node, byId, expectedAlignmentX),
                 tolerance,
                 category: 'alignment',
               });
