@@ -300,3 +300,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`passes aligned design fixture within tolerance`).
 - (2026-02-09) T053 completed: drifted layout fixture integration test verifies expected mismatch set when rendered output diverges.
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`fails drifted design fixture with expected mismatch set`).
+- (2026-02-09) T054 completed: editor-level e2e flow test covers design edit -> authoritative preview -> verification -> save.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (`covers design edit -> authoritative preview -> verification -> save`).

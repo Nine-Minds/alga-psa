@@ -490,7 +490,7 @@
   {
     "id": "T054",
     "description": "End-to-end flow covers design edit -> authoritative preview -> verification -> save",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ],
