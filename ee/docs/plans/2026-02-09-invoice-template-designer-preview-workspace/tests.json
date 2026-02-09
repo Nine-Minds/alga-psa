@@ -167,7 +167,7 @@
   {
     "id": "T019",
     "description": "Existing-invoice list empty state is shown when no results match",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],
