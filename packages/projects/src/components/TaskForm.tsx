@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from '@alga-psa/types';
@@ -30,6 +31,7 @@ import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions'
 import { QuickAddTagPicker, TagManager } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { InsideDialogContext } from '@alga-psa/ui/components/ModalityContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { ListChecks, Trash2, Clock, Ticket } from 'lucide-react';
@@ -54,7 +56,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
-import { useSchedulingCallbacks } from '@alga-psa/ui/context';
+import { useSchedulingCallbacks, useUnsavedChanges } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
@@ -195,6 +197,7 @@ export default function TaskForm({
 
   const { openDrawer, closeDrawer } = useDrawer();
   const { renderPrioritySelect, deleteTicket } = useTicketIntegration();
+  const { hasAnyUnsavedChanges } = useUnsavedChanges();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -783,7 +786,8 @@ export default function TaskForm({
       e.preventDefault();
     }
 
-    if (hasChanges()) {
+    // Check both local form changes AND global unsaved changes (e.g., document editor)
+    if (hasChanges() || hasAnyUnsavedChanges()) {
       setShowCancelConfirm(true);
     } else {
       onClose();
@@ -1666,15 +1670,21 @@ export default function TaskForm({
         </Dialog>
       )}
 
-      <ConfirmationDialog
-        isOpen={showCancelConfirm}
-        onClose={handleCancelDismiss}
-        onConfirm={handleCancelConfirm}
-        title={mode === 'create' ? "Cancel Task Creation" : "Cancel Edit"}
-        message="Are you sure you want to cancel? Any unsaved changes will be lost."
-        confirmLabel="Discard changes"
-        cancelLabel="Continue editing"
-      />
+      {/* Unsaved changes dialog - portaled to document.body with InsideDialogContext to ensure z-70 rendering above all modals */}
+      {typeof document !== 'undefined' && createPortal(
+        <InsideDialogContext.Provider value={true}>
+          <ConfirmationDialog
+            isOpen={showCancelConfirm}
+            onClose={handleCancelDismiss}
+            onConfirm={handleCancelConfirm}
+            title="Unsaved Changes"
+            message="Are you sure you want to cancel? Any unsaved changes will be lost."
+            confirmLabel="Discard changes"
+            cancelLabel="Continue editing"
+          />
+        </InsideDialogContext.Provider>,
+        document.body
+      )}
 
       {/* Document cleanup confirmation - shown when canceling with new documents (uploaded/created) */}
       <ConfirmationDialog

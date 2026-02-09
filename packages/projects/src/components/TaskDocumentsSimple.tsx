@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
 import { 
@@ -25,6 +26,8 @@ import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
 import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { InsideDialogContext } from '@alga-psa/ui/components/ModalityContext';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
@@ -111,12 +114,30 @@ export default function TaskDocumentsSimple({
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<IDocument | null>(null);
+
+  // Unsaved changes dialog
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   // Preview modal for images/videos/PDFs
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
+
+  // Track unsaved changes for navigation protection
+  const hasUnsavedDocumentChanges = useMemo(() => {
+    if (!isDrawerOpen) return false;
+    if (isCreatingNew) {
+      return hasContentChanged || newDocumentName.trim() !== '';
+    }
+    if (isEditMode && selectedDocument) {
+      return hasContentChanged || documentName !== selectedDocument.document_name;
+    }
+    return false;
+  }, [isDrawerOpen, isCreatingNew, hasContentChanged, newDocumentName, isEditMode, selectedDocument, documentName]);
+
+  // Register with unsaved changes context for navigation protection
+  useRegisterUnsavedChanges(`task-document-editor-${taskId || 'new'}`, hasUnsavedDocumentChanges);
 
   const fetchUser = async () => {
     if (currentUser) return currentUser;
@@ -319,7 +340,9 @@ export default function TaskDocumentsSimple({
         await handleDocumentMutation();
       }
 
-      handleCloseDrawer();
+      // Use executeDrawerClose directly to bypass unsaved changes check after successful save
+      // (handleCloseDrawer would incorrectly show unsaved changes dialog since state hasn't reset yet)
+      executeDrawerClose();
       setIsCreatingNew(false);
       setSelectedFolderPath(null); // Reset folder selection
     } catch (error) {
@@ -403,15 +426,17 @@ export default function TaskDocumentsSimple({
     setHasContentChanged(true);
   };
 
-  const handleCloseDrawer = () => {
+  // Execute the actual drawer close (used after confirmation or when no unsaved changes)
+  const executeDrawerClose = useCallback(() => {
     // Mark as closing to hide the editor
     setIsClosing(true);
-    
+    setShowUnsavedChangesDialog(false);
+
     // Clear editor ref first to prevent cleanup issues
     if (editorRef.current) {
       editorRef.current = null;
     }
-    
+
     // Small delay to allow editor cleanup
     setTimeout(() => {
       setIsDrawerOpen(false);
@@ -424,7 +449,16 @@ export default function TaskDocumentsSimple({
       setNewDocumentName('');
       setIsClosing(false);
     }, 100);
-  };
+  }, []);
+
+  // Handle drawer close with unsaved changes check
+  const handleCloseDrawer = useCallback(() => {
+    if (hasUnsavedDocumentChanges) {
+      setShowUnsavedChangesDialog(true);
+    } else {
+      executeDrawerClose();
+    }
+  }, [hasUnsavedDocumentChanges, executeDrawerClose]);
 
   const handleDownload = async (e: React.MouseEvent, document: IDocument) => {
     e.stopPropagation();
@@ -716,6 +750,19 @@ export default function TaskDocumentsSimple({
         />
       )}
 
+      {/* Click-outside catcher - portaled to document.body to intercept clicks outside drawer when there are unsaved changes */}
+      {/* z-[55] is between TaskForm (z-50) and drawer overlay (z-60), so drawer content remains clickable */}
+      {isDrawerOpen && hasUnsavedDocumentChanges && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[55]"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowUnsavedChangesDialog(true);
+          }}
+        />,
+        document.body
+      )}
+
       {/* Document viewer/editor drawer */}
       <Drawer
         id="task-document-drawer"
@@ -835,17 +882,7 @@ export default function TaskDocumentsSimple({
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button
                 id="task-document-cancel-btn"
-                onClick={() => {
-                  if (isCreatingNew) {
-                    handleCloseDrawer();
-                    setIsCreatingNew(false);
-                  } else {
-                    setIsEditMode(false);
-                    setHasContentChanged(false);
-                    // Reload original content
-                    handleDocumentClick(selectedDocument!);
-                  }
-                }}
+                onClick={handleCloseDrawer}
                 variant="outline"
               >
                 Cancel
@@ -946,6 +983,24 @@ export default function TaskDocumentsSimple({
         confirmLabel="Remove from Task"
         cancelLabel="Cancel"
       />
+
+      {/* Unsaved changes confirmation dialog - portaled to document.body to escape drawer's stacking context */}
+      {/* InsideDialogContext ensures z-[70] rendering, portal ensures it's not trapped by drawer's transform */}
+      {typeof document !== 'undefined' && createPortal(
+        <InsideDialogContext.Provider value={true}>
+          <ConfirmationDialog
+            id="task-document-unsaved-changes-dialog"
+            isOpen={showUnsavedChangesDialog}
+            onClose={() => setShowUnsavedChangesDialog(false)}
+            onConfirm={executeDrawerClose}
+            title="Unsaved Changes"
+            message="Are you sure you want to cancel? Any unsaved changes will be lost."
+            confirmLabel="Discard changes"
+            cancelLabel="Continue editing"
+          />
+        </InsideDialogContext.Provider>,
+        document.body
+      )}
     </>
   );
 }

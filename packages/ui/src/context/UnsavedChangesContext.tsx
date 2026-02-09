@@ -1,8 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { InsideDialogContext } from '../components/ModalityContext';
 
 interface UnsavedChangesContextType {
   /**
@@ -181,16 +183,22 @@ export function UnsavedChangesProvider({
   return (
     <UnsavedChangesContext value={contextValue}>
       {children}
-      <ConfirmationDialog
-        id="unsaved-changes-dialog"
-        isOpen={showDialog}
-        onClose={handleClose}
-        onConfirm={handleConfirm}
-        title={dialogTitle}
-        message={dialogMessage}
-        confirmLabel="Leave Without Saving"
-        cancelLabel="Stay"
-      />
+      {/* Portal the dialog to document.body and wrap in InsideDialogContext to ensure z-70 rendering above all modals */}
+      {typeof document !== 'undefined' && createPortal(
+        <InsideDialogContext.Provider value={true}>
+          <ConfirmationDialog
+            id="unsaved-changes-dialog"
+            isOpen={showDialog}
+            onClose={handleClose}
+            onConfirm={handleConfirm}
+            title={dialogTitle}
+            message={dialogMessage}
+            confirmLabel="Leave Without Saving"
+            cancelLabel="Stay"
+          />
+        </InsideDialogContext.Provider>,
+        document.body
+      )}
     </UnsavedChangesContext>
   );
 }
