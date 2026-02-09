@@ -306,7 +306,7 @@
   {
     "id": "T080",
     "description": "End-to-end: API-created ticket displays Created via API badge in MSP ticket details",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F015",
