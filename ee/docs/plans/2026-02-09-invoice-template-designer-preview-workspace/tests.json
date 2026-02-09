@@ -306,7 +306,7 @@
   {
     "id": "T034",
     "description": "Debounce limits preview recompute frequency during rapid edits",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],

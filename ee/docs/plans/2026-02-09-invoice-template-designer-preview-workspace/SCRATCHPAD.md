@@ -112,3 +112,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T031`: Dynamic-table components render preview rows from selected invoice items
 - (2026-02-09) Completed `T032`: Preview recomputes when node metadata affecting bindings changes
 - (2026-02-09) Completed `T033`: Preview recomputes when relevant layout changes alter rendered structure
+- (2026-02-09) Completed `T034`: Debounce limits preview recompute frequency during rapid edits
