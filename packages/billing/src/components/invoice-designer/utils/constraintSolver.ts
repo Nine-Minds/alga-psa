@@ -54,23 +54,51 @@ export const solveConstraints = (
       solver.suggestValue(width, node.size.width);
       solver.suggestValue(height, node.size.height);
 
-      solver.addConstraint(new kiwi.Constraint(x, kiwi.Operator.Ge, 0, kiwi.Strength.required));
-      solver.addConstraint(new kiwi.Constraint(y, kiwi.Operator.Ge, 0, kiwi.Strength.required));
-      solver.addConstraint(new kiwi.Constraint(width, kiwi.Operator.Ge, 1, kiwi.Strength.required));
-      solver.addConstraint(new kiwi.Constraint(height, kiwi.Operator.Ge, 1, kiwi.Strength.required));
+      variableMap.set(node.id, { x, y, width, height });
+    });
 
-      if (node.type !== 'document' && node.type !== 'page') {
-        solver.addConstraint(new kiwi.Constraint(x, kiwi.Operator.Ge, 0, kiwi.Strength.required));
-        solver.addConstraint(new kiwi.Constraint(y, kiwi.Operator.Ge, 0, kiwi.Strength.required));
-        solver.addConstraint(
-          new kiwi.Constraint(new kiwi.Expression(x).plus(width), kiwi.Operator.Le, bounds.width, kiwi.Strength.required)
-        );
-        solver.addConstraint(
-          new kiwi.Constraint(new kiwi.Expression(y).plus(height), kiwi.Operator.Le, bounds.height, kiwi.Strength.required)
-        );
+    nodes.forEach((node) => {
+      const vars = variableMap.get(node.id);
+      if (!vars) {
+        return;
       }
 
-      variableMap.set(node.id, { x, y, width, height });
+      solver.addConstraint(new kiwi.Constraint(vars.x, kiwi.Operator.Ge, 0, kiwi.Strength.required));
+      solver.addConstraint(new kiwi.Constraint(vars.y, kiwi.Operator.Ge, 0, kiwi.Strength.required));
+      solver.addConstraint(new kiwi.Constraint(vars.width, kiwi.Operator.Ge, 1, kiwi.Strength.required));
+      solver.addConstraint(new kiwi.Constraint(vars.height, kiwi.Operator.Ge, 1, kiwi.Strength.required));
+
+      if (node.type === 'document' || node.type === 'page') {
+        return;
+      }
+
+      const parentVars = node.parentId ? variableMap.get(node.parentId) : undefined;
+      if (parentVars) {
+        solver.addConstraint(
+          new kiwi.Constraint(
+            new kiwi.Expression(vars.x).plus(vars.width).minus(parentVars.width),
+            kiwi.Operator.Le,
+            0,
+            kiwi.Strength.required
+          )
+        );
+        solver.addConstraint(
+          new kiwi.Constraint(
+            new kiwi.Expression(vars.y).plus(vars.height).minus(parentVars.height),
+            kiwi.Operator.Le,
+            0,
+            kiwi.Strength.required
+          )
+        );
+        return;
+      }
+
+      solver.addConstraint(
+        new kiwi.Constraint(new kiwi.Expression(vars.x).plus(vars.width), kiwi.Operator.Le, bounds.width, kiwi.Strength.required)
+      );
+      solver.addConstraint(
+        new kiwi.Constraint(new kiwi.Expression(vars.y).plus(vars.height), kiwi.Operator.Le, bounds.height, kiwi.Strength.required)
+      );
     });
 
     constraints.forEach((constraint) => {
@@ -132,10 +160,13 @@ export const solveConstraints = (
         };
       }
 
-      const width = clamp(vars.width.value(), 1, bounds.width);
-      const height = clamp(vars.height.value(), 1, bounds.height);
-      const maxX = Math.max(0, bounds.width - width);
-      const maxY = Math.max(0, bounds.height - height);
+      const parentVars = node.parentId ? variableMap.get(node.parentId) : undefined;
+      const maxWidth = Math.max(1, parentVars?.width.value() ?? bounds.width);
+      const maxHeight = Math.max(1, parentVars?.height.value() ?? bounds.height);
+      const width = clamp(vars.width.value(), 1, maxWidth);
+      const height = clamp(vars.height.value(), 1, maxHeight);
+      const maxX = Math.max(0, maxWidth - width);
+      const maxY = Math.max(0, maxHeight - height);
       return {
         ...node,
         position: {

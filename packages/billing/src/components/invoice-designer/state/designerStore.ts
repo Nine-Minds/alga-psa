@@ -463,6 +463,15 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
         } else {
           node.size.width = currentX + padding - gap;
         }
+
+        const parent = node.parentId ? nodeMap.get(node.parentId) : undefined;
+        if (parent) {
+          const parentPadding = parent.layout?.mode === 'flex' ? Math.max(0, parent.layout.padding ?? 0) : 0;
+          const maxInnerWidth = Math.max(1, parent.size.width - parentPadding * 2);
+          const maxInnerHeight = Math.max(1, parent.size.height - parentPadding * 2);
+          node.size.width = Math.min(node.size.width, maxInnerWidth);
+          node.size.height = Math.min(node.size.height, maxInnerHeight);
+        }
         // If parent resized, we might need to re-layout siblings? 
         // For this simple single-pass, we assume 'hug' parents are laid out *before* their parents read their size.
         // But we are traversing Top-Down.
@@ -500,6 +509,10 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
   roots.forEach((root) => layoutNode(root.id));
 
   return Array.from(nodeMap.values());
+};
+
+export const __designerLayoutTestUtils = {
+  computeLayout,
 };
 
 // Wrapper to combine Constraint Solver + Auto Layout

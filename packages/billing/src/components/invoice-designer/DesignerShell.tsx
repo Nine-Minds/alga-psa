@@ -22,6 +22,11 @@ import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerSt
 import { AlignmentGuide, calculateGuides, clampPositionToParent } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
+import {
+  findNearestSectionAncestor,
+  resolvePreferredParentFromSelection,
+  resolveSectionParentForInsertion,
+} from './utils/dropParentResolution';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
@@ -359,10 +364,14 @@ export const DesignerShell: React.FC = () => {
 
   const resolveComponentDropParent = useCallback(
     (componentType: DesignerComponentType, dropMeta: DropTargetMeta | undefined, dropPoint: Point): ComponentDropResolution => {
-      const nodesForDrop = useInvoiceDesignerStore.getState().nodes;
+      const state = useInvoiceDesignerStore.getState();
+      const nodesForDrop = state.nodes;
       const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
       const dropNode = dropMeta?.nodeId ? nodesById.get(dropMeta.nodeId) : undefined;
       const allowedParents = getAllowedParentsForType(componentType);
+      const componentDefinition = getDefinition(componentType);
+      const liveSelectedNodeId = state.selectedNodeId;
+      const selectedSectionId = findNearestSectionAncestor(liveSelectedNodeId, nodesById);
 
       if (dropNode && canNestWithinParent(componentType, dropNode.type)) {
         return { ok: true, parentId: dropNode.id };
@@ -380,7 +389,7 @@ export const DesignerShell: React.FC = () => {
         ancestor = parent;
       }
 
-      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id);
+      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id ?? selectedSectionId ?? undefined);
       if (componentType === 'section') {
         if (pageNode && canNestWithinParent('section', pageNode.type)) {
           return { ok: true, parentId: pageNode.id };
@@ -388,10 +397,27 @@ export const DesignerShell: React.FC = () => {
         return { ok: false, message: 'Unable to place section here.' };
       }
 
+      if (!dropNode && pageNode) {
+        const preferredParent = resolvePreferredParentFromSelection({
+          selectedNodeId: liveSelectedNodeId,
+          pageNode,
+          nodesById,
+          componentType,
+          desiredSize: componentDefinition?.defaultSize,
+        });
+        if (preferredParent) {
+          return { ok: true, parentId: preferredParent.id };
+        }
+      }
+
       if (allowedParents.includes('section') && pageNode) {
-        const existingSection = pageNode.childIds
-          .map((childId) => nodesById.get(childId))
-          .find((node): node is DesignerNode => Boolean(node && node.type === 'section'));
+        const existingSection = resolveSectionParentForInsertion({
+          pageNode,
+          nodesById,
+          componentType,
+          desiredSize: componentDefinition?.defaultSize,
+          preferredSectionId: selectedSectionId,
+        });
         if (existingSection) {
           return { ok: true, parentId: existingSection.id };
         }
@@ -428,9 +454,15 @@ export const DesignerShell: React.FC = () => {
           return { ok: true, parentId: createdSection.id, notice: 'Added a section scaffold for this drop.' };
         }
 
-        const fallbackSection = nodesAfterScaffold.find(
-          (node) => node.type === 'section' && node.parentId === pageNode.id
-        );
+        const fallbackNodesById = new Map(nodesAfterScaffold.map((node) => [node.id, node]));
+        const nextPageNode = fallbackNodesById.get(pageNode.id) ?? pageNode;
+        const fallbackSection = resolveSectionParentForInsertion({
+          pageNode: nextPageNode,
+          nodesById: fallbackNodesById,
+          componentType,
+          desiredSize: componentDefinition?.defaultSize,
+          preferredSectionId: selectedSectionId,
+        });
         if (fallbackSection) {
           return { ok: true, parentId: fallbackSection.id };
         }

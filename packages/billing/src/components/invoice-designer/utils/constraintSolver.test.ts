@@ -58,4 +58,47 @@ describe('constraintSolver', () => {
     expect(nodeA.position.x).toBeCloseTo(nodeB.position.x, 4);
     expect(nodeA.size.width).toBeCloseTo(nodeB.size.width, 4);
   });
+
+  it('keeps child sizing stable when local coordinates exceed canvas width', () => {
+    const bounds = { width: 816, height: 1056 };
+    const document = createNode({
+      id: 'document',
+      type: 'document',
+      size: { width: 1400, height: 1200 },
+      allowedChildren: ['page'],
+      childIds: ['page'],
+    });
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      parentId: document.id,
+      size: { width: 1400, height: 1000 },
+      allowedChildren: ['section'],
+      childIds: ['parent'],
+    });
+    const parent = createNode({
+      id: 'parent',
+      type: 'section',
+      parentId: page.id,
+      size: { width: 1400, height: 400 },
+      childIds: ['child'],
+    });
+    const child = createNode({
+      id: 'child',
+      type: 'text',
+      parentId: parent.id,
+      position: { x: 1200, y: 32 },
+      size: { width: 160, height: 60 },
+    });
+
+    const solved = solveConstraints([document, page, parent, child], [], bounds);
+    const solvedChild = solved.find((node) => node.id === child.id);
+
+    expect(solvedChild).toBeTruthy();
+    if (!solvedChild) return;
+
+    expect(solvedChild.size.width).toBeGreaterThan(1);
+    expect(solvedChild.size.width).toBeCloseTo(160, 4);
+    expect(solvedChild.position.x + solvedChild.size.width).toBeLessThanOrEqual(parent.size.width);
+  });
 });

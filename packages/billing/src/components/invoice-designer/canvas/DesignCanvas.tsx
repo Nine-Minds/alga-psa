@@ -36,6 +36,63 @@ interface CanvasNodeProps {
   childExtents?: { maxRight: number; maxBottom: number };
 }
 
+type SectionSemanticCue = {
+  label: string;
+  surfaceClass: string;
+  chipClass: string;
+  accentClass: string;
+};
+
+const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
+  const name = sectionName.toLowerCase();
+  if (/\b(item|line item|service|detail)\b/.test(name)) {
+    return {
+      label: 'Items',
+      surfaceClass: 'bg-cyan-100/45 border-cyan-300 border-dashed',
+      chipClass: 'border-cyan-300 bg-cyan-100 text-cyan-800',
+      accentClass: 'bg-cyan-400/80',
+    };
+  }
+  if (/\b(total|summary|payment)\b/.test(name)) {
+    return {
+      label: 'Totals',
+      surfaceClass: 'bg-emerald-100/45 border-emerald-300 border-dashed',
+      chipClass: 'border-emerald-300 bg-emerald-100 text-emerald-800',
+      accentClass: 'bg-emerald-400/80',
+    };
+  }
+  if (/\b(footer|approval|signature)\b/.test(name)) {
+    return {
+      label: 'Footer',
+      surfaceClass: 'bg-slate-100 border-slate-400 border-dashed',
+      chipClass: 'border-slate-400 bg-white text-slate-700',
+      accentClass: 'bg-slate-400/80',
+    };
+  }
+  if (/\b(billing|info|meta|details)\b/.test(name)) {
+    return {
+      label: 'Info',
+      surfaceClass: 'bg-blue-100/45 border-blue-300 border-dashed',
+      chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
+      accentClass: 'bg-blue-400/80',
+    };
+  }
+  if (/\b(header|masthead|top)\b/.test(name)) {
+    return {
+      label: 'Header',
+      surfaceClass: 'bg-amber-100/45 border-amber-300 border-dashed',
+      chipClass: 'border-amber-300 bg-amber-100 text-amber-800',
+      accentClass: 'bg-amber-400/80',
+    };
+  }
+  return {
+    label: 'Section',
+    surfaceClass: 'bg-blue-100/45 border-blue-300 border-dashed',
+    chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
+    accentClass: 'bg-blue-400/80',
+  };
+};
+
 const getPreviewContent = (node: DesignerNode): React.ReactNode => {
   const metadata = (node.metadata ?? {}) as Record<string, unknown>;
   switch (node.type) {
@@ -164,6 +221,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = hasActiveSelection && !isSelected && !isDragging;
+  const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -220,7 +278,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       style={nodeStyle}
       className={clsx(
         'border rounded-md select-none transition-[opacity,box-shadow,border-color] duration-150',
-        isContainer ? 'bg-blue-50/40 border-blue-200 border-dashed' : 'bg-white shadow-sm border-slate-300',
+        isContainer
+          ? sectionCue?.surfaceClass ?? 'bg-blue-50/40 border-blue-200 border-dashed'
+          : 'bg-white shadow-sm border-slate-300',
         isSelected && 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500',
         ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
           'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
@@ -234,8 +294,14 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     >
       {isContainer ? (
         <div className="relative w-full h-full">
-          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10">
-            {node.name} · {node.type}
+          {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
+          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10 flex items-center gap-1.5">
+            <span>{node.name} · {node.type}</span>
+            {sectionCue && (
+              <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
+                {sectionCue.label}
+              </span>
+            )}
           </div>
           <div className="relative w-full h-full">
             {renderChildren(node.id)}
