@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "Top-level `Visual` and `Code` tab behavior remains intact after adding preview workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ],

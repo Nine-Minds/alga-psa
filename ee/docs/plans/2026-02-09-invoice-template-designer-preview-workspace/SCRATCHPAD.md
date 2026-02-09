@@ -179,3 +179,5 @@ Authoritative preview for invoice template designer:
   - Result: documentation now reflects implemented `GUI -> IR -> AssemblyScript -> Wasm -> render -> verify` preview flow and explicitly documents read-only/no-write preview guarantees.
 - (2026-02-09) T001 completed: component coverage verifies nested `Design` and `Preview` tabs render under `Visual` workspace.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`renders Design and Preview tabs with stable automation IDs`).
+- (2026-02-09) T002 completed: top-level `Visual`/`Code` tab behavior remains intact with preview workflow additions.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`preserves nested visual workspace state when switching Visual -> Code -> Visual`).
