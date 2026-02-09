@@ -243,7 +243,7 @@
   {
     "id": "T027",
     "description": "Totals components display subtotal/tax/grand-total from selected preview data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ],
