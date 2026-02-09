@@ -499,7 +499,7 @@
   {
     "id": "T055",
     "description": "End-to-end flow covers existing invoice selection and authoritative preview update",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ],

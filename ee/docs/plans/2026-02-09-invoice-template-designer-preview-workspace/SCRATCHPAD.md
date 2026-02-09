@@ -302,3 +302,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`fails drifted design fixture with expected mismatch set`).
 - (2026-02-09) T054 completed: editor-level e2e flow test covers design edit -> authoritative preview -> verification -> save.
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (`covers design edit -> authoritative preview -> verification -> save`).
+- (2026-02-09) T055 completed: editor-level e2e test covers existing invoice selection and authoritative preview update path.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (`updates authoritative preview when switching to existing invoice data`).
