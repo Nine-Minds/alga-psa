@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Implement compile cache keyed by generated source hash to avoid redundant compilation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements"]
   },
   {

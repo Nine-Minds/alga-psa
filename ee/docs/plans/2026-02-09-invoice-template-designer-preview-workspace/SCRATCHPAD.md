@@ -120,3 +120,7 @@ Authoritative preview for invoice template designer:
   - Production compile wiring updated in `packages/billing/src/actions/invoiceTemplates.ts` to use the shared command builder.
   - Validation command: `npx vitest run packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`
   - Result: 3/3 tests passed.
+- (2026-02-09) F014 implemented: preview compile now uses an in-memory LRU cache keyed by source hash to skip recompilation for unchanged generated sources.
+  - Cache controls exposed for tests via `__previewCompileCacheTestUtils`.
+  - Validation command: `npx vitest run packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.test.ts`
+  - Result: 5/5 tests passed.
