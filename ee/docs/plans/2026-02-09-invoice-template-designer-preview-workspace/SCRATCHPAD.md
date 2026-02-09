@@ -229,3 +229,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`
 - (2026-02-09) T024 completed: authoritative preview integration test validates compiled Wasm executes through the same runtime/render path as direct runtime calls.
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`.
+- (2026-02-09) T025 completed: integration parity test asserts preview render returns HTML/CSS contract identical to direct renderLayout output for same runtime layout.
+  - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (`expect(actionResult.render.html).toBe(directRender.html)` / CSS parity assertion).
