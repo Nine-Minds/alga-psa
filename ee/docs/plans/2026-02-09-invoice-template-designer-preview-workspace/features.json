@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Ensure preview compile path is side-effect free and does not write templates/invoices",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {

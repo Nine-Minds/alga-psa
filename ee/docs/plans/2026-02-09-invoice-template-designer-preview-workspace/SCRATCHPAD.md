@@ -127,3 +127,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) F015 implemented: preview pipeline now surfaces structured compiler diagnostics (severity/message/node mapping) and compile error details in Preview UI status panel.
   - Diagnostics come from AssemblyScript stderr parsing + GUI-node source map linking.
   - UI automation IDs: `invoice-designer-preview-compile-error`, `invoice-designer-preview-compile-diagnostics-list`, `invoice-designer-preview-compile-diagnostic-item`.
+- (2026-02-09) F016 completed by implementation review: preview compile/render action path (`invoiceTemplatePreview.ts`) is transient-only and performs no invoice/template DB writes.
+  - The pipeline uses temp files + wasm execution/rendering only, and does not import tenant DB helpers (`createTenantKnex`, `withTransaction`) in preview action module.
