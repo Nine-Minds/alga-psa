@@ -1,7 +1,7 @@
 import React from 'react';
 import { Progress, Stack, Text } from '@alga/ui-kit';
 import { DemoSection } from '../components/DemoSection';
-
+ 
 export function ProgressDemo() {
   return (
     <DemoSection title="Progress" description="Progress indicators with value, size, colors, labels, and indeterminate mode.">
