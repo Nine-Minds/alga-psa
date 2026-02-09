@@ -90,3 +90,4 @@
   - `tickets.origin.internal`
   - `tickets.origin.clientPortal`
   - `tickets.origin.inboundEmail`
+- (2026-02-09) **F014 completed**: Added matching English client portal locale keys under `server/public/locales/en/clientPortal.json` for `tickets.origin.internal|clientPortal|inboundEmail`.
