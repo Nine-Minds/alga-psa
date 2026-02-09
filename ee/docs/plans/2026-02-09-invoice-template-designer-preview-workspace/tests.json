@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "Switching `Design` -> `Preview` -> `Design` preserves unsaved workspace state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F030"
