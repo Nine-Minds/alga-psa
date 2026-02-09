@@ -132,7 +132,7 @@
   {
     "id": "T015",
     "description": "Code generation output includes table and dynamic-table row rendering logic",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
