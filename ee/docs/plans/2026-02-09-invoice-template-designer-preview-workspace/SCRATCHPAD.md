@@ -48,3 +48,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - Should preview remember selected sample/invoice across browser sessions or only during the current edit session?
 - Which sample scenarios are mandatory for MVP beyond a basic/default invoice?
 - (2026-02-09) Completed `F001`: Added `Design`/`Preview` secondary tabs under Visual by introducing `DesignerVisualWorkspace` and wiring it inside `InvoiceTemplateEditor`, so users can switch design vs preview without leaving the editor shell.
+- (2026-02-09) Completed `F002`: Defaulted the nested visual workspace state to Design while preserving top-level Visual/Code tabs.

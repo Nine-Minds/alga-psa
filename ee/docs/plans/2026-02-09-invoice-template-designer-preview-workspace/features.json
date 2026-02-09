@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Default Visual mode to `Design` and keep top-level `Visual`/`Code` behavior unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements"

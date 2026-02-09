@@ -1,0 +1,366 @@
+[
+  {
+    "id": "T001",
+    "description": "Visual editor renders secondary `Design` and `Preview` tabs",
+    "implemented": false,
+    "featureIds": ["F001"],
+    "type": "component"
+  },
+  {
+    "id": "T002",
+    "description": "Visual editor defaults to `Design` on initial load",
+    "implemented": false,
+    "featureIds": ["F002"],
+    "type": "component"
+  },
+  {
+    "id": "T003",
+    "description": "Switching `Design` -> `Preview` -> `Design` preserves unsaved workspace state",
+    "implemented": false,
+    "featureIds": ["F003", "F030"],
+    "type": "integration"
+  },
+  {
+    "id": "T004",
+    "description": "Switching `Visual` -> `Code` -> `Visual` does not break nested tab state",
+    "implemented": false,
+    "featureIds": ["F004"],
+    "type": "component"
+  },
+  {
+    "id": "T005",
+    "description": "Preview state initializes with valid defaults (source, selection ids, loading/error)",
+    "implemented": false,
+    "featureIds": ["F005"],
+    "type": "unit"
+  },
+  {
+    "id": "T006",
+    "description": "Sample fixture module exports at least three scenarios with unique ids",
+    "implemented": false,
+    "featureIds": ["F006"],
+    "type": "unit"
+  },
+  {
+    "id": "T007",
+    "description": "Each sample fixture satisfies required preview model fields (header, totals, items)",
+    "implemented": false,
+    "featureIds": ["F006"],
+    "type": "unit"
+  },
+  {
+    "id": "T008",
+    "description": "Selecting a sample scenario updates active preview dataset",
+    "implemented": false,
+    "featureIds": ["F007"],
+    "type": "component"
+  },
+  {
+    "id": "T009",
+    "description": "Existing-invoice selector is hidden while source is `Sample`",
+    "implemented": false,
+    "featureIds": ["F007", "F008"],
+    "type": "component"
+  },
+  {
+    "id": "T010",
+    "description": "Existing-invoice selector is shown while source is `Existing`",
+    "implemented": false,
+    "featureIds": ["F008"],
+    "type": "component"
+  },
+  {
+    "id": "T011",
+    "description": "Existing invoice search calls paginated fetch with status `all` and expected paging params",
+    "implemented": false,
+    "featureIds": ["F009"],
+    "type": "integration"
+  },
+  {
+    "id": "T012",
+    "description": "Existing invoice search applies query text filtering",
+    "implemented": false,
+    "featureIds": ["F009"],
+    "type": "integration"
+  },
+  {
+    "id": "T013",
+    "description": "Existing invoice search handles pagination transitions correctly",
+    "implemented": false,
+    "featureIds": ["F009"],
+    "type": "integration"
+  },
+  {
+    "id": "T014",
+    "description": "Selecting an existing invoice triggers detail fetch via getInvoiceForRendering",
+    "implemented": false,
+    "featureIds": ["F010"],
+    "type": "integration"
+  },
+  {
+    "id": "T015",
+    "description": "Rapidly changing selected existing invoice does not leave stale detail data in preview",
+    "implemented": false,
+    "featureIds": ["F010", "F012"],
+    "type": "integration"
+  },
+  {
+    "id": "T016",
+    "description": "Detail mapping converts DB invoice payload into preview model numeric/string types correctly",
+    "implemented": false,
+    "featureIds": ["F011"],
+    "type": "unit"
+  },
+  {
+    "id": "T017",
+    "description": "Detail mapping handles nullable fields without crashing",
+    "implemented": false,
+    "featureIds": ["F011"],
+    "type": "unit"
+  },
+  {
+    "id": "T018",
+    "description": "Existing-invoice list loading state is visible while searching",
+    "implemented": false,
+    "featureIds": ["F012"],
+    "type": "component"
+  },
+  {
+    "id": "T019",
+    "description": "Existing-invoice list empty state is shown when no results match",
+    "implemented": false,
+    "featureIds": ["F012"],
+    "type": "component"
+  },
+  {
+    "id": "T020",
+    "description": "Existing-invoice fetch failures show recoverable error state",
+    "implemented": false,
+    "featureIds": ["F012"],
+    "type": "component"
+  },
+  {
+    "id": "T021",
+    "description": "Resetting existing invoice selection clears detail payload and rendered output",
+    "implemented": false,
+    "featureIds": ["F013"],
+    "type": "component"
+  },
+  {
+    "id": "T022",
+    "description": "Preview panel renders with selected sample data in default flow",
+    "implemented": false,
+    "featureIds": ["F014", "F026"],
+    "type": "component"
+  },
+  {
+    "id": "T023",
+    "description": "Preview panel uses designer page/frame scale conventions",
+    "implemented": false,
+    "featureIds": ["F015"],
+    "type": "component"
+  },
+  {
+    "id": "T024",
+    "description": "Field binding resolution prefers real preview data value when available",
+    "implemented": false,
+    "featureIds": ["F016", "F029"],
+    "type": "unit"
+  },
+  {
+    "id": "T025",
+    "description": "Field binding resolution falls back to scaffold placeholder when value is missing",
+    "implemented": false,
+    "featureIds": ["F017", "F029"],
+    "type": "unit"
+  },
+  {
+    "id": "T026",
+    "description": "Label metadata text overrides generic label scaffold in preview",
+    "implemented": false,
+    "featureIds": ["F016", "F017"],
+    "type": "unit"
+  },
+  {
+    "id": "T027",
+    "description": "Totals components display subtotal/tax/grand-total from selected preview data",
+    "implemented": false,
+    "featureIds": ["F018"],
+    "type": "component"
+  },
+  {
+    "id": "T028",
+    "description": "Totals components degrade gracefully when one or more totals are absent",
+    "implemented": false,
+    "featureIds": ["F018"],
+    "type": "component"
+  },
+  {
+    "id": "T029",
+    "description": "Table components render all invoice line items from preview dataset",
+    "implemented": false,
+    "featureIds": ["F019"],
+    "type": "component"
+  },
+  {
+    "id": "T030",
+    "description": "Table components render valid empty state when selected invoice has no line items",
+    "implemented": false,
+    "featureIds": ["F019"],
+    "type": "component"
+  },
+  {
+    "id": "T031",
+    "description": "Dynamic-table components render preview rows from selected invoice items",
+    "implemented": false,
+    "featureIds": ["F019"],
+    "type": "component"
+  },
+  {
+    "id": "T032",
+    "description": "Preview recomputes when node metadata affecting bindings changes",
+    "implemented": false,
+    "featureIds": ["F020"],
+    "type": "integration"
+  },
+  {
+    "id": "T033",
+    "description": "Preview recomputes when relevant layout changes alter rendered structure",
+    "implemented": false,
+    "featureIds": ["F020"],
+    "type": "integration"
+  },
+  {
+    "id": "T034",
+    "description": "Debounce limits preview recompute frequency during rapid edits",
+    "implemented": false,
+    "featureIds": ["F021"],
+    "type": "unit"
+  },
+  {
+    "id": "T035",
+    "description": "Preview mode hides/blocks drag handles and resize affordances",
+    "implemented": false,
+    "featureIds": ["F022"],
+    "type": "component"
+  },
+  {
+    "id": "T036",
+    "description": "Preview mode prevents selection mutation from click interactions",
+    "implemented": false,
+    "featureIds": ["F022"],
+    "type": "component"
+  },
+  {
+    "id": "T037",
+    "description": "Preview mode ignores destructive keyboard shortcuts (delete/backspace)",
+    "implemented": false,
+    "featureIds": ["F022"],
+    "type": "component"
+  },
+  {
+    "id": "T038",
+    "description": "Preview mode does not apply design-time selection opacity deemphasis",
+    "implemented": false,
+    "featureIds": ["F023"],
+    "type": "component"
+  },
+  {
+    "id": "T039",
+    "description": "Workspace hydration from source-embedded designer state still succeeds with preview feature enabled",
+    "implemented": false,
+    "featureIds": ["F024"],
+    "type": "integration"
+  },
+  {
+    "id": "T040",
+    "description": "Workspace hydration from localStorage fallback still succeeds with preview feature enabled",
+    "implemented": false,
+    "featureIds": ["F024"],
+    "type": "integration"
+  },
+  {
+    "id": "T041",
+    "description": "Saving template while preview tab is active preserves existing save behavior and payload shape",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "type": "integration"
+  },
+  {
+    "id": "T042",
+    "description": "Preview interactions perform no invoice/template write operations",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "type": "integration"
+  },
+  {
+    "id": "T043",
+    "description": "New-template flow shows preview successfully without requiring existing invoices",
+    "implemented": false,
+    "featureIds": ["F026"],
+    "type": "component"
+  },
+  {
+    "id": "T044",
+    "description": "Preview remains usable even when template name is empty prior to save validation",
+    "implemented": false,
+    "featureIds": ["F026"],
+    "type": "component"
+  },
+  {
+    "id": "T045",
+    "description": "Preview tab and design tab expose stable automation IDs",
+    "implemented": false,
+    "featureIds": ["F027"],
+    "type": "component"
+  },
+  {
+    "id": "T046",
+    "description": "Preview source toggle and sample selector expose stable automation IDs",
+    "implemented": false,
+    "featureIds": ["F027"],
+    "type": "component"
+  },
+  {
+    "id": "T047",
+    "description": "Existing invoice selector and empty/error states expose stable automation IDs",
+    "implemented": false,
+    "featureIds": ["F027"],
+    "type": "component"
+  },
+  {
+    "id": "T048",
+    "description": "Unit tests verify preview source-state reducer/selectors for all transitions",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "type": "unit"
+  },
+  {
+    "id": "T049",
+    "description": "Integration test covers end-to-end Design -> Preview -> Design workflow with preserved edits",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "type": "integration"
+  },
+  {
+    "id": "T050",
+    "description": "Integration test covers Existing source selection and preview update after detail fetch",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "type": "integration"
+  },
+  {
+    "id": "T051",
+    "description": "Integration test covers switching Sample -> Existing -> Sample and correct output refresh",
+    "implemented": false,
+    "featureIds": ["F030", "F031"],
+    "type": "integration"
+  },
+  {
+    "id": "T052",
+    "description": "Documentation update includes preview workflow, source controls, and expected behavior",
+    "implemented": false,
+    "featureIds": ["F032"],
+    "type": "docs"
+  }
+]
