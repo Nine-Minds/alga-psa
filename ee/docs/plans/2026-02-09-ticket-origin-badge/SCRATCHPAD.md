@@ -161,3 +161,4 @@
 - (2026-02-09) **T003 completed (reconciliation pass)**: Backfill marks tickets with email_metadata as inbound_email
 - (2026-02-09) **T004 completed (reconciliation pass)**: Backfill marks tickets created by client users as client_portal when no email_metadata
 - (2026-02-09) **T005 completed (reconciliation pass)**: Backfill marks unresolved legacy tickets as internal
+- (2026-02-09) **T006 completed (reconciliation pass)**: TicketOrigin typecheck accepts internal/client_portal/inbound_email/api and rejects invalid values

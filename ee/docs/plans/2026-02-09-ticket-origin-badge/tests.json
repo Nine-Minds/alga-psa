@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "TicketOrigin typecheck accepts internal/client_portal/inbound_email/api and rejects invalid values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
