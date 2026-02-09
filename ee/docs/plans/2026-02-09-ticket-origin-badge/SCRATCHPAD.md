@@ -108,3 +108,5 @@
   - `npx vitest run packages/tickets/src/actions/ticketActions.ticketOrigin.test.ts` ✅
   - `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.ticketOrigin.test.ts` ✅
   - Note: same transient coverage tmp-folder ENOENT can appear when running concurrent Vitest processes; sequential rerun passes.
+- (2026-02-09) Added badge render contract tests `packages/tickets/src/components/TicketOriginBadge.render.test.tsx` for `T030`–`T033`.
+- (2026-02-09) Validation command: `npx vitest run packages/tickets/src/components/TicketOriginBadge.render.test.tsx` ✅

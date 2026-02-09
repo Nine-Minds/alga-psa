@@ -116,25 +116,25 @@
   {
     "id": "T030",
     "description": "TicketOriginBadge renders internal variant with expected label and data attribute",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F015"]
   },
   {
     "id": "T031",
     "description": "TicketOriginBadge renders client_portal variant with expected label and data attribute",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F015"]
   },
   {
     "id": "T032",
     "description": "TicketOriginBadge renders inbound_email variant with expected label and data attribute",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F015"]
   },
   {
     "id": "T033",
     "description": "TicketOriginBadge supports size/className props used by both TicketDetails views",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
