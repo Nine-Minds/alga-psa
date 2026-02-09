@@ -169,7 +169,7 @@
   {
     "id": "T019",
     "description": "Transient preview compile uses same AssemblyScript compiler flags/options as production compile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],

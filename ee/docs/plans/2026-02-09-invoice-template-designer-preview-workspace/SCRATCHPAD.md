@@ -214,3 +214,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts` (`emits layout/style declarations derived from node size, position, and layout metadata`).
 - (2026-02-09) T018 completed: diagnostics mapping tests validate compiler errors are linked back to GUI node ids when source map coverage exists.
   - Evidence: `packages/billing/src/components/invoice-designer/compiler/diagnostics.test.ts`.
+- (2026-02-09) T019 completed: compile parity integration test validates preview compile path reuses shared AssemblyScript flags/options helper used by production compile.
+  - Evidence: `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`.
