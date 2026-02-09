@@ -123,6 +123,27 @@ export const collectRenderedGeometryFromLayout = (
   return geometryByNode;
 };
 
+export const estimateRenderedContentHeight = (
+  geometryByNode: Record<string, RenderedGeometry>,
+  minimumHeightPx = 640
+): number => {
+  const maxBottom = Object.values(geometryByNode).reduce((max, geometry) => {
+    if (geometry.y === null || geometry.height === null) {
+      return max;
+    }
+    const bottom = geometry.y + geometry.height;
+    if (!Number.isFinite(bottom)) {
+      return max;
+    }
+    return Math.max(max, bottom);
+  }, 0);
+
+  if (!Number.isFinite(maxBottom) || maxBottom <= 0) {
+    return minimumHeightPx;
+  }
+  return Math.max(minimumHeightPx, Math.ceil(maxBottom));
+};
+
 export const extractExpectedLayoutConstraintsFromIr = (
   ir: InvoiceDesignerCompilerIr,
   tolerance = 2

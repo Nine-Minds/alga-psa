@@ -24,6 +24,7 @@ import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
 import {
   collectRenderedGeometryFromLayout,
   compareLayoutConstraints,
+  estimateRenderedContentHeight,
   extractExpectedLayoutConstraintsFromIr,
 } from '../lib/invoice-template-compiler/layoutVerification';
 import {
@@ -196,6 +197,7 @@ type AuthoritativePreviewResult = {
     status: 'idle' | 'success' | 'error';
     html: string | null;
     css: string | null;
+    contentHeightPx?: number | null;
     error?: string;
   };
   verification: {
@@ -218,7 +220,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           diagnostics: [],
           error: 'Preview workspace is empty.',
         },
-        render: { status: 'idle', html: null, css: null },
+        render: { status: 'idle', html: null, css: null, contentHeightPx: null },
         verification: { status: 'idle', mismatches: [] },
       };
     }
@@ -233,7 +235,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           cacheHit: false,
           diagnostics: [],
         },
-        render: { status: 'idle', html: null, css: null },
+        render: { status: 'idle', html: null, css: null, contentHeightPx: null },
         verification: { status: 'idle', mismatches: [] },
       };
     }
@@ -260,7 +262,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           error: compileResult.error,
           details: compileResult.details,
         },
-        render: { status: 'idle', html: null, css: null },
+        render: { status: 'idle', html: null, css: null, contentHeightPx: null },
         verification: { status: 'idle', mismatches: [] },
       };
     }
@@ -268,9 +270,20 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
     try {
       const renderedLayout = await executeWasmTemplate(input.invoiceData, compileResult.wasmBinary);
       const renderedOutput = renderLayout(renderedLayout);
+      let renderedGeometry: ReturnType<typeof collectRenderedGeometryFromLayout> | null = null;
+      let contentHeightPx: number | null = null;
+      try {
+        renderedGeometry = collectRenderedGeometryFromLayout(renderedLayout);
+        contentHeightPx = estimateRenderedContentHeight(renderedGeometry, 640);
+      } catch {
+        renderedGeometry = null;
+        contentHeightPx = null;
+      }
       try {
         const expectedConstraints = extractExpectedLayoutConstraintsFromIr(ir, input.tolerancePx ?? 2);
-        const renderedGeometry = collectRenderedGeometryFromLayout(renderedLayout);
+        if (!renderedGeometry) {
+          throw new Error('Rendered geometry could not be derived for verification.');
+        }
         const verification = compareLayoutConstraints(expectedConstraints, renderedGeometry);
         return {
           success: true,
@@ -285,6 +298,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
             status: 'success',
             html: renderedOutput.html,
             css: renderedOutput.css,
+            contentHeightPx,
           },
           verification: {
             status: verification.status,
@@ -305,6 +319,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
             status: 'success',
             html: renderedOutput.html,
             css: renderedOutput.css,
+            contentHeightPx,
           },
           verification: {
             status: 'error',
@@ -327,6 +342,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           status: 'error',
           html: null,
           css: null,
+          contentHeightPx: null,
           error: renderError?.message || String(renderError),
         },
         verification: {

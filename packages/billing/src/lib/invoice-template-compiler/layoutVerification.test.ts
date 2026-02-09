@@ -4,6 +4,7 @@ import type { InvoiceDesignerCompilerIr } from '../../components/invoice-designe
 import {
   collectRenderedGeometryFromLayout,
   compareLayoutConstraints,
+  estimateRenderedContentHeight,
   extractExpectedLayoutConstraintsFromIr,
 } from './layoutVerification';
 
@@ -326,5 +327,38 @@ describe('layoutVerification', () => {
     expect(constraintIds.has('field-b:spacing-y')).toBe(false);
     expect(constraintIds.has('field-a:alignment-x')).toBe(false);
     expect(constraintIds.has('field-b:alignment-x')).toBe(false);
+  });
+
+  it('estimates preview content height from rendered geometry', () => {
+    const renderedLayout = {
+      type: LayoutElementType.Document,
+      id: 'doc',
+      style: { marginTop: '0px', height: '1056px' },
+      children: [
+        {
+          type: LayoutElementType.Section,
+          id: 'page',
+          style: {
+            marginTop: '0px',
+            height: '945px',
+          },
+          children: [
+            {
+              type: LayoutElementType.Text,
+              id: 'totals',
+              content: 'Total',
+              style: {
+                marginTop: '1001px',
+                height: '232px',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const geometry = collectRenderedGeometryFromLayout(renderedLayout);
+    expect(estimateRenderedContentHeight(geometry, 640)).toBe(1233);
+    expect(estimateRenderedContentHeight({}, 640)).toBe(640);
   });
 });

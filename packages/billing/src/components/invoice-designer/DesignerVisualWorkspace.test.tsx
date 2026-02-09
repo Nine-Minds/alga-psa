@@ -156,6 +156,7 @@ describe('DesignerVisualWorkspace', () => {
         status: 'success',
         html: `<div>${invoiceData?.invoiceNumber ?? 'N/A'}</div>`,
         css: '',
+        contentHeightPx: 1180,
       },
       verification: {
         status: 'pass',
@@ -199,6 +200,63 @@ describe('DesignerVisualWorkspace', () => {
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
     expect(screen.queryByText('Designer Shell')).toBeNull();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-iframe\"]')).toBeTruthy();
+  });
+
+  it('sizes preview iframe to rendered content height and enforces minimum height', async () => {
+    seedBoundField('invoice.number');
+    runAuthoritativeInvoiceTemplatePreviewMock.mockResolvedValueOnce({
+      success: true,
+      sourceHash: 'source-hash',
+      generatedSource: '// generated',
+      compile: {
+        status: 'success',
+        cacheHit: false,
+        diagnostics: [],
+      },
+      render: {
+        status: 'success',
+        html: '<div>Invoice</div>',
+        css: '',
+        contentHeightPx: 1325,
+      },
+      verification: {
+        status: 'pass',
+        mismatches: [],
+      },
+    });
+    renderWorkspace('preview');
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+
+    const iframe = document.querySelector(
+      '[data-automation-id=\"invoice-designer-preview-render-iframe\"]'
+    ) as HTMLIFrameElement | null;
+    expect(iframe).toBeTruthy();
+    expect(iframe?.style.height).toBe('1325px');
+
+    runAuthoritativeInvoiceTemplatePreviewMock.mockResolvedValueOnce({
+      success: true,
+      sourceHash: 'source-hash',
+      generatedSource: '// generated',
+      compile: {
+        status: 'success',
+        cacheHit: false,
+        diagnostics: [],
+      },
+      render: {
+        status: 'success',
+        html: '<div>Invoice</div>',
+        css: '',
+        contentHeightPx: 320,
+      },
+      verification: {
+        status: 'pass',
+        mismatches: [],
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalledTimes(2));
+    expect(iframe?.style.height).toBe('640px');
   });
 
   it('updates sample scenario selection while in Sample source mode', async () => {

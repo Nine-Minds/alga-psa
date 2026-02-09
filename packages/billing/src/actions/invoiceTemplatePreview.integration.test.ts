@@ -153,5 +153,6 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
     expect(actionResult.verification.mismatches).toHaveLength(0);
     expect(actionResult.render.html).toBe(directRender.html);
     expect(actionResult.render.css).toBe(directRender.css);
+    expect(actionResult.render.contentHeightPx).toBe(1056);
   }, 45000);
 });

@@ -110,6 +110,13 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     html: authoritativePreview?.render.html ?? null,
   });
   const canDisplaySuccessStates = hasValidSelectionForSource && hasRenderedPreviewOutput;
+  const previewIframeHeightPx = useMemo(() => {
+    const measuredHeight = authoritativePreview?.render.contentHeightPx;
+    if (typeof measuredHeight !== 'number' || !Number.isFinite(measuredHeight)) {
+      return 640;
+    }
+    return Math.max(640, Math.ceil(measuredHeight));
+  }, [authoritativePreview?.render.contentHeightPx]);
   const displayStatuses = derivePreviewPipelineDisplayStatuses({
     statuses: {
       compileStatus: previewState.compileStatus,
@@ -606,7 +613,8 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
           {previewData && authoritativePreview?.render.status === 'success' && authoritativePreview.render.html && (
             <iframe
               title="Invoice Preview Output"
-              className="w-full min-h-[640px] border-0"
+              className="block w-full border-0"
+              style={{ height: `${previewIframeHeightPx}px` }}
               srcDoc={`<style>${authoritativePreview.render.css ?? ''}</style>${authoritativePreview.render.html}`}
               data-automation-id="invoice-designer-preview-render-iframe"
             />
