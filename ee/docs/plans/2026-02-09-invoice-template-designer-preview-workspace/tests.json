@@ -112,7 +112,7 @@
   {
     "id": "T013",
     "description": "Existing invoice search handles pagination transitions correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
