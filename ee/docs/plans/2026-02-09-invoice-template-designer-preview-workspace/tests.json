@@ -450,7 +450,7 @@
   {
     "id": "T050",
     "description": "Integration test covers Existing source selection and preview update after detail fetch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],
