@@ -223,7 +223,7 @@
   {
     "id": "T025",
     "description": "Field binding resolution falls back to scaffold placeholder when value is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F029"
