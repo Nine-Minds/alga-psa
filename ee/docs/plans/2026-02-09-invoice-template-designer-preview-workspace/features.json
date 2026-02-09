@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Collect rendered HTML layout geometry from authoritative preview output",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
