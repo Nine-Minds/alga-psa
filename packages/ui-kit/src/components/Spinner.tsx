@@ -60,7 +60,7 @@ export function Spinner({ size = 'md', variant = 'default', className, style }: 
     borderWidth: dims.border,
     borderRadius: '9999px',
     borderColor: isInverted ? 'rgba(255, 255, 255, 0.3)' : 'var(--alga-primary, #9855ee)',
-    borderTopColor: isInverted ? 'white' : 'var(--alga-primary-light, #ede2fd)',
+    borderTopColor: isInverted ? 'white' : 'var(--alga-primary-100, #ede2fd)',
     animation: 'alga-spinner-spin 0.9s linear infinite',
     backgroundColor: 'transparent',
     boxSizing: 'border-box',
