@@ -270,7 +270,7 @@
   {
     "id": "T030",
     "description": "Table components render valid empty state when selected invoice has no line items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
