@@ -342,7 +342,7 @@
   {
     "id": "T038",
     "description": "Preview mode does not apply design-time selection opacity deemphasis",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ],
