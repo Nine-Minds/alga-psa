@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Preserve designer workspace hydration/reset and unsaved state while running authoritative preview",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration", "Functional Requirements"]
   },
   {

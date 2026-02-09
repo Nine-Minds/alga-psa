@@ -152,3 +152,4 @@ Authoritative preview for invoice template designer:
   - Result: 12/12 tests passed.
 - (2026-02-09) F029 implemented: codified source-of-truth rule for GUI templates as “Visual is authoritative, Code is generated read-only view.”
   - Code tab now shows generated source and blocks direct edits when GUI designer flag is enabled.
+- (2026-02-09) F030 completed by regression validation: existing workspace hydration + localStorage fallback behavior remains intact after authoritative preview pipeline integration (`InvoiceTemplateEditor.previewWorkspace.test.tsx` passing).
