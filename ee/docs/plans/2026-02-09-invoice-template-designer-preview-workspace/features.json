@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "Ensure `Code` tab interoperability remains intact with new Visual sub-tab state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"

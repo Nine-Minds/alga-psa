@@ -50,3 +50,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F001`: Added `Design`/`Preview` secondary tabs under Visual by introducing `DesignerVisualWorkspace` and wiring it inside `InvoiceTemplateEditor`, so users can switch design vs preview without leaving the editor shell.
 - (2026-02-09) Completed `F002`: Defaulted the nested visual workspace state to Design while preserving top-level Visual/Code tabs.
 - (2026-02-09) Completed `F003`: Design/Preview toggling now keeps workspace data in the shared designer store so unsaved node edits persist.
+- (2026-02-09) Completed `F004`: Lifted nested visual tab state into InvoiceTemplateEditor so Visual->Code->Visual returns to the prior nested tab.
