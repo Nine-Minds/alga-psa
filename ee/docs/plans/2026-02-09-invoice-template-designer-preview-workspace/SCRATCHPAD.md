@@ -110,3 +110,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T029`: Table components render all invoice line items from preview dataset
 - (2026-02-09) Completed `T030`: Table components render valid empty state when selected invoice has no line items
 - (2026-02-09) Completed `T031`: Dynamic-table components render preview rows from selected invoice items
+- (2026-02-09) Completed `T032`: Preview recomputes when node metadata affecting bindings changes

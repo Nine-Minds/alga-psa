@@ -288,7 +288,7 @@
   {
     "id": "T032",
     "description": "Preview recomputes when node metadata affecting bindings changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
