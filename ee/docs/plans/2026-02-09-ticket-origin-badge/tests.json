@@ -78,7 +78,7 @@
   {
     "id": "T013",
     "description": "API create path persists ticket_origin=api",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010"

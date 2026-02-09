@@ -165,3 +165,4 @@
 - (2026-02-09) **T010 completed (reconciliation pass)**: MSP server action create path persists ticket_origin=internal
 - (2026-02-09) **T011 completed (reconciliation pass)**: Client portal create path persists ticket_origin=client_portal
 - (2026-02-09) **T012 completed (reconciliation pass)**: Inbound email create path persists ticket_origin=inbound_email
+- (2026-02-09) **T013 completed (reconciliation pass)**: API create path persists ticket_origin=api
