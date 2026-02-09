@@ -120,7 +120,7 @@
   {
     "id": "T023",
     "description": "Resolver maps null legacy row with no signal to internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

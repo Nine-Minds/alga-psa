@@ -170,3 +170,4 @@
 - (2026-02-09) **T020 completed (reconciliation pass)**: Resolver returns stored ticket_origin when present and valid
 - (2026-02-09) **T021 completed (reconciliation pass)**: Resolver maps null legacy row with email_metadata to inbound_email
 - (2026-02-09) **T022 completed (reconciliation pass)**: Resolver maps null legacy row with creator user_type client to client_portal
+- (2026-02-09) **T023 completed (reconciliation pass)**: Resolver maps null legacy row with no signal to internal
