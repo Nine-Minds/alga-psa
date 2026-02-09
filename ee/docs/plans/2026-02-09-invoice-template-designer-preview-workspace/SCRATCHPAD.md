@@ -186,3 +186,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T004 completed: source switching test now explicitly verifies Sample<->Existing toggles do not drop current design workspace nodes.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`refreshes preview output when switching Sample -> Existing -> Sample`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T005 completed: sample scenario catalog test enforces at least three curated scenarios.
+  - Evidence: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts` (`exports at least three unique scenarios`).

@@ -40,7 +40,7 @@
   {
     "id": "T005",
     "description": "Sample source renders at least three curated scenarios",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
