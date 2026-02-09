@@ -83,3 +83,5 @@
   - return sanitized ticket payload with `ticket_origin` for client portal details.
 - (2026-02-09) Validation command: `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts` (fails in existing test mock with `Unexpected table: tickets`; unrelated to origin derivation path).
 - (2026-02-09) **F010 completed**: Added reusable `TicketOriginBadge` in `packages/tickets/src/components/TicketOriginBadge.tsx` and exported it in `packages/tickets/src/components/index.ts`. Component supports all three origin states with icon/color variants and `size`/`className` props.
+- (2026-02-09) **F011 completed**: Rendered `TicketOriginBadge` in MSP ticket header (`packages/tickets/src/components/ticket/TicketDetails.tsx`) beside ticket number/response-state badge; origin is resolved with shared `getTicketOrigin`.
+- (2026-02-09) Validation command: `npx vitest run packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx` (fails in current workspace due unresolved legacy alias import `@alga-psa/db/models/user` from auth package).

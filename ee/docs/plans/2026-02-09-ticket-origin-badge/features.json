@@ -85,7 +85,7 @@
   {
     "id": "F011",
     "description": "Render TicketOriginBadge in MSP TicketDetails header near ticket number/response state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"

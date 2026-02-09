@@ -57,9 +57,11 @@ import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
+import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
+import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
@@ -230,6 +232,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
+    const ticketOriginLabels = useMemo(() => ({
+        internal: t('tickets.origin.internal', 'Created Internally'),
+        clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal'),
+        inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email'),
+    }), [t]);
 
     useEffect(() => {
         setBundle(initialBundle);
@@ -1468,6 +1476,12 @@ const handleClose = () => {
                                 className="flex-shrink-0"
                             />
                         ) : null}
+                        <TicketOriginBadge
+                            origin={ticketOrigin}
+                            labels={ticketOriginLabels}
+                            size="sm"
+                            className="flex-shrink-0"
+                        />
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
