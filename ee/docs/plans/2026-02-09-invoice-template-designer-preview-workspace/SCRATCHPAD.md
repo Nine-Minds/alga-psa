@@ -296,3 +296,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.test.ts`
 - (2026-02-09) T051 completed: integration parity test proves preview output equals real runtime output for same generated template and invoice input.
   - Evidence: `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`.
+- (2026-02-09) T052 completed: aligned layout fixture integration test verifies verification pass behavior when design/render geometry match.
+  - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`passes aligned design fixture within tolerance`).

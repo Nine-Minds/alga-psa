@@ -472,7 +472,7 @@
   {
     "id": "T052",
     "description": "Layout verification test fixture passes when design and render are aligned",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ],
