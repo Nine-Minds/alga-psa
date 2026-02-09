@@ -101,3 +101,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T020`: Existing-invoice fetch failures show recoverable error state
 - (2026-02-09) Completed `T021`: Resetting existing invoice selection clears detail payload and rendered output
 - (2026-02-09) Completed `T022`: Preview panel renders with selected sample data in default flow
+- (2026-02-09) Completed `T023`: Preview panel uses designer page/frame scale conventions

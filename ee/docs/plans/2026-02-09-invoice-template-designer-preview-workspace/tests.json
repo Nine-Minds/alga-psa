@@ -204,7 +204,7 @@
   {
     "id": "T023",
     "description": "Preview panel uses designer page/frame scale conventions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ],
