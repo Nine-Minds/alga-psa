@@ -141,3 +141,4 @@
 - (2026-02-09) **F003 completed (reconciliation pass)**: Add tickets.ticket_origin persisted column (text) via migration
 - (2026-02-09) **F004 completed (reconciliation pass)**: Backfill existing tickets.ticket_origin using legacy signals (email_metadata, creator user_type, fallback internal)
 - (2026-02-09) **F005 completed (reconciliation pass)**: Keep ticket_origin storage extensible for future values (for example ai_agent) without schema redesign
+- (2026-02-09) **F006 completed (reconciliation pass)**: Internal MSP create path writes ticket_origin=internal

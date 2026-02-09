@@ -44,7 +44,7 @@
   {
     "id": "F006",
     "description": "Internal MSP create path writes ticket_origin=internal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
