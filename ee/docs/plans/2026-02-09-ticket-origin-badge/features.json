@@ -105,7 +105,7 @@
   {
     "id": "F013",
     "description": "Client portal getClientTicketDetails returns normalized ticket_origin for TicketDetails",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
