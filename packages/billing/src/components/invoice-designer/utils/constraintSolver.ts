@@ -20,6 +20,39 @@ type VariableBundle = {
   height: kiwi.Variable;
 };
 
+const getPracticalMinimumSize = (type: DesignerNode['type']) => {
+  switch (type) {
+    case 'field':
+      return { width: 120, height: 40 };
+    case 'label':
+      return { width: 80, height: 24 };
+    case 'text':
+      return { width: 120, height: 32 };
+    case 'signature':
+      return { width: 180, height: 96 };
+    case 'action-button':
+      return { width: 120, height: 40 };
+    case 'attachment-list':
+      return { width: 180, height: 96 };
+    case 'table':
+    case 'dynamic-table':
+      return { width: 260, height: 120 };
+    case 'totals':
+      return { width: 220, height: 96 };
+    case 'subtotal':
+    case 'tax':
+    case 'discount':
+    case 'custom-total':
+      return { width: 180, height: 40 };
+    case 'container':
+      return { width: 120, height: 64 };
+    case 'section':
+      return { width: 160, height: 96 };
+    default:
+      return { width: 40, height: 24 };
+  }
+};
+
 export interface CanvasBounds {
   width: number;
   height: number;
@@ -65,8 +98,9 @@ export const solveConstraints = (
 
       solver.addConstraint(new kiwi.Constraint(vars.x, kiwi.Operator.Ge, 0, kiwi.Strength.required));
       solver.addConstraint(new kiwi.Constraint(vars.y, kiwi.Operator.Ge, 0, kiwi.Strength.required));
-      solver.addConstraint(new kiwi.Constraint(vars.width, kiwi.Operator.Ge, 1, kiwi.Strength.required));
-      solver.addConstraint(new kiwi.Constraint(vars.height, kiwi.Operator.Ge, 1, kiwi.Strength.required));
+      const minSize = getPracticalMinimumSize(node.type);
+      solver.addConstraint(new kiwi.Constraint(vars.width, kiwi.Operator.Ge, minSize.width, kiwi.Strength.required));
+      solver.addConstraint(new kiwi.Constraint(vars.height, kiwi.Operator.Ge, minSize.height, kiwi.Strength.required));
 
       if (node.type === 'document' || node.type === 'page') {
         return;
@@ -163,8 +197,9 @@ export const solveConstraints = (
       const parentVars = node.parentId ? variableMap.get(node.parentId) : undefined;
       const maxWidth = Math.max(1, parentVars?.width.value() ?? bounds.width);
       const maxHeight = Math.max(1, parentVars?.height.value() ?? bounds.height);
-      const width = clamp(vars.width.value(), 1, maxWidth);
-      const height = clamp(vars.height.value(), 1, maxHeight);
+      const minSize = getPracticalMinimumSize(node.type);
+      const width = Math.max(minSize.width, vars.width.value());
+      const height = Math.max(minSize.height, vars.height.value());
       const maxX = Math.max(0, maxWidth - width);
       const maxY = Math.max(0, maxHeight - height);
       return {

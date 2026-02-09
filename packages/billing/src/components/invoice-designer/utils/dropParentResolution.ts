@@ -476,7 +476,7 @@ type ForceSelectedInsertionParams = {
 
 type ForceSelectedInsertionPlan =
   | { ok: true; parentId: string; reflowAdjustments: LocalReflowAdjustment[] }
-  | { ok: false; message: string };
+  | { ok: false; message: string; sectionId?: string; nextAction?: string };
 
 export const planForceSelectedInsertion = ({
   selectedNodeId,
@@ -494,6 +494,8 @@ export const planForceSelectedInsertion = ({
     return {
       ok: false,
       message: 'Selected section is unavailable. Re-select a section and try again.',
+      sectionId: selectedSectionId,
+      nextAction: 'Select a section on the current page, then retry.',
     };
   }
 
@@ -520,8 +522,15 @@ export const planForceSelectedInsertion = ({
     }
   }
 
+  const descendantParent = findBestDescendantParentInSection(selectedSection, componentType, nodesById, desiredSize);
+  if (descendantParent) {
+    return { ok: true, parentId: descendantParent.id, reflowAdjustments: [] };
+  }
+
   return {
     ok: false,
     message: 'No room in the selected section. Resize or clear space, then try again.',
+    sectionId: selectedSection.id,
+    nextAction: 'Resize the selected section, remove nearby blocks, or pick another section.',
   };
 };

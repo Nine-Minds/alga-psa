@@ -729,6 +729,74 @@ describe('dropParentResolution', () => {
     expect(plan).toEqual({
       ok: false,
       message: 'No room in the selected section. Resize or clear space, then try again.',
+      sectionId: 'footer',
+      nextAction: 'Resize the selected section, remove nearby blocks, or pick another section.',
     });
+  });
+
+  it('uses selected-section descendant parent in forced mode before failing', () => {
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      childIds: ['footer'],
+      allowedChildren: ['section'],
+    });
+    const footer = createNode({
+      id: 'footer',
+      type: 'section',
+      name: 'Footer',
+      parentId: 'page',
+      size: { width: 360, height: 180 },
+      childIds: ['totals', 'footer-box'],
+      layout: {
+        mode: 'flex',
+        direction: 'row',
+        gap: 12,
+        padding: 12,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+    const totals = createNode({
+      id: 'totals',
+      type: 'totals',
+      parentId: 'footer',
+      size: { width: 300, height: 120 },
+    });
+    const footerBox = createNode({
+      id: 'footer-box',
+      type: 'container',
+      parentId: 'footer',
+      size: { width: 240, height: 140 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 8,
+        padding: 8,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+
+    const nodesById = new Map(
+      [page, footer, totals, footerBox].map((node) => [node.id, node] satisfies [string, DesignerNode])
+    );
+
+    const plan = planForceSelectedInsertion({
+      selectedNodeId: 'totals',
+      pageNode: page,
+      nodesById,
+      componentType: 'signature',
+      desiredSize: { width: 320, height: 120 },
+    });
+
+    expect(plan && plan.ok).toBe(true);
+    if (!plan || !plan.ok) {
+      return;
+    }
+    expect(plan.parentId).toBe('footer-box');
+    expect(plan.reflowAdjustments).toEqual([]);
   });
 });

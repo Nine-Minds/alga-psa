@@ -159,6 +159,91 @@ const generateId = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 const snapToGridValue = (value: number, gridSize: number) => Math.round(value / gridSize) * gridSize;
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const getPracticalMinimumSizeForType = (type: DesignerComponentType): Size => {
+  switch (type) {
+    case 'field':
+      return { width: 120, height: 40 };
+    case 'label':
+      return { width: 80, height: 24 };
+    case 'text':
+      return { width: 120, height: 32 };
+    case 'signature':
+      return { width: 180, height: 96 };
+    case 'action-button':
+      return { width: 120, height: 40 };
+    case 'attachment-list':
+      return { width: 180, height: 96 };
+    case 'table':
+    case 'dynamic-table':
+      return { width: 260, height: 120 };
+    case 'totals':
+      return { width: 220, height: 96 };
+    case 'subtotal':
+    case 'tax':
+    case 'discount':
+    case 'custom-total':
+      return { width: 180, height: 40 };
+    case 'container':
+      return { width: 120, height: 64 };
+    case 'section':
+      return { width: 160, height: 96 };
+    default:
+      return { width: 40, height: 24 };
+  }
+};
+
+const clampNodeSizeToPracticalMinimum = (type: DesignerComponentType, size: Size): Size => {
+  const minimum = getPracticalMinimumSizeForType(type);
+  return {
+    width: Math.max(minimum.width, size.width),
+    height: Math.max(minimum.height, size.height),
+  };
+};
+
+const normalizeResolvedNodes = (nodes: DesignerNode[]): DesignerNode[] => {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  return nodes.map((node) => {
+    if (node.type === 'document' || node.type === 'page') {
+      return node;
+    }
+
+    const minimum = getPracticalMinimumSizeForType(node.type);
+    const width = Math.max(minimum.width, Number.isFinite(node.size.width) ? node.size.width : minimum.width);
+    const height = Math.max(minimum.height, Number.isFinite(node.size.height) ? node.size.height : minimum.height);
+    const normalizedSize = { width, height };
+    const normalizedBaseSize = node.baseSize ? clampNodeSizeToPracticalMinimum(node.type, node.baseSize) : node.baseSize;
+
+    const parent = node.parentId ? nodesById.get(node.parentId) : undefined;
+    const maxWidth = Math.max(1, parent?.size.width ?? DESIGNER_CANVAS_BOUNDS.width);
+    const maxHeight = Math.max(1, parent?.size.height ?? DESIGNER_CANVAS_BOUNDS.height);
+    const maxX = Math.max(0, maxWidth - width);
+    const maxY = Math.max(0, maxHeight - height);
+    const normalizedPosition = {
+      x: clamp(Number.isFinite(node.position.x) ? node.position.x : 0, 0, maxX),
+      y: clamp(Number.isFinite(node.position.y) ? node.position.y : 0, 0, maxY),
+    };
+
+    if (
+      normalizedSize.width === node.size.width &&
+      normalizedSize.height === node.size.height &&
+      normalizedPosition.x === node.position.x &&
+      normalizedPosition.y === node.position.y &&
+      normalizedBaseSize?.width === node.baseSize?.width &&
+      normalizedBaseSize?.height === node.baseSize?.height
+    ) {
+      return node;
+    }
+
+    return {
+      ...node,
+      size: normalizedSize,
+      baseSize: normalizedBaseSize,
+      position: normalizedPosition,
+    };
+  });
+};
 
 const createDocumentNode = (): DesignerNode => ({
   id: DOCUMENT_NODE_ID,
@@ -260,14 +345,15 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
 
 const resolveWithConstraints = (nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
   try {
+    const resolvedNodes = solveConstraints(nodes, constraints);
     return {
-      nodes: solveConstraints(nodes, constraints),
+      nodes: normalizeResolvedNodes(resolvedNodes),
       constraintError: null as string | null,
     };
   } catch (error) {
     console.warn('[Designer] constraint solver conflict', error);
     return {
-      nodes,
+      nodes: normalizeResolvedNodes(nodes),
       constraintError:
         error instanceof Error ? error.message : 'Constraint conflict detected. Try relaxing or removing constraints.',
     };
@@ -390,8 +476,14 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
           }
         }
         
-        // Update child size in map
-        child.size = { width: newWidth, height: newHeight };
+        // Update child size in map and enforce practical minimums to avoid collapsed artifacts.
+        const clampedPlannedSize = clampNodeSizeToPracticalMinimum(child.type, {
+          width: newWidth,
+          height: newHeight,
+        });
+        child.size = clampedPlannedSize;
+        newWidth = clampedPlannedSize.width;
+        newHeight = clampedPlannedSize.height;
 
         // Calculate Cross-Axis Alignment Offset
         let crossAxisOffset = 0;
@@ -426,6 +518,14 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
         // Recursively layout this child first (if it's also a container)
         // This allows nested stack calculations to propagate
         layoutNode(child.id);
+
+        const clampedAfterLayoutSize = clampNodeSizeToPracticalMinimum(child.type, child.size);
+        if (
+          clampedAfterLayoutSize.width !== child.size.width ||
+          clampedAfterLayoutSize.height !== child.size.height
+        ) {
+          child.size = clampedAfterLayoutSize;
+        }
 
         // 2. Re-evaluate Alignment (if child size changed during recursion, e.g. 'hug')
         // If the child resized, we might need to re-center it on the cross axis
@@ -526,6 +626,10 @@ const resolveLayout = (nodes: DesignerNode[], constraints: DesignerConstraint[])
   return resolveWithConstraints(layoutNodes, constraints);
 };
 
+export const __designerResolveLayoutTestUtils = {
+  resolveLayout,
+};
+
 const appendHistory = (state: DesignerState, nodes: DesignerNode[]) => {
   const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
   if (nextHistory.length > MAX_HISTORY_LENGTH) {
@@ -598,7 +702,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           }
         : relativeDropPoint;
 
-      const size = options.defaults?.size ?? DEFAULT_SIZE;
+      const rawSize = options.defaults?.size ?? DEFAULT_SIZE;
+      const size = clampNodeSizeToPracticalMinimum(type, rawSize);
       const defaultLayout: NonNullable<DesignerNode['layout']> = {
         mode: 'flex', // Default to flex for new nodes if applicable
         direction: type === 'section' ? 'row' : 'column',
@@ -703,7 +808,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           keyToId.set(nodeDef.key, newId);
 
           const catalogSize = getDefinition(nodeDef.type)?.defaultSize ?? DEFAULT_SIZE;
-          const size = nodeDef.size ?? catalogSize;
+          const rawSize = nodeDef.size ?? catalogSize;
+          const size = clampNodeSizeToPracticalMinimum(nodeDef.type, rawSize);
           
           // Calculate Position (Relative)
           let position: Point;
@@ -897,8 +1003,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     updateNodeSize: (id, size, commit = true) => {
       set((state) => {
-        // Update both size and baseSize (persisting user preference)
-        const nodes = state.nodes.map((node) => (node.id === id ? { ...node, size, baseSize: size } : node));
+        // Update both size and baseSize (persisting user preference), with practical minimum size clamps.
+        const nodes = state.nodes.map((node) => {
+          if (node.id !== id) {
+            return node;
+          }
+          const clamped = clampNodeSizeToPracticalMinimum(node.type, size);
+          return { ...node, size: clamped, baseSize: clamped };
+        });
         if (!commit) {
           return { nodes };
         }

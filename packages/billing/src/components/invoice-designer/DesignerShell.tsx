@@ -66,9 +66,15 @@ type DropFeedback = {
   message: string;
 };
 
+type InsertBlockCallout = {
+  sectionId: string;
+  message: string;
+  nextAction: string;
+};
+
 type ComponentDropResolution =
   | { ok: true; parentId: string; notice?: string; reflowAdjustments?: Array<{ nodeId: string; width: number }> }
-  | { ok: false; message: string };
+  | { ok: false; message: string; reason?: 'selected-section-no-room'; sectionId?: string; nextAction?: string };
 
 type ComponentInsertOptions = {
   dropMeta?: DropTargetMeta;
@@ -149,6 +155,35 @@ const buildDescendantPositionMap = (rootId: string, allNodes: DesignerNode[]) =>
   return positions;
 };
 
+const getPracticalMinimumSizeForType = (type: DesignerComponentType): { width: number; height: number } => {
+  switch (type) {
+    case 'field':
+      return { width: 120, height: 40 };
+    case 'label':
+      return { width: 80, height: 24 };
+    case 'text':
+      return { width: 120, height: 32 };
+    case 'signature':
+      return { width: 180, height: 96 };
+    case 'action-button':
+      return { width: 120, height: 40 };
+    case 'attachment-list':
+      return { width: 180, height: 96 };
+    case 'table':
+    case 'dynamic-table':
+      return { width: 260, height: 120 };
+    case 'totals':
+      return { width: 220, height: 96 };
+    case 'subtotal':
+    case 'tax':
+    case 'discount':
+    case 'custom-total':
+      return { width: 180, height: 40 };
+    default:
+      return { width: 72, height: 24 };
+  }
+};
+
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const constraints = useInvoiceDesignerStore((state) => state.constraints);
@@ -193,7 +228,14 @@ export const DesignerShell: React.FC = () => {
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
   const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
   const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
+  const [insertBlockCallout, setInsertBlockCallout] = useState<InsertBlockCallout | null>(null);
   const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
+  const blockedSectionName = useMemo(() => {
+    if (!insertBlockCallout) {
+      return null;
+    }
+    return nodes.find((node) => node.id === insertBlockCallout.sectionId)?.name ?? null;
+  }, [insertBlockCallout, nodes]);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -255,6 +297,14 @@ export const DesignerShell: React.FC = () => {
     setDropFeedback(null);
   }, []);
 
+  const clearInsertBlockCallout = useCallback(() => {
+    setInsertBlockCallout(null);
+  }, []);
+
+  const showInsertBlockCallout = useCallback((callout: InsertBlockCallout) => {
+    setInsertBlockCallout(callout);
+  }, []);
+
   const showDropFeedback = useCallback((tone: DropFeedback['tone'], message: string) => {
     if (dropFeedbackTimeoutRef.current) {
       clearTimeout(dropFeedbackTimeoutRef.current);
@@ -273,6 +323,17 @@ export const DesignerShell: React.FC = () => {
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!insertBlockCallout) {
+      return;
+    }
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
+    const selectedSectionId = findNearestSectionAncestor(selectedNodeId, nodesById);
+    if (!selectedSectionId || selectedSectionId !== insertBlockCallout.sectionId) {
+      setInsertBlockCallout(null);
+    }
+  }, [insertBlockCallout, nodes, selectedNodeId]);
 
   const snapModifier = useMemo<Modifier | null>(() => {
     if (!snapToGrid) {
@@ -408,7 +469,13 @@ export const DesignerShell: React.FC = () => {
         });
         if (forcePlan) {
           if (!forcePlan.ok) {
-            return { ok: false, message: forcePlan.message };
+            return {
+              ok: false,
+              message: forcePlan.message,
+              reason: 'selected-section-no-room',
+              sectionId: forcePlan.sectionId,
+              nextAction: forcePlan.nextAction,
+            };
           }
           return {
             ok: true,
@@ -536,8 +603,17 @@ export const DesignerShell: React.FC = () => {
       if (!resolution.ok) {
         recordDropResult(false);
         showDropFeedback('error', resolution.message);
+        if (resolution.reason === 'selected-section-no-room' && resolution.sectionId) {
+          showInsertBlockCallout({
+            sectionId: resolution.sectionId,
+            message: resolution.message,
+            nextAction: resolution.nextAction ?? 'Resize the selected section or choose another section.',
+          });
+        }
         return false;
       }
+
+      clearInsertBlockCallout();
 
       if (resolution.reflowAdjustments && resolution.reflowAdjustments.length > 0) {
         const nodesById = new Map(useInvoiceDesignerStore.getState().nodes.map((node) => [node.id, node]));
@@ -546,11 +622,12 @@ export const DesignerShell: React.FC = () => {
           if (!node) {
             return;
           }
+          const minimum = getPracticalMinimumSizeForType(node.type);
           updateNodeSize(
             adjustment.nodeId,
             {
-              width: Math.max(1, adjustment.width),
-              height: node.size.height,
+              width: Math.max(minimum.width, adjustment.width),
+              height: Math.max(minimum.height, node.size.height),
             },
             false
           );
@@ -583,7 +660,16 @@ export const DesignerShell: React.FC = () => {
       }
       return true;
     },
-    [addNode, getDefaultInsertionPoint, recordDropResult, resolveComponentDropParent, showDropFeedback, updateNodeSize]
+    [
+      addNode,
+      clearInsertBlockCallout,
+      getDefaultInsertionPoint,
+      recordDropResult,
+      resolveComponentDropParent,
+      showDropFeedback,
+      showInsertBlockCallout,
+      updateNodeSize,
+    ]
   );
 
   const insertPresetWithResolution = useCallback(
@@ -594,6 +680,8 @@ export const DesignerShell: React.FC = () => {
         showDropFeedback('error', 'Preset definition is unavailable.');
         return false;
       }
+
+      clearInsertBlockCallout();
 
       const dropPoint = options.dropPoint ?? getDefaultInsertionPoint();
       const dropMeta = options.dropMeta;
@@ -638,7 +726,15 @@ export const DesignerShell: React.FC = () => {
       }
       return true;
     },
-    [getDefaultInsertionPoint, insertPreset, recordDropResult, resolvePageForDrop, selectedNodeId, showDropFeedback]
+    [
+      clearInsertBlockCallout,
+      getDefaultInsertionPoint,
+      insertPreset,
+      recordDropResult,
+      resolvePageForDrop,
+      selectedNodeId,
+      showDropFeedback,
+    ]
   );
 
   const cleanupDragState = useCallback(() => {
@@ -1338,6 +1434,18 @@ export const DesignerShell: React.FC = () => {
           </>
         )}
       </div>
+      {insertBlockCallout && (
+        <div
+          className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800"
+          data-automation-id="designer-insert-blocked-callout"
+        >
+          <span className="font-semibold">
+            {blockedSectionName ? `${blockedSectionName}: ` : ''}
+            {insertBlockCallout.message}
+          </span>{' '}
+          <span className="text-amber-700/90">{insertBlockCallout.nextAction}</span>
+        </div>
+      )}
       <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
       {dropFeedback && (
         <div

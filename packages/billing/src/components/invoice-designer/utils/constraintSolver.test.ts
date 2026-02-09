@@ -101,4 +101,56 @@ describe('constraintSolver', () => {
     expect(solvedChild.size.width).toBeCloseTo(160, 4);
     expect(solvedChild.position.x + solvedChild.size.width).toBeLessThanOrEqual(parent.size.width);
   });
+
+  it('applies practical minimum sizes for field and signature nodes', () => {
+    const document = createNode({
+      id: 'document',
+      type: 'document',
+      size: { width: 816, height: 1056 },
+      allowedChildren: ['page'],
+      childIds: ['page'],
+    });
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      parentId: document.id,
+      size: { width: 816, height: 1056 },
+      allowedChildren: ['section'],
+      childIds: ['section'],
+    });
+    const section = createNode({
+      id: 'section',
+      type: 'section',
+      parentId: page.id,
+      size: { width: 640, height: 300 },
+      childIds: ['field', 'signature'],
+    });
+    const field = createNode({
+      id: 'field',
+      type: 'field',
+      parentId: section.id,
+      position: { x: 24, y: 24 },
+      size: { width: 1, height: 48 },
+    });
+    const signature = createNode({
+      id: 'signature',
+      type: 'signature',
+      parentId: section.id,
+      position: { x: 24, y: 96 },
+      size: { width: 280, height: 1 },
+    });
+
+    const solved = solveConstraints([document, page, section, field, signature], []);
+    const solvedField = solved.find((node) => node.id === 'field');
+    const solvedSignature = solved.find((node) => node.id === 'signature');
+
+    expect(solvedField).toBeTruthy();
+    expect(solvedSignature).toBeTruthy();
+    if (!solvedField || !solvedSignature) return;
+
+    expect(solvedField.size.width).toBeGreaterThanOrEqual(120);
+    expect(solvedField.size.height).toBeGreaterThanOrEqual(40);
+    expect(solvedSignature.size.width).toBeGreaterThanOrEqual(180);
+    expect(solvedSignature.size.height).toBeGreaterThanOrEqual(96);
+  });
 });
