@@ -19,6 +19,33 @@ function camelToKebab(str: string): string {
   return str.replace(/([A-Z])/g, (match) => `-${match.toLowerCase()}`);
 }
 
+// CSS id selectors are invalid for identifiers like UUIDs that begin with digits.
+// Fall back to attribute selectors in those cases so generated styles still match.
+function escapeCssString(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\A ')
+    .replace(/\r/g, '\\D ')
+    .replace(/\f/g, '\\C ');
+}
+
+function isSafeIdSelector(id: string): boolean {
+  return /^-?[_a-zA-Z][_a-zA-Z0-9-]*$/.test(id);
+}
+
+function getElementSelector(element: Pick<LayoutElement, 'id' | 'type'>): string {
+  if (!element.id) {
+    return `.${element.type}`;
+  }
+
+  if (isSafeIdSelector(element.id)) {
+    return `#${element.id}`;
+  }
+
+  return `[id="${escapeCssString(element.id)}"]`;
+}
+
 // Helper to generate CSS rules from an ElementStyle object
 function generateStyleCss(selector: string, style: ElementStyle): string {
   let css = `${selector} {\n`;
@@ -97,9 +124,7 @@ interface RenderContext {
 
 function renderElement(element: LayoutElement, context: RenderContext): string {
   let elementHtml = '';
-  let elementCss = '';
   const baseSelector = element.type; // Use type as base class
-  const idSelector = element.id ? `#${element.id}` : '';
   // Explicitly type classList as string[]
   const classList: string[] = [baseSelector]; // Start with base type class
 
@@ -112,7 +137,7 @@ function renderElement(element: LayoutElement, context: RenderContext): string {
   }
 
   // Generate CSS for the current element's specific styles using ID if available, otherwise class
-  const selector = idSelector || `.${baseSelector}`; // Prioritize ID for specific styles
+  const selector = getElementSelector(element);
   if (element.style) {
     context.css += generateStyleCss(selector, element.style);
   }
