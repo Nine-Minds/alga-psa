@@ -167,3 +167,4 @@
 - (2026-02-09) **T012 completed (reconciliation pass)**: Inbound email create path persists ticket_origin=inbound_email
 - (2026-02-09) **T013 completed (reconciliation pass)**: API create path persists ticket_origin=api
 - (2026-02-09) **T014 completed (reconciliation pass)**: Workflow/automation ticket creation without explicit origin persists internal default
+- (2026-02-09) **T020 completed (reconciliation pass)**: Resolver returns stored ticket_origin when present and valid

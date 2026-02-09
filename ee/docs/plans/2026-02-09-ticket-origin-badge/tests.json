@@ -96,7 +96,7 @@
   {
     "id": "T020",
     "description": "Resolver returns stored ticket_origin when present and valid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
