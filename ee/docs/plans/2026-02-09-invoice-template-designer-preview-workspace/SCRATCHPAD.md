@@ -188,3 +188,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
 - (2026-02-09) T005 completed: sample scenario catalog test enforces at least three curated scenarios.
   - Evidence: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts` (`exports at least three unique scenarios`).
+- (2026-02-09) T006 completed: sample payload test enforces required renderer fields and numeric totals/amounts types.
+  - Evidence: `packages/billing/src/components/invoice-designer/preview/sampleScenarios.test.ts` (`provides required preview fields for each sample`).

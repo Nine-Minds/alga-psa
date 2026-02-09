@@ -49,7 +49,7 @@
   {
     "id": "T006",
     "description": "Sample scenario payloads map to required renderer fields and numeric types",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F007"
