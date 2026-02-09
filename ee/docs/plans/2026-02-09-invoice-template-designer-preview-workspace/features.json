@@ -159,7 +159,7 @@
   {
     "id": "F019",
     "description": "Render table and dynamic-table components from selected preview invoice line items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]

@@ -65,3 +65,4 @@ Working notes for adding a preview workspace to the invoice template designer so
 - (2026-02-09) Completed `F016`: Updated preview rendering to resolve field and totals bindings from selected preview dataset before scaffold fallback.
 - (2026-02-09) Completed `F017`: Kept scaffold placeholder resolution for missing bound values so previews remain legible with sparse data.
 - (2026-02-09) Completed `F018`: Updated totals/totals-row preview rendering to show selected invoice subtotal/tax/total values.
+- (2026-02-09) Completed `F019`: Updated table and dynamic-table preview rendering to display selected invoice line items with empty-state fallback.
