@@ -8,9 +8,11 @@ import { Knex } from 'knex';
 import { TaggedEntityType } from '../../interfaces/tag.interfaces';
 import { getCurrentTenantId } from '../db';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
+import TagDefinition from '@alga-psa/tags/models/tagDefinition';
 
 /**
- * Delete all tags associated with an entity
+ * Delete all tags associated with an entity.
+ * Also cleans up any tag definitions that become orphaned (no remaining mappings).
  */
 export async function deleteEntityTags(
   trx: Knex.Transaction,
@@ -21,12 +23,26 @@ export async function deleteEntityTags(
   if (!tenant) {
     throw new Error('Tenant context is required for tag operations');
   }
-  return await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
+
+  // Collect tag_ids before deleting mappings
+  const mappings = await trx('tag_mappings')
+    .where({ tenant, tagged_id: entityId, tagged_type: entityType })
+    .select('tag_id');
+  const tagIds = [...new Set(mappings.map(m => m.tag_id))];
+
+  const deleted = await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
+
+  // Clean up any now-orphaned definitions
+  if (tagIds.length > 0) {
+    await TagDefinition.deleteOrphaned(trx, tenant, tagIds);
+  }
+
+  return deleted;
 }
 
 /**
- * Delete tags for multiple entities
- * Useful for bulk deletions
+ * Delete tags for multiple entities.
+ * Also cleans up any tag definitions that become orphaned (no remaining mappings).
  */
 export async function deleteEntitiesTags(
   trx: Knex.Transaction,
@@ -42,6 +58,13 @@ export async function deleteEntitiesTags(
     return 0;
   }
 
+  // Collect tag_ids before deleting mappings
+  const mappings = await trx('tag_mappings')
+    .where({ tenant, tagged_type: entityType })
+    .whereIn('tagged_id', entityIds)
+    .select('tag_id');
+  const tagIds = [...new Set(mappings.map(m => m.tag_id))];
+
   const result = await trx('tag_mappings')
     .where({
       tenant,
@@ -49,7 +72,12 @@ export async function deleteEntitiesTags(
     })
     .whereIn('tagged_id', entityIds)
     .delete();
-  
+
+  // Clean up any now-orphaned definitions
+  if (tagIds.length > 0) {
+    await TagDefinition.deleteOrphaned(trx, tenant, tagIds);
+  }
+
   return result;
 }
 
