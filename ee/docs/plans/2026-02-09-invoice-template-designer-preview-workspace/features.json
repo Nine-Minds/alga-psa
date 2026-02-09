@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Implement loading, empty, and error UI states for data load, compile, render, and verification phases",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Non-functional Requirements"]
   },
   {
