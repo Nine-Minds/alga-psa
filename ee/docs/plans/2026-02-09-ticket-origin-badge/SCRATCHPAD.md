@@ -194,3 +194,4 @@
 - (2026-02-09) **T070 completed (reconciliation pass)**: Existing comment ResponseSourceBadge tests continue to pass after ticket-origin changes
 - (2026-02-09) **T071 completed (reconciliation pass)**: Existing response-state badge behavior remains unchanged in MSP and client portal ticket details
 - (2026-02-09) **T080 completed (reconciliation pass)**: End-to-end: API-created ticket displays Created via API badge in MSP ticket details
+- (2026-02-09) **T081 completed (reconciliation pass)**: End-to-end: API-created ticket displays Created via API badge in client portal ticket details when ticket is visible to the client

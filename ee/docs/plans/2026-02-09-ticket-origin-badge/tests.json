@@ -316,7 +316,7 @@
   {
     "id": "T081",
     "description": "End-to-end: API-created ticket displays Created via API badge in client portal ticket details when ticket is visible to the client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F016",
