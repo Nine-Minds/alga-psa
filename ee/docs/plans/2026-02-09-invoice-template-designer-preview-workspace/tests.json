@@ -57,7 +57,7 @@
   {
     "id": "T007",
     "description": "Each sample fixture satisfies required preview model fields (header, totals, items)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
