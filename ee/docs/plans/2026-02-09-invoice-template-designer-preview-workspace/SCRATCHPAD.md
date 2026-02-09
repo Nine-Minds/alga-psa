@@ -264,3 +264,5 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts` (`passes when rendered geometry stays within tolerance`).
 - (2026-02-09) T038 completed: layout comparator failure behavior is validated for geometry that exceeds configured tolerance.
   - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.test.ts` (`reports mismatches when rendered geometry exceeds tolerance`).
+- (2026-02-09) T039 completed: mismatch report assertions validate presence of constraint id plus expected/actual/delta/tolerance fields.
+  - Evidence: `packages/billing/src/lib/invoice-template-compiler/layoutVerification.fixtures.test.ts` (`fails drifted design fixture with expected mismatch set`).

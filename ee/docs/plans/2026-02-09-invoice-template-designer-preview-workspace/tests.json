@@ -354,7 +354,7 @@
   {
     "id": "T039",
     "description": "Verification mismatch report includes failing constraint id, expected value, actual value, and delta",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ],
