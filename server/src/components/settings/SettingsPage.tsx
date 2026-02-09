@@ -38,6 +38,7 @@ import NotificationsTab from './general/NotificationsTab';
 import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
+import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import Link from 'next/link';
@@ -69,39 +70,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-  // Dynamically load the Extensions (Manage) component using stable package paths
-  const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
-    import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
-    {
-      loading: () => (
-        <div className="flex items-center justify-center py-8">
-          <LoadingIndicator
-            layout="stacked"
-            text="Loading extensions..."
-            spinnerProps={{ size: 'md' }}
-          />
-        </div>
-      ),
-      ssr: false
-    }
-  ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
-
-  // Dynamically load the new Installer using stable package paths
-  const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
-    import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as unknown as React.ComponentType),
-    {
-      loading: () => (
-        <div className="flex items-center justify-center py-8">
-          <LoadingIndicator
-            layout="stacked"
-            text="Loading installer..."
-            spinnerProps={{ size: 'md' }}
-          />
-        </div>
-      ),
-      ssr: false
-    }
-  ) : () => null;
+  // Extensions dynamic imports moved to ExtensionManagement shared component
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap = useMemo<Record<string, string>>(() => ({
@@ -311,65 +280,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const extensionsTab: TabContent = {
     label: "Extensions",
     icon: Puzzle,
-    content: (
-      <Card>
-        <CardHeader>
-          <CardTitle>Extension Management</CardTitle>
-          <CardDescription>
-            Install, configure, and manage extensions to extend Alga PSA functionality.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isEEAvailable ? (
-            <div className="space-y-4">
-              <CustomTabs
-                tabs={[
-                  {
-                    label: "Manage",
-                    content: (
-                      <div className="py-2 space-y-3">
-                        {/* Primary extensions management grid */}
-                        <DynamicExtensionsComponent />
-                        {/* Global debug console link for the Service Proxy Demo extension */}
-                        <div className="flex items-center justify-end gap-2 text-[10px]">
-                          <span className="text-slate-500">
-                            Need extension logs?
-                          </span>
-                          <Link
-                            href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            Open Service Proxy Demo Debug Console
-                          </Link>
-                        </div>
-                      </div>
-                    )
-                  },
-                  {
-                    label: "Install",
-                    content: (
-                      <div className="py-2">
-                        {/* EE server-actions installer, styled with standard UI */}
-                        <DynamicInstallComponent />
-                      </div>
-                    )
-                  }
-                ] as TabContent[]}
-                defaultTab="Manage"
-              />
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
-              <p className="text-sm text-gray-600 mt-2">
-                Extensions are available in the Enterprise edition of Alga PSA.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    ),
+    content: <ExtensionManagement />,
   };
 
   // Create a map of tab content by label for easy lookup
