@@ -324,7 +324,7 @@
   {
     "id": "T036",
     "description": "Preview mode prevents selection mutation from click interactions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],

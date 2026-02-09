@@ -114,3 +114,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T033`: Preview recomputes when relevant layout changes alter rendered structure
 - (2026-02-09) Completed `T034`: Debounce limits preview recompute frequency during rapid edits
 - (2026-02-09) Completed `T035`: Preview mode hides/blocks drag handles and resize affordances
+- (2026-02-09) Completed `T036`: Preview mode prevents selection mutation from click interactions
