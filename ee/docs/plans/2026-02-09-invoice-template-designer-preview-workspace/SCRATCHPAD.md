@@ -65,3 +65,7 @@ Authoritative preview for invoice template designer:
   - Evidence files: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx`, `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
   - Validation command: `npx vitest run packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`
   - Result: 21/21 tests passed.
+- (2026-02-09) F002 completed by verification: top-level `Visual`/`Code` tabs keep behavior and preserve nested visual sub-tab state while switching.
+  - Evidence file: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx`
+  - Validation command: `npx vitest run packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx`
+  - Result: 6/6 tests passed.

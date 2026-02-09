@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Preserve existing top-level `Visual` and `Code` editor behavior while adding preview workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Functional Requirements"]
   },
   {
