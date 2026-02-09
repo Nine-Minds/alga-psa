@@ -463,6 +463,9 @@ describe('DesignerVisualWorkspace', () => {
         document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
       ).toContain('issues');
       expect(
+        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-mismatch-list\"]')
+      ).toBeTruthy();
+      expect(
         document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-mismatch-item\"]')
       ).toBeTruthy();
     });
@@ -537,6 +540,15 @@ describe('DesignerVisualWorkspace', () => {
         document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')?.textContent
       ).toContain('running');
     });
+  });
+
+  it('exposes stable automation ids for compile/render/verify status indicators', async () => {
+    renderWorkspace('preview');
+
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-status\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-verify-status\"]')).toBeTruthy();
   });
 
   it('blocks drag-like interactions while in preview mode', async () => {

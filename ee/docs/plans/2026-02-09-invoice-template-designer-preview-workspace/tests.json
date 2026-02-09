@@ -436,7 +436,7 @@
   {
     "id": "T048",
     "description": "Compile/render/verify status indicators expose stable automation IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],

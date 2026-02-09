@@ -286,3 +286,6 @@ Authoritative preview for invoice template designer:
   - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (`hydrates workspace from source-embedded designer state`, `hydrates workspace from localStorage fallback...`).
 - (2026-02-09) T047 completed: automation ID coverage verifies preview source and selector controls expose stable selectors.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`exposes stable automation IDs for source and selector controls`).
+- (2026-02-09) T048 completed: status-indicator automation ID test verifies compile/render/verify selectors are stable in preview UI.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`exposes stable automation ids for compile/render/verify status indicators`).
+  - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
