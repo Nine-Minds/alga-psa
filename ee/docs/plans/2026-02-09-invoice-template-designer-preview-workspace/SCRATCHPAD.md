@@ -289,3 +289,5 @@ Authoritative preview for invoice template designer:
 - (2026-02-09) T048 completed: status-indicator automation ID test verifies compile/render/verify selectors are stable in preview UI.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`exposes stable automation ids for compile/render/verify status indicators`).
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+- (2026-02-09) T049 completed: verification issues test now asserts mismatch list and mismatch item automation IDs are present.
+  - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows issues verification badge when one or more constraints fail`).

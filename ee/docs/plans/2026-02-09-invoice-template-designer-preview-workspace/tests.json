@@ -445,7 +445,7 @@
   {
     "id": "T049",
     "description": "Verification mismatch list exposes stable automation IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],
