@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Implement layout comparator with tolerance rules to detect mismatches between expected design constraints and rendered geometry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Open Questions"]
   },
   {
