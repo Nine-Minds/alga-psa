@@ -154,3 +154,4 @@ Authoritative preview for invoice template designer:
   - Code tab now shows generated source and blocks direct edits when GUI designer flag is enabled.
 - (2026-02-09) F030 completed by regression validation: existing workspace hydration + localStorage fallback behavior remains intact after authoritative preview pipeline integration (`InvoiceTemplateEditor.previewWorkspace.test.tsx` passing).
 - (2026-02-09) F031 implemented: added stable automation IDs for preview rerun control, compile/render/verify statuses, render output container/iframe, compile diagnostics list, and verification summary/mismatch report rows.
+- (2026-02-09) F032 completed: unit coverage added for IR extraction and deterministic AssemblyScript generation (`guiIr.test.ts`, `assemblyScriptGenerator.test.ts`).

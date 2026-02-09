@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Add unit tests for IR extraction and deterministic AssemblyScript code generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria (Definition of Done)"]
   },
   {
