@@ -189,3 +189,4 @@
 - (2026-02-09) **T051 completed (reconciliation pass)**: MSP TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)
 - (2026-02-09) **T052 completed (reconciliation pass)**: Client portal TicketDetails renders API origin badge when ticket_origin=api
 - (2026-02-09) **T053 completed (reconciliation pass)**: Client portal TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)
+- (2026-02-09) **T060 completed (reconciliation pass)**: English common locale includes ticket origin keys for internal/client_portal/inbound_email/api/other

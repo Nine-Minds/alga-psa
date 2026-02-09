@@ -274,7 +274,7 @@
   {
     "id": "T060",
     "description": "English common locale includes ticket origin keys for internal/client_portal/inbound_email/api/other",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
