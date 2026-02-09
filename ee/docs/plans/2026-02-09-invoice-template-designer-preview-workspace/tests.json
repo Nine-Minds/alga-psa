@@ -297,7 +297,7 @@
   {
     "id": "T033",
     "description": "Preview recomputes when relevant layout changes alter rendered structure",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
