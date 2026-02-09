@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "Visual editor defaults to `Design` on initial load",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ],
