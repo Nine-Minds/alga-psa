@@ -233,7 +233,7 @@
   {
     "id": "T044",
     "description": "TicketOriginBadge renders safe fallback label for unknown future origin value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F014"
