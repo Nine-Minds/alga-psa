@@ -193,7 +193,7 @@
   {
     "id": "T037",
     "description": "Client portal getClientTicketDetails payload includes normalized ticket_origin for api ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
