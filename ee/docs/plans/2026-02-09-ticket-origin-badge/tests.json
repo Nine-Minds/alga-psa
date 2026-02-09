@@ -225,7 +225,7 @@
   {
     "id": "T043",
     "description": "TicketOriginBadge renders Created via API label and data attribute for api",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

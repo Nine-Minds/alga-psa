@@ -183,3 +183,4 @@
 - (2026-02-09) **T040 completed (reconciliation pass)**: TicketOriginBadge renders Created Internally label and data attribute for internal
 - (2026-02-09) **T041 completed (reconciliation pass)**: TicketOriginBadge renders Created via Client Portal label and data attribute for client_portal
 - (2026-02-09) **T042 completed (reconciliation pass)**: TicketOriginBadge renders Created via Inbound Email label and data attribute for inbound_email
+- (2026-02-09) **T043 completed (reconciliation pass)**: TicketOriginBadge renders Created via API label and data attribute for api
