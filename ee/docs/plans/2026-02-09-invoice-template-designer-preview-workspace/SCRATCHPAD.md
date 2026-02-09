@@ -125,3 +125,4 @@ EOF && git add ee/docs/plans/2026-02-09-invoice-template-designer-preview-worksp
 - (2026-02-09) Completed `T044`: Preview remains usable even when template name is empty prior to save validation
 - (2026-02-09) Completed `T045`: Preview tab and design tab expose stable automation IDs
 - (2026-02-09) Completed `T046`: Preview source toggle and sample selector expose stable automation IDs
+- (2026-02-09) Completed `T047`: Existing invoice selector and empty/error states expose stable automation IDs

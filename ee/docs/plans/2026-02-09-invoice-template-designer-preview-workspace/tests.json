@@ -423,7 +423,7 @@
   {
     "id": "T047",
     "description": "Existing invoice selector and empty/error states expose stable automation IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ],
