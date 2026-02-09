@@ -271,3 +271,5 @@ Authoritative preview for invoice template designer:
   - Validation command: `pnpm vitest packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
 - (2026-02-09) T041 completed: preview component test verifies issues badge and mismatch row rendering when verification detects failing constraints.
   - Evidence: `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` (`shows issues verification badge when one or more constraints fail`).
+- (2026-02-09) T042 completed: editor integration test verifies save payload includes compiler-generated AssemblyScript source tied to current GUI workspace.
+  - Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` and `InvoiceTemplateEditor.authoritativeFlow.test.tsx`.

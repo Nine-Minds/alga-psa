@@ -381,7 +381,7 @@
   {
     "id": "T042",
     "description": "Save action persists compiler-generated AssemblyScript source associated with current GUI design",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ],
