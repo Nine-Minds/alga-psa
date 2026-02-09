@@ -126,7 +126,7 @@
   {
     "id": "F015",
     "description": "Render preview within the same page/frame scale conventions used by the design canvas",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements"
