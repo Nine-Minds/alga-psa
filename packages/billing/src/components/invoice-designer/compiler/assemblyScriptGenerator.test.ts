@@ -111,10 +111,101 @@ describe('generateAssemblyScriptFromIr', () => {
     const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
 
     expect(generated.source).toContain('function resolveInvoiceBinding');
+    expect(generated.source).toContain('if (key == "invoice.dueDate") return viewModel.dueDate;');
+    expect(generated.source).toContain('if (key == "invoice.discount") {');
+    expect(generated.source).toContain(
+      'if (key == "tenant.address") return viewModel.tenantClient != null && viewModel.tenantClient!.address != null ? viewModel.tenantClient!.address! : "";'
+    );
     expect(generated.source).toContain('resolveInvoiceBinding(viewModel, "customer.name", "text")');
     expect(generated.source).toContain('function resolveItemBinding');
+    expect(generated.source).toContain('if (key == "item.rate") return formatBindingValueNumeric(item.unitPrice, format, viewModel.currencyCode);');
     expect(generated.source).toContain('resolveItemBinding(viewModel, rowItem, "item.total", "currency")');
     expect(generated.source).toContain('Amount Due: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")');
+  });
+
+  it('infers common invoice bindings from node names when metadata binding keys are missing', () => {
+    const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
+    const pageNode = createNode('page', 'page', 'doc', { childIds: ['field-1', 'text-from', 'text-client'] });
+    const fieldNode = createNode('field-1', 'field', 'page', {
+      name: 'Invoice Number',
+      metadata: {},
+    });
+    const fromAddressNode = createNode('text-from', 'text', 'page', {
+      name: 'From Address',
+      metadata: {},
+    });
+    const clientAddressNode = createNode('text-client', 'text', 'page', {
+      name: 'Client Address',
+      metadata: {},
+    });
+    const workspace = createWorkspace([documentNode, pageNode, fieldNode, fromAddressNode, clientAddressNode]);
+
+    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
+
+    expect(generated.source).toContain('resolveInvoiceBinding(viewModel, "invoice.number", "text")');
+    expect(generated.source).toContain('resolveInvoiceBinding(viewModel, "tenant.address", "text")');
+    expect(generated.source).toContain('resolveInvoiceBinding(viewModel, "customer.address", "text")');
+  });
+
+  it('suppresses generic scaffold literals and normalizes custom-total default binding keys', () => {
+    const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
+    const pageNode = createNode('page', 'page', 'doc', {
+      childIds: ['label-1', 'label-2', 'label-3', 'label-4', 'text-1', 'text-2', 'total-1'],
+    });
+    const invoiceNumberLabel = createNode('label-1', 'label', 'page', {
+      name: 'Invoice Number Label',
+      metadata: { text: 'Label' },
+    });
+    const fromLabel = createNode('label-2', 'label', 'page', {
+      name: 'From Label',
+      metadata: { text: 'Label' },
+    });
+    const billToLabel = createNode('label-3', 'label', 'page', {
+      name: 'Bill To Label',
+      metadata: { text: 'Label' },
+    });
+    const notesLabel = createNode('label-4', 'label', 'page', {
+      name: 'Notes Label',
+      metadata: { text: 'Label' },
+    });
+    const textNode = createNode('text-1', 'text', 'page', {
+      name: 'text 4',
+      metadata: {},
+    });
+    const termsNode = createNode('text-2', 'text', 'page', {
+      name: 'Terms Text',
+      metadata: {},
+    });
+    const customTotal = createNode('total-1', 'custom-total', 'page', {
+      metadata: { label: 'Custom Total', bindingKey: 'invoice.custom', format: 'currency' },
+    });
+
+    const workspace = createWorkspace([
+      documentNode,
+      pageNode,
+      invoiceNumberLabel,
+      fromLabel,
+      billToLabel,
+      notesLabel,
+      textNode,
+      termsNode,
+      customTotal,
+    ]);
+    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
+
+    expect(generated.source).not.toContain('new TextElement("Label", "label")');
+    expect(generated.source).not.toContain('new TextElement("Invoice Number Label", "label")');
+    expect(generated.source).not.toContain('new TextElement("From Label", "label")');
+    expect(generated.source).not.toContain('new TextElement("Bill To Label", "label")');
+    expect(generated.source).not.toContain('new TextElement("Notes Label", "label")');
+    expect(generated.source).toContain('new TextElement("Invoice #", "label")');
+    expect(generated.source).toContain('new TextElement("From", "label")');
+    expect(generated.source).toContain('new TextElement("Bill To", "label")');
+    expect(generated.source).toContain('new TextElement("Notes", "label")');
+    expect(generated.source).not.toContain('new TextElement("text 4")');
+    expect(generated.source).not.toContain('new TextElement("Terms Text")');
+    expect(generated.source).toContain('new TextElement(resolveInvoiceBinding(viewModel, "invoice.total", "currency"))');
+    expect(generated.source).not.toContain('invoice.custom');
   });
 
   it('emits layout/style declarations derived from node size, position, and layout metadata', () => {

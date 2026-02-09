@@ -34,6 +34,7 @@ export const normalizeFieldFormat = (value: unknown): FieldFormat => {
 };
 
 const flattenInvoiceBindingMap = (invoice: WasmInvoiceViewModel): Record<string, unknown> => ({
+  'invoice.discount': Math.max(0, (invoice.subtotal ?? 0) + (invoice.tax ?? 0) - (invoice.total ?? 0)),
   'invoice.number': invoice.invoiceNumber,
   'invoice.invoiceNumber': invoice.invoiceNumber,
   'invoice.issueDate': invoice.issueDate,
@@ -155,4 +156,3 @@ export const resolveTableItemBindingRawValue = (
   }
   return resolveInvoiceBindingRawValue(invoice, normalizedKey);
 };
-

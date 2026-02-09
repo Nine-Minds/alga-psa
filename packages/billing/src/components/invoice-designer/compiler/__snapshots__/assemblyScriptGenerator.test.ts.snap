@@ -4,7 +4,7 @@ exports[`generateAssemblyScriptFromIr > matches deterministic golden snapshots f
 [
   {
     "name": "simple-field-label",
-    "sourceHash": "fnv1a32-b546623b",
+    "sourceHash": "fnv1a32-ee86c4dc",
     "sourcePreview": "import { JSON } from "json-as";
 import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
 
@@ -28,7 +28,7 @@ function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32,
   },
   {
     "name": "table-and-total",
-    "sourceHash": "fnv1a32-a207a4c9",
+    "sourceHash": "fnv1a32-ae66afcc",
     "sourcePreview": "import { JSON } from "json-as";
 import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
 

@@ -231,4 +231,100 @@ describe('layoutVerification', () => {
     expect(byId.get('field-b:spacing-y')?.category).toBe('spacing');
     expect(byId.get('field-b:spacing-y')?.expected).toBe(76);
   });
+
+  it('omits derived spacing/alignment constraints when node positions are intentionally manual', () => {
+    const ir: InvoiceDesignerCompilerIr = {
+      version: 1,
+      rootNodeId: 'doc',
+      flatNodes: [
+        {
+          id: 'doc',
+          type: 'document',
+          name: 'Document',
+          parentId: null,
+          childIds: ['section-1'],
+          position: { x: 0, y: 0 },
+          size: { width: 816, height: 1056 },
+          rotation: 0,
+          allowResize: false,
+          layoutPresetId: null,
+          layout: null,
+          metadata: {},
+        },
+        {
+          id: 'section-1',
+          type: 'section',
+          name: 'Section',
+          parentId: 'doc',
+          childIds: ['field-a', 'field-b'],
+          position: { x: 32, y: 40 },
+          size: { width: 600, height: 400 },
+          rotation: 0,
+          allowResize: true,
+          layoutPresetId: null,
+          layout: {
+            mode: 'flex',
+            direction: 'column',
+            gap: 16,
+            padding: 20,
+            justify: 'start',
+            align: 'center',
+            sizing: 'fixed',
+          },
+          metadata: {},
+        },
+        {
+          id: 'field-a',
+          type: 'field',
+          name: 'Field A',
+          parentId: 'section-1',
+          childIds: [],
+          position: { x: 120, y: 20 },
+          size: { width: 200, height: 40 },
+          rotation: 0,
+          allowResize: true,
+          layoutPresetId: null,
+          layout: null,
+          metadata: {},
+        },
+        {
+          id: 'field-b',
+          type: 'field',
+          name: 'Field B',
+          parentId: 'section-1',
+          childIds: [],
+          position: { x: 155, y: 116 },
+          size: { width: 200, height: 40 },
+          rotation: 0,
+          allowResize: true,
+          layoutPresetId: null,
+          layout: null,
+          metadata: {},
+        },
+      ],
+      tree: {
+        id: 'doc',
+        type: 'document',
+        name: 'Document',
+        parentId: null,
+        childIds: ['section-1'],
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        rotation: 0,
+        allowResize: false,
+        layoutPresetId: null,
+        layout: null,
+        metadata: {},
+        children: [],
+      },
+      constraints: [],
+    };
+
+    const constraints = extractExpectedLayoutConstraintsFromIr(ir, 2);
+    const constraintIds = new Set(constraints.map((constraint) => constraint.id));
+
+    expect(constraintIds.has('field-b:spacing-y')).toBe(false);
+    expect(constraintIds.has('field-a:alignment-x')).toBe(false);
+    expect(constraintIds.has('field-b:alignment-x')).toBe(false);
+  });
 });

@@ -120,6 +120,13 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
 
     const directLayout = await executeWasmTemplate(invoiceData, compileResult.wasmBinary);
     const directRender = renderLayout(directLayout);
+    const renderedFieldStyle = ((directLayout as any).children?.[0]?.children?.[0]?.style ?? null) as
+      | Record<string, string>
+      | null;
+    expect(renderedFieldStyle).toBeTruthy();
+    expect(renderedFieldStyle?.width).toBe('220px');
+    expect(renderedFieldStyle?.paddingLeft).toBe('24px');
+    expect(renderedFieldStyle?.marginTop).toBe('24px');
 
     const actionResult = await runAuthoritativeInvoiceTemplatePreview(
       undefined as any,
@@ -134,6 +141,8 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
     expect(actionResult.success).toBe(true);
     expect(actionResult.compile.status).toBe('success');
     expect(actionResult.render.status).toBe('success');
+    expect(actionResult.verification.status).toBe('pass');
+    expect(actionResult.verification.mismatches).toHaveLength(0);
     expect(actionResult.render.html).toBe(directRender.html);
     expect(actionResult.render.css).toBe(directRender.css);
   }, 45000);

@@ -15,6 +15,11 @@ import {
   type PreviewSourceKind,
 } from './preview/previewSessionState';
 import {
+  derivePreviewPipelineDisplayStatuses,
+  hasRenderablePreviewOutput,
+  hasValidPreviewSelectionForSource,
+} from './preview/previewStatus';
+import {
   DEFAULT_PREVIEW_SAMPLE_ID,
   getPreviewSampleScenarioById,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
@@ -93,6 +98,26 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
   const previewData = previewState.sourceKind === 'sample' ? activeSample?.data ?? null : previewState.selectedInvoiceData;
+  const hasValidSelectionForSource = hasValidPreviewSelectionForSource({
+    sourceKind: previewState.sourceKind,
+    selectedInvoiceId: previewState.selectedInvoiceId,
+    selectedInvoiceData: previewState.selectedInvoiceData,
+    previewData,
+  });
+  const hasRenderedPreviewOutput = hasRenderablePreviewOutput({
+    previewData,
+    renderStatus: authoritativePreview?.render.status ?? 'idle',
+    html: authoritativePreview?.render.html ?? null,
+  });
+  const canDisplaySuccessStates = hasValidSelectionForSource && hasRenderedPreviewOutput;
+  const displayStatuses = derivePreviewPipelineDisplayStatuses({
+    statuses: {
+      compileStatus: previewState.compileStatus,
+      renderStatus: previewState.renderStatus,
+      verifyStatus: previewState.verifyStatus,
+    },
+    canDisplaySuccessStates,
+  });
   const isPreviewRunning =
     previewState.compileStatus === 'running' ||
     previewState.renderStatus === 'running' ||
@@ -180,8 +205,14 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     }
 
     if (!previewData) {
-      setAuthoritativePreview(null);
+      previewRunSequence.current += 1;
       dispatch({ type: 'pipeline-reset' });
+      const shouldRetainPreviousRender =
+        previewState.sourceKind === 'existing' &&
+        (previewState.isInvoiceDetailLoading || Boolean(previewState.selectedInvoiceId));
+      if (!shouldRetainPreviousRender) {
+        setAuthoritativePreview(null);
+      }
       return;
     }
 
@@ -251,6 +282,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     gridSize,
     manualRunNonce,
     previewData,
+    previewState.isInvoiceDetailLoading,
+    previewState.selectedInvoiceId,
+    previewState.sourceKind,
     showGuides,
     showRulers,
     snapToGrid,
@@ -475,23 +509,23 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                 className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-compile-status"
               >
-                {previewState.compileStatus}
+                {displayStatuses.compileStatus}
               </span>
               <span className="font-semibold">Render</span>
               <span
                 className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-render-status"
               >
-                {previewState.renderStatus}
+                {displayStatuses.renderStatus}
               </span>
               <span className="font-semibold">Verify</span>
               <span
                 className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-verify-status"
               >
-                {previewState.verifyStatus}
+                {displayStatuses.verifyStatus}
               </span>
-              {authoritativePreview?.compile.status === 'success' && (
+              {authoritativePreview?.compile.status === 'success' && canDisplaySuccessStates && (
                 <span
                   className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5"
                   data-automation-id="invoice-designer-preview-compile-cache-hit"
@@ -589,11 +623,11 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs uppercase"
               data-automation-id="invoice-designer-preview-verification-badge"
             >
-              {authoritativePreview?.verification.status ?? 'idle'}
+              {hasValidSelectionForSource ? authoritativePreview?.verification.status ?? 'idle' : 'idle'}
             </span>
           </div>
 
-          {authoritativePreview?.verification.status === 'error' && (
+          {hasValidSelectionForSource && authoritativePreview?.verification.status === 'error' && (
             <p
               className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
               data-automation-id="invoice-designer-preview-verification-error"
@@ -602,7 +636,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </p>
           )}
 
-          {authoritativePreview?.verification.mismatches?.length ? (
+          {hasValidSelectionForSource && authoritativePreview?.verification.mismatches?.length ? (
             <ul
               className="space-y-1"
               data-automation-id="invoice-designer-preview-verification-mismatch-list"
@@ -622,6 +656,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               ))}
             </ul>
           ) : (
+            hasValidSelectionForSource &&
             authoritativePreview?.verification.status === 'pass' && (
               <p
                 className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800"

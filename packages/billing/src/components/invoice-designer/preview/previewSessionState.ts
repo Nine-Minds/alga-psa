@@ -159,7 +159,6 @@ export const previewSessionReducer = (
       return {
         ...state,
         selectedInvoiceId: action.invoiceId,
-        selectedInvoiceData: null,
         invoiceDetailError: null,
       };
     case 'clear-existing-invoice':
@@ -175,7 +174,6 @@ export const previewSessionReducer = (
         ...state,
         isInvoiceDetailLoading: true,
         invoiceDetailError: null,
-        selectedInvoiceData: null,
       };
     case 'detail-load-success':
       return {
@@ -189,7 +187,6 @@ export const previewSessionReducer = (
         ...state,
         isInvoiceDetailLoading: false,
         invoiceDetailError: action.error,
-        selectedInvoiceData: null,
       };
     case 'pipeline-phase-start':
       return setPhaseStatus(state, action.phase, 'running', null);

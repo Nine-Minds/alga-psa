@@ -64,7 +64,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
       columns: [
         { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text', width: 220 },
         { id: 'col-qty', header: 'Qty', key: 'item.quantity', type: 'number', width: 60 },
-        { id: 'col-rate', header: 'Rate', key: 'item.rate', type: 'currency', width: 100 },
+        { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 100 },
         { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency', width: 120 },
       ],
     },
@@ -142,8 +142,8 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     defaultSize: { width: 320, height: 56 },
     defaultMetadata: {
       variant: 'custom',
-      label: 'Custom Total',
-      bindingKey: 'invoice.custom',
+      label: 'Total',
+      bindingKey: 'invoice.total',
     },
   },
   {

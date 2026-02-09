@@ -74,4 +74,124 @@ describe('mapDbInvoiceToWasmViewModel', () => {
     expect(mapped?.tax).toBe(0);
     expect(mapped?.total).toBe(0);
   });
+
+  it('normalizes legacy existing-invoice major-unit payloads into minor units', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-005',
+      invoice_date: '2026-01-01',
+      due_date: '2026-02-16',
+      currency_code: 'USD',
+      client: {
+        name: 'Emerald City',
+        address: '1010 Emerald Street',
+      },
+      invoice_charges: [
+        {
+          item_id: 'line-1',
+          description: 'Premium Rabbit Tracking Services',
+          quantity: 50,
+          unit_price: 125,
+          total_price: 6250,
+        },
+        {
+          item_id: 'line-2',
+          description: 'Monthly Looking Glass Maintenance',
+          quantity: 1,
+          unit_price: 1250,
+          total_price: 1250,
+        },
+      ],
+      subtotal: 0,
+      tax: 0,
+      total: 7500,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.items[0].unitPrice).toBe(12_500);
+    expect(mapped?.items[0].total).toBe(625_000);
+    expect(mapped?.items[1].unitPrice).toBe(125_000);
+    expect(mapped?.subtotal).toBe(750_000);
+    expect(mapped?.total).toBe(750_000);
+  });
+
+  it('keeps canonical minor-unit payloads unchanged', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-2026-0147',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [
+        {
+          item_id: 'svc-monitoring',
+          description: 'Managed Endpoint Monitoring',
+          quantity: 15,
+          unit_price: 4200,
+          total_price: 63000,
+        },
+      ],
+      subtotal: 87000,
+      tax: 7830,
+      total: 94830,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.items[0].unitPrice).toBe(4200);
+    expect(mapped?.items[0].total).toBe(63000);
+    expect(mapped?.subtotal).toBe(87000);
+    expect(mapped?.tax).toBe(7830);
+    expect(mapped?.total).toBe(94830);
+  });
+
+  it('maps tenant snapshot details when provided by the invoice query payload', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-601',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      tenantClientInfo: {
+        client_name: 'Northwind MSP',
+        location_address: '400 SW Main St',
+        logo_url: 'https://cdn.example.com/logo.png',
+      },
+      invoice_charges: [],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.tenantClient).toEqual({
+      name: 'Northwind MSP',
+      address: '400 SW Main St',
+      logoUrl: 'https://cdn.example.com/logo.png',
+    });
+  });
+
+  it('keeps tenant snapshot null when tenant details are not present', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-602',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.tenantClient).toBeNull();
+  });
 });

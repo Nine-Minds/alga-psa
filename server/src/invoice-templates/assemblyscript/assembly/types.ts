@@ -31,6 +31,7 @@ export class TenantClient {
 export class InvoiceViewModel {
   invoiceNumber: string = "";
   issueDate: string = "";
+  dueDate: string = "";
   currencyCode: string = "USD";
   poNumber: string | null = null;
   customer: Customer | null = null;
@@ -47,7 +48,15 @@ export class InvoiceViewModel {
 export abstract class LayoutElement {
   id: string = "";
   style: ElementStyle | null = null;
-  
+
+  protected appendBaseProperties(json: string): string {
+    json += `, "id": "${this.id}"`;
+    if (this.style != null) {
+      json += `, "style": ${this.style!.toJsonString()}`;
+    }
+    return json;
+  }
+
   abstract toJsonString(): string;
 }
 
@@ -65,6 +74,75 @@ export class ElementStyle {
   borderTop: string | null = null;
   border: string | null = null;
   marginBottom: string | null = null;
+
+  toJsonString(): string {
+    let json = "{";
+    let isFirst = true;
+
+    if (this.width != null) {
+      if (!isFirst) json += ", ";
+      json += `"width": "${this.width!}"`;
+      isFirst = false;
+    }
+    if (this.textAlign != null) {
+      if (!isFirst) json += ", ";
+      json += `"textAlign": "${this.textAlign!}"`;
+      isFirst = false;
+    }
+    if (this.fontWeight != null) {
+      if (!isFirst) json += ", ";
+      json += `"fontWeight": "${this.fontWeight!}"`;
+      isFirst = false;
+    }
+    if (this.marginTop != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginTop": "${this.marginTop!}"`;
+      isFirst = false;
+    }
+    if (this.paddingLeft != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingLeft": "${this.paddingLeft!}"`;
+      isFirst = false;
+    }
+    if (this.paddingRight != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingRight": "${this.paddingRight!}"`;
+      isFirst = false;
+    }
+    if (this.paddingTop != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingTop": "${this.paddingTop!}"`;
+      isFirst = false;
+    }
+    if (this.paddingBottom != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingBottom": "${this.paddingBottom!}"`;
+      isFirst = false;
+    }
+    if (this.borderBottom != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderBottom": "${this.borderBottom!}"`;
+      isFirst = false;
+    }
+    if (this.borderTop != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderTop": "${this.borderTop!}"`;
+      isFirst = false;
+    }
+    if (this.border != null) {
+      if (!isFirst) json += ", ";
+      json += `"border": "${this.border!}"`;
+      isFirst = false;
+    }
+    if (this.marginBottom != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginBottom": "${this.marginBottom!}"`;
+      isFirst = false;
+    }
+
+    json += "}";
+    return json;
+  }
 }
 
 export class TextElement extends LayoutElement {
@@ -78,7 +156,9 @@ export class TextElement extends LayoutElement {
   }
   
   toJsonString(): string {
-    return `{"type": "Text", "content": "${this.text}", "variant": "${this.tag || ""}", "id": "${this.id}"}`;
+    let json = `{"type": "Text", "content": "${this.text}", "variant": "${this.tag || ""}"`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -93,7 +173,9 @@ export class ImageElement extends LayoutElement {
   }
   
   toJsonString(): string {
-    return `{"type": "Image", "src": "${this.src}", "alt": "${this.alt}", "id": "${this.id}"}`;
+    let json = `{"type": "Image", "src": "${this.src}", "alt": "${this.alt}"`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -113,7 +195,9 @@ export class ColumnElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Column", "span": ${this.span}, "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Column", "span": ${this.span}, "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -132,7 +216,9 @@ export class RowElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Row", "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Row", "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -151,7 +237,9 @@ export class SectionElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Section", "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Section", "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -170,6 +258,8 @@ export class DocumentElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Document", "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Document", "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }

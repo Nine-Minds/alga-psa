@@ -8,6 +8,7 @@ export interface LayoutPresetNodeDefinition {
   name?: string;
   parentKey?: string;
   layout?: DesignerNode['layout'];
+  metadata?: Record<string, unknown>;
 }
 
 export type LayoutPresetConstraintDefinition =
@@ -455,7 +456,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'header-right',
         offset: { x: 0, y: 0 },
         size: { width: 212, height: 40 },
-        name: 'Invoice Number'
+        name: 'Invoice Number',
+        metadata: {
+          bindingKey: 'invoice.number',
+          format: 'text',
+          placeholder: 'Invoice Number',
+        },
       },
       
       // --- Billing Section ---
@@ -490,7 +496,11 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'col-from',
         offset: { x: 0, y: 0 },
         size: { width: 280, height: 80 },
-        name: 'From Address'
+        name: 'From Address',
+        metadata: {
+          bindingKey: 'tenant.address',
+          format: 'text',
+        },
       },
       {
         key: 'col-to',
@@ -515,7 +525,11 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'col-to',
         offset: { x: 0, y: 0 },
         size: { width: 280, height: 80 },
-        name: 'Client Address'
+        name: 'Client Address',
+        metadata: {
+          bindingKey: 'customer.address',
+          format: 'text',
+        },
       },
 
       // --- Items Section ---

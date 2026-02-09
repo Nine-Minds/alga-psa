@@ -36,11 +36,77 @@ const createDeterministicSourceHash = (value: string): string => {
   return `fnv1a32-${(hash >>> 0).toString(16).padStart(8, '0')}`;
 };
 
+const isGenericScaffoldLiteral = (value: string): boolean => {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, ' ');
+  return (
+    normalized.length === 0 ||
+    normalized === 'label' ||
+    normalized === 'field label' ||
+    normalized === 'text' ||
+    normalized === 'terms text' ||
+    normalized === 'term text' ||
+    normalized === 'custom total' ||
+    /^custom[-_ ]?total([ -_].*)?$/.test(normalized) ||
+    /^text \d+$/.test(normalized) ||
+    /^text[-_]\d+$/.test(normalized) ||
+    /^label \d+$/.test(normalized) ||
+    /^label[-_]\d+$/.test(normalized)
+  );
+};
+
+const pickRenderableLiteral = (...candidates: string[]): string => {
+  for (const candidate of candidates) {
+    const trimmed = candidate.trim();
+    if (!isGenericScaffoldLiteral(trimmed)) {
+      return trimmed;
+    }
+  }
+  return '';
+};
+
+const normalizeScaffoldLabelLiteral = (value: string): string => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return '';
+  }
+
+  const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ');
+  if (normalized === 'invoice number label') {
+    return 'Invoice #';
+  }
+  if (normalized === 'from label') {
+    return 'From';
+  }
+  if (normalized === 'bill to label') {
+    return 'Bill To';
+  }
+  if (normalized === 'notes label') {
+    return 'Notes';
+  }
+
+  const suffixMatch = trimmed.match(/^(.+)\s+label$/i);
+  if (suffixMatch) {
+    return suffixMatch[1].trim();
+  }
+  return trimmed;
+};
+
+const normalizeTotalBindingKey = (node: InvoiceDesignerIrTreeNode, value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (node.type === 'custom-total' && trimmed === 'invoice.custom') {
+    return '';
+  }
+  return trimmed;
+};
+
 const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; variant: string | null } => {
   const metadata = asRecord(node.metadata);
 
   if (node.type === 'text') {
-    const text = asTrimmedString(metadata.text) || node.name;
+    const text = pickRenderableLiteral(asTrimmedString(metadata.text), node.name);
     const variant = asTrimmedString(metadata.variant) || null;
     return { content: text, variant };
   }
@@ -53,15 +119,22 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   }
 
   if (node.type === 'label') {
+    const labelContent = normalizeScaffoldLabelLiteral(
+      pickRenderableLiteral(asTrimmedString(metadata.text), node.name)
+    );
     return {
-      content: asTrimmedString(metadata.text) || node.name,
+      content: labelContent,
       variant: 'label',
     };
   }
 
   if (node.type === 'subtotal' || node.type === 'tax' || node.type === 'discount' || node.type === 'custom-total') {
-    const label = asTrimmedString(metadata.label) || node.name;
-    const bindingKey = asTrimmedString(metadata.bindingKey);
+    const label = pickRenderableLiteral(
+      asTrimmedString(metadata.label),
+      node.name,
+      resolveTotalLabelFallback(node)
+    );
+    const bindingKey = normalizeTotalBindingKey(node, asTrimmedString(metadata.bindingKey));
     return {
       content: bindingKey ? `${label}: {{${bindingKey}}}` : label,
       variant: null,
@@ -69,7 +142,7 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   }
 
   if (node.type === 'signature') {
-    const signer = asTrimmedString(metadata.signerLabel);
+    const signer = pickRenderableLiteral(asTrimmedString(metadata.signerLabel));
     return {
       content: signer ? `Signature: ${signer}` : 'Signature',
       variant: null,
@@ -77,7 +150,7 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   }
 
   if (node.type === 'action-button') {
-    const label = asTrimmedString(metadata.label);
+    const label = pickRenderableLiteral(asTrimmedString(metadata.label));
     return {
       content: label ? `Button: ${label}` : 'Button',
       variant: null,
@@ -85,7 +158,7 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   }
 
   if (node.type === 'attachment-list') {
-    const title = asTrimmedString(metadata.title);
+    const title = pickRenderableLiteral(asTrimmedString(metadata.title));
     return {
       content: title ? `Attachments: ${title}` : 'Attachments',
       variant: null,
@@ -112,17 +185,75 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
   };
 };
 
+const normalizeBindingHint = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const resolveImplicitBindingKeyFromHint = (hint: string): string => {
+  const normalized = normalizeBindingHint(hint);
+  if (normalized.length === 0) {
+    return '';
+  }
+
+  if (normalized.includes('invoice number') || normalized === 'invoice #' || normalized === 'invoice no') {
+    return 'invoice.number';
+  }
+  if (normalized.includes('from address') || normalized.includes('sender address') || normalized.includes('vendor address')) {
+    return 'tenant.address';
+  }
+  if (
+    normalized.includes('client address') ||
+    normalized.includes('customer address') ||
+    normalized.includes('bill to')
+  ) {
+    return 'customer.address';
+  }
+  if (normalized.includes('invoice date') || normalized.includes('issue date')) {
+    return 'invoice.issueDate';
+  }
+  if (normalized.includes('due date')) {
+    return 'invoice.dueDate';
+  }
+  if (
+    normalized.includes('po number') ||
+    normalized.includes('purchase order') ||
+    normalized.includes('po #')
+  ) {
+    return 'invoice.poNumber';
+  }
+  if (normalized === 'subtotal') {
+    return 'invoice.subtotal';
+  }
+  if (normalized === 'tax') {
+    return 'invoice.tax';
+  }
+  if (normalized === 'total' || normalized === 'amount due' || normalized === 'grand total') {
+    return 'invoice.total';
+  }
+  return '';
+};
+
+const resolveImplicitBindingKeyForNode = (node: InvoiceDesignerIrTreeNode): string => {
+  const metadata = asRecord(node.metadata);
+  const label = asTrimmedString(metadata.label);
+  const text = asTrimmedString(metadata.text);
+  return (
+    resolveImplicitBindingKeyFromHint(label) ||
+    resolveImplicitBindingKeyFromHint(text) ||
+    resolveImplicitBindingKeyFromHint(node.name)
+  );
+};
+
 const resolveFieldBindingKey = (node: InvoiceDesignerIrTreeNode): string =>
   asTrimmedString(asRecord(node.metadata).bindingKey) ||
   asTrimmedString(asRecord(node.metadata).binding) ||
-  asTrimmedString(asRecord(node.metadata).path);
+  asTrimmedString(asRecord(node.metadata).path) ||
+  resolveImplicitBindingKeyForNode(node);
 
-const resolveFieldFormat = (node: InvoiceDesignerIrTreeNode): string => {
+const resolveFieldFormat = (node: InvoiceDesignerIrTreeNode, fallback: 'text' | 'currency' = 'text'): string => {
   const format = asTrimmedString(asRecord(node.metadata).format).toLowerCase();
   if (format === 'currency' || format === 'number' || format === 'date') {
     return format;
   }
-  return 'text';
+  return fallback;
 };
 
 const resolveTotalBindingFallback = (node: InvoiceDesignerIrTreeNode): string => {
@@ -140,6 +271,19 @@ const resolveTotalLabelFallback = (node: InvoiceDesignerIrTreeNode): string => {
   if (node.type === 'custom-total') return 'Total';
   return node.name;
 };
+
+const resolveRenderableTotalLabel = (node: InvoiceDesignerIrTreeNode): string =>
+  (() => {
+    const configuredLabel = asTrimmedString(asRecord(node.metadata).label);
+    if (node.type === 'custom-total' && isGenericScaffoldLiteral(configuredLabel)) {
+      return '';
+    }
+    return pickRenderableLiteral(configuredLabel, resolveTotalLabelFallback(node));
+  })();
+
+const resolveRenderableTotalBindingKey = (node: InvoiceDesignerIrTreeNode): string =>
+  normalizeTotalBindingKey(node, asTrimmedString(asRecord(node.metadata).bindingKey)) ||
+  resolveTotalBindingFallback(node);
 
 const resolveLayoutStyleArgs = (node: InvoiceDesignerIrTreeNode) => ({
   width: Math.max(1, Math.round(node.size.width)),
@@ -210,13 +354,16 @@ const emitBindingHelpers = (lines: string[]) => {
   lines.push('function resolveInvoiceBinding(viewModel: InvoiceViewModel, key: string, format: string): string {');
   lines.push('  if (key == "invoice.number" || key == "invoice.invoiceNumber") return viewModel.invoiceNumber;');
   lines.push('  if (key == "invoice.issueDate") return viewModel.issueDate;');
-  lines.push('  if (key == "invoice.dueDate") return "";');
+  lines.push('  if (key == "invoice.dueDate") return viewModel.dueDate;');
   lines.push('  if (key == "invoice.poNumber") return viewModel.poNumber != null ? viewModel.poNumber! : "";');
   lines.push('  if (key == "invoice.currencyCode") return viewModel.currencyCode;');
   lines.push('  if (key == "invoice.subtotal") return formatBindingValueNumeric(viewModel.subtotal, format, viewModel.currencyCode);');
   lines.push('  if (key == "invoice.tax") return formatBindingValueNumeric(viewModel.tax, format, viewModel.currencyCode);');
   lines.push('  if (key == "invoice.total") return formatBindingValueNumeric(viewModel.total, format, viewModel.currencyCode);');
-  lines.push('  if (key == "invoice.discount") return "0";');
+  lines.push('  if (key == "invoice.discount") {');
+  lines.push('    const discount = viewModel.subtotal + viewModel.tax - viewModel.total;');
+  lines.push('    return formatBindingValueNumeric(discount > 0.0 ? discount : 0.0, format, viewModel.currencyCode);');
+  lines.push('  }');
   lines.push('  if (key == "customer.name") return viewModel.customer != null ? viewModel.customer!.name : "";');
   lines.push('  if (key == "customer.address") return viewModel.customer != null ? viewModel.customer!.address : "";');
   lines.push('  if (key == "tenant.name") return viewModel.tenantClient != null && viewModel.tenantClient!.name != null ? viewModel.tenantClient!.name! : "";');
@@ -228,6 +375,7 @@ const emitBindingHelpers = (lines: string[]) => {
   lines.push('  if (key == "item.id") return item.id;');
   lines.push('  if (key == "item.description") return item.description;');
   lines.push('  if (key == "item.quantity") return formatBindingValueNumeric(item.quantity, format, viewModel.currencyCode);');
+  lines.push('  if (key == "item.rate") return formatBindingValueNumeric(item.unitPrice, format, viewModel.currencyCode);');
   lines.push('  if (key == "item.unitPrice") return formatBindingValueNumeric(item.unitPrice, format, viewModel.currencyCode);');
   lines.push('  if (key == "item.total") return formatBindingValueNumeric(item.total, format, viewModel.currencyCode);');
   lines.push('  if (key == "item.category") return item.category != null ? item.category! : "";');
@@ -369,15 +517,50 @@ const emitNodeFactory = (
   }
 
   if (node.type === 'subtotal' || node.type === 'tax' || node.type === 'discount' || node.type === 'custom-total') {
-    const metadata = asRecord(node.metadata);
-    const label = asTrimmedString(metadata.label) || resolveTotalLabelFallback(node);
-    const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalBindingFallback(node);
-    const format = resolveFieldFormat(node);
+    const label = resolveRenderableTotalLabel(node);
+    const bindingKey = resolveRenderableTotalBindingKey(node);
+    const format = resolveFieldFormat(node, 'currency');
+    const valueExpr = `resolveInvoiceBinding(viewModel, "${escapeSourceString(bindingKey)}", "${escapeSourceString(
+      format
+    )}")`;
+    const contentExpr = label.length > 0 ? `"${escapeSourceString(label)}: " + ${valueExpr}` : valueExpr;
     lines.push(
-      `  const node = new TextElement("${escapeSourceString(label)}: " + resolveInvoiceBinding(viewModel, "${escapeSourceString(
-        bindingKey
-      )}", "${escapeSourceString(format)}"));`
+      `  const node = new TextElement(${contentExpr});`
     );
+    emitLayoutStyleCall(node, lines);
+    lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
+    lines.push('  return node;');
+    lines.push('}');
+    const endLine = lines.length;
+    sourceMap.push({ nodeId: node.id, symbol, startLine, endLine });
+    return;
+  }
+
+  if (node.type === 'text') {
+    const metadata = asRecord(node.metadata);
+    const explicitText = asTrimmedString(metadata.text);
+    const variant = asTrimmedString(metadata.variant);
+    const bindingKey =
+      asTrimmedString(metadata.bindingKey) ||
+      asTrimmedString(metadata.binding) ||
+      resolveImplicitBindingKeyForNode(node);
+    const format = resolveFieldFormat(node);
+
+    if (bindingKey.length > 0 && explicitText.length === 0) {
+      lines.push(
+        `  const node = new TextElement(resolveInvoiceBinding(viewModel, "${escapeSourceString(
+          bindingKey
+        )}", "${escapeSourceString(format)}"));`
+      );
+    } else if (variant.length > 0) {
+      const content = pickRenderableLiteral(explicitText, node.name);
+      lines.push(
+        `  const node = new TextElement("${escapeSourceString(content)}", "${escapeSourceString(variant)}");`
+      );
+    } else {
+      const content = pickRenderableLiteral(explicitText, node.name);
+      lines.push(`  const node = new TextElement("${escapeSourceString(content)}");`);
+    }
     emitLayoutStyleCall(node, lines);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');

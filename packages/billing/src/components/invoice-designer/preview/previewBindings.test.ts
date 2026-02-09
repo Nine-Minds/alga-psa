@@ -65,4 +65,32 @@ describe('previewBindings', () => {
     expect(dateValue).toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
     expect(currencyValue).toBe('$21.00');
   });
+
+  it('derives invoice.discount from subtotal + tax - total', () => {
+    const value = resolveFieldPreviewValue({
+      invoice: {
+        ...previewInvoice,
+        subtotal: 2000,
+        tax: 100,
+        total: 1900,
+      },
+      bindingKey: 'invoice.discount',
+      format: 'currency',
+    });
+
+    expect(value).toBe('$2.00');
+  });
+
+  it('does not mirror customer address when tenant address is missing', () => {
+    const value = resolveFieldPreviewValue({
+      invoice: {
+        ...previewInvoice,
+        tenantClient: null,
+      },
+      bindingKey: 'tenant.address',
+      format: 'text',
+    });
+
+    expect(value).toBeNull();
+  });
 });

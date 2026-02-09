@@ -137,23 +137,25 @@ export const extractExpectedLayoutConstraintsFromIr = (
         const maxY = Math.max(0, parent.size.height - parentPadding - node.size.height);
         const boundedX = Math.min(Math.max(node.position.x, parentPadding), maxX);
         const boundedY = Math.min(Math.max(node.position.y, parentPadding), maxY);
-
-        constraints.push({
-          id: `${node.id}:containment-x`,
-          nodeId: node.id,
-          metric: 'x',
-          expected: boundedX,
-          tolerance,
-          category: 'containment',
-        });
-        constraints.push({
-          id: `${node.id}:containment-y`,
-          nodeId: node.id,
-          metric: 'y',
-          expected: boundedY,
-          tolerance,
-          category: 'containment',
-        });
+        const shouldApplyContainment = (parent.layout.sizing ?? 'fixed') === 'fixed';
+        if (shouldApplyContainment) {
+          constraints.push({
+            id: `${node.id}:containment-x`,
+            nodeId: node.id,
+            metric: 'x',
+            expected: boundedX,
+            tolerance,
+            category: 'containment',
+          });
+          constraints.push({
+            id: `${node.id}:containment-y`,
+            nodeId: node.id,
+            metric: 'y',
+            expected: boundedY,
+            tolerance,
+            category: 'containment',
+          });
+        }
 
         const parentChildren = parent.childIds;
         const currentIndex = parentChildren.indexOf(node.id);
@@ -162,23 +164,31 @@ export const extractExpectedLayoutConstraintsFromIr = (
           if (previousSibling) {
             const gap = Math.max(0, parent.layout.gap ?? 0);
             if (parent.layout.direction === 'column') {
-              constraints.push({
-                id: `${node.id}:spacing-y`,
-                nodeId: node.id,
-                metric: 'y',
-                expected: previousSibling.position.y + previousSibling.size.height + gap,
-                tolerance,
-                category: 'spacing',
-              });
+              const expectedSpacingY = previousSibling.position.y + previousSibling.size.height + gap;
+              const followsDerivedSpacing = Math.abs(node.position.y - expectedSpacingY) <= tolerance;
+              if (followsDerivedSpacing) {
+                constraints.push({
+                  id: `${node.id}:spacing-y`,
+                  nodeId: node.id,
+                  metric: 'y',
+                  expected: expectedSpacingY,
+                  tolerance,
+                  category: 'spacing',
+                });
+              }
             } else {
-              constraints.push({
-                id: `${node.id}:spacing-x`,
-                nodeId: node.id,
-                metric: 'x',
-                expected: previousSibling.position.x + previousSibling.size.width + gap,
-                tolerance,
-                category: 'spacing',
-              });
+              const expectedSpacingX = previousSibling.position.x + previousSibling.size.width + gap;
+              const followsDerivedSpacing = Math.abs(node.position.x - expectedSpacingX) <= tolerance;
+              if (followsDerivedSpacing) {
+                constraints.push({
+                  id: `${node.id}:spacing-x`,
+                  nodeId: node.id,
+                  metric: 'x',
+                  expected: expectedSpacingX,
+                  tolerance,
+                  category: 'spacing',
+                });
+              }
             }
           }
         }
@@ -186,44 +196,60 @@ export const extractExpectedLayoutConstraintsFromIr = (
         if (parent.layout.direction === 'column') {
           const innerWidth = Math.max(1, parent.size.width - parentPadding * 2);
           if (parent.layout.align === 'center') {
-            constraints.push({
-              id: `${node.id}:alignment-x`,
-              nodeId: node.id,
-              metric: 'x',
-              expected: parentPadding + (innerWidth - node.size.width) / 2,
-              tolerance,
-              category: 'alignment',
-            });
+            const expectedAlignmentX = parentPadding + (innerWidth - node.size.width) / 2;
+            const followsDerivedAlignment = Math.abs(node.position.x - expectedAlignmentX) <= tolerance;
+            if (followsDerivedAlignment) {
+              constraints.push({
+                id: `${node.id}:alignment-x`,
+                nodeId: node.id,
+                metric: 'x',
+                expected: expectedAlignmentX,
+                tolerance,
+                category: 'alignment',
+              });
+            }
           } else if (parent.layout.align === 'end') {
-            constraints.push({
-              id: `${node.id}:alignment-x`,
-              nodeId: node.id,
-              metric: 'x',
-              expected: Math.max(parentPadding, parent.size.width - parentPadding - node.size.width),
-              tolerance,
-              category: 'alignment',
-            });
+            const expectedAlignmentX = Math.max(parentPadding, parent.size.width - parentPadding - node.size.width);
+            const followsDerivedAlignment = Math.abs(node.position.x - expectedAlignmentX) <= tolerance;
+            if (followsDerivedAlignment) {
+              constraints.push({
+                id: `${node.id}:alignment-x`,
+                nodeId: node.id,
+                metric: 'x',
+                expected: expectedAlignmentX,
+                tolerance,
+                category: 'alignment',
+              });
+            }
           }
         } else {
           const innerHeight = Math.max(1, parent.size.height - parentPadding * 2);
           if (parent.layout.align === 'center') {
-            constraints.push({
-              id: `${node.id}:alignment-y`,
-              nodeId: node.id,
-              metric: 'y',
-              expected: parentPadding + (innerHeight - node.size.height) / 2,
-              tolerance,
-              category: 'alignment',
-            });
+            const expectedAlignmentY = parentPadding + (innerHeight - node.size.height) / 2;
+            const followsDerivedAlignment = Math.abs(node.position.y - expectedAlignmentY) <= tolerance;
+            if (followsDerivedAlignment) {
+              constraints.push({
+                id: `${node.id}:alignment-y`,
+                nodeId: node.id,
+                metric: 'y',
+                expected: expectedAlignmentY,
+                tolerance,
+                category: 'alignment',
+              });
+            }
           } else if (parent.layout.align === 'end') {
-            constraints.push({
-              id: `${node.id}:alignment-y`,
-              nodeId: node.id,
-              metric: 'y',
-              expected: Math.max(parentPadding, parent.size.height - parentPadding - node.size.height),
-              tolerance,
-              category: 'alignment',
-            });
+            const expectedAlignmentY = Math.max(parentPadding, parent.size.height - parentPadding - node.size.height);
+            const followsDerivedAlignment = Math.abs(node.position.y - expectedAlignmentY) <= tolerance;
+            if (followsDerivedAlignment) {
+              constraints.push({
+                id: `${node.id}:alignment-y`,
+                nodeId: node.id,
+                metric: 'y',
+                expected: expectedAlignmentY,
+                tolerance,
+                category: 'alignment',
+              });
+            }
           }
         }
       }

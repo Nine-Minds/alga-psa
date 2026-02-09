@@ -34,8 +34,26 @@ describe('previewSessionState', () => {
     state = previewSessionReducer(state, { type: 'set-list-page', page: 3 });
     expect(state.invoiceListPage).toBe(3);
 
+    state = previewSessionReducer(state, {
+      type: 'detail-load-success',
+      payload: {
+        invoiceNumber: 'INV-1',
+        issueDate: '2026-01-01',
+        dueDate: '2026-01-31',
+        currencyCode: 'USD',
+        poNumber: null,
+        customer: { name: 'Acme', address: '123 Main' },
+        tenantClient: null,
+        items: [],
+        subtotal: 100,
+        tax: 10,
+        total: 110,
+      },
+    });
+
     state = previewSessionReducer(state, { type: 'select-existing-invoice', invoiceId: 'inv-1' });
     expect(state.selectedInvoiceId).toBe('inv-1');
+    expect(state.selectedInvoiceData?.invoiceNumber).toBe('INV-1');
 
     state = previewSessionReducer(state, { type: 'clear-existing-invoice' });
     expect(state.selectedInvoiceId).toBeNull();
@@ -64,10 +82,41 @@ describe('previewSessionState', () => {
 
     state = previewSessionReducer(state, { type: 'detail-load-start' });
     expect(state.isInvoiceDetailLoading).toBe(true);
+    expect(state.selectedInvoiceData).toBeNull();
 
     state = previewSessionReducer(state, { type: 'detail-load-error', error: 'Boom' });
     expect(state.isInvoiceDetailLoading).toBe(false);
     expect(state.invoiceDetailError).toBe('Boom');
+  });
+
+  it('retains prior existing invoice data while replacement detail request is in flight', () => {
+    let state = createInitialPreviewSessionState();
+    const previousInvoice = {
+      invoiceNumber: 'INV-OLD',
+      issueDate: '2026-01-01',
+      dueDate: '2026-01-31',
+      currencyCode: 'USD',
+      poNumber: null,
+      customer: { name: 'Acme', address: '123 Main' },
+      tenantClient: null,
+      items: [],
+      subtotal: 100,
+      tax: 10,
+      total: 110,
+    } as const;
+
+    state = previewSessionReducer(state, { type: 'set-source', source: 'existing' });
+    state = previewSessionReducer(state, { type: 'detail-load-success', payload: previousInvoice });
+    state = previewSessionReducer(state, { type: 'select-existing-invoice', invoiceId: 'inv-new' });
+    state = previewSessionReducer(state, { type: 'detail-load-start' });
+
+    expect(state.isInvoiceDetailLoading).toBe(true);
+    expect(state.selectedInvoiceData?.invoiceNumber).toBe('INV-OLD');
+
+    state = previewSessionReducer(state, { type: 'detail-load-error', error: 'Timeout' });
+    expect(state.isInvoiceDetailLoading).toBe(false);
+    expect(state.invoiceDetailError).toBe('Timeout');
+    expect(state.selectedInvoiceData?.invoiceNumber).toBe('INV-OLD');
   });
 
   it('tracks compile/render/verify lifecycle statuses', () => {

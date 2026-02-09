@@ -202,6 +202,17 @@ const clampNodeSizeToPracticalMinimum = (type: DesignerComponentType, size: Size
   };
 };
 
+const cloneMetadata = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  } catch {
+    return { ...(value as Record<string, unknown>) };
+  }
+};
+
 const normalizeResolvedNodes = (nodes: DesignerNode[]): DesignerNode[] => {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   return nodes.map((node) => {
@@ -838,7 +849,10 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             canRotate: true,
             allowResize: true,
             layoutPresetId: preset.id,
-            metadata: {},
+            metadata: {
+              ...cloneMetadata(getDefinition(nodeDef.type)?.defaultMetadata),
+              ...cloneMetadata(nodeDef.metadata),
+            },
             parentId: resolvedParentForNode,
             childIds: [],
             allowedChildren: getAllowedChildrenForType(nodeDef.type),
