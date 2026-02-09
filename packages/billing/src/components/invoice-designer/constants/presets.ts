@@ -575,7 +575,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         type: 'container',
         parentKey: 'footer-section',
         offset: { x: 0, y: 0 },
-        size: { width: 280, height: 150 },
+        size: { width: 280, height: 192 },
         name: 'Totals Area',
         layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'start', align: 'stretch', sizing: 'fixed' }
       },
@@ -584,7 +584,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         type: 'subtotal',
         parentKey: 'footer-totals',
         offset: { x: 0, y: 0 },
-        size: { width: 280, height: 32 },
+        size: { width: 280, height: 56 },
         name: 'Subtotal'
       },
       {
@@ -592,7 +592,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         type: 'tax',
         parentKey: 'footer-totals',
         offset: { x: 0, y: 0 },
-        size: { width: 280, height: 32 },
+        size: { width: 280, height: 56 },
         name: 'Tax'
       },
       {
@@ -600,7 +600,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         type: 'custom-total',
         parentKey: 'footer-totals',
         offset: { x: 0, y: 0 },
-        size: { width: 280, height: 40 },
+        size: { width: 280, height: 64 },
         name: 'Grand Total'
       }
     ],

@@ -100,6 +100,13 @@ type PreviewContentResult = {
   singleLine?: boolean;
 };
 
+type TotalsRowPreviewModel = {
+  label: string;
+  bindingKey: string;
+  previewValue: string;
+  isGrandTotal: boolean;
+};
+
 const placeholderPreviewClassName = 'block truncate text-[11px] font-normal text-slate-400/95 italic';
 
 const renderPlaceholderPreview = (text: string): React.ReactNode => (
@@ -117,6 +124,78 @@ const hasRenderableActiveSelection = (nodes: DesignerNode[], selectedNodeId: str
   }
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
   return isRenderableCanvasNode(selectedNode);
+};
+
+const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const isTotalsRowType = (type: DesignerNode['type']): type is 'subtotal' | 'tax' | 'discount' | 'custom-total' =>
+  type === 'subtotal' || type === 'tax' || type === 'discount' || type === 'custom-total';
+
+const resolveTotalsRowLabelFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+  switch (type) {
+    case 'subtotal':
+      return 'Subtotal';
+    case 'tax':
+      return 'Tax';
+    case 'discount':
+      return 'Discount';
+    case 'custom-total':
+      return 'Total';
+  }
+};
+
+const resolveTotalsRowBindingFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+  switch (type) {
+    case 'subtotal':
+      return 'invoice.subtotal';
+    case 'tax':
+      return 'invoice.tax';
+    case 'discount':
+      return 'invoice.discount';
+    case 'custom-total':
+      return 'invoice.total';
+  }
+};
+
+const resolveTotalsRowAmountFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+  switch (type) {
+    case 'subtotal':
+      return '$1,200.00';
+    case 'tax':
+      return '$96.00';
+    case 'discount':
+      return '-$50.00';
+    case 'custom-total':
+      return '$1,296.00';
+  }
+};
+
+const resolveTotalsRowPreviewModel = (node: DesignerNode): TotalsRowPreviewModel => {
+  if (!isTotalsRowType(node.type)) {
+    return {
+      label: node.name,
+      bindingKey: 'binding',
+      previewValue: '$0.00',
+      isGrandTotal: false,
+    };
+  }
+
+  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
+  const label = asTrimmedString(metadata.label) || asTrimmedString(node.name) || fallbackLabel;
+  const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
+  const previewValue =
+    asTrimmedString(metadata.previewValue) ||
+    asTrimmedString(metadata.sampleValue) ||
+    resolveTotalsRowAmountFallback(node.type);
+  const isGrandTotal = /\b(grand total|amount due|balance due|total due)\b/i.test(label);
+
+  return {
+    label,
+    bindingKey,
+    previewValue,
+    isGrandTotal,
+  };
 };
 
 const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
@@ -183,8 +262,49 @@ const getPreviewContent = (node: DesignerNode): PreviewContentResult => {
     case 'subtotal':
     case 'tax':
     case 'discount':
-    case 'custom-total':
-      return { content: `${metadata.label ?? node.name}: {${metadata.bindingKey ?? 'binding'}}` };
+    case 'custom-total': {
+      const totalsRow = resolveTotalsRowPreviewModel(node);
+      return {
+        content: (
+          <div className="flex h-full flex-col justify-between gap-1">
+            <div
+              className={clsx(
+                'flex min-h-[14px] items-baseline justify-between gap-3',
+                totalsRow.isGrandTotal && 'border-t border-slate-300 pt-1'
+              )}
+            >
+              <span
+                className={clsx(
+                  'min-w-0 truncate',
+                  totalsRow.isGrandTotal ? 'text-[11px] font-semibold text-slate-800' : 'text-[11px] font-medium text-slate-600'
+                )}
+                title={totalsRow.label}
+              >
+                {totalsRow.label}
+              </span>
+              <span
+                className={clsx(
+                  'shrink-0 text-right tabular-nums',
+                  totalsRow.isGrandTotal ? 'text-[12px] font-bold text-slate-900' : 'text-[11px] font-semibold text-slate-700'
+                )}
+                title={totalsRow.previewValue}
+              >
+                {totalsRow.previewValue}
+              </span>
+            </div>
+            <div
+              className={clsx(
+                'truncate text-[10px] font-mono',
+                totalsRow.isGrandTotal ? 'text-slate-500' : 'text-slate-400'
+              )}
+              title={totalsRow.bindingKey}
+            >
+              {`{${totalsRow.bindingKey}}`}
+            </div>
+          </div>
+        ),
+      };
+    }
     case 'table':
     case 'dynamic-table': {
       const columns = Array.isArray((metadata as { columns?: unknown }).columns)
@@ -277,6 +397,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   };
   const shouldDeemphasize = hasActiveSelection && !isSelected && !isDragging;
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
+  const isTotalsRow = isTotalsRowType(node.type);
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -363,15 +484,11 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           </div>
         </div>
       ) : (
-        <>
-          <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
-            <span className="truncate">{node.name}</span>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
-          </div>
+        isTotalsRow ? (
           <div
             className={clsx(
-              'text-[11px] text-slate-500',
-              node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
+              'h-full text-[11px] text-slate-500',
+              'p-1.5 whitespace-pre-wrap',
               node.type === 'spacer' && 'h-full p-0',
               previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
               previewContent.isPlaceholder && 'text-slate-400'
@@ -379,7 +496,25 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           >
             {previewContent.content}
           </div>
-        </>
+        ) : (
+          <>
+            <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
+              <span className="truncate">{node.name}</span>
+              <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
+            </div>
+            <div
+              className={clsx(
+                'text-[11px] text-slate-500',
+                node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
+                node.type === 'spacer' && 'h-full p-0',
+                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.isPlaceholder && 'text-slate-400'
+              )}
+            >
+              {previewContent.content}
+            </div>
+          </>
+        )
       )}
       {node.allowResize !== false && (
         <div
@@ -594,4 +729,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 export const __designCanvasSelectionTestUtils = {
   isRenderableCanvasNode,
   hasRenderableActiveSelection,
+};
+
+export const __designCanvasPreviewTestUtils = {
+  resolveTotalsRowPreviewModel,
 };
