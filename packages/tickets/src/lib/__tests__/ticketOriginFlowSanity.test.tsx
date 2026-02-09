@@ -1,63 +1,66 @@
 import React from 'react';
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { TICKET_ORIGINS } from '@alga-psa/types';
 import TicketOriginBadge from '../../components/TicketOriginBadge';
 import { getTicketOrigin } from '../ticketOrigin';
 
-const labels = {
-  internal: 'Created Internally',
-  clientPortal: 'Created via Client Portal',
-  inboundEmail: 'Created via Inbound Email',
-};
-
-function renderBadgeForTicket(ticket: Record<string, unknown>): string {
-  const origin = getTicketOrigin(ticket as any);
-
-  return renderToStaticMarkup(
-    <TicketOriginBadge origin={origin} labels={labels} />
-  );
+function readJson(relativePathFromRepoRoot: string): any {
+  const repoRoot = path.resolve(__dirname, '../../../../../');
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePathFromRepoRoot), 'utf8'));
 }
 
-describe('ticket origin flow sanity', () => {
-  it('T080: end-to-end sanity: new MSP-created ticket displays internal origin badge', () => {
-    const html = renderBadgeForTicket({
-      source: 'web_app',
+describe('ticket origin API flow sanity', () => {
+  it('T080: end-to-end API-created ticket displays Created via API badge in MSP ticket details', () => {
+    const labels = readJson('server/public/locales/en/common.json').tickets.origin;
+    const origin = getTicketOrigin({
+      ticket_origin: 'api',
+      source: 'api',
       email_metadata: null,
       entered_by_user_type: 'internal',
     });
 
-    expect(getTicketOrigin({ source: 'web_app' })).toBe(TICKET_ORIGINS.INTERNAL);
-    expect(html).toContain('Created Internally');
-    expect(html).toContain('data-ticket-origin="internal"');
+    const html = renderToStaticMarkup(
+      <TicketOriginBadge
+        origin={origin}
+        labels={{
+          internal: labels.internal,
+          clientPortal: labels.clientPortal,
+          inboundEmail: labels.inboundEmail,
+          api: labels.api,
+          other: labels.other,
+        }}
+      />
+    );
+
+    expect(html).toContain('Created via API');
+    expect(html).toContain('data-ticket-origin="api"');
   });
 
-  it('T081: end-to-end sanity: new client-portal-created ticket displays client_portal badge', () => {
-    const html = renderBadgeForTicket({
-      source: 'client_portal',
+  it('T081: end-to-end API-created ticket displays Created via API badge in client portal ticket details', () => {
+    const labels = readJson('server/public/locales/en/clientPortal.json').tickets.origin;
+    const origin = getTicketOrigin({
+      ticket_origin: 'api',
+      source: 'api',
       email_metadata: null,
-      entered_by_user_type: 'client',
+      entered_by_user_type: 'internal',
     });
 
-    expect(getTicketOrigin({ source: 'client_portal' })).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
-    expect(html).toContain('Created via Client Portal');
-    expect(html).toContain('data-ticket-origin="client_portal"');
-  });
+    const html = renderToStaticMarkup(
+      <TicketOriginBadge
+        origin={origin}
+        labels={{
+          internal: labels.internal,
+          clientPortal: labels.clientPortal,
+          inboundEmail: labels.inboundEmail,
+          api: labels.api,
+          other: labels.other,
+        }}
+      />
+    );
 
-  it('T082: end-to-end sanity: new inbound-email-created ticket displays inbound_email badge', () => {
-    const html = renderBadgeForTicket({
-      source: 'email',
-      email_metadata: { messageId: 'm-1' },
-      entered_by_user_type: 'client',
-    });
-
-    expect(
-      getTicketOrigin({
-        source: 'email',
-        email_metadata: { messageId: 'm-1' },
-      })
-    ).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
-    expect(html).toContain('Created via Inbound Email');
-    expect(html).toContain('data-ticket-origin="inbound_email"');
+    expect(html).toContain('Created via API');
+    expect(html).toContain('data-ticket-origin="api"');
   });
 });

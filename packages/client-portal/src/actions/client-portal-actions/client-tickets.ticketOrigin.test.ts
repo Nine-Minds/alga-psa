@@ -141,7 +141,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     hasPermissionMock.mockResolvedValue(true);
   });
 
-  it('T024: response includes derived ticket_origin', async () => {
+  it('T034: response includes normalized ticket_origin for internal ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(buildTrx({ ticket: makeTicket({ source: 'web_app' }) }))
@@ -153,7 +153,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INTERNAL);
   });
 
-  it('T025: classifies inbound_email when email_metadata exists', async () => {
+  it('T036: response includes normalized ticket_origin for inbound_email ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(
@@ -172,7 +172,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
   });
 
-  it('T026: classifies client_portal when creator is client user', async () => {
+  it('T035: response includes normalized ticket_origin for client_portal ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(
@@ -191,14 +191,14 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
   });
 
-  it('T027: classifies internal for unresolved records', async () => {
+  it('T037: response includes normalized ticket_origin for api ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(
           buildTrx({
             ticket: makeTicket({
-              source: null,
-              entered_by_user_type: null,
+              source: 'client_portal',
+              ticket_origin: 'api',
             }),
           })
         )
@@ -207,6 +207,6 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     const { getClientTicketDetails } = await import('./client-tickets');
     const ticket = await getClientTicketDetails('ticket-1');
 
-    expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INTERNAL);
+    expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.API);
   });
 });

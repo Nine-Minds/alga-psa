@@ -18,10 +18,12 @@ export const TICKET_ORIGINS = {
   INTERNAL: 'internal',
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
+  API: 'api',
 } as const;
 
 export type TicketOrigin =
   (typeof TICKET_ORIGINS)[keyof typeof TICKET_ORIGINS];
+export type TicketOriginDisplay = TicketOrigin | 'other';
 
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
@@ -55,7 +57,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   // Response state tracking (who needs to respond next)
   response_state?: TicketResponseState;
   // Derived ticket creation origin signal for UI display.
-  ticket_origin?: TicketOrigin;
+  ticket_origin?: TicketOriginDisplay;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {

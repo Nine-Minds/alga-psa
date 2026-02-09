@@ -89,6 +89,8 @@ export function TicketDetails({
     internal: t('tickets.origin.internal', 'Created Internally'),
     clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal'),
     inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email'),
+    api: t('tickets.origin.api', 'Created via API'),
+    other: t('tickets.origin.other', 'Created via Other'),
   }), [t]);
 
   // Fetch appointment requests for this ticket

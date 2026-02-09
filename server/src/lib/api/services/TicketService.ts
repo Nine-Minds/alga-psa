@@ -6,6 +6,7 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
+import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { NumberingService } from 'server/src/lib/services/numberingService';
@@ -276,7 +277,8 @@ export class TicketService extends BaseService<ITicket> {
           assigned_to: data.assigned_to,
           priority_id: data.priority_id,
           attributes: data.attributes,
-          source: 'api'
+          source: 'api',
+          ticket_origin: TICKET_ORIGINS.API,
         };
 
         // Create adapters for API service context

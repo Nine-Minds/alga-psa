@@ -5,7 +5,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import TicketOriginBadge from './TicketOriginBadge';
 
 describe('TicketOriginBadge render contract', () => {
-  it('T030: renders internal variant with expected label and data attribute', () => {
+  it('T040: renders Created Internally label and data attribute for internal', () => {
     const html = renderToStaticMarkup(
       <TicketOriginBadge origin={TICKET_ORIGINS.INTERNAL} />
     );
@@ -14,7 +14,7 @@ describe('TicketOriginBadge render contract', () => {
     expect(html).toContain('data-ticket-origin="internal"');
   });
 
-  it('T031: renders client_portal variant with expected label and data attribute', () => {
+  it('T041: renders Created via Client Portal label and data attribute for client_portal', () => {
     const html = renderToStaticMarkup(
       <TicketOriginBadge origin={TICKET_ORIGINS.CLIENT_PORTAL} />
     );
@@ -23,7 +23,7 @@ describe('TicketOriginBadge render contract', () => {
     expect(html).toContain('data-ticket-origin="client_portal"');
   });
 
-  it('T032: renders inbound_email variant with expected label and data attribute', () => {
+  it('T042: renders Created via Inbound Email label and data attribute for inbound_email', () => {
     const html = renderToStaticMarkup(
       <TicketOriginBadge origin={TICKET_ORIGINS.INBOUND_EMAIL} />
     );
@@ -32,16 +32,21 @@ describe('TicketOriginBadge render contract', () => {
     expect(html).toContain('data-ticket-origin="inbound_email"');
   });
 
-  it('T033: supports size/className props used by both TicketDetails views', () => {
+  it('T043: renders Created via API label and data attribute for api', () => {
     const html = renderToStaticMarkup(
-      <TicketOriginBadge
-        origin={TICKET_ORIGINS.INTERNAL}
-        size="md"
-        className="origin-badge-custom"
-      />
+      <TicketOriginBadge origin={TICKET_ORIGINS.API} />
     );
 
-    expect(html).toContain('origin-badge-custom');
-    expect(html).toContain('text-sm');
+    expect(html).toContain('Created via API');
+    expect(html).toContain('data-ticket-origin="api"');
+  });
+
+  it('T044: renders safe fallback label for unknown future origin value', () => {
+    const html = renderToStaticMarkup(
+      <TicketOriginBadge origin={'ai_agent'} />
+    );
+
+    expect(html).toContain('Created via Other');
+    expect(html).toContain('data-ticket-origin="other"');
   });
 });

@@ -1,7 +1,7 @@
 [
   {
     "id": "F001",
-    "description": "Define canonical ticket origin values: internal, client_portal, inbound_email",
+    "description": "Define canonical ticket origin values for this phase: internal, client_portal, inbound_email, api",
     "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
@@ -9,56 +9,60 @@
   },
   {
     "id": "F002",
-    "description": "Add shared TicketOrigin type to @alga-psa/types for ticket-level origin",
-    "implemented": true,
+    "description": "Add shared TicketOrigin type in @alga-psa/types and include api in the union",
+    "implemented": false,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
   },
   {
     "id": "F003",
-    "description": "Implement shared getTicketOrigin resolver helper with deterministic precedence rules",
-    "implemented": true,
+    "description": "Add tickets.ticket_origin persisted column (text) via migration",
+    "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements"
+      "Requirements > Functional Requirements",
+      "Rollout / Migration"
     ]
   },
   {
     "id": "F004",
-    "description": "Resolver classifies ticket as inbound_email when email_metadata is present",
-    "implemented": true,
+    "description": "Backfill existing tickets.ticket_origin using legacy signals (email_metadata, creator user_type, fallback internal)",
+    "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements"
+      "Rollout / Migration"
     ]
   },
   {
     "id": "F005",
-    "description": "Resolver maps known source hints (email/client_portal/web_app/api/etc.) to canonical origin",
-    "implemented": true,
+    "description": "Keep ticket_origin storage extensible for future values (for example ai_agent) without schema redesign",
+    "implemented": false,
     "prdRefs": [
+      "Goals",
       "Requirements > Functional Requirements"
     ]
   },
   {
     "id": "F006",
-    "description": "Resolver classifies ticket as client_portal when creator user_type is client and no higher-precedence email signal exists",
-    "implemented": true,
+    "description": "Internal MSP create path writes ticket_origin=internal",
+    "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements"
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
     ]
   },
   {
     "id": "F007",
-    "description": "Resolver falls back to internal for unresolved or legacy records",
-    "implemented": true,
+    "description": "Client portal create path writes ticket_origin=client_portal",
+    "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements"
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
     ]
   },
   {
     "id": "F008",
-    "description": "MSP getTicketById action returns derived ticket_origin for TicketDetails consumption",
-    "implemented": true,
+    "description": "Inbound email create path writes ticket_origin=inbound_email",
+    "implemented": false,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -66,8 +70,8 @@
   },
   {
     "id": "F009",
-    "description": "Client portal getClientTicketDetails action returns derived ticket_origin for TicketDetails consumption",
-    "implemented": true,
+    "description": "API create path writes ticket_origin=api",
+    "implemented": false,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -75,77 +79,90 @@
   },
   {
     "id": "F010",
-    "description": "Add shared TicketOriginBadge component in @alga-psa/tickets/components with three origin states",
-    "implemented": true,
+    "description": "Update shared TicketModel validation so ticket_origin is preserved and persisted",
+    "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements",
-      "UX / UI Notes"
-    ]
-  },
-  {
-    "id": "F011",
-    "description": "Render TicketOriginBadge in MSP TicketDetails header near ticket number/response state",
-    "implemented": true,
-    "prdRefs": [
-      "UX / UI Notes",
       "Requirements > Functional Requirements"
     ]
   },
   {
-    "id": "F012",
-    "description": "Render TicketOriginBadge in client portal TicketDetails header/status area",
-    "implemented": true,
+    "id": "F011",
+    "description": "Implement shared ticket origin normalization/resolver helper with legacy fallback for null historical rows",
+    "implemented": false,
     "prdRefs": [
-      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Requirements > Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "MSP getTicketById returns normalized ticket_origin for TicketDetails",
+    "implemented": false,
+    "prdRefs": [
       "Requirements > Functional Requirements"
     ]
   },
   {
     "id": "F013",
-    "description": "Add English translation keys for ticket origin labels in common locale",
-    "implemented": true,
+    "description": "Client portal getClientTicketDetails returns normalized ticket_origin for TicketDetails",
+    "implemented": false,
     "prdRefs": [
-      "UX / UI Notes"
+      "Requirements > Functional Requirements"
     ]
   },
   {
     "id": "F014",
-    "description": "Add English translation keys for ticket origin labels in clientPortal locale",
-    "implemented": true,
+    "description": "Add shared TicketOriginBadge component with internal/client_portal/inbound_email/api variants and unknown fallback",
+    "implemented": false,
     "prdRefs": [
-      "UX / UI Notes"
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
     ]
   },
   {
     "id": "F015",
-    "description": "Badge copy clearly distinguishes Created Internally vs Created via Client Portal vs Created via Inbound Email",
-    "implemented": true,
+    "description": "Render TicketOriginBadge in MSP TicketDetails header near ticket number and response state badge",
+    "implemented": false,
     "prdRefs": [
       "UX / UI Notes"
     ]
   },
   {
     "id": "F016",
-    "description": "Preserve existing per-comment ResponseSourceBadge behavior with no regression",
-    "implemented": true,
+    "description": "Render TicketOriginBadge in client portal TicketDetails header/status area",
+    "implemented": false,
     "prdRefs": [
-      "Non-goals",
-      "Requirements > Functional Requirements"
+      "UX / UI Notes"
     ]
   },
   {
     "id": "F017",
-    "description": "Ship MVP without mandatory DB migration by deriving ticket_origin from existing ticket/user fields",
-    "implemented": true,
+    "description": "Add locale keys for ticket origin labels including Created via API",
+    "implemented": false,
     "prdRefs": [
-      "Rollout / Migration",
-      "Requirements > Non-functional Requirements"
+      "UX / UI Notes"
     ]
   },
   {
     "id": "F018",
-    "description": "Add automated tests for resolver logic, server-action payloads, badge component, and both TicketDetails surfaces",
-    "implemented": true,
+    "description": "Preserve existing comment response-source badge behavior with no regression",
+    "implemented": false,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Preserve existing response-state badge behavior with no regression",
+    "implemented": false,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add automated tests for persistence, backfill, resolver logic, API distinction, and both TicketDetails surfaces",
+    "implemented": false,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]

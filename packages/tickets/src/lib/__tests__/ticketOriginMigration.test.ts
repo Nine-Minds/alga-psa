@@ -1,49 +1,50 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { TICKET_ORIGINS } from '@alga-psa/types';
-import { getTicketOrigin } from '../ticketOrigin';
 
-function collectFilesRecursively(dir: string): string[] {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files: string[] = [];
+const migrationPath = path.resolve(
+  __dirname,
+  '../../../../../server/migrations/20260209160000_add_ticket_origin_to_tickets.cjs'
+);
 
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectFilesRecursively(fullPath));
-      continue;
-    }
-
-    files.push(fullPath);
-  }
-
-  return files;
+function readMigration(): string {
+  return fs.readFileSync(migrationPath, 'utf8');
 }
 
-describe('ticket origin migration posture', () => {
-  it('T070: no new migration is required for MVP; feature works with existing ticket/user fields', () => {
-    const derivedWithoutTicketOriginField = getTicketOrigin({
-      source: null,
-      email_metadata: null,
-      entered_by_user_type: 'client',
-    });
+describe('ticket_origin migration contract', () => {
+  it('T001: migration adds tickets.ticket_origin column successfully in existing DB', () => {
+    const migration = readMigration();
 
-    expect(derivedWithoutTicketOriginField).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
+    expect(migration).toContain("hasColumn('tickets', 'ticket_origin')");
+    expect(migration).toContain("alterTable('tickets'");
+    expect(migration).toContain("table.text('ticket_origin')");
+  });
 
-    const migrationRoots = [
-      path.resolve(__dirname, '../../../../../server/migrations'),
-      path.resolve(__dirname, '../../../../../ee/server/migrations'),
-    ];
+  it('T002: newly inserted tickets default ticket_origin to internal when not explicitly provided', () => {
+    const migration = readMigration();
 
-    const migrationFiles = migrationRoots
-      .flatMap((root) => collectFilesRecursively(root))
-      .filter((filePath) => filePath.endsWith('.ts') || filePath.endsWith('.js'));
+    expect(migration).toContain("defaultTo('internal')");
+  });
 
-    const ticketOriginMentions = migrationFiles.filter((filePath) =>
-      fs.readFileSync(filePath, 'utf8').includes('ticket_origin')
-    );
+  it('T003: backfill marks tickets with email_metadata as inbound_email', () => {
+    const migration = readMigration();
 
-    expect(ticketOriginMentions).toEqual([]);
+    expect(migration).toContain("SET ticket_origin = 'inbound_email'");
+    expect(migration).toContain('email_metadata IS NOT NULL');
+  });
+
+  it('T004: backfill marks tickets created by client users as client_portal when no email_metadata', () => {
+    const migration = readMigration();
+
+    expect(migration).toContain("SET ticket_origin = 'client_portal'");
+    expect(migration).toContain('FROM users u');
+    expect(migration).toContain("lower(coalesce(u.user_type, '')) = 'client'");
+  });
+
+  it('T005: backfill marks unresolved legacy tickets as internal', () => {
+    const migration = readMigration();
+
+    expect(migration).toContain("SET ticket_origin = 'internal'");
+    expect(migration).toContain('WHERE ticket_origin IS NULL');
   });
 });

@@ -1,6 +1,10 @@
-import { TICKET_ORIGINS, type TicketOrigin } from '@alga-psa/types';
+import { TICKET_ORIGINS, type TicketOriginDisplay } from '@alga-psa/types';
+
+export const TICKET_ORIGIN_OTHER = 'other' as const;
+export type ResolvedTicketOrigin = TicketOriginDisplay;
 
 export interface TicketOriginResolverInput {
+  ticket_origin?: string | null;
   email_metadata?: unknown;
   source?: string | null;
   creator_user_type?: string | null;
@@ -8,8 +12,8 @@ export interface TicketOriginResolverInput {
   user_type?: string | null;
 }
 
-const SOURCE_HINT_TO_ORIGIN: Readonly<Record<string, TicketOrigin>> = {
-  api: TICKET_ORIGINS.INTERNAL,
+const SOURCE_HINT_TO_ORIGIN: Readonly<Record<string, Exclude<ResolvedTicketOrigin, 'other'>>> = {
+  api: TICKET_ORIGINS.API,
   client_portal: TICKET_ORIGINS.CLIENT_PORTAL,
   email: TICKET_ORIGINS.INBOUND_EMAIL,
   inbound_email: TICKET_ORIGINS.INBOUND_EMAIL,
@@ -45,7 +49,38 @@ function normalizeSource(source: unknown): string | null {
   return normalized || null;
 }
 
-function mapSourceHintToOrigin(sourceHint: string | null): TicketOrigin | null {
+function normalizeStoredOrigin(origin: unknown): ResolvedTicketOrigin | null {
+  if (typeof origin !== 'string') {
+    return null;
+  }
+
+  const normalized = origin.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized === TICKET_ORIGINS.INTERNAL) {
+    return TICKET_ORIGINS.INTERNAL;
+  }
+
+  if (normalized === TICKET_ORIGINS.CLIENT_PORTAL) {
+    return TICKET_ORIGINS.CLIENT_PORTAL;
+  }
+
+  if (normalized === TICKET_ORIGINS.INBOUND_EMAIL) {
+    return TICKET_ORIGINS.INBOUND_EMAIL;
+  }
+
+  if (normalized === TICKET_ORIGINS.API) {
+    return TICKET_ORIGINS.API;
+  }
+
+  return TICKET_ORIGIN_OTHER;
+}
+
+function mapSourceHintToOrigin(
+  sourceHint: string | null
+): Exclude<ResolvedTicketOrigin, 'other'> | null {
   if (!sourceHint) {
     return null;
   }
@@ -64,9 +99,14 @@ function normalizeUserType(userType: unknown): string | null {
 
 export function getTicketOrigin(
   ticket: TicketOriginResolverInput | null | undefined
-): TicketOrigin {
+): ResolvedTicketOrigin {
   if (!ticket) {
     return TICKET_ORIGINS.INTERNAL;
+  }
+
+  const storedOrigin = normalizeStoredOrigin(ticket.ticket_origin);
+  if (storedOrigin) {
+    return storedOrigin;
   }
 
   if (hasEmailMetadata(ticket.email_metadata)) {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('ticket origin locale keys', () => {
-  it('T050: English common locale includes ticket origin label keys', () => {
+  it('T060: English common locale includes ticket origin keys for internal/client_portal/inbound_email/api/other', () => {
     const localePath = path.resolve(
       __dirname,
       '../../../../../server/public/locales/en/common.json'
@@ -11,15 +11,13 @@ describe('ticket origin locale keys', () => {
     const locale = JSON.parse(fs.readFileSync(localePath, 'utf8'));
 
     expect(locale?.tickets?.origin?.internal).toBe('Created Internally');
-    expect(locale?.tickets?.origin?.clientPortal).toBe(
-      'Created via Client Portal'
-    );
-    expect(locale?.tickets?.origin?.inboundEmail).toBe(
-      'Created via Inbound Email'
-    );
+    expect(locale?.tickets?.origin?.clientPortal).toBe('Created via Client Portal');
+    expect(locale?.tickets?.origin?.inboundEmail).toBe('Created via Inbound Email');
+    expect(locale?.tickets?.origin?.api).toBe('Created via API');
+    expect(locale?.tickets?.origin?.other).toBe('Created via Other');
   });
 
-  it('T051: English clientPortal locale includes ticket origin label keys', () => {
+  it('T061: English clientPortal locale includes ticket origin keys for internal/client_portal/inbound_email/api/other', () => {
     const localePath = path.resolve(
       __dirname,
       '../../../../../server/public/locales/en/clientPortal.json'
@@ -27,11 +25,9 @@ describe('ticket origin locale keys', () => {
     const locale = JSON.parse(fs.readFileSync(localePath, 'utf8'));
 
     expect(locale?.tickets?.origin?.internal).toBe('Created Internally');
-    expect(locale?.tickets?.origin?.clientPortal).toBe(
-      'Created via Client Portal'
-    );
-    expect(locale?.tickets?.origin?.inboundEmail).toBe(
-      'Created via Inbound Email'
-    );
+    expect(locale?.tickets?.origin?.clientPortal).toBe('Created via Client Portal');
+    expect(locale?.tickets?.origin?.inboundEmail).toBe('Created via Inbound Email');
+    expect(locale?.tickets?.origin?.api).toBe('Created via API');
+    expect(locale?.tickets?.origin?.other).toBe('Created via Other');
   });
 });

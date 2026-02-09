@@ -10,40 +10,28 @@ function readTicketDetailsSource(): string {
 }
 
 describe('client portal TicketDetails origin badge contract', () => {
-  it('T043: renders origin badge when origin is inbound_email', () => {
+  it('T052: client portal TicketDetails renders API origin badge when ticket_origin=api', () => {
     const source = readTicketDetailsSource();
-    const resolvedOrigin = getTicketOrigin({ email_metadata: { messageId: 'm-1' } });
+    const resolvedOrigin = getTicketOrigin({ ticket_origin: 'api' });
 
-    expect(resolvedOrigin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
+    expect(resolvedOrigin).toBe(TICKET_ORIGINS.API);
     expect(source).toContain('<TicketOriginBadge');
-    expect(source).toContain('origin={ticketOrigin}');
+    expect(source).toContain("api: t('tickets.origin.api', 'Created via API')");
   });
 
-  it('T044: renders origin badge when origin is client_portal', () => {
+  it('T053: client portal TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)', () => {
     const source = readTicketDetailsSource();
-    const resolvedOrigin = getTicketOrigin({
-      source: null,
-      entered_by_user_type: 'client',
-      email_metadata: null,
-    });
 
-    expect(resolvedOrigin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
-    expect(source).toContain('const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);');
-  });
+    expect(getTicketOrigin({ ticket_origin: 'internal' })).toBe(TICKET_ORIGINS.INTERNAL);
+    expect(getTicketOrigin({ ticket_origin: 'client_portal' })).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
+    expect(getTicketOrigin({ ticket_origin: 'inbound_email' })).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
 
-  it('T045: renders internal badge fallback for unresolved/legacy records', () => {
-    const source = readTicketDetailsSource();
-    const resolvedOrigin = getTicketOrigin({
-      source: null,
-      entered_by_user_type: null,
-      email_metadata: null,
-    });
-
-    expect(resolvedOrigin).toBe(TICKET_ORIGINS.INTERNAL);
     expect(source).toContain("internal: t('tickets.origin.internal', 'Created Internally')");
+    expect(source).toContain("clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal')");
+    expect(source).toContain("inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email')");
   });
 
-  it('T061: ResponseStateBadge behavior remains wired after origin badge insertion (client portal view)', () => {
+  it('T071: existing response-state badge behavior remains unchanged in client portal ticket details', () => {
     const source = readTicketDetailsSource();
 
     expect(source).toContain('<ResponseStateBadge');

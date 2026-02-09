@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { TICKET_ORIGINS } from '@alga-psa/types';
-import { getTicketOrigin } from '../ticketOrigin';
+import { getTicketOrigin, TICKET_ORIGIN_OTHER } from '../ticketOrigin';
 
 describe('ticket origin resolver', () => {
-  it('T001: returns inbound_email when ticket.email_metadata is present', () => {
+  it('T020: returns stored ticket_origin when present and valid', () => {
     const origin = getTicketOrigin({
-      email_metadata: { messageId: 'msg-1' },
+      ticket_origin: TICKET_ORIGINS.API,
+      source: 'web_app',
+      email_metadata: { messageId: 'm-1' },
+      entered_by_user_type: 'client',
+    });
+
+    expect(origin).toBe(TICKET_ORIGINS.API);
+  });
+
+  it('T021: maps null legacy row with email_metadata to inbound_email', () => {
+    const origin = getTicketOrigin({
+      ticket_origin: null,
+      email_metadata: { messageId: 'm-1' },
       source: 'web_app',
       entered_by_user_type: 'internal',
     });
@@ -13,54 +25,9 @@ describe('ticket origin resolver', () => {
     expect(origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
   });
 
-  it('T002: keeps inbound_email precedence even when creator is a client user', () => {
+  it('T022: maps null legacy row with creator user_type client to client_portal', () => {
     const origin = getTicketOrigin({
-      email_metadata: { provider: 'google' },
-      entered_by_user_type: 'client',
-      source: 'client_portal',
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
-  });
-
-  it('T003: maps explicit source=client_portal to client_portal origin', () => {
-    const origin = getTicketOrigin({
-      source: 'client_portal',
-      entered_by_user_type: 'internal',
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
-  });
-
-  it('T004: maps explicit source=email to inbound_email origin', () => {
-    const origin = getTicketOrigin({
-      source: 'email',
-      entered_by_user_type: 'internal',
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
-  });
-
-  it('T005: maps explicit source=web_app to internal origin', () => {
-    const origin = getTicketOrigin({
-      source: 'web_app',
-      entered_by_user_type: 'client',
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.INTERNAL);
-  });
-
-  it('T006: maps explicit source=api to internal origin', () => {
-    const origin = getTicketOrigin({
-      source: 'api',
-      entered_by_user_type: 'client',
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.INTERNAL);
-  });
-
-  it('T007: returns client_portal when creator user_type is client and no email signal exists', () => {
-    const origin = getTicketOrigin({
+      ticket_origin: null,
       source: null,
       entered_by_user_type: 'client',
     });
@@ -68,29 +35,25 @@ describe('ticket origin resolver', () => {
     expect(origin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
   });
 
-  it('T008: returns internal when creator user_type is internal and no email signal exists', () => {
+  it('T023: maps null legacy row with no signal to internal', () => {
     const origin = getTicketOrigin({
+      ticket_origin: null,
       source: null,
-      entered_by_user_type: 'internal',
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.INTERNAL);
-  });
-
-  it('T009: returns internal when creator information is missing', () => {
-    const origin = getTicketOrigin({
-      source: null,
-    });
-
-    expect(origin).toBe(TICKET_ORIGINS.INTERNAL);
-  });
-
-  it('T010: handles unknown source values safely and falls back to internal', () => {
-    const origin = getTicketOrigin({
-      source: 'some_future_source',
       entered_by_user_type: null,
+      email_metadata: null,
     });
 
     expect(origin).toBe(TICKET_ORIGINS.INTERNAL);
+  });
+
+  it('T024: handles unknown future stored origin values with safe fallback classification', () => {
+    const origin = getTicketOrigin({
+      ticket_origin: 'ai_agent',
+      source: null,
+      entered_by_user_type: null,
+      email_metadata: null,
+    });
+
+    expect(origin).toBe(TICKET_ORIGIN_OTHER);
   });
 });

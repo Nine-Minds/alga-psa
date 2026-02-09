@@ -1,4 +1,4 @@
-# Scratchpad — Ticket Origin Badge (Internal vs Client Portal vs Inbound Email)
+# Scratchpad — Ticket Origin Badge (Internal vs Client Portal vs Inbound Email vs API)
 
 - Plan slug: `2026-02-09-ticket-origin-badge`
 - Created: `2026-02-09`
@@ -10,6 +10,7 @@
   - MSP create: `source: 'web_app'` in `packages/tickets/src/actions/ticketActions.ts`
   - Client portal create: `source: 'client_portal'` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
   - Inbound email create: `source: 'email'` in `shared/services/email/processInboundEmailInApp.ts` and `shared/workflow/actions/emailWorkflowActions.ts`
+- API create also sets `source: 'api'` in `server/src/lib/api/services/TicketService.ts`.
 - `shared/models/ticketModel.ts` accepts `CreateTicketInput.source`, but its `ticketSchema` does not currently include `source` (zod parse strips unknown keys), so source hints are not guaranteed to persist via that write path.
 - `tickets.email_metadata` exists and is reliable signal for inbound-email-created tickets.
 - Current ticket details UIs:
@@ -18,22 +19,27 @@
 
 ## Decisions
 
-- (2026-02-09) MVP will derive `ticket_origin` from existing ticket/user fields instead of requiring a DB migration. Rationale: fastest path to user-visible badge with backward compatibility.
-- (2026-02-09) Origin will be shown in ticket details only (MSP + client portal) for this phase.
+- (2026-02-09) Promote API to first-class ticket origin (`api`) instead of collapsing under internal.
+- (2026-02-09) Add persisted `tickets.ticket_origin` to avoid relying solely on heuristics and preserve source fidelity.
+- (2026-02-09) Keep `ticket_origin` as text (not DB enum) for forward compatibility with future values (for example `ai_agent`) without schema redesign.
+- (2026-02-09) Origin remains ticket-details-only for this phase.
 - (2026-02-09) Existing per-comment response source badges remain unchanged.
 
 ## Discoveries / Constraints
 
 - (2026-02-09) `ITicket` in `packages/types/src/interfaces/ticket.interfaces.ts` currently has no ticket origin field.
-- (2026-02-09) Details actions already return `t.*`, but creator `user_type` is not always explicitly selected; derivation may require adding/joining creator metadata or computing server-side.
+- (2026-02-09) MSP and client portal detail queries already join creator user type:
+  - MSP: `u_creator.user_type as entered_by_user_type`
+  - Client portal: `u_creator.user_type as entered_by_user_type`
 - (2026-02-09) Existing badge patterns/components (`ResponseStateBadge`, `ResponseSourceBadge`) can be reused stylistically for consistency.
-- (2026-02-09) API ticket creation path in `server/src/lib/api/services/TicketService.ts` passes `source: 'api'`; for this feature that should likely map to `internal`.
+- (2026-02-09) API ticket creation path already marks source as `api`, but this is not reliably persisted today due to shared model validation/schema.
 
 ## Commands / Runbooks
 
 - (2026-02-09) Inspect plans: `ls -la ee/docs/plans`
 - (2026-02-09) Read related plan: `sed -n '1,220p' ee/docs/plans/2026-02-05-ticket-response-source/PRD.md`
 - (2026-02-09) Locate source hints: `rg -n "source: 'web_app'|source: 'client_portal'|source: 'email'" packages shared`
+- (2026-02-09) Locate API source hint: `rg -n "source: 'api'" server/src/lib/api/services/TicketService.ts`
 - (2026-02-09) Locate ticket details surfaces:
   - `sed -n '1438,1495p' packages/tickets/src/components/ticket/TicketDetails.tsx`
   - `sed -n '380,500p' packages/client-portal/src/components/tickets/TicketDetails.tsx`
@@ -48,6 +54,9 @@
 - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
 - `shared/services/email/processInboundEmailInApp.ts`
 - `shared/workflow/actions/emailWorkflowActions.ts`
+- `server/src/app/api/v1/tickets/route.ts`
+- `server/src/lib/api/controllers/ApiTicketController.ts`
+- `server/src/lib/api/services/TicketService.ts`
 - `packages/tickets/src/components/ticket/TicketDetails.tsx`
 - `packages/client-portal/src/components/tickets/TicketDetails.tsx`
 - `packages/tickets/src/components/ResponseSourceBadge.tsx`
@@ -58,7 +67,7 @@
 - Confirm label copy for internal origin: `Created Internally` vs `Created by MSP`.
 - Confirm whether ticket list/table should show origin in this phase.
 - Confirm whether inbound email badge should remain generic or include provider detail.
-- Confirm how to classify API/workflow-created tickets beyond MSP/client/email (defaulting to internal unless instructed otherwise).
+- Confirm desired fallback label for unknown future origins (`Created via Other` vs raw source string).
 
 ## Implementation Log
 
@@ -127,3 +136,4 @@
 - (2026-02-09) **F016 completed**: Verified no regressions for comment/source and response-state badges via existing and new regression/contract tests (`T060`, `T061`).
 - (2026-02-09) **F017 completed**: Confirmed migration-free MVP via resolver derivation + migration scan test (`T070`).
 - (2026-02-09) **F018 completed**: Added automated coverage for resolver logic, action payloads, badge component, locales, TicketDetails surfaces, and flow sanity (`T001`–`T082` plan scope items now covered).
+- (2026-02-09) **F001 completed (reconciliation pass)**: Added `api` to canonical `TICKET_ORIGINS` and propagated canonical origin typing updates in `@alga-psa/types`.

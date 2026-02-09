@@ -167,7 +167,7 @@ describe('getTicketById ticket origin derivation', () => {
     hasPermissionMock.mockResolvedValue(true);
   });
 
-  it('T020: response includes derived ticket_origin', async () => {
+  it('T030: response includes normalized ticket_origin for internal ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(buildTrx({ ticket: makeTicketQueryResult({ source: 'web_app' }) }))
@@ -179,7 +179,7 @@ describe('getTicketById ticket origin derivation', () => {
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INTERNAL);
   });
 
-  it('T021: classifies inbound_email when email_metadata exists', async () => {
+  it('T032: response includes normalized ticket_origin for inbound_email ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(buildTrx({
@@ -196,7 +196,7 @@ describe('getTicketById ticket origin derivation', () => {
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
   });
 
-  it('T022: classifies client_portal when creator is a client user', async () => {
+  it('T031: response includes normalized ticket_origin for client_portal ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(buildTrx({
@@ -213,13 +213,13 @@ describe('getTicketById ticket origin derivation', () => {
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
   });
 
-  it('T023: classifies internal for unresolved records', async () => {
+  it('T033: response includes normalized ticket_origin for api ticket', async () => {
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) =>
         callback(buildTrx({
           ticket: makeTicketQueryResult({
-            source: null,
-            entered_by_user_type: null,
+            ticket_origin: 'api',
+            source: 'web_app',
           }),
         }))
     );
@@ -227,6 +227,6 @@ describe('getTicketById ticket origin derivation', () => {
     const { getTicketById } = await import('./ticketActions');
     const ticket = await getTicketById('ticket-1');
 
-    expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INTERNAL);
+    expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.API);
   });
 });

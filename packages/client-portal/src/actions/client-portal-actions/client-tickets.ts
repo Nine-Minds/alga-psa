@@ -1,7 +1,7 @@
 'use server'
 
 import { validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -907,6 +907,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         contact_id: userRecord.contact_id, // Maps to contact_name_id in database
         entered_by: user.user_id,
         source: 'client_portal',
+        ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
         board_id: defaultBoard.board_id,
         status_id: defaultStatus.status_id,
         // Auto-assign to board's default agent if configured
