@@ -1,4 +1,3 @@
-// server/src/lib/utils/tagCleanup.ts
 /**
  * Utility functions for cleaning up tags when entities are deleted
  * Used across different entity deletion operations
@@ -8,10 +7,11 @@ import { Knex } from 'knex';
 import type { TaggedEntityType } from '@alga-psa/types';
 import { requireTenantId } from '@alga-psa/db';
 import TagMapping from '../models/tagMapping';
+import TagDefinition from '../models/tagDefinition';
 
 /**
- * Delete all tags associated with an entity
- * Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
+ * Delete all tags associated with an entity.
+ * Also cleans up any tag definitions that become orphaned (no remaining mappings).
  */
 export async function deleteEntityTags(
   trx: Knex.Transaction,
@@ -20,13 +20,25 @@ export async function deleteEntityTags(
 ): Promise<number> {
   const tenant = await requireTenantId(trx);
 
-  return await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
+  // Collect tag_ids before deleting mappings
+  const mappings = await trx('tag_mappings')
+    .where({ tenant, tagged_id: entityId, tagged_type: entityType })
+    .select('tag_id');
+  const tagIds = [...new Set(mappings.map(m => m.tag_id))];
+
+  const deleted = await TagMapping.deleteByEntity(trx, tenant, entityId, entityType);
+
+  // Clean up any now-orphaned definitions
+  if (tagIds.length > 0) {
+    await TagDefinition.deleteOrphaned(trx, tenant, tagIds);
+  }
+
+  return deleted;
 }
 
 /**
- * Delete tags for multiple entities
- * Useful for bulk deletions
- * Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
+ * Delete tags for multiple entities.
+ * Also cleans up any tag definitions that become orphaned (no remaining mappings).
  */
 export async function deleteEntitiesTags(
   trx: Knex.Transaction,
@@ -39,6 +51,13 @@ export async function deleteEntitiesTags(
     return 0;
   }
 
+  // Collect tag_ids before deleting mappings
+  const mappings = await trx('tag_mappings')
+    .where({ tenant, tagged_type: entityType })
+    .whereIn('tagged_id', entityIds)
+    .select('tag_id');
+  const tagIds = [...new Set(mappings.map(m => m.tag_id))];
+
   const result = await trx('tag_mappings')
     .where({
       tenant,
@@ -46,6 +65,11 @@ export async function deleteEntitiesTags(
     })
     .whereIn('tagged_id', entityIds)
     .delete();
+
+  // Clean up any now-orphaned definitions
+  if (tagIds.length > 0) {
+    await TagDefinition.deleteOrphaned(trx, tenant, tagIds);
+  }
 
   return result;
 }

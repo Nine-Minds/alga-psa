@@ -38,35 +38,43 @@ This guide provides step-by-step instructions for setting up the PSA system usin
 
 1. Create secret files in the `secrets/` directory:
 
+   Use single quotes around secret values to prevent shell expansion of special characters (for example `$`, `!`, `*`, and backticks).
+   If a secret contains a single quote (`'`), use a quoted heredoc instead:
+   ```bash
+   cat > secrets/email_password <<'EOF'
+   your-secret-value
+   EOF
+   ```
+
 Database secrets (replace placeholders with strong values):
 ```bash
-echo "your-secure-admin-password" > secrets/postgres_password
-echo "your-secure-app-password" > secrets/db_password_server
-echo "your-secure-hocuspocus-password" > secrets/db_password_hocuspocus
+echo 'your-secure-admin-password' > secrets/postgres_password
+echo 'your-secure-app-password' > secrets/db_password_server
+echo 'your-secure-hocuspocus-password' > secrets/db_password_hocuspocus
 ```
 
 Redis Secret:
 ```bash
-echo "your-secure-password" > secrets/redis_password
+echo 'your-secure-password' > secrets/redis_password
 ```
 
 Authentication secret:
 ```bash
-echo "your-32-char-min-key" > secrets/alga_auth_key
+echo 'your-32-char-min-key' > secrets/alga_auth_key
 ```
 
 Security Secrets:
 ```bash
-echo "your-32-char-min-key" > secrets/crypto_key
-echo "your-32-char-min-key" > secrets/token_secret_key
-echo "your-32-char-min-key" > secrets/nextauth_secret
+echo 'your-32-char-min-key' > secrets/crypto_key
+echo 'your-32-char-min-key' > secrets/token_secret_key
+echo 'your-32-char-min-key' > secrets/nextauth_secret
 ```
 
 Email & OAuth Secrets:
 ```bash
-echo "your-email-password" > secrets/email_password
-echo "your-client-id" > secrets/google_oauth_client_id
-echo "your-client-secret" > secrets/google_oauth_client_secret
+echo 'your-email-password' > secrets/email_password
+echo 'your-client-id' > secrets/google_oauth_client_id
+echo 'your-client-secret' > secrets/google_oauth_client_secret
 ```
 
 2. Set proper permissions:

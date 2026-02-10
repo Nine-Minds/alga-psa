@@ -2,6 +2,7 @@ import type { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/ex
 
 // Inline jsonResponse to avoid external dependency for jco componentize
 const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): ExecuteResponse {
   const encoded = body instanceof Uint8Array ? body : encoder.encode(JSON.stringify(body));
   return {
@@ -12,6 +13,14 @@ function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): Execu
 }
 
 const BUILD_STAMP = '2026-01-02T00:00:00Z';
+
+type SchedulerEndpoint = {
+  id?: string;
+  method?: string;
+  path?: string;
+  handler?: string;
+  schedulable?: boolean;
+};
 
 /**
  * Scheduler Demo Extension
@@ -46,8 +55,10 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
 }
 
 async function processRequest(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  const method = request.http.method || 'GET';
-  const url = request.http.url || '/';
+  const rawMethod = request.http.method || 'GET';
+  const rawUrl = request.http.url || '/';
+  const url = normalizePath(rawUrl);
+  const method = resolveEffectiveMethod(rawMethod, rawUrl, request.http.body);
   const requestId = request.context.requestId ?? 'n/a';
   const tenantId = request.context.tenantId;
 
@@ -83,6 +94,38 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
     { error: 'not_found', message: `No handler for ${method} ${url}` },
     { status: 404 }
   );
+}
+
+function normalizePath(url: string): string {
+  const idx = url.indexOf('?');
+  return idx >= 0 ? url.slice(0, idx) : url;
+}
+
+function resolveEffectiveMethod(method: string, rawUrl: string, requestBody?: Uint8Array | null): string {
+  if (method !== 'POST') return method;
+  const override = extractOverrideFromQuery(rawUrl) || extractOverrideFromBody(requestBody);
+  if (override === 'GET' || override === 'POST' || override === 'DELETE') {
+    return override;
+  }
+  return method;
+}
+
+function extractOverrideFromQuery(rawUrl: string): string {
+  const idx = rawUrl.indexOf('?');
+  if (idx < 0) return '';
+  const query = rawUrl.slice(idx + 1);
+  const params = new URLSearchParams(query);
+  return (params.get('__method') || '').toUpperCase();
+}
+
+function extractOverrideFromBody(requestBody?: Uint8Array | null): string {
+  if (!requestBody || requestBody.length === 0) return '';
+  try {
+    const parsed = JSON.parse(decoder.decode(requestBody)) as { __method?: string };
+    return (parsed?.__method || '').toUpperCase();
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -128,12 +171,14 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
   // Older versions of @alga-psa/extension-runtime shipped without scheduler typings.
   // This demo targets the scheduler capability, so we access it dynamically.
   const scheduler = (host as any).scheduler as any;
+  let discoveredEndpoints: SchedulerEndpoint[] = [];
 
   const results: Array<{ name: string; success: boolean; scheduleId?: string; error?: string }> = [];
 
   // First, discover available schedulable endpoints
   try {
-    const endpoints = await scheduler.getEndpoints();
+    const endpoints = (await scheduler.getEndpoints()) as SchedulerEndpoint[];
+    discoveredEndpoints = endpoints;
     await safeLog(host, 'info', `[scheduler-demo] discovered ${endpoints.length} endpoints`);
 
     const schedulableEndpoints = endpoints.filter((e: { schedulable?: boolean }) => e.schedulable);
@@ -142,6 +187,19 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
     const reason = err instanceof Error ? err.message : String(err);
     await safeLog(host, 'error', `[scheduler-demo] failed to get endpoints: ${reason}`);
   }
+
+  // Scheduler host API resolves endpoints by path (method is implicit in endpoint metadata).
+  // Prefer discovered endpoints to avoid drift between manifest and handler route strings.
+  const resolveEndpointPath = (method: 'GET' | 'POST', fallbackPath: string): string => {
+    const desired = normalizeEndpointPath(fallbackPath);
+    const match = discoveredEndpoints.find((e) => {
+      if (!e || e.schedulable === false) return false;
+      const endpointMethod = String(e.method || '').toUpperCase();
+      const endpointPath = normalizeEndpointPath(e.path || '');
+      return endpointMethod === method && endpointPath === desired;
+    });
+    return normalizeEndpointPath(match?.path || desired);
+  };
 
   // Check existing schedules to avoid duplicates
   let existingSchedules: Array<{ name?: string | null; endpointPath: string }> = [];
@@ -161,7 +219,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
   if (!heartbeatExists) {
     try {
       const result = await scheduler.create({
-        endpoint: 'POST /api/heartbeat',
+        endpoint: resolveEndpointPath('POST', '/api/heartbeat'),
         cron: '*/5 * * * *', // Every 5 minutes
         timezone: 'UTC',
         enabled: true,
@@ -194,7 +252,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
   if (!statusExists) {
     try {
       const result = await scheduler.create({
-        endpoint: 'GET /api/status',
+        endpoint: resolveEndpointPath('GET', '/api/status'),
         cron: '0 9 * * *', // Every day at 9 AM
         timezone: 'America/New_York',
         enabled: true,
@@ -225,6 +283,12 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
     results,
     build: BUILD_STAMP,
   }, { status: allSuccess ? 200 : 207 });
+}
+
+function normalizeEndpointPath(path: string): string {
+  const raw = String(path || '').trim();
+  if (!raw) return '';
+  return raw.startsWith('/') ? raw : `/${raw}`;
 }
 
 /**

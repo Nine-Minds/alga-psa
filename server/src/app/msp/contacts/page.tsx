@@ -1,19 +1,18 @@
 // server/src/app/msp/contacts/page.tsx
 import React from 'react';
-import ContactModel from 'server/src/lib/models/contact';
-import UserModel from '@alga-psa/db/models/user';
-import { IContact } from 'server/src/interfaces';
-import { IUser } from '@shared/interfaces/user.interfaces';
 import type { IClient } from '@alga-psa/types';
-import { getAllClients } from '@alga-psa/clients/actions';
+import type { IContact } from '@alga-psa/types';
+import type { IUser } from '@shared/interfaces/user.interfaces';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { ContactsLayout } from '@alga-psa/clients';
-import { getConnection } from 'server/src/lib/db/db';
 
 export default async function ContactsPage() {
-  const knex = await getConnection();
-  const contacts = await ContactModel.getAll(knex, true);
-  const users: IUser[] = await UserModel.getAll(knex, true);
-  const clients: IClient[] = await getAllClients(true);
+  const [contacts, users, clients] = await Promise.all([
+    getAllContacts('all'),
+    getAllUsersBasic(true),
+    getAllClients(true),
+  ]);
 
   // Filter out any duplicate contacts based on contact_name_id
   const uniqueContacts = Array.from(

@@ -281,11 +281,12 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     const isAdHoc = entry?.work_item_type === 'ad_hoc';
 
-    // Ensure we have required fields (skip for ad_hoc)
-    if (!isAdHoc && !entry?.service_id) {
+    // Ensure we have required fields (skip for ad_hoc and non-billable entries)
+    const isBillable = entry?.billable_duration > 0;
+    if (!isAdHoc && isBillable && !entry?.service_id) {
       setValidationErrors(prev => ({
         ...prev,
-        service: 'Service is required'
+        service: 'Service is required for billable entries'
       }));
       return;
     }
@@ -394,7 +395,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       <div className="border p-4 rounded space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Service</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Service {entry?.billable_duration > 0 && <span className="text-red-500">*</span>}
+            </label>
             <CustomSelect
               value={entry?.service_id || ''}
               onValueChange={(value) => {
@@ -539,9 +542,6 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700">
-              {entry?.billable_duration > 0 ? 'Billable' : 'Non-billable'}
-            </span>
             <Switch
               id='billable-duration'
               checked={entry?.billable_duration > 0}
@@ -564,6 +564,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               }}
               className="data-[state=checked]:bg-primary-500"
             />
+            <span className="text-sm font-medium text-gray-700">
+              Billable
+            </span>
           </div>
         </div>
       </div>

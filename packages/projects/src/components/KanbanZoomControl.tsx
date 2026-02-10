@@ -1,7 +1,6 @@
 'use client';
 
-import { Minus, Plus } from 'lucide-react';
-import { Button } from '@alga-psa/ui/components/Button';
+import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 
 interface KanbanZoomControlProps {
   zoomLevel: number;
@@ -23,90 +22,25 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
   maxZoom = 100,
   step = 10,
 }) => {
-  const handleZoomOut = () => {
-    const newLevel = Math.max(minZoom, zoomLevel - step);
-    onZoomChange(newLevel);
-  };
-
-  const handleZoomIn = () => {
-    const newLevel = Math.min(maxZoom, zoomLevel + step);
-    onZoomChange(newLevel);
-  };
-
-  const isMinZoom = zoomLevel <= minZoom;
-  const isMaxZoom = zoomLevel >= maxZoom;
-  const isDefaultZoom = zoomLevel === 50;
-
-  const handleSnapToCompact = () => {
-    onZoomChange(minZoom);
-  };
-
-  const handleSnapToSpacious = () => {
-    onZoomChange(maxZoom);
-  };
-
-  const handleResetToDefault = () => {
-    onZoomChange(50);
-  };
-
   return (
-    <div className="flex items-center gap-1.5">
-      <Button
-        id="kanban-snap-compact"
-        variant="ghost"
-        size="xs"
-        onClick={handleSnapToCompact}
-        disabled={isMinZoom}
-        title="Snap to compact view"
-        className="!h-6 !px-1 !min-w-0 text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-400"
-      >
-        Compact
-      </Button>
-      <Button
-        id="kanban-zoom-out"
-        variant="outline"
-        size="xs"
-        onClick={handleZoomOut}
-        disabled={isMinZoom}
-        title="Decrease column width"
-        className="!w-6 !h-6 !p-0 !min-w-0"
-      >
-        <Minus className="w-3.5 h-3.5" />
-      </Button>
-      <Button
-        id="kanban-zoom-reset"
-        variant={isDefaultZoom ? "outline" : "ghost"}
-        size="xs"
-        onClick={handleResetToDefault}
-        disabled={isDefaultZoom}
-        title="Reset to default"
-        className="!h-6 !px-1.5 !min-w-0 text-xs"
-      >
-        Reset
-      </Button>
-      <Button
-        id="kanban-zoom-in"
-        variant="outline"
-        size="xs"
-        onClick={handleZoomIn}
-        disabled={isMaxZoom}
-        title="Increase column width"
-        className="!w-6 !h-6 !p-0 !min-w-0"
-      >
-        <Plus className="w-3.5 h-3.5" />
-      </Button>
-      <Button
-        id="kanban-snap-spacious"
-        variant="ghost"
-        size="xs"
-        onClick={handleSnapToSpacious}
-        disabled={isMaxZoom}
-        title="Snap to spacious view"
-        className="!h-6 !px-1 !min-w-0 text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-400"
-      >
-        Spacious
-      </Button>
-    </div>
+    <ViewDensityControl
+      idPrefix="kanban"
+      compactId="kanban-snap-compact"
+      decreaseId="kanban-zoom-out"
+      resetId="kanban-zoom-reset"
+      increaseId="kanban-zoom-in"
+      spaciousId="kanban-snap-spacious"
+      value={zoomLevel}
+      onChange={onZoomChange}
+      minValue={minZoom}
+      maxValue={maxZoom}
+      step={step}
+      compactLabel="Compact"
+      spaciousLabel="Spacious"
+      decreaseTitle="Decrease column width"
+      increaseTitle="Increase column width"
+      resetTitle="Reset to default"
+    />
   );
 };
 

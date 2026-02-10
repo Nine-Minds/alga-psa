@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
-export type NavMode = 'main' | 'settings' | 'billing';
+export type NavMode = 'main' | 'settings' | 'billing' | 'extensions';
 
 export interface MenuItem {
   name: string;
@@ -155,6 +155,11 @@ export const navigationSections: NavigationSection[] = [
           { name: 'Jobs', icon: LayoutDashboard, href: '/msp/jobs' },
           { name: 'Email Logs', icon: Mail, href: '/msp/email-logs' },
         ]
+      },
+      {
+        name: 'Extensions',
+        icon: Puzzle,
+        href: '/msp/extensions'
       }
     ]
   }
@@ -228,6 +233,16 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Experimental Features', icon: FlaskConical, href: '/msp/settings?tab=experimental-features' },
     ]
   },
+];
+
+// Extensions navigation sections - used when sidebar is in 'extensions' mode
+export const extensionsNavigationSections: NavigationSection[] = [
+  {
+    title: '',
+    items: [
+      { name: 'Settings', icon: Settings, href: '/msp/extensions' },
+    ]
+  }
 ];
 
 // Billing navigation sections - used when sidebar is in 'billing' mode

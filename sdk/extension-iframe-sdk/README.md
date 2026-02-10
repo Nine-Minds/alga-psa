@@ -69,6 +69,28 @@ export default function App() {
 }
 ```
 
+## Canonical Handler Calls (UI -> own handler)
+
+Use `callHandlerJson` for extension UI calls instead of direct `fetch()` or manual postMessage wiring:
+
+```ts
+import { IframeBridge, callHandlerJson } from '@alga-psa/extension-iframe-sdk';
+
+const bridge = new IframeBridge({ devAllowWildcard: true });
+bridge.ready();
+
+const status = await callHandlerJson(bridge, '/api/status');
+
+const created = await callHandlerJson(bridge, '/api/items', {
+  method: 'POST',
+  body: { name: 'Sample' },
+});
+
+await callHandlerJson(bridge, '/api/items/123', { method: 'DELETE' });
+```
+
+For non-`POST` methods (`GET`, `PUT`, `PATCH`, `DELETE`), the helper applies method override transport (`__method`) so calls work consistently over the proxy channel.
+
 ## Protocol
 - Parent → Child: `bootstrap` with `{ session, theme_tokens, navigation }`
 - Child → Parent: `ready`, `resize`, `navigate`
@@ -81,4 +103,3 @@ export default function App() {
 
 ## License
 BSD-3-Clause — see `LICENSE`.
-

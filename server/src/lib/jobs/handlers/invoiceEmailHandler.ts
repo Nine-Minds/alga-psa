@@ -2,7 +2,6 @@ import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getClientById } from '@alga-psa/clients/actions';
 import ContactModel from 'server/src/lib/models/contact';

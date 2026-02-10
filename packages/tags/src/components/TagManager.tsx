@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from '@alga-psa/types';
-import { createTag, deleteTag, getAllTags } from '../actions';
+import { createTag, deleteTag, getAllTags, getTagMappingUsageCount } from '../actions';
 import { TagList, TagInput, TagInputInline, type TagSize } from '@alga-psa/ui/components/tags';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { useTags } from '../context/TagContext';
 import { handleError } from '@alga-psa/ui';
@@ -58,6 +59,9 @@ export const TagManager: React.FC<TagManagerProps> = ({
   );
   const lastGlobalTagsRef = useRef<ITag[]>([]);
   const skipNextSyncRef = useRef(false);
+  const [pendingRemoveTagId, setPendingRemoveTagId] = useState<string | null>(null);
+  const [pendingRemoveTagText, setPendingRemoveTagText] = useState<string>('');
+  const [showLastUsageDialog, setShowLastUsageDialog] = useState(false);
 
   // Use context if available, otherwise use local state
   const allTags = tagContext?.tags || localAllTags;
@@ -212,15 +216,54 @@ export const TagManager: React.FC<TagManagerProps> = ({
 
   const handleRemoveTag = async (tagId: string) => {
     try {
+      // Check if this is the last usage of the tag definition
+      const usage = await getTagMappingUsageCount(tagId);
+      if (usage.usageCount === 1) {
+        // Show confirmation dialog for last usage
+        setPendingRemoveTagId(tagId);
+        setPendingRemoveTagText(usage.tagText);
+        setShowLastUsageDialog(true);
+        return;
+      }
+
       await deleteTag(tagId);
       const updatedTags = tags.filter(tag => tag.tag_id !== tagId);
       setTags(updatedTags);
       onTagsChange?.(updatedTags);
-
-      // Skip TagContext updates to prevent circular updates
-      // Global syncing is handled by the parent component through onTagsChange
     } catch (error) {
       handleError(error);
+    }
+  };
+
+  const handleConfirmRemoveAndDeleteDefinition = async () => {
+    if (!pendingRemoveTagId) return;
+    try {
+      await deleteTag(pendingRemoveTagId, true);
+      const updatedTags = tags.filter(tag => tag.tag_id !== pendingRemoveTagId);
+      setTags(updatedTags);
+      onTagsChange?.(updatedTags);
+    } catch (error) {
+      handleError(error);
+    } finally {
+      setShowLastUsageDialog(false);
+      setPendingRemoveTagId(null);
+      setPendingRemoveTagText('');
+    }
+  };
+
+  const handleRemoveAndKeepDefinition = async () => {
+    if (!pendingRemoveTagId) return;
+    try {
+      await deleteTag(pendingRemoveTagId, false);
+      const updatedTags = tags.filter(tag => tag.tag_id !== pendingRemoveTagId);
+      setTags(updatedTags);
+      onTagsChange?.(updatedTags);
+    } catch (error) {
+      handleError(error);
+    } finally {
+      setShowLastUsageDialog(false);
+      setPendingRemoveTagId(null);
+      setPendingRemoveTagText('');
     }
   };
 
@@ -283,39 +326,57 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const gapClass = size === 'sm' ? 'gap-0.5' : size === 'lg' ? 'gap-1.5' : 'gap-1';
 
   return (
-    <div className={`flex flex-wrap items-center ${gapClass} overflow-visible ${className}`}>
-      <div className={`flex flex-wrap ${gapClass}`}>
-        <TagList
-          tags={tags}
-          onRemoveTag={handleRemoveTag}
-          allowColorEdit={allowColorEdit && permissions.canEditColors}
-          allowTextEdit={allowTextEdit && permissions.canEditText}
-          allowDeleteAll={permissions.canDeleteAll}
-          onTagUpdate={handleTagUpdate}
-          size={size}
-        />
-      </div>
-      {(permissions.canAddExisting || permissions.canCreateNew) && (
-        <div className="flex-shrink-0 overflow-visible">
-          {useInlineInput ? (
-            <TagInputInline
-              id={`${id}-input`}
-              existingTags={allTags.filter(t => t.tagged_type === entityType)}
-              currentTags={tags}
-              onAddTag={handleAddTag}
-              size={size}
-            />
-          ) : (
-            <TagInput
-              id={`${id}-input`}
-              existingTags={allTags.filter(t => t.tagged_type === entityType)}
-              currentTags={tags}
-              onAddTag={handleAddTag}
-              size={size}
-            />
-          )}
+    <>
+      <div className={`flex flex-wrap items-center ${gapClass} overflow-visible ${className}`}>
+        <div className={`flex flex-wrap ${gapClass}`}>
+          <TagList
+            tags={tags}
+            onRemoveTag={handleRemoveTag}
+            allowColorEdit={allowColorEdit && permissions.canEditColors}
+            allowTextEdit={allowTextEdit && permissions.canEditText}
+            allowDeleteAll={permissions.canDeleteAll}
+            onTagUpdate={handleTagUpdate}
+            size={size}
+          />
         </div>
-      )}
-    </div>
+        {(permissions.canAddExisting || permissions.canCreateNew) && (
+          <div className="flex-shrink-0 overflow-visible">
+            {useInlineInput ? (
+              <TagInputInline
+                id={`${id}-input`}
+                existingTags={allTags.filter(t => t.tagged_type === entityType)}
+                currentTags={tags}
+                onAddTag={handleAddTag}
+                size={size}
+              />
+            ) : (
+              <TagInput
+                id={`${id}-input`}
+                existingTags={allTags.filter(t => t.tagged_type === entityType)}
+                currentTags={tags}
+                onAddTag={handleAddTag}
+                size={size}
+              />
+            )}
+          </div>
+        )}
+      </div>
+      <ConfirmationDialog
+        id="tag-last-usage-dialog"
+        isOpen={showLastUsageDialog}
+        onClose={() => {
+          setShowLastUsageDialog(false);
+          setPendingRemoveTagId(null);
+          setPendingRemoveTagText('');
+        }}
+        onConfirm={handleConfirmRemoveAndDeleteDefinition}
+        onCancel={handleRemoveAndKeepDefinition}
+        title="Last Tag Usage"
+        message={`This is the last use of tag "${pendingRemoveTagText}". Delete the tag definition, or keep it for future use?`}
+        confirmLabel="Remove & Delete Definition"
+        thirdButtonLabel="Remove & Keep Definition"
+        cancelLabel="Cancel"
+      />
+    </>
   );
 };

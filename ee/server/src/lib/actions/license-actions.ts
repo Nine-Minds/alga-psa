@@ -713,6 +713,28 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
     // Cancel subscription at period end via Stripe
     const stripe = await stripeService.getStripeClient();
+
+    // If the subscription has an attached schedule (e.g. from a pending license decrease),
+    // release it first — the schedule is irrelevant if the user is canceling entirely.
+    const stripeSubscription = await stripe.subscriptions.retrieve(
+      subscription.stripe_subscription_external_id
+    );
+    if (stripeSubscription.schedule) {
+      const scheduleId = typeof stripeSubscription.schedule === 'string'
+        ? stripeSubscription.schedule
+        : stripeSubscription.schedule.id;
+      try {
+        logger.info(
+          `[cancelSubscriptionAction][tenant=${session.user.tenant}] Releasing subscription schedule ${scheduleId} before cancellation`
+        );
+        await stripe.subscriptionSchedules.release(scheduleId);
+      } catch (releaseError) {
+        throw new Error(
+          `Failed to release subscription schedule ${scheduleId}: ${releaseError instanceof Error ? releaseError.message : String(releaseError)}`
+        );
+      }
+    }
+
     const updatedSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_external_id,
       {
@@ -720,18 +742,20 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       }
     );
 
-    // Update local database
+    // Update local database (clear schedule metadata if present)
+    const { scheduled_quantity, schedule_id, ...remainingMetadata } = subscription.metadata || {};
     await knex<IStripeSubscription>('stripe_subscriptions')
       .where({
         stripe_subscription_id: subscription.stripe_subscription_id,
       })
       .update({
         cancel_at: updatedSubscription.cancel_at ? new Date(updatedSubscription.cancel_at * 1000).toISOString() : null,
+        metadata: Object.keys(remainingMetadata).length > 0 ? remainingMetadata : null,
         updated_at: knex.fn.now(),
       });
 
     logger.info(
-      `[cancelSubscriptionAction] Subscription ${subscription.stripe_subscription_external_id} set to cancel at period end for tenant ${session.user.tenant}`
+      `[cancelSubscriptionAction][tenant=${session.user.tenant}] Subscription ${subscription.stripe_subscription_external_id} set to cancel at period end`
     );
 
     return {

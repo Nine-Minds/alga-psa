@@ -1,10 +1,17 @@
 import React from 'react';
 
 export interface SpinnerProps {
+  /** Spinner diameter preset.
+   * @default 'md'
+   */
   size?: 'button' | 'xs' | 'sm' | 'md' | 'lg';
-  /** Use 'inverted' for spinners on colored backgrounds (e.g., primary buttons) */
+  /** Use 'inverted' for spinners on coloured backgrounds (e.g. primary buttons).
+   * @default 'default'
+   */
   variant?: 'default' | 'inverted';
+  /** Additional CSS class name for the outer container. */
   className?: string;
+  /** Inline styles applied to the outer container. */
   style?: React.CSSProperties;
 }
 
@@ -34,6 +41,7 @@ function ensureKeyframes() {
   document.head.appendChild(style);
 }
 
+/** Animated circular loading spinner. */
 export function Spinner({ size = 'md', variant = 'default', className, style }: SpinnerProps) {
   React.useEffect(() => {
     ensureKeyframes();
@@ -60,7 +68,7 @@ export function Spinner({ size = 'md', variant = 'default', className, style }: 
     borderWidth: dims.border,
     borderRadius: '9999px',
     borderColor: isInverted ? 'rgba(255, 255, 255, 0.3)' : 'var(--alga-primary, #9855ee)',
-    borderTopColor: isInverted ? 'white' : 'var(--alga-secondary, #53d7fa)',
+    borderTopColor: isInverted ? 'white' : 'var(--alga-primary-100, #ede2fd)',
     animation: 'alga-spinner-spin 0.9s linear infinite',
     backgroundColor: 'transparent',
     boxSizing: 'border-box',
@@ -88,10 +96,19 @@ export function Spinner({ size = 'md', variant = 'default', className, style }: 
 }
 
 export interface LoadingIndicatorProps {
+  /** Spinner size preset. Passed through to `Spinner`.
+   * @default 'md'
+   */
   size?: SpinnerProps['size'];
+  /** Optional label displayed next to the spinner. */
   text?: string;
+  /** `'inline'` places text beside the spinner; `'stacked'` places it below.
+   * @default 'inline'
+   */
   layout?: 'inline' | 'stacked';
+  /** Additional CSS class name for the outer container. */
   className?: string;
+  /** Inline styles applied to the outer container. */
   style?: React.CSSProperties;
 }
 
@@ -103,6 +120,7 @@ const gapMap = {
   lg: { inline: 12, stacked: 10 },
 };
 
+/** Spinner paired with an optional text label. */
 export function LoadingIndicator({
   size = 'md',
   text,

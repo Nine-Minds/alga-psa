@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NineMinds Control Panel (Dev)</title>
+    <style>
+      :root {
+        --alga-bg: #fff;
+        --alga-fg: #334155;
+        --alga-fg-muted: #64748b;
+        --alga-fg-light: #94a3b8;
+        --alga-muted-fg: #64748b;
+        --alga-muted: #f8fafc;
+        --alga-border: #e2e8f0;
+        --alga-border-light: #f1f5f9;
+        --alga-card-bg: #f8fafc;
+        --alga-radius: 6px;
+        --alga-primary: #8a4dea;
+        --alga-primary-light: #a673f2;
+        --alga-primary-dark: #7c45d3;
+        --alga-primary-50: #f6f0fe;
+        --alga-primary-100: #ede2fd;
+        --alga-primary-foreground: #ffffff;
+        --alga-ring: #8a4dea;
+        --alga-ring-width: 2px;
+        --alga-ring-opacity: 1;
+        --alga-secondary: #40cff9;
+        --alga-secondary-light: #66dffb;
+        --alga-accent: #ff9c30;
+        --alga-success: #16a34a;
+        --alga-warning: #d97706;
+        --alga-danger: #ff9c30;
+        --alga-danger-dark: #e68a2a;
+        --alga-row-even: #f9fafb;
+        --alga-row-odd: #ffffff;
+        --alga-row-hover: #eff6ff;
+        --alga-surface: #f8fafc;
+        --alga-hover: #f3f4f6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: var(--alga-fg);
+        background: var(--alga-bg);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--alga-border);
+        position: sticky;
+        top: 0;
+        background: var(--alga-bg);
+        z-index: 10;
+      }
+      header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+      main { padding: 20px; }
+      input[type="text"]:focus, input[type="email"]:focus,
+      input[type="number"]:focus, textarea:focus {
+        outline: none !important;
+        border-color: transparent !important;
+        box-shadow: 0 0 0 2px rgba(138, 77, 234, 1) !important;
+      }
+      button:focus { outline: none !important; box-shadow: none !important; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>NineMinds Control Panel</h1>
+    </header>
+    <main>
+      <div id="root"></div>
+    </main>
+    <script type="module" src="./src/iframe/main.tsx"></script>
+  </body>
+</html>

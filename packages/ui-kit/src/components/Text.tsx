@@ -1,9 +1,21 @@
 import React from 'react';
 
 export type TextProps = React.HTMLAttributes<HTMLSpanElement> & {
+  /** HTML element to render.
+   * @default 'span'
+   */
   as?: 'span' | 'p' | 'label' | 'strong';
+  /** Font size preset.
+   * @default 'md'
+   */
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  /** Text colour mapped to theme tokens.
+   * @default 'default'
+   */
   tone?: 'default' | 'muted' | 'danger' | 'warning' | 'success';
+  /** CSS font-weight value.
+   * @default 400
+   */
   weight?: 400 | 500 | 600 | 700;
 };
 
@@ -22,6 +34,7 @@ const toneColor: Record<NonNullable<TextProps['tone']>, string> = {
   success: 'var(--alga-success)',
 };
 
+/** General-purpose typography component with size, tone, and weight presets. */
 export function Text({ as = 'span', size = 'md', tone = 'default', weight = 400, style, ...rest }: TextProps) {
   const Comp: any = as;
   const merged: React.CSSProperties = { color: toneColor[tone], fontWeight: weight, ...sizeStyles[size], ...style };

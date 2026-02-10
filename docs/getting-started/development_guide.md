@@ -24,8 +24,8 @@ cp .env.example .env.development
 ```bash
 mkdir -p secrets
 # Create development secrets with dummy values
-echo "dev-password" > secrets/db_password_server
-echo "dev-password" > secrets/db_password_hocuspocus
+echo 'dev-password' > secrets/db_password_server
+echo 'dev-password' > secrets/db_password_hocuspocus
 # ... create other required secrets
 chmod 600 secrets/*
 ```

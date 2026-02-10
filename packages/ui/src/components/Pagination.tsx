@@ -109,7 +109,7 @@ const Pagination = ({
                 <button
                     key={1}
                     onClick={() => handleChange(1)}
-                    className="border-gray-300 text-gray-500 hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] px-2 py-1 border text-sm font-medium rounded"
+                    className="border-[rgb(var(--color-border-300))] text-muted-foreground hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] px-2 py-1 border text-sm font-medium rounded"
                 >
                     1
                 </button>
@@ -118,7 +118,7 @@ const Pagination = ({
                 buttons.push(
                     <span
                         key="ellipsis-start"
-                        className="border border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 rounded"
+                        className="border border-[rgb(var(--color-border-300))] px-2 py-1 text-sm font-medium text-[rgb(var(--color-text-700))] rounded"
                     >
                         ...
                     </span>
@@ -135,7 +135,7 @@ const Pagination = ({
                     className={`${
                         currentPage === i
                             ? "border-[rgb(var(--color-primary-500))] text-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))]"
-                            : "border-gray-300 text-gray-500 hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]"
+                            : "border-[rgb(var(--color-border-300))] text-muted-foreground hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]"
                     } px-2 py-1 border text-sm font-medium rounded`}
                 >
                     {i}
@@ -149,7 +149,7 @@ const Pagination = ({
                 buttons.push(
                     <span
                         key="ellipsis-end"
-                        className="border border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 rounded"
+                        className="border border-[rgb(var(--color-border-300))] px-2 py-1 text-sm font-medium text-[rgb(var(--color-text-700))] rounded"
                     >
                         ...
                     </span>
@@ -159,7 +159,7 @@ const Pagination = ({
                 <button
                     key={totalPages}
                     onClick={() => handleChange(totalPages)}
-                    className="border-gray-300 text-gray-500 hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] px-2 py-1 border text-sm font-medium rounded"
+                    className="border-[rgb(var(--color-border-300))] text-muted-foreground hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] px-2 py-1 border text-sm font-medium rounded"
                 >
                     {totalPages}
                 </button>
@@ -186,7 +186,7 @@ const Pagination = ({
                 label={t('pagination.reflectionLabel', 'Pagination')}
             >
                 <div className={`flex py-3 items-center justify-end pr-6 ${className}`}>
-                    <p className="text-sm text-gray-700 mr-6">
+                    <p className="text-sm text-[rgb(var(--color-text-700))] mr-6">
                         {t('pagination.totalItems', {
                             count: totalItems,
                             itemLabel: resolvedItemLabel,
@@ -212,7 +212,7 @@ const Pagination = ({
                 label={t('pagination.reflectionLabel', 'Pagination')}
             >
                 <div className={`flex py-3 items-center justify-end pr-6 ${className}`}>
-                    <p className="text-sm text-gray-700 mr-6">
+                    <p className="text-sm text-[rgb(var(--color-text-700))] mr-6">
                         {t('pagination.range', {
                             from: firstItemIndex,
                             to: lastItemIndex,
@@ -230,18 +230,18 @@ const Pagination = ({
                             id={`${id}-prev-btn`}
                             onClick={() => handleChange(currentPage - 1)} 
                             disabled={currentPage === 1}
-                            className="px-1 py-1 border border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-1 py-1 border border-[rgb(var(--color-border-300))] text-sm font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <ChevronLeft className="text-gray-900" />
+                            <ChevronLeft className="text-[rgb(var(--color-text-900))]" />
                         </button>
                         {renderPageButtons()}
                         <button 
                             id={`${id}-next-btn`}
                             onClick={() => handleChange(currentPage + 1)} 
                             disabled={currentPage === totalPages}
-                            className="px-1 py-1 border border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-1 py-1 border border-[rgb(var(--color-border-300))] text-sm font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <ChevronRight className="text-gray-900" />
+                            <ChevronRight className="text-[rgb(var(--color-text-900))]" />
                         </button>
                     </div>
 
@@ -273,18 +273,18 @@ const Pagination = ({
                             id={`${id}-prev-btn`}
                             onClick={() => handleChange(currentPage - 1)} 
                             disabled={currentPage === 1}
-                            className="px-1 py-1 border border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-1 py-1 border border-[rgb(var(--color-border-300))] text-sm font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <ChevronLeft className="text-gray-900" />
+                            <ChevronLeft className="text-[rgb(var(--color-text-900))]" />
                         </button>
                         {renderPageButtons()}
                         <button 
                             id={`${id}-next-btn`}
                             onClick={() => handleChange(currentPage + 1)} 
                             disabled={currentPage === totalPages}
-                            className="px-1 py-1 border border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-1 py-1 border border-[rgb(var(--color-border-300))] text-sm font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <ChevronRight className="text-gray-900" />
+                            <ChevronRight className="text-[rgb(var(--color-text-900))]" />
                         </button>
                     </div>
                 </div>
@@ -297,7 +297,7 @@ const Pagination = ({
             id={id}
             label={t('pagination.reflectionLabel', 'Pagination')}
         >
-            <div className={`px-6 py-4 bg-white ${className}`}>
+            <div className={`px-6 py-4 bg-background ${className}`}>
                 <div className="flex items-center justify-between space-x-4">
                     {variant === 'compact' ? (
                         // Compact variant with icon buttons
@@ -306,7 +306,7 @@ const Pagination = ({
                                 id={`${id}-prev-btn`}
                                 onClick={() => handleChange(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                className="w-8 h-8 flex items-center justify-center border border-[rgb(var(--color-border-300))] rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
                             >
                                 <ChevronLeft size={16} />
                             </button>
@@ -327,7 +327,7 @@ const Pagination = ({
                                 id={`${id}-next-btn`}
                                 onClick={() => handleChange(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                className="w-8 h-8 flex items-center justify-center border border-[rgb(var(--color-border-300))] rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
                             >
                                 <ChevronRight size={16} />
                             </button>
@@ -339,7 +339,7 @@ const Pagination = ({
                                 id={`${id}-prev-btn`}
                                 onClick={() => handleChange(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-4 py-2 border border-[rgb(var(--color-border-300))] rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {t('pagination.previous', 'Previous')}
                             </button>
@@ -360,7 +360,7 @@ const Pagination = ({
                                 id={`${id}-next-btn`}
                                 onClick={() => handleChange(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-4 py-2 border border-[rgb(var(--color-border-300))] rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {t('pagination.next', 'Next')}
                             </button>
