@@ -4846,6 +4846,39 @@ function FeatureFlagsView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tenantFilter, setTenantFilter] = useState('');
+  const [expandedFlagIds, setExpandedFlagIds] = useState<Set<number>>(new Set());
+  const [allTenants, setAllTenants] = useState<Record<string, Tenant>>({});
+
+  // Get tenant IDs from a flag's release conditions
+  const getFlagTenants = (flag: PostHogFeatureFlag): string[] => {
+    const tenants: string[] = [];
+    if (flag.filters?.groups) {
+      for (const group of flag.filters.groups) {
+        for (const prop of group.properties || []) {
+          if (prop.key === 'tenant' && Array.isArray(prop.value)) {
+            tenants.push(...prop.value);
+          }
+        }
+      }
+    }
+    return [...new Set(tenants)];
+  };
+
+  const filteredFlags = flags.filter(flag => {
+    // Text search on key/name
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!flag.key.toLowerCase().includes(q) && !(flag.name || '').toLowerCase().includes(q)) return false;
+    }
+    // Tenant filter
+    if (tenantFilter) {
+      const tenantIds = getFlagTenants(flag);
+      if (!tenantIds.includes(tenantFilter)) return false;
+    }
+    return true;
+  });
 
   const fetchFlags = useCallback(async () => {
     setLoading(true);
@@ -4859,24 +4892,29 @@ function FeatureFlagsView() {
     setLoading(false);
   }, []);
 
+  // Fetch tenant names for inline display
+  useEffect(() => {
+    callTenantManagementApi<Tenant[]>('/tenants').then(result => {
+      if (result.success && result.data) {
+        const map: Record<string, Tenant> = {};
+        for (const t of result.data) map[t.tenant] = t;
+        setAllTenants(map);
+      }
+    });
+  }, []);
+
+  const toggleExpanded = (flagId: number) => {
+    setExpandedFlagIds(prev => {
+      const next = new Set(prev);
+      if (next.has(flagId)) next.delete(flagId);
+      else next.add(flagId);
+      return next;
+    });
+  };
+
   useEffect(() => {
     fetchFlags();
   }, [fetchFlags]);
-
-  // Get tenant IDs from a flag's release conditions
-  const getFlagTenants = (flag: PostHogFeatureFlag): string[] => {
-    const tenants: string[] = [];
-    if (flag.filters?.groups) {
-      for (const group of flag.filters.groups) {
-        for (const prop of group.properties || []) {
-          if (prop.key === 'tenant_id' && Array.isArray(prop.value)) {
-            tenants.push(...prop.value);
-          }
-        }
-      }
-    }
-    return [...new Set(tenants)];
-  };
 
   // Get rollout summary
   const getRolloutSummary = (flag: PostHogFeatureFlag): string => {
@@ -4920,11 +4958,43 @@ function FeatureFlagsView() {
       key: 'filters',
       header: 'Rollout',
       sortable: false,
-      render: (row) => (
-        <Text tone="muted" style={{ fontSize: '0.875rem' }}>
-          {getRolloutSummary(row)}
-        </Text>
-      ),
+      render: (row) => {
+        const tenantIds = getFlagTenants(row);
+        const isExpanded = expandedFlagIds.has(row.id);
+        if (tenantIds.length === 0) {
+          return (
+            <Text tone="muted" style={{ fontSize: '0.875rem' }}>
+              {getRolloutSummary(row)}
+            </Text>
+          );
+        }
+        return (
+          <div>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleExpanded(row.id); }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                color: 'var(--alga-primary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '4px',
+              }}
+            >
+              <span style={{ display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>&#9654;</span>
+              {tenantIds.length} tenant{tenantIds.length !== 1 ? 's' : ''}
+            </button>
+            {isExpanded && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '6px' }}>
+                {tenantIds.map(tid => {
+                  const t = allTenants[tid];
+                  return (
+                    <Text key={tid} style={{ fontSize: '0.75rem', fontFamily: 'monospace' }} tone="muted">
+                      {t ? t.client_name : tid}
+                    </Text>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'created_at',
@@ -4956,7 +5026,7 @@ function FeatureFlagsView() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <h2 style={{ margin: 0 }}>Feature Flags</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button variant="outline" onClick={fetchFlags} disabled={loading}>
@@ -4966,6 +5036,37 @@ function FeatureFlagsView() {
             Create Flag
           </Button>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <Input
+          type="text"
+          placeholder="Search flags by key or name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ flex: 1 }}
+        />
+        <CustomSelect
+          options={[
+            { value: '', label: 'All tenants' },
+            ...(() => {
+              const tenantIds = new Set<string>();
+              for (const flag of flags) {
+                for (const tid of getFlagTenants(flag)) tenantIds.add(tid);
+              }
+              return Array.from(tenantIds)
+                .map(tid => ({
+                  value: tid,
+                  label: allTenants[tid]?.client_name || tid.slice(0, 12) + '...',
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label));
+            })(),
+          ]}
+          value={tenantFilter}
+          onValueChange={(v) => setTenantFilter(v)}
+          placeholder="Filter by tenant..."
+          style={{ minWidth: '200px' }}
+        />
       </div>
 
       {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
@@ -5004,10 +5105,16 @@ function FeatureFlagsView() {
             No feature flags found. Create your first flag to get started.
           </Text>
         </Card>
+      ) : filteredFlags.length === 0 ? (
+        <Card>
+          <Text tone="muted">
+            No flags matching "{searchQuery}"
+          </Text>
+        </Card>
       ) : (
         <DataTable
           columns={columns}
-          data={flags}
+          data={filteredFlags}
           paginate
           defaultPageSize={10}
           initialSortKey="created_at"
@@ -5290,7 +5397,7 @@ function FeatureFlagDetail({
     if (flag.filters?.groups) {
       for (const group of flag.filters.groups) {
         for (const prop of group.properties || []) {
-          if (prop.key === 'tenant_id' && Array.isArray(prop.value)) {
+          if (prop.key === 'tenant' && Array.isArray(prop.value)) {
             ids.push(...prop.value);
           }
         }
@@ -5520,7 +5627,7 @@ function FeatureFlagDetail({
 type View = 'reports' | 'create' | 'execute' | 'tenants' | 'feature-flags' | 'audit';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('reports');
+  const [currentView, setCurrentView] = useState<View>('feature-flags');
 
   // Log extension access on mount (via proxy)
   useEffect(() => {
