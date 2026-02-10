@@ -1,0 +1,242 @@
+[
+  {
+    "id": "F001",
+    "description": "Create shared auth claims mapping helpers used by both Node and Edge auth pipelines",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002",
+    "description": "Refactor Edge auth session mapping to consume shared claims helpers instead of local mapping",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Refactor NextAuth options construction to a single policy-driven factory for async/sync paths",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004",
+    "description": "Unify auth cookie-name and secret resolution helpers in one package-level source of truth",
+    "implemented": false,
+    "prdRefs": ["FR-1", "FR-5"]
+  },
+  {
+    "id": "F005",
+    "description": "Adopt shared token decode helper in middleware modules to avoid per-module secret/cookie drift",
+    "implemented": false,
+    "prdRefs": ["FR-1", "FR-4"]
+  },
+  {
+    "id": "F006",
+    "description": "Add parity tests proving identical core claims across Node and Edge auth session outputs",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F007",
+    "description": "Create shared extension gateway execution core with explicit mode parameter (`api` or `ui-proxy`)",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F008",
+    "description": "Refactor `/api/ext` route to thin wrapper around shared gateway core in `api` mode",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F009",
+    "description": "Refactor `/api/ext-proxy` route to thin wrapper around shared gateway core in `ui-proxy` mode",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F010",
+    "description": "Standardize tenant and session resolution inside shared gateway core",
+    "implemented": false,
+    "prdRefs": ["FR-2", "FR-3"]
+  },
+  {
+    "id": "F011",
+    "description": "Standardize gateway user-info enrichment to include `client_id` for eligible client users in both modes",
+    "implemented": false,
+    "prdRefs": ["FR-2", "FR-3"]
+  },
+  {
+    "id": "F012",
+    "description": "Standardize install-context loading and caching behavior across extension gateway modes",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F013",
+    "description": "Standardize gateway CORS allowlist policy while preserving expected portal/runner origins",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F014",
+    "description": "Preserve `ui-proxy:*` endpoint semantics in shared core for extension runtime compatibility",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F015",
+    "description": "Introduce rollout flag for unified extension gateway path switching",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F016",
+    "description": "Define canonical `UserContextV2` TypeScript contract for gateway/runtime boundary",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F017",
+    "description": "Implement deterministic mapper from canonical user context to runner payload (`snake_case`)",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F018",
+    "description": "Include `additional_fields` mapping support in user-v2 payload from gateway to runner",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F019",
+    "description": "Standardize naming on `client_name` while keeping compatibility alias only where necessary",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F020",
+    "description": "Align WIT schema definitions for `user-data` and `user-data-v2` across runner and SDK assets",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F021",
+    "description": "Consolidate duplicated NextAuth type declaration files into one canonical exported definition",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F022",
+    "description": "Align shared `IUser` interface variants so `clientId` field presence is consistent",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F023",
+    "description": "Introduce shared `portalGuard` pipeline that classifies route type, host context, and session state",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F024",
+    "description": "Refactor edge middleware to use shared `portalGuard` decisions for `/msp` and `/client-portal`",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F025",
+    "description": "Refactor express auth middleware to use shared `portalGuard` decisions",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F026",
+    "description": "Refactor app layout/session entry points to use shared guard/session policy helpers",
+    "implemented": false,
+    "prdRefs": ["FR-4", "FR-5"]
+  },
+  {
+    "id": "F027",
+    "description": "Refactor signin routing decisions to shared guard resolver preserving callback and portal-domain context",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F028",
+    "description": "Centralize portal-domain resolution and remove duplicate model usages where feasible",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F029",
+    "description": "Define explicit vanity-handoff decision interface in guard pipeline for consistent redirects",
+    "implemented": false,
+    "prdRefs": ["FR-4", "FR-5"]
+  },
+  {
+    "id": "F030",
+    "description": "Replace bespoke server OTT session-cookie helper with shared auth session issuance utility",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F031",
+    "description": "Ensure OTT/domain-session exchange signs tokens with same secret/salt/cookie configuration as Auth.js",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F032",
+    "description": "Propagate `session_id` and `login_method` into handoff-issued sessions for parity",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F033",
+    "description": "Add optional handoff stabilization check before final client-side redirect post-cookie issuance",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F034",
+    "description": "Add guarded first-request tolerance logic for post-handoff session warmup where needed",
+    "implemented": false,
+    "prdRefs": ["FR-5", "FR-7"]
+  },
+  {
+    "id": "F035",
+    "description": "Add structured session-gap diagnostics in current-user/session retrieval paths",
+    "implemented": false,
+    "prdRefs": ["FR-5", "FR-6"]
+  },
+  {
+    "id": "F036",
+    "description": "Add structured OTT issue/consume/cookie events with correlation identifiers",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F037",
+    "description": "Add gateway and auth parity metrics for missing clientId/session_id by mode and flow",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F038",
+    "description": "Add integration coverage for canonical vs vanity login/session parity",
+    "implemented": false,
+    "prdRefs": ["FR-5", "FR-6"]
+  },
+  {
+    "id": "F039",
+    "description": "Add integration coverage for `/api/ext` vs `/api/ext-proxy` user-context parity",
+    "implemented": false,
+    "prdRefs": ["FR-2", "FR-3", "FR-6"]
+  },
+  {
+    "id": "F040",
+    "description": "Produce rollout runbook with toggles, shadow validation, and rollback steps",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  }
+]

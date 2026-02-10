@@ -1,0 +1,470 @@
+[
+  {
+    "id": "T001",
+    "description": "Shared claim mapper includes id, tenant, tenantSlug, user_type, clientId, contactId, session_id, login_method",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Shared claim mapper handles missing optional fields without dropping required identity fields",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "Edge auth session callback uses shared mapper output without local claim drift",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Node auth session callback uses shared mapper output without local claim drift",
+    "implemented": false,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T005",
+    "description": "Auth options factory produces equivalent callbacks for sync and async construction modes",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "OAuth provider registration behavior remains unchanged after auth options factory refactor",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T007",
+    "description": "Cookie helper returns identical session cookie name in auth and server middleware contexts",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T008",
+    "description": "Secret resolution used for token encoding equals secret used for token decoding in middleware",
+    "implemented": false,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T009",
+    "description": "Middleware decode helper resolves token from expected cookie and returns tenant/client claims",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "Parity test confirms `/api/auth/session` and edge-derived session expose the same core claims",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "Shared gateway core executes a request in `api` mode with expected runner payload shape",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T012",
+    "description": "Shared gateway core executes a request in `ui-proxy` mode with expected runner payload shape",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T013",
+    "description": "`/api/ext` wrapper delegates to shared gateway with `api` mode and preserves route params",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T014",
+    "description": "`/api/ext-proxy` wrapper delegates to shared gateway with `ui-proxy` mode and preserves route params",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Tenant resolution precedence (header > session > fallback) is consistent across both gateway modes",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Client portal user in `api` mode receives `client_id` when mapping exists",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T017",
+    "description": "Client portal user in `ui-proxy` mode receives `client_id` when mapping exists",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Internal/header-auth request paths do not incorrectly inject client-specific user fields",
+    "implemented": false,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T019",
+    "description": "Install context lookup yields same install/version/config for equivalent requests in both gateway modes",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T020",
+    "description": "Gateway CORS policy allows configured canonical and vanity portal origins",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T021",
+    "description": "Gateway CORS policy rejects non-allowlisted origins",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T022",
+    "description": "`ui-proxy` mode includes `endpoint` value prefixed with `ui-proxy:`",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T023",
+    "description": "`api` mode does not emit `ui-proxy` endpoint tag",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T024",
+    "description": "Unified gateway flag disabled keeps legacy route behavior",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T025",
+    "description": "Unified gateway flag enabled routes traffic through shared core for both endpoints",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T026",
+    "description": "`UserContextV2` type enforces required fields for tenant and user identity",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T027",
+    "description": "`UserContextV2` type allows optional `clientId`, `clientName`, `contactId`, and `additionalFields`",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T028",
+    "description": "Mapper converts canonical camelCase fields to runner snake_case fields deterministically",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T029",
+    "description": "Mapper output includes `client_id` key when source has clientId",
+    "implemented": false,
+    "featureIds": ["F017", "F018"]
+  },
+  {
+    "id": "T030",
+    "description": "Mapper omits `client_id` key when user is internal or source field is null",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T031",
+    "description": "Mapper includes `additional_fields` map and preserves key/value strings",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T032",
+    "description": "Gateway payload uses `client_name` as canonical field name",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T033",
+    "description": "Runner compatibility alias still accepts legacy `company_name` during transition",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T034",
+    "description": "Runner WIT and SDK template WIT definitions for user-data structures are consistent",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T035",
+    "description": "Scheduler sample WIT does not diverge from canonical runner/template user context schema",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T036",
+    "description": "Server next-auth type file re-exports canonical auth package type definitions",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T037",
+    "description": "Type-check confirms no duplicate conflicting declarations for session/JWT custom fields",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T038",
+    "description": "Shared IUser interfaces expose `clientId` consistently across package boundaries",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T039",
+    "description": "Type-check confirms downstream modules compile with unified IUser interface",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T040",
+    "description": "End-to-end user-v2 payload includes client_id for client user extension calls",
+    "implemented": false,
+    "featureIds": ["F011", "F016", "F017", "F039"]
+  },
+  {
+    "id": "T041",
+    "description": "Portal guard classifies `/msp/*` requests as MSP route type",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T042",
+    "description": "Portal guard classifies `/client-portal/*` requests as client route type",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T043",
+    "description": "Portal guard classifies `/auth/*` requests as auth route type",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T044",
+    "description": "Portal guard resolves host context (app/canonicalPortal/vanityPortal/unknown) deterministically",
+    "implemented": false,
+    "featureIds": ["F023", "F028"]
+  },
+  {
+    "id": "T045",
+    "description": "Edge middleware redirects unauthenticated MSP requests to MSP signin via guard decision",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T046",
+    "description": "Edge middleware redirects unauthenticated client requests to client signin via guard decision",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T047",
+    "description": "Edge middleware enforces user_type mismatch redirect for internal user on client portal",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T048",
+    "description": "Edge middleware enforces user_type mismatch redirect for client user on MSP routes",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T049",
+    "description": "Express auth middleware produces same redirect outcome as edge middleware for equivalent request/session",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T050",
+    "description": "App layout/session policy helper produces same allow/deny outcome as portal guard",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T051",
+    "description": "Signin resolver preserves callback path when redirecting to portal-specific signin",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T052",
+    "description": "Signin resolver preserves portal-domain context for branding on canonical signin",
+    "implemented": false,
+    "featureIds": ["F027", "F028"]
+  },
+  {
+    "id": "T053",
+    "description": "Central portal-domain resolver returns consistent tenant/domain record across call sites",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T054",
+    "description": "Guard vanity-handoff decision triggers when authenticated client on canonical host has active vanity domain",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T055",
+    "description": "Guard does not trigger vanity-handoff decision when request already on vanity host",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T056",
+    "description": "Domain-session exchange uses shared auth cookie helper rather than bespoke server helper",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T057",
+    "description": "Bespoke server session cookie helper is removed or reduced to compatibility wrapper with no divergent logic",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T058",
+    "description": "OTT-issued session token decodes successfully via same secret and salt used by normal Auth.js sessions",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T059",
+    "description": "OTT-issued session cookie name matches cookie name expected by middleware and getSession",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T060",
+    "description": "Handoff-issued session includes `session_id` claim when available",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T061",
+    "description": "Handoff-issued session includes `login_method` claim parity with standard login flow",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T062",
+    "description": "Client handoff stabilization check waits for valid session before final redirect",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T063",
+    "description": "Handoff stabilization check reports actionable error path when session validation fails",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T064",
+    "description": "First-request tolerance path is disabled by default and enabled only by explicit flag",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T065",
+    "description": "With first-request tolerance enabled, immediate post-handoff request does not loop back to signin",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T066",
+    "description": "Session-gap diagnostic logs include host, path, cookie presence, and missing core claims",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T067",
+    "description": "Session-gap diagnostics redact sensitive token values while preserving troubleshooting context",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T068",
+    "description": "Canonical-domain and vanity-domain login flows both produce non-null clientId in first authenticated request",
+    "implemented": false,
+    "featureIds": ["F031", "F032", "F038"]
+  },
+  {
+    "id": "T069",
+    "description": "Canonical-domain and vanity-domain login flows both produce non-null session_id in first authenticated request",
+    "implemented": false,
+    "featureIds": ["F032", "F038"]
+  },
+  {
+    "id": "T070",
+    "description": "OTT issue event log includes correlation ID, tenant, user, source host, and intended target host",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T071",
+    "description": "OTT consume event log includes correlation ID, outcome, and failure reason when applicable",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T072",
+    "description": "Gateway start/finish logs include mode, extension id, tenant, and latency",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T073",
+    "description": "Metrics counter increments for missing clientId by gateway mode and user_type",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T074",
+    "description": "Metrics counter increments for missing session_id in session-mapped requests",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T075",
+    "description": "Metrics counter increments for handoff failures with reason tags",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T076",
+    "description": "Integration test: `/api/ext` and `/api/ext-proxy` return equivalent user identity fields for same authenticated client",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T077",
+    "description": "Integration test: MSP flow remains unaffected and still denies client-only route access",
+    "implemented": false,
+    "featureIds": ["F024", "F025", "F038"]
+  },
+  {
+    "id": "T078",
+    "description": "Runbook validation test documents enable/disable steps for rollout flags and confirms rollback path",
+    "implemented": false,
+    "featureIds": ["F040"]
+  }
+]
