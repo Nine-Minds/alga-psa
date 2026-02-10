@@ -104,7 +104,7 @@
   {
     "id": "F015",
     "description": "Update the iframe bridge (`iframeBridge.ts`) to re-send theme tokens to extension iframes when the user switches theme",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3.3"]
   },
   {
