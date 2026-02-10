@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Install `next-themes` package in the server workspace",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.1"]
   },
   {

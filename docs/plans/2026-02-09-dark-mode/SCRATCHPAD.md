@@ -20,6 +20,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-09) **AUTO-ADJUST BRANDED SHADES** — `BrandingProvider` will generate inverted shade scale for dark mode (swap 50↔900 etc.), matching the static primary/secondary inversion pattern in globals.css. No separate tenant dark-mode colors needed.
 - (2026-02-09) **TOGGLE FOR PREVIEW** — single toggle switch in branding settings, not side-by-side comparison.
 - (2026-02-09) **SELECTORS VERIFIED COMPATIBLE** — globals.css `.dark`/`.light` are bare class selectors (not `body.dark` or `html.dark`). They match `<html class="dark">` (next-themes default target) correctly. CSS variables cascade to all descendants. No selector changes needed.
+- (2026-02-10) Installed `next-themes` in `server` workspace via npm workspaces to satisfy FR-1.1.
 
 ## Discoveries / Constraints
 
@@ -55,6 +56,12 @@ npm run build:shared    # first time only
 npm run dev             # http://localhost:3000
 # or with Turbopack:
 npm run dev:turbo
+```
+
+### Package Install
+
+```bash
+npm install next-themes --workspace server
 ```
 
 ### Quick Dark Mode Smoke Test (Before Toggle Exists)
