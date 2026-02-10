@@ -308,7 +308,7 @@
   {
     "id": "F049",
     "description": "Extension loading overlay gradient uses theme-aware values in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.4"]
   },
   {
