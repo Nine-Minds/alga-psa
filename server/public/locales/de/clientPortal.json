@@ -182,6 +182,13 @@
       "awaitingYourResponseTooltip": "Der Support wartet auf Ihre Antwort",
       "awaitingSupportResponseTooltip": "Ihre Antwort wurde erhalten. Der Support wird in Kürze antworten."
     },
+    "origin": {
+      "internal": "Intern erstellt",
+      "clientPortal": "Über das Kundenportal erstellt",
+      "inboundEmail": "Über eingehende E-Mail erstellt",
+      "api": "Über API erstellt",
+      "other": "Über andere Quelle erstellt"
+    },
     "responseSource": {
       "clientPortal": "Empfangen über Kundenportal",
       "inboundEmail": "Empfangen über E-Mail"
