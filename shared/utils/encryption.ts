@@ -108,7 +108,7 @@ export async function verifyPassword(password: string, storedHash: string): Prom
  * @returns A secure random password
  */
 export function generateSecurePassword(length: number = 16): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@%^&';
   const buf = new Uint8Array(length);
   globalThis.crypto.getRandomValues(buf);
   let out = '';
