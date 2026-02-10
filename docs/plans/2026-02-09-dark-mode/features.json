@@ -92,13 +92,13 @@
   {
     "id": "F013",
     "description": "Create a token mapping layer that syncs `--color-*` variables to `--alga-*` variables (or vice versa) whenever the theme changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3.1"]
   },
   {
     "id": "F014",
     "description": "Ensure both `--color-*` and `--alga-*` token sets update when theme class changes on `<body>`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3.2"]
   },
   {

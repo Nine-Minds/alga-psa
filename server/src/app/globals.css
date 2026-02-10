@@ -405,6 +405,31 @@ body,
 
 }
 
+.light,
+.dark {
+    --alga-bg: rgb(var(--color-background));
+    --alga-fg: rgb(var(--color-text-900));
+    --alga-muted: rgb(var(--color-border-50));
+    --alga-muted-fg: rgb(var(--color-text-500));
+    --alga-primary: rgb(var(--color-primary-500));
+    --alga-primary-foreground: rgb(var(--color-primary-50));
+    --alga-primary-light: rgb(var(--color-primary-200));
+    --alga-secondary: rgb(var(--color-secondary-500));
+    --alga-secondary-foreground: rgb(var(--color-secondary-50));
+    --alga-border: rgb(var(--color-border-200));
+    --alga-ring: 0 0% 0%;
+    --alga-radius: var(--radius-lg);
+    --alga-accent: rgb(var(--color-accent-500));
+    --alga-accent-foreground: rgb(var(--color-accent-50));
+    --alga-primary-soft: rgb(var(--color-primary-50));
+    --alga-primary-soft-fg: rgb(var(--color-primary-700));
+    --alga-primary-soft-hover: rgb(var(--color-primary-100));
+    --alga-primary-border: rgb(var(--color-primary-300));
+    --alga-danger: rgb(var(--color-status-error));
+    --alga-warning: rgb(var(--color-status-warning));
+    --alga-success: rgb(var(--color-status-success));
+}
+
 /* Give a remote user a caret */
 .collaboration-cursor__caret {
     border-left: 1px solid #0d0d0d;

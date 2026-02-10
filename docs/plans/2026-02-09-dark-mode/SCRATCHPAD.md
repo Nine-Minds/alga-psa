@@ -34,6 +34,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) next-themes provider now handles localStorage persistence and flash prevention without custom code.
 - (2026-02-10) useAppTheme now persists theme changes to `user_preferences` via the v1 preferences API.
 - (2026-02-10) useAppTheme loads the saved theme from `user_preferences` on auth and applies it.
+- (2026-02-10) Added CSS variable mapping to sync `--color-*` tokens to `--alga-*` tokens and set `data-theme` via `ThemeBridge` so ui-kit tokens track theme changes.
 
 ## Discoveries / Constraints
 
