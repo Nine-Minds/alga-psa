@@ -266,7 +266,7 @@
   {
     "id": "F042",
     "description": "Mantine components respect the active theme color scheme",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.4"]
   },
   {
