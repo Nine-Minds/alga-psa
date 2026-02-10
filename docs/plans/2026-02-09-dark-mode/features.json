@@ -314,7 +314,7 @@
   {
     "id": "F050",
     "description": "Add `next-themes` `ThemeProvider` to client portal layout (`server/src/app/client-portal/ClientPortalLayoutClient.tsx`)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.1"]
   },
   {
