@@ -205,13 +205,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     setIsInternalToggle(checked);
     if (checked) {
       // Turn ON Internal → go to Internal tab, preserve Resolution toggle
-      tabChangeFromToggle.current = true;
+      // Only mark as toggle-sourced when the tab will actually change;
+      // if activeTab is already the target, useEffect won't fire to reset the ref.
+      if (activeTab !== TAB_INTERNAL) tabChangeFromToggle.current = true;
       onTabChange(TAB_INTERNAL);
     } else {
       // Turn OFF Internal
       if (isResolutionToggle) {
         // Resolution still ON → switch to Resolution tab
-        tabChangeFromToggle.current = true;
+        if (activeTab !== TAB_RESOLUTION) tabChangeFromToggle.current = true;
         onTabChange(TAB_RESOLUTION);
       } else {
         // Both OFF → switch to default tab (Client for MSP, All Comments for client portal)
@@ -225,13 +227,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     setIsResolutionToggle(checked);
     if (checked) {
       // Turn ON Resolution → go to Resolution tab, preserve Internal toggle
-      tabChangeFromToggle.current = true;
+      if (activeTab !== TAB_RESOLUTION) tabChangeFromToggle.current = true;
       onTabChange(TAB_RESOLUTION);
     } else {
       // Turn OFF Resolution
       if (isInternalToggle) {
         // Internal still ON → switch to Internal tab
-        tabChangeFromToggle.current = true;
+        if (activeTab !== TAB_INTERNAL) tabChangeFromToggle.current = true;
         onTabChange(TAB_INTERNAL);
       } else {
         // Both OFF → switch to default tab (Client for MSP, All Comments for client portal)
