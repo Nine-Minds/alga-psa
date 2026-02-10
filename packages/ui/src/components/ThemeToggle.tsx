@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
-import { Button } from '@alga-psa/ui/components/Button';
-import { useAppTheme } from '@/hooks/useAppTheme';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './DropdownMenu';
+import { Button } from './Button';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 

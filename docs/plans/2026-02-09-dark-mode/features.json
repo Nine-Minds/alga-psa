@@ -68,7 +68,7 @@
   {
     "id": "F009b",
     "description": "Place the `ThemeToggle` component in the client portal navigation bar",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.3"]
   },
   {

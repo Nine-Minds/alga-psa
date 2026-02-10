@@ -32,7 +32,7 @@ import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
 interface HeaderProps {
   sidebarOpen: boolean;

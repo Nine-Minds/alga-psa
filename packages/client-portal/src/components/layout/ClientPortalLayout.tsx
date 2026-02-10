@@ -24,6 +24,7 @@ import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
 import { DrawerProvider } from '@alga-psa/ui';
+import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -172,6 +173,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             {/* Right side - Notifications and Profile */}
             <div className="flex items-center gap-2">
               <NotificationBell />
+              <ThemeToggle />
               <div className="flex items-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
