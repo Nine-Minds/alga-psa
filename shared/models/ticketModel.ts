@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import type { IEventPublisher } from '@alga-psa/types';
+import { TICKET_ORIGINS, type IEventPublisher } from '@alga-psa/types';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -64,7 +64,10 @@ export const ticketSchema = z.object({
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
+  ticket_origin: z.string().nullable().optional(),
   attributes: z.record(z.unknown()).nullable(),
+  email_metadata: z.unknown().nullable().optional(),
   priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
   // ITIL-specific fields
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
@@ -111,6 +114,7 @@ export interface CreateTicketInput {
   subcategory_id?: string;
   board_id?: string;
   source?: string;
+  ticket_origin?: string;
   entered_by?: string;
   email_metadata?: any;
   attributes?: Record<string, any>;
@@ -617,6 +621,7 @@ export class TicketModel {
       subcategory_id: cleanedInput.subcategory_id || null,
       board_id: cleanedInput.board_id || null,
       source: cleanedInput.source || null,
+      ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
       entered_by: cleanedInput.entered_by || null,
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),

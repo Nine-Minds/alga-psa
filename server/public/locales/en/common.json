@@ -98,6 +98,13 @@
     "notes": "Notes"
   },
   "tickets": {
+    "origin": {
+      "internal": "Created Internally",
+      "clientPortal": "Created via Client Portal",
+      "inboundEmail": "Created via Inbound Email",
+      "api": "Created via API",
+      "other": "Created via Other"
+    },
     "responseSource": {
       "clientPortal": "Received via Client Portal",
       "inboundEmail": "Received via Inbound Email"

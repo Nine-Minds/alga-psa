@@ -14,6 +14,17 @@ import { IDocument } from './document.interface';
  */
 export type TicketResponseState = 'awaiting_client' | 'awaiting_internal' | null;
 
+export const TICKET_ORIGINS = {
+  INTERNAL: 'internal',
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+  API: 'api',
+} as const;
+
+export type TicketOrigin =
+  (typeof TICKET_ORIGINS)[keyof typeof TICKET_ORIGINS];
+export type TicketOriginDisplay = TicketOrigin | 'other';
+
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
   master_ticket_id?: string | null;
@@ -45,6 +56,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
   // Response state tracking (who needs to respond next)
   response_state?: TicketResponseState;
+  // Derived ticket creation origin signal for UI display.
+  ticket_origin?: TicketOriginDisplay;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {

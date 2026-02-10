@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   COMMENT_RESPONSE_SOURCES,
+  TICKET_ORIGINS,
   type CommentMetadata,
   type InboundEmailProviderType,
 } from '@alga-psa/types';
@@ -598,7 +599,8 @@ export async function createTicketFromEmail(
         location_id: ticketData.location_id,
         entered_by: ticketData.entered_by || undefined,
         assigned_to: assignedTo,
-        email_metadata: ticketData.email_metadata
+        email_metadata: ticketData.email_metadata,
+        ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
       }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
 
       // Publish TICKET_ASSIGNED event if an agent was assigned

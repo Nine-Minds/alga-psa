@@ -54,7 +54,10 @@ export const ticketSchema = z.object({
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().datetime().nullable().optional(),
+  source: z.string().nullable().optional(),
+  ticket_origin: z.string().nullable().optional(),
   attributes: z.record(z.unknown()).nullable(),
+  email_metadata: z.unknown().nullable().optional(),
   priority_id: z.string().uuid().nullable(), // Used for both custom and ITIL priorities
   // ITIL-specific fields (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
@@ -97,6 +100,7 @@ const baseTicketSchema = z.object({
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().datetime().nullable().optional(),
+  ticket_origin: z.string().nullable().optional(),
   attributes: z.record(z.unknown()).nullable(),
   updated_by: z.string().uuid().nullable(),
 });
