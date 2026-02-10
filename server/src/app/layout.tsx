@@ -113,7 +113,7 @@ export default async function RootLayout({
           />
         )}
       </head>
-      <body className={`light`} suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <PostHogProvider>
            <MainContent>{children}</MainContent>
           <Toaster position="top-right" />

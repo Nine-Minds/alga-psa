@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "Update root layout (`server/src/app/layout.tsx`) — remove hardcoded `className=\"light\"` on `<body>`, wrap with `next-themes` `ThemeProvider` (attribute='class', defaultTheme='system')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.5"]
   },
   {
