@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
-import { getEntityImageUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getEntityImageUrlsBatch } from '@alga-psa/media';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 

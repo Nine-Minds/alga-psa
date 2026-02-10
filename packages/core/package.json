@@ -41,6 +41,10 @@
     "./i18n/config": {
       "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
+    },
+    "./lib/blocknoteUtils": {
+      "import": "./dist/lib/blocknoteUtils.js",
+      "types": "./src/lib/blocknoteUtils.ts"
     }
   },
   "scripts": {
@@ -50,6 +54,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@blocknote/core": "^0.22.0",
     "dotenv": "^16.4.5",
     "node-vault": "^0.10.2",
     "redis": "^4.6.10",

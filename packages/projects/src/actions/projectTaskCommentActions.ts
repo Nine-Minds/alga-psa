@@ -2,10 +2,10 @@
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/core/lib/blocknoteUtils';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
-import { getEntityImageUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getEntityImageUrlsBatch } from '@alga-psa/media';
 import { Knex } from 'knex';
 
 /**

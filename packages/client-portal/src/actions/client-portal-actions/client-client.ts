@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import Client from '@alga-psa/clients/models/client';
-import { getClientLogoUrl } from '@alga-psa/documents/lib/avatarUtils';
+import { getClientLogoUrl } from '@alga-psa/media';
 import type { IClient, IUserWithRoles } from '@alga-psa/types';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 

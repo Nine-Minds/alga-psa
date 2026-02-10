@@ -7,7 +7,7 @@ import { IComment } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/core/lib/blocknoteUtils';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';

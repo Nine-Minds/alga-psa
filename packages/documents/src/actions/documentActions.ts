@@ -12,7 +12,7 @@ import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
-import { convertBlockNoteToHTML } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToHTML } from '@alga-psa/core/lib/blocknoteUtils';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
     IDocument,
