@@ -152,7 +152,7 @@
   {
     "id": "F023",
     "description": "Checkbox and switch components use theme-aware colors — fix hardcoded `white` in globals.css switch thumb",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.2", "FR-8.1"]
   },
   {
@@ -278,7 +278,7 @@
   {
     "id": "F044",
     "description": "Replace hardcoded `white` values in globals.css switch/button styles with `rgb(var(--color-*))` references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.1"]
   },
   {

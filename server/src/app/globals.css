@@ -187,6 +187,11 @@ body {
     color: rgb(var(--color-text-500));
 }
 
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+    accent-color: rgb(var(--color-primary-500));
+}
+
 /* Add placeholder styles */
 ::placeholder,
 [data-placeholder] {
@@ -308,6 +313,9 @@ body {
     --color-text-800: 241 245 249;
     --color-text-900: 248 250 252;
 
+    /* Switch */
+    --color-switch-thumb: 248 250 252;
+
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
     --color-primary-50: 82 46 140;
@@ -423,6 +431,9 @@ body {
     --color-text-700: 51 65 85;
     --color-text-800: 30 41 59;
     --color-text-900: 15 23 42;
+
+    /* Switch */
+    --color-switch-thumb: 255 255 255;
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
@@ -648,7 +659,7 @@ body {
     display: block;
     width: 21px;
     height: 21px;
-    background-color: white;
+    background-color: rgb(var(--color-switch-thumb));
     border-radius: 9999px;
     position: absolute;
     top: 2px;
@@ -700,7 +711,7 @@ body {
   display: block;
   width: 21px;
   height: 21px;
-  background-color: white;
+  background-color: rgb(var(--color-switch-thumb));
   border-radius: 9999px;
   position: absolute;
   top: 2px;
