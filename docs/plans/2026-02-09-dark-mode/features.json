@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "`next-themes` handles localStorage persistence (key: `theme`) and blocking script for flash prevention automatically — no custom code needed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.4"]
   },
   {
