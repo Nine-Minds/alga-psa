@@ -18,6 +18,7 @@ import { toast } from 'react-hot-toast';
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 /**
  * Extension Details page
@@ -32,6 +33,7 @@ export default function ExtensionDetails() {
   const [error, setError] = useState<string | null>(null);
   type RunnerStatus = { state?: string } | null;
   const [installInfo, setInstallInfo] = useState<{ domain: string | null; status: RunnerStatus } | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -103,21 +105,23 @@ export default function ExtensionDetails() {
   };
   
   // Handle removing extension
-  const handleRemoveExtension = async () => {
-    if (!confirm('Are you sure you want to remove this extension? This action cannot be undone.')) {
-      return;
-    }
-    
+  const handleRemoveExtension = () => {
+    setShowRemoveConfirm(true);
+  };
+
+  const confirmRemoveExtension = async () => {
+    setShowRemoveConfirm(false);
+
     try {
       const result = await uninstallExtension(extensionId);
       if (!result.success) {
         toast.error(result.message || 'Failed to remove extension');
         return;
       }
-      
+
       console.info('Extension removed', { extensionId });
       toast.success('Extension removed');
-      
+
       // Navigate back to extensions list
       router.push('/msp/settings/extensions');
     } catch (err) {
@@ -441,6 +445,16 @@ export default function ExtensionDetails() {
           </div>
         )}
       </div>
+      <ConfirmationDialog
+        isOpen={showRemoveConfirm}
+        onClose={() => setShowRemoveConfirm(false)}
+        onConfirm={confirmRemoveExtension}
+        title="Remove Extension"
+        message="Are you sure you want to remove this extension? This action cannot be undone."
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        id="remove-extension-confirm"
+      />
     </ReflectionContainer>
   );
 }

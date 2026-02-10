@@ -19,6 +19,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toast } from 'react-hot-toast';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 /**
  * Extensions management page
@@ -31,6 +32,7 @@ export default function Extensions() {
   const [error, setError] = useState<string | null>(null);
   const [installInfo, setInstallInfo] = useState<Record<string, { domain: string | null; status: any }>>({});
   const [viewing, setViewing] = useState<ExtRow | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -92,23 +94,27 @@ export default function Extensions() {
   };
   
   // Handle removing extensions
-  const handleRemoveExtension = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this extension? This action cannot be undone.')) {
-      return;
-    }
-  
+  const handleRemoveExtension = (id: string) => {
+    setRemoveTarget(id);
+  };
+
+  const confirmRemoveExtension = async () => {
+    if (!removeTarget) return;
+    const id = removeTarget;
+    setRemoveTarget(null);
+
     try {
       const result = await uninstallExtensionV2(id);
       if (!result.success) {
         toast.error(result.message || 'Failed to remove extension');
         return;
       }
-  
+
       // Update local state
       setExtensions(prevExtensions =>
         prevExtensions.filter(ext => ext.id !== id)
       );
-  
+
       toast.success('Extension removed');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
@@ -179,6 +185,16 @@ export default function Extensions() {
         )}
       </div>
     </ReflectionContainer>
+    <ConfirmationDialog
+      isOpen={removeTarget !== null}
+      onClose={() => setRemoveTarget(null)}
+      onConfirm={confirmRemoveExtension}
+      title="Remove Extension"
+      message="Are you sure you want to remove this extension? This action cannot be undone."
+      confirmLabel="Remove"
+      cancelLabel="Cancel"
+      id="remove-extension-confirm"
+    />
     {viewing && (
       <Dialog isOpen={true} onClose={() => setViewing(null)}>
         <DialogContent>
