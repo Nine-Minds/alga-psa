@@ -5,7 +5,8 @@
  */
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 interface ExtensionUI {
   id: string;
@@ -34,6 +35,8 @@ export default function ExtensionDetailsModal({
   onToggle,
   onRemove
 }: ExtensionDetailsModalProps) {
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+
   if (!isOpen || !extension) return null;
 
   return (
@@ -137,12 +140,7 @@ export default function ExtensionDetailsModal({
 
           {onRemove && (
             <button
-              onClick={() => {
-                if (confirm('Are you sure you want to remove this extension? This action cannot be undone.')) {
-                  onRemove(extension.id);
-                  onClose();
-                }
-              }}
+              onClick={() => setShowRemoveConfirm(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
             >
               <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,6 +151,20 @@ export default function ExtensionDetailsModal({
           )}
         </div>
       </div>
+      <ConfirmationDialog
+        isOpen={showRemoveConfirm}
+        onClose={() => setShowRemoveConfirm(false)}
+        onConfirm={() => {
+          setShowRemoveConfirm(false);
+          onRemove!(extension.id);
+          onClose();
+        }}
+        title="Remove Extension"
+        message="Are you sure you want to remove this extension? This action cannot be undone."
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        id="remove-extension-modal-confirm"
+      />
     </div>
   );
 }

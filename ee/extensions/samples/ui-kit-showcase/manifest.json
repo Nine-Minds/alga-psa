@@ -1,6 +1,6 @@
 {
   "name": "com.alga.sample.ui-kit-showcase",
-  "publisher": "Alga",
+  "publisher": "Nine Minds",
   "version": "0.1.0",
   "runtime": "wasm-js@1",
   "capabilities": [],
