@@ -125,6 +125,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     },
     canDisplaySuccessStates,
   });
+  const compileDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
   const isPreviewRunning =
     previewState.compileStatus === 'running' ||
     previewState.renderStatus === 'running' ||
@@ -565,12 +566,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </div>
           )}
 
-          {authoritativePreview?.compile.diagnostics?.length > 0 && (
+          {compileDiagnostics.length > 0 && (
             <ul
               className="space-y-1 text-xs"
               data-automation-id="invoice-designer-preview-compile-diagnostics-list"
             >
-              {authoritativePreview.compile.diagnostics.map((diagnostic, index) => (
+              {compileDiagnostics.map((diagnostic, index) => (
                 <li
                   key={`${diagnostic.raw}-${index}`}
                   className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900"

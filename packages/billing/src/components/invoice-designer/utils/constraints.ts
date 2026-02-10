@@ -47,8 +47,12 @@ export const isPairConstraintType = (value: DesignerConstraint['type']): value i
 export const isPairConstraint = (constraint: DesignerConstraint): constraint is PairConstraint =>
   isPairConstraintType(constraint.type);
 
-export const canNodeParticipateInPairConstraint = (node: Pick<DesignerNode, 'type'> | null | undefined) =>
-  Boolean(node) && !UNSUPPORTED_PAIR_CONSTRAINT_TYPES.has(node.type);
+export const canNodeParticipateInPairConstraint = (node: Pick<DesignerNode, 'type'> | null | undefined) => {
+  if (!node) {
+    return false;
+  }
+  return !UNSUPPORTED_PAIR_CONSTRAINT_TYPES.has(node.type);
+};
 
 export const normalizePairConstraintNodeIds = (firstId: string, secondId: string): [string, string] =>
   firstId <= secondId ? [firstId, secondId] : [secondId, firstId];

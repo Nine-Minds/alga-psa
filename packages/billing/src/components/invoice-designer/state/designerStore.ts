@@ -784,7 +784,7 @@ const normalizeAuthoredConstraint = (
 
   const validation = validatePairConstraintNodes(nodesById, constraint.nodes[0], constraint.nodes[1]);
   if (!validation.ok) {
-    return { error: validation.message };
+    return { error: (validation as { message: string }).message };
   }
 
   return {
@@ -1301,11 +1301,16 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
                 normalized.constraint.nodes[1]
               )
             : null;
-        const hasDuplicate = state.constraints.some((existing) =>
-          duplicatePairConstraintId
-            ? existing.id === duplicatePairConstraintId
-            : existing.type === 'aspect-ratio' && existing.nodeId === normalized.constraint.nodeId
-        );
+        const hasDuplicate = state.constraints.some((existing) => {
+          if (duplicatePairConstraintId) {
+            return existing.id === duplicatePairConstraintId;
+          }
+          return (
+            normalized.constraint.type === 'aspect-ratio' &&
+            existing.type === 'aspect-ratio' &&
+            existing.nodeId === normalized.constraint.nodeId
+          );
+        });
         if (hasDuplicate) {
           return {
             ...state,

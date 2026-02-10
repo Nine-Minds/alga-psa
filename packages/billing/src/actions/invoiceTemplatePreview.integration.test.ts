@@ -104,8 +104,6 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
     __previewCompileCacheTestUtils.clear();
     const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
     const compileResult = await compilePreviewAssemblyScript(
-      undefined as any,
-      { tenant: 'integration-test' } as any,
       {
         source: generated.source,
         sourceHash: generated.sourceHash,
@@ -143,8 +141,6 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
     expect(renderedFieldStyle?.borderTop).toBeUndefined();
 
     const actionResult = await runAuthoritativeInvoiceTemplatePreview(
-      undefined as any,
-      { tenant: 'integration-test' } as any,
       {
         workspace,
         invoiceData,

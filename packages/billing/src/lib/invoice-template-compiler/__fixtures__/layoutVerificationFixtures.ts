@@ -141,7 +141,7 @@ export const PASSING_LAYOUT_FIXTURE: LayoutVerificationFixture = {
         },
       },
     ],
-  },
+  } as unknown as LayoutElement,
   expectedMismatchConstraintIds: [],
 };
 
@@ -176,6 +176,6 @@ export const FAILING_LAYOUT_FIXTURE: LayoutVerificationFixture = {
         },
       },
     ],
-  },
+  } as unknown as LayoutElement,
   expectedMismatchConstraintIds: ['totals:x', 'totals:y', 'totals:width', 'totals:height'],
 };

@@ -103,7 +103,7 @@ describe('previewSessionState', () => {
       subtotal: 100,
       tax: 10,
       total: 110,
-    } as const;
+    };
 
     state = previewSessionReducer(state, { type: 'set-source', source: 'existing' });
     state = previewSessionReducer(state, { type: 'detail-load-success', payload: previousInvoice });

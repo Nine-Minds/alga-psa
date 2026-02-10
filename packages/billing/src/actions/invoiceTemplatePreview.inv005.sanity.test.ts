@@ -328,8 +328,6 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
     expect(mapped).not.toBeNull();
 
     const actionResult = await runAuthoritativeInvoiceTemplatePreview(
-      undefined as any,
-      { tenant: 'integration-test' } as any,
       {
         workspace,
         invoiceData: mapped,
@@ -357,4 +355,3 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
     expect(targetedContainmentMismatches).toHaveLength(0);
   }, 45000);
 });
-

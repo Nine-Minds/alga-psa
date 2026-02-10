@@ -17,7 +17,7 @@ const previewInvoice = {
   subtotal: 100,
   tax: 8,
   total: 108,
-} as const;
+};
 
 describe('previewStatus', () => {
   it('requires selected invoice id and mapped data for existing-source validity', () => {

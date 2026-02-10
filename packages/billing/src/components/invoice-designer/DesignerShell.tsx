@@ -385,8 +385,8 @@ export const DesignerShell: React.FC = () => {
     if (!referenceNode || !canNodeParticipateInPairConstraint(referenceNode)) {
       return 'Reference node is not available. Set a new reference node.';
     }
-    if (pairAuthoringValidation && !pairAuthoringValidation.ok) {
-      return pairAuthoringValidation.message;
+    if (pairAuthoringValidation && pairAuthoringValidation.ok === false) {
+      return (pairAuthoringValidation as { message: string }).message;
     }
     return null;
   }, [canUsePairConstraints, pairAuthoringValidation, referenceNode, referenceNodeId, selectedNode]);
@@ -683,12 +683,13 @@ export const DesignerShell: React.FC = () => {
             };
           }
           if (!selectedPathPlan.ok) {
+            const failedPlan = selectedPathPlan as { message: string; sectionId?: string; nextAction?: string };
             return {
               ok: false,
-              message: selectedPathPlan.message,
+              message: failedPlan.message,
               reason: 'selected-section-no-room',
-              sectionId: selectedPathPlan.sectionId,
-              nextAction: selectedPathPlan.nextAction,
+              sectionId: failedPlan.sectionId,
+              nextAction: failedPlan.nextAction,
             };
           }
           return {
@@ -711,12 +712,13 @@ export const DesignerShell: React.FC = () => {
         });
         if (forcePlan) {
           if (!forcePlan.ok) {
+            const failedPlan = forcePlan as { message: string; sectionId?: string; nextAction?: string };
             return {
               ok: false,
-              message: forcePlan.message,
+              message: failedPlan.message,
               reason: 'selected-section-no-room',
-              sectionId: forcePlan.sectionId,
-              nextAction: forcePlan.nextAction,
+              sectionId: failedPlan.sectionId,
+              nextAction: failedPlan.nextAction,
             };
           }
           return {
@@ -856,13 +858,14 @@ export const DesignerShell: React.FC = () => {
         selectedNodeIdOverride: selectedNodeIdForResolution,
       });
       if (!resolution.ok) {
+        const failedResolution = resolution as Extract<ComponentDropResolution, { ok: false }>;
         recordDropResult(false);
-        showDropFeedback('error', resolution.message);
-        if (resolution.reason === 'selected-section-no-room' && resolution.sectionId) {
+        showDropFeedback('error', failedResolution.message);
+        if (failedResolution.reason === 'selected-section-no-room' && failedResolution.sectionId) {
           showInsertBlockCallout({
-            sectionId: resolution.sectionId,
-            message: resolution.message,
-            nextAction: resolution.nextAction ?? 'Resize the selected section or choose another section.',
+            sectionId: failedResolution.sectionId,
+            message: failedResolution.message,
+            nextAction: failedResolution.nextAction ?? 'Resize the selected section or choose another section.',
           });
         }
         return false;
@@ -2028,7 +2031,7 @@ export const DesignerShell: React.FC = () => {
       }
       const validation = validatePairConstraintNodes(nodesById, referenceNodeId, selectedNodeId);
       if (!validation.ok) {
-        showDropFeedback('error', validation.message);
+        showDropFeedback('error', (validation as { message: string }).message);
         return;
       }
       const nextConstraint = buildPairConstraint(type, validation.orderedNodeIds[0], validation.orderedNodeIds[1]);
