@@ -122,7 +122,7 @@
   {
     "id": "F018",
     "description": "Fix dark submenu CSS variables in `.dark` block — change `--color-submenu-bg: #D0D5DD` to dark value (e.g. `#1f2937`), `--color-submenu-text: #000000` to light value (e.g. `#f5f5f5`), and verify submenu renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.9", "FR-4.3"]
   },
   {
