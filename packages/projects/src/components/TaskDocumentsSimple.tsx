@@ -433,17 +433,20 @@ export default function TaskDocumentsSimple({
 
   // Execute the actual drawer close (used after confirmation or when no unsaved changes)
   const executeDrawerClose = useCallback(() => {
-    // Mark as closing to hide the editor
-    setIsClosing(true);
     setShowUnsavedChangesDialog(false);
 
-    // Clear editor ref first to prevent cleanup issues
-    if (editorRef.current) {
-      editorRef.current = null;
-    }
+    // Mark as closing FIRST to unmount the editor before any other state changes
+    setIsClosing(true);
 
-    // Small delay to allow editor cleanup
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure React processes the isClosing state
+    // before we close the drawer, preventing editor recreation race conditions
+    requestAnimationFrame(() => {
+      // Clear editor ref
+      if (editorRef.current) {
+        editorRef.current = null;
+      }
+
+      // Now close the drawer and reset all state
       setIsDrawerOpen(false);
       setIsEditMode(false);
       setIsCreatingNew(false);
@@ -452,8 +455,12 @@ export default function TaskDocumentsSimple({
       setHasContentChanged(false);
       setDocumentName('');
       setNewDocumentName('');
-      setIsClosing(false);
-    }, 100);
+
+      // Reset isClosing after a frame to ensure clean state for next open
+      requestAnimationFrame(() => {
+        setIsClosing(false);
+      });
+    });
   }, []);
 
   // Handle drawer close with unsaved changes check
@@ -1009,8 +1016,7 @@ export default function TaskDocumentsSimple({
         cancelLabel="Cancel"
       />
 
-      {/* Unsaved changes confirmation dialog - portaled to document.body to escape drawer's stacking context */}
-      {/* InsideDialogContext ensures z-[70] rendering, portal ensures it's not trapped by drawer's transform */}
+      {/* Unsaved changes confirmation dialog - portaled to document.body with z-[70] to appear above drawer */}
       {typeof document !== 'undefined' && createPortal(
         <InsideDialogContext.Provider value={true}>
           <ConfirmationDialog

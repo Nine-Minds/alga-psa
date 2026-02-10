@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -56,7 +56,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
-import { useSchedulingCallbacks, useUnsavedChanges } from '@alga-psa/ui/context';
+import { useSchedulingCallbacks, useUnsavedChanges, useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
@@ -198,6 +198,9 @@ export default function TaskForm({
   const { openDrawer, closeDrawer } = useDrawer();
   const { renderPrioritySelect, deleteTicket } = useTicketIntegration();
   const { hasAnyUnsavedChanges } = useUnsavedChanges();
+
+  // Stable ID for unsaved changes registration
+  const formInstanceId = useId();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -780,6 +783,82 @@ export default function TaskForm({
 
     return false;
   };
+
+  // Memoized version of hasChanges for context registration
+  // Note: This doesn't include ref-based checks (like dependencies), but those are caught by hasChanges()
+  const hasFormChanges = useMemo((): boolean => {
+    if (mode === 'create') {
+      if (taskName.trim() !== '') return true;
+      if (description.trim() !== '') return true;
+      if (assignedUser !== null && assignedUser !== currentUserId) return true;
+      if (checklistItems.length > 0) return true;
+      if (estimatedHours > 0) return true;
+      if (actualHours > 0) return true;
+      if (dueDate !== undefined) return true;
+      if (tempTaskResources.length > 0) return true;
+      if (pendingTicketLinks.length > 0) return true;
+      if (selectedPriorityId !== null) return true;
+      if (selectedTaskType !== initialTaskType) return true;
+      if (selectedServiceId !== null) return true;
+      if (pendingTags.length > 0) return true;
+      if (pendingDocuments.length > 0) return true;
+      return false;
+    }
+
+    if (!task) return false;
+
+    const normalizeString = (val: string | null | undefined): string => val || '';
+    const normalizeNullable = <T,>(val: T | null | undefined): T | null => val ?? null;
+
+    if (taskName !== (task.task_name || '')) return true;
+    if (normalizeString(description) !== normalizeString(task.description)) return true;
+    if (selectedPhaseId !== task.phase_id) return true;
+    if (selectedStatusId !== task.project_status_mapping_id) return true;
+    if (estimatedHours !== (Number(task.estimated_hours) / 60 || 0)) return true;
+    if (actualHours !== (Number(task.actual_hours) / 60 || 0)) return true;
+    if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
+    if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
+    if (normalizeNullable(selectedServiceId) !== normalizeNullable(task.service_id)) return true;
+
+    if (checklistItems.length !== (task.checklist_items?.length ?? 0)) return true;
+    for (let i = 0; i < checklistItems.length; i++) {
+      const current = checklistItems[i];
+      const original = task.checklist_items?.[i];
+      if (!original) return true;
+      if (current.item_name !== original.item_name) return true;
+      if (current.completed !== original.completed) return true;
+    }
+
+    if (task.task_id && resourcesLoaded) {
+      if (taskResources.length !== initialTaskResources.length) return true;
+      const currentUserIds = new Set(taskResources.map(r => r.additional_user_id));
+      const initialUserIds = new Set(initialTaskResources.map(r => r.additional_user_id));
+      if (currentUserIds.size !== initialUserIds.size) return true;
+      for (const id of currentUserIds) {
+        if (!initialUserIds.has(id)) return true;
+      }
+    }
+
+    const currentTicketIds = new Set(pendingTicketLinks.map((link): string => link.ticket_id));
+    const originalTicketIds = new Set(task.ticket_links?.map((link): string => link.ticket_id) || []);
+    if (currentTicketIds.size !== originalTicketIds.size) return true;
+    for (const id of currentTicketIds) {
+      if (!originalTicketIds.has(id)) return true;
+    }
+
+    if (sessionAddedDocuments.length > 0) return true;
+
+    return false;
+  }, [
+    mode, task, taskName, description, assignedUser, currentUserId, checklistItems,
+    estimatedHours, actualHours, dueDate, tempTaskResources, pendingTicketLinks,
+    selectedPriorityId, selectedTaskType, initialTaskType, selectedServiceId,
+    pendingTags, pendingDocuments, selectedPhaseId, selectedStatusId,
+    taskResources, initialTaskResources, resourcesLoaded, sessionAddedDocuments
+  ]);
+
+  // Register form changes with the unsaved changes context for navigation protection
+  useRegisterUnsavedChanges(`task-form-${task?.task_id || formInstanceId}`, hasFormChanges);
 
   const handleCancelClick = (e?: React.MouseEvent) => {
     if (e) {

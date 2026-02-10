@@ -65,11 +65,14 @@ const Drawer = ({
       if (!open) onClose(); // Ensure onClose is called when dialog is closed
     }}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          className={`fixed inset-0 bg-black/50 transition-opacity duration-300 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${isInDrawer ? 'z-[60]' : 'z-50'}`}
-          style={isInsideDialog ? { pointerEvents: 'auto' } : undefined}
-          onClick={() => onClose()} // Explicitly handle overlay clicks
+        {/* Custom overlay that always renders and handles clicks, even for non-modal dialogs */}
+        <div
+          className={`fixed inset-0 bg-black/50 transition-opacity duration-300 ${isInDrawer ? 'z-[60]' : 'z-50'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
+          onClick={onClose}
+          aria-hidden="true"
         />
+        <Dialog.Overlay className="sr-only" />
         <Dialog.Content
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
