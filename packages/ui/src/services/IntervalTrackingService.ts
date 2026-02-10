@@ -277,7 +277,7 @@ export class IntervalTrackingService {
 
         const endTime = new Date();
         const startTime = new Date(interval.startTime);
-        const duration = endTime.getTime() - startTime.getTime();
+        const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
 
         interval.endTime = endTime.toISOString();
         interval.duration = duration;
@@ -339,7 +339,7 @@ export class IntervalTrackingService {
         const now = new Date();
         for (const interval of open) {
           const startTime = new Date(interval.startTime);
-          const duration = now.getTime() - startTime.getTime();
+          const duration = Math.floor((now.getTime() - startTime.getTime()) / 1000);
           interval.endTime = now.toISOString();
           interval.duration = duration;
           interval.autoClosed = true;
