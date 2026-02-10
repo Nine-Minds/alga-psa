@@ -6,14 +6,13 @@ import { getCurrentTenant, getTenantBrandingByDomain } from '@alga-psa/tenancy/a
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
-import { Theme } from '@radix-ui/themes';
 import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
+import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { TagProvider } from '@alga-psa/tags/context';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { cookies, headers } from 'next/headers';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
-import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
 
@@ -57,23 +56,21 @@ async function MainContent({ children }: { children: React.ReactNode }) {
   const tenant = await getCurrentTenant();
   return (
     <TenantProvider tenant={tenant}>
-      <MantineProvider>
-        <AppThemeProvider>
-          <Theme>
-            <DynamicExtensionProvider>
-              <ClientUIStateProvider
-                initialPageState={{
-                  id: 'msp-application',
-                  title: 'MSP Application',
-                  components: []
-                }}
-              >
-                {children}
-              </ClientUIStateProvider>
-            </DynamicExtensionProvider>
-          </Theme>
-        </AppThemeProvider>
-      </MantineProvider>
+      <AppThemeProvider>
+        <ThemeBridge>
+          <DynamicExtensionProvider>
+            <ClientUIStateProvider
+              initialPageState={{
+                id: 'msp-application',
+                title: 'MSP Application',
+                components: []
+              }}
+            >
+              {children}
+            </ClientUIStateProvider>
+          </DynamicExtensionProvider>
+        </ThemeBridge>
+      </AppThemeProvider>
     </TenantProvider>
   );
 }

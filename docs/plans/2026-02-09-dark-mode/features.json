@@ -44,13 +44,13 @@
   {
     "id": "F006",
     "description": "Pass `appearance` prop (light/dark) to Radix UI `<Theme>` component based on active theme",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.6"]
   },
   {
     "id": "F007",
     "description": "Pass `forceColorScheme` or equivalent color scheme prop to `<MantineProvider>` based on active theme",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.7"]
   },
   {
