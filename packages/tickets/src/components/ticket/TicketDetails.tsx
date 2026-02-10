@@ -1590,7 +1590,7 @@ const handleClose = () => {
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
-                                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" id="ticket-bundle-child-banner">
+                                    <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-900 dark:text-amber-200" id="ticket-bundle-child-banner">
                                         This ticket is bundled under{' '}
                                         <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
                                             {bundle.masterTicket.ticket_number}

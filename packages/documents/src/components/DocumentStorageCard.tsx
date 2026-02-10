@@ -518,7 +518,7 @@ function DocumentStorageCardComponent({
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
             <div
                 ref={cardRef}
-                className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
+                className={`bg-white dark:bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
                 }`}
                 onClick={(isContentDocument || !document.file_id) && onClick ? (e) => {
                     // Prevent click event if it's coming from the delete button
@@ -767,7 +767,7 @@ function DocumentStorageCardComponent({
         {/* Full Size View Modal */}
         {showFullSizeModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowFullSizeModal(false)}>
-                <div className={`relative bg-white rounded-lg shadow-xl overflow-hidden ${
+                <div className={`relative bg-white dark:bg-[rgb(var(--color-card))] rounded-lg shadow-xl overflow-hidden ${
                     document.mime_type === 'application/pdf' 
                         ? 'w-[95vw] max-w-6xl h-[90vh]' 
                         : 'max-w-[90vw] max-h-[90vh]'

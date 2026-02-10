@@ -712,8 +712,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
           {/* Unsaved changes alert banner */}
           {hasUnsavedChanges && (
-            <Alert className="bg-amber-50 border-amber-200 mb-4">
-              <AlertDescription className="text-amber-800 flex items-center gap-2">
+            <Alert variant="warning" className="mb-4">
+              <AlertDescription className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 <span>You have unsaved changes. Click &quot;Save Changes&quot; to apply them.</span>
               </AlertDescription>

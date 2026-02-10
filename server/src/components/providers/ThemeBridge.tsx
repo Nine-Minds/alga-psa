@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MantineProvider } from '@mantine/core';
 import { Theme } from '@radix-ui/themes';
 import { useTheme } from 'next-themes';
@@ -12,12 +12,31 @@ type ThemeBridgeProps = {
 
 export function ThemeBridge({ children }: ThemeBridgeProps) {
   const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
   const appearance = resolvedTheme === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', appearance);
   }, [appearance]);
+
+  // Until next-themes has resolved, hide content to prevent light-mode flash.
+  // The body background is handled by CSS vars that next-themes' blocking script
+  // already set via the .dark/.light class on <html>.
+  if (!mounted) {
+    return (
+      <div style={{ visibility: 'hidden' }}>
+        <MantineProvider forceColorScheme="light">
+          <Theme appearance="light">
+            {children}
+          </Theme>
+        </MantineProvider>
+      </div>
+    );
+  }
 
   return (
     <MantineProvider forceColorScheme={appearance}>

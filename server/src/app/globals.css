@@ -130,6 +130,26 @@ body {
     background-color: rgb(var(--color-border-200)) !important;
 }
 
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-slate-50:hover {
+    background-color: rgb(var(--color-border-50)) !important;
+}
+
+.dark .hover\:bg-gray-100:hover,
+.dark .hover\:bg-slate-100:hover {
+    background-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .hover\:bg-gray-200:hover,
+.dark .hover\:bg-slate-200:hover {
+    background-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark .focus\:bg-gray-100:focus,
+.dark .focus\:bg-slate-100:focus {
+    background-color: rgb(var(--color-border-100)) !important;
+}
+
 .dark .text-gray-900,
 .dark .text-slate-900 {
     color: rgb(var(--color-text-900)) !important;
@@ -358,14 +378,14 @@ body {
     --color-destructive-foreground: 254 226 226; /* red-100 */
 
     /* Sidebar Colors  */
-    --color-sidebar-bg: #1b1a1a;
+    --color-sidebar-bg: #0f172a;
     --color-sidebar-text: #f5f5f5;
-    --color-sidebar-hover: #808080;
-    --color-sidebar-icon: #909090;
+    --color-sidebar-hover: #1e293b;
+    --color-sidebar-icon: #94a3b8;
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: #1f2937;
+    --color-submenu-bg: #1e293b;
     --color-submenu-text: #f5f5f5;
     --color-submenu-hover: #808080;
     --color-submenu-icon: #909090;
@@ -869,6 +889,23 @@ body {
 
 .dark .rbc-today {
   background-color: rgb(var(--color-border-100));
+}
+
+.dark .rbc-timeslot-group,
+.dark .rbc-time-slot,
+.dark .rbc-day-slot .rbc-time-slot,
+.dark .rbc-time-column,
+.dark .rbc-time-content,
+.dark .rbc-time-content > * + * > *,
+.dark .rbc-time-view,
+.dark .rbc-allday-cell,
+.dark .rbc-time-header.rbc-overflowing,
+.dark .rbc-time-header-content {
+  border-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .rbc-day-slot::after {
+  background: rgb(var(--color-border-100)) !important;
 }
 
 /* Tiptap / ProseMirror dark background */

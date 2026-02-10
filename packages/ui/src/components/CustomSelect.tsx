@@ -234,7 +234,7 @@ const CustomSelect = ({
         <RadixSelect.Portal>
           <RadixSelect.Content
             className={`
-              overflow-hidden bg-background rounded-md shadow-lg pointer-events-auto
+              overflow-hidden bg-background dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg pointer-events-auto
               border border-border mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
               [&[data-side=top]]:mb-2 [&[data-side=bottom]]:mt-2
               ${customStyles?.content || ''}
@@ -245,7 +245,7 @@ const CustomSelect = ({
             onCloseAutoFocus={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.stopPropagation()}
           >
-            <RadixSelect.ScrollUpButton className="flex items-center justify-center h-6 bg-background text-foreground cursor-default">
+            <RadixSelect.ScrollUpButton className="flex items-center justify-center h-6 bg-background dark:bg-[rgb(var(--color-card))] text-foreground cursor-default">
               <ChevronDown className="w-4 h-4 rotate-180" />
             </RadixSelect.ScrollUpButton>
             
@@ -304,7 +304,7 @@ const CustomSelect = ({
               ))}
             </RadixSelect.Viewport>
 
-            <RadixSelect.ScrollDownButton className="flex items-center justify-center h-6 bg-background text-foreground cursor-default">
+            <RadixSelect.ScrollDownButton className="flex items-center justify-center h-6 bg-background dark:bg-[rgb(var(--color-card))] text-foreground cursor-default">
               <ChevronDown className="w-4 h-4" />
             </RadixSelect.ScrollDownButton>
           </RadixSelect.Content>

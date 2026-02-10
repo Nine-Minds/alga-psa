@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket } from '../actions/ticketActions';
 import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
@@ -634,8 +635,8 @@ export function QuickAddTicket({
       >
         <DialogContent>
           {isLoading ? (
-            <div className="flex items-center justify-center p-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
+            <div className="p-6">
+              <Spinner size="sm" />
             </div>
           ) : (
             <>

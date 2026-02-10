@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { useTheme } from 'next-themes';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
@@ -32,6 +33,8 @@ function RichTextViewerInternal({
   content,
   className = '',
 }: RichTextViewerProps) {
+  const { resolvedTheme } = useTheme();
+  const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
   const parsedContent = (() => {
     let blocks: PartialBlock[] = [];
 
@@ -161,12 +164,12 @@ function RichTextViewerInternal({
 
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
-      <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
+      <div className="w-full bg-white dark:bg-transparent rounded-lg overflow-auto min-w-0">
         <BlockNoteView
           key={shouldRemount ? contentKey : 'stable'}
           editor={editor}
           editable={false}
-          theme="light"
+          theme={blockNoteTheme}
           className="w-full min-w-0"
           style={{
             overflowWrap: 'break-word',

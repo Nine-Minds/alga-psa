@@ -1,8 +1,9 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { generateEntityColor } from '../../lib/colorUtils';
+import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
+import { useTheme } from 'next-themes';
 
 interface TagGridProps {
   tags: string[] | ITag[];
@@ -17,6 +18,8 @@ export const TagGrid: React.FC<TagGridProps> = ({
   onTagSelect,
   className = ''
 }) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   return (
     <div className={`grid grid-cols-3 gap-2 p-2 max-h-60 overflow-y-auto ${className}`}>
       {tags.map((tag, index): React.JSX.Element => {
@@ -28,12 +31,15 @@ export const TagGrid: React.FC<TagGridProps> = ({
         let textColor: string;
         
         if (typeof tag !== 'string' && tag.background_color && tag.text_color) {
-          backgroundColor = tag.background_color;
-          textColor = tag.text_color;
+          const raw = { background: tag.background_color, text: tag.text_color };
+          const adapted = isDark ? adaptColorsForDarkMode(raw) : raw;
+          backgroundColor = adapted.background;
+          textColor = adapted.text;
         } else {
-          const colors = generateEntityColor(tagText);
-          backgroundColor = colors.background;
-          textColor = colors.text;
+          const raw = generateEntityColor(tagText);
+          const adapted = isDark ? adaptColorsForDarkMode(raw) : raw;
+          backgroundColor = adapted.background;
+          textColor = adapted.text;
         }
         
         return (

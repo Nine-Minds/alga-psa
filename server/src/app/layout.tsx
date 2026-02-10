@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
-import { Toaster } from 'react-hot-toast';
+import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
 import { getCurrentTenant, getTenantBrandingByDomain } from '@alga-psa/tenancy/actions';
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
@@ -69,6 +69,7 @@ async function MainContent({ children }: { children: React.ReactNode }) {
               {children}
             </ClientUIStateProvider>
           </DynamicExtensionProvider>
+          <ThemedToaster />
         </ThemeBridge>
       </AppThemeProvider>
     </TenantProvider>
@@ -98,7 +99,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
@@ -113,7 +114,6 @@ export default async function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <PostHogProvider>
            <MainContent>{children}</MainContent>
-          <Toaster position="top-right" />
         </PostHogProvider>
       </body>
     </html>
