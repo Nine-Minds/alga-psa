@@ -275,7 +275,7 @@ jobs:
           if [ -z "$SETUP_CONTAINER_ID" ]; then
             echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
             docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
-            echo "::set-output name=status::failure"
+            echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
           echo "Monitoring Setup Container ID: $SETUP_CONTAINER_ID"
@@ -304,12 +304,12 @@ jobs:
               echo "Reported Setup Exit Code: $SETUP_EXIT_CODE"
               if [ "$SETUP_EXIT_CODE" -eq 0 ]; then
                 echo "Setup service completed successfully."
-                echo "::set-output name=status::success"
+                echo "status=success" >> $GITHUB_OUTPUT
                 exit 0
               else
                 echo "Setup service failed with exit code $SETUP_EXIT_CODE."
                 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
-                echo "::set-output name=status::failure"
+                echo "status=failure" >> $GITHUB_OUTPUT
                 exit 1
               fi
             fi
@@ -330,12 +330,12 @@ jobs:
 
                     if [ "$SETUP_EXIT_CODE_LOG_CHECK" -eq 0 ]; then
                         echo "Setup service completed successfully after log check (Exit Code: $SETUP_EXIT_CODE_LOG_CHECK)."
-                        echo "::set-output name=status::success"
+                        echo "status=success" >> $GITHUB_OUTPUT
                         exit 0 # Successful exit from the script
                     else
                         echo "Setup service showed completion log but exited with code $SETUP_EXIT_CODE_LOG_CHECK."
                         docker-compose -p alga-e2e-test logs setup
-                        echo "::set-output name=status::failure"
+                        echo "status=failure" >> $GITHUB_OUTPUT
                         exit 1 # Failed exit from the script
                     fi
                 fi
@@ -347,7 +347,7 @@ jobs:
           done
           echo "Timeout: Setup service did not complete within the allocated time."
           docker-compose -p alga-e2e-test logs
-          echo "::set-output name=status::failure"
+          echo "status=failure" >> $GITHUB_OUTPUT
           exit 1
         shell: bash
 
@@ -447,8 +447,12 @@ jobs:
           fi
 
           echo "Successfully extracted credentials."
-          echo "::set-output name=e2e_user_email::$USER_EMAIL"
-          echo "::set-output name=e2e_user_password::$USER_PASSWORD"
+          echo "e2e_user_email=$USER_EMAIL" >> $GITHUB_OUTPUT
+          # Use a delimiter to safely pass passwords with special characters
+          EOF_DELIM=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "e2e_user_password<<$EOF_DELIM" >> $GITHUB_OUTPUT
+          echo "$USER_PASSWORD" >> $GITHUB_OUTPUT
+          echo "$EOF_DELIM" >> $GITHUB_OUTPUT
           # Mask the password in logs
           echo "::add-mask::$USER_PASSWORD"
         shell: bash
@@ -699,12 +703,10 @@ jobs:
       - name: Run Playwright E2E tests
         if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
         working-directory: ./e2e-tests
-        run: |
-          # Pass credentials as environment variables to Playwright tests
-          # Ensure variables are properly quoted to handle special characters
-          E2E_USER_EMAIL="${{ steps.capture_creds.outputs.e2e_user_email }}" \
-          E2E_USER_PASSWORD="${{ steps.capture_creds.outputs.e2e_user_password }}" \
-          npx playwright test
+        env:
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: npx playwright test
         shell: bash
 
       - name: Collect all container logs on failure
