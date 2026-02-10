@@ -419,7 +419,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         variant="default"
         size="icon"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute -right-3 top-12 transform w-6 h-6 rounded-full flex items-center justify-center"
+        className="absolute -right-3 top-12 z-10 transform w-6 h-6 rounded-full flex items-center justify-center"
         aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
       >
         <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
