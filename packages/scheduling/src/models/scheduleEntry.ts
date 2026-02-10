@@ -18,6 +18,7 @@ import type {
   IScheduleEntry,
   IRecurrencePattern,
   IEditScope,
+  IHoliday,
   CreateScheduleEntryOptions,
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -150,6 +151,24 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting recurring entries');
     }
 
+    // Load holidays for the tenant (unified holidays table - shared with SLA system)
+    // Include global holidays (schedule_id IS NULL) that apply to all schedules
+    const startDateStr = start.toISOString().split('T')[0];
+    const endDateStr = end.toISOString().split('T')[0];
+    let holidays: IHoliday[] = [];
+    try {
+      holidays = await knexOrTrx('holidays')
+        .where('tenant', tenant)
+        .whereNull('schedule_id') // Only global holidays (not schedule-specific SLA holidays)
+        .where(function () {
+          this.whereBetween('holiday_date', [startDateStr, endDateStr])
+            .orWhere('is_recurring', true);
+        })
+        .select('*') as IHoliday[];
+    } catch {
+      // holidays table may not exist yet — proceed without holiday filtering
+    }
+
     // Get master recurring entries that might have occurrences in the range
     const masterEntries = await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
@@ -167,7 +186,7 @@ const ScheduleEntry = {
     if (masterEntries.length === 0) return [];
 
     // Only return virtual instances — master entries are already included in getAll()
-    return ScheduleEntry.getRecurringEntriesWithAssignments(knexOrTrx, tenant, masterEntries, start, end);
+    return ScheduleEntry.getRecurringEntriesWithAssignments(knexOrTrx, tenant, masterEntries, start, end, holidays);
   },
 
   /**
@@ -178,7 +197,8 @@ const ScheduleEntry = {
     tenant: string,
     entries: IScheduleEntry[],
     start: Date,
-    end: Date
+    end: Date,
+    holidays: IHoliday[] = []
   ): Promise<IScheduleEntry[]> => {
     const result: IScheduleEntry[] = [];
 
@@ -213,7 +233,7 @@ const ScheduleEntry = {
           entry.recurrence_pattern.endDate && entry.recurrence_pattern.endDate < end
             ? entry.recurrence_pattern.endDate
             : end;
-        const occurrences = generateOccurrences(entry, start, effectiveEnd);
+        const occurrences = generateOccurrences(entry, start, effectiveEnd, { holidays });
 
         // Create virtual entries for each occurrence
         const duration =
