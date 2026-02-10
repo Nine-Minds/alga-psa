@@ -69,7 +69,8 @@ function errorResponse(error: unknown, context: string): NextResponse {
     }
   }
 
-  return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+  const detail = error instanceof Error ? error.message : String(error);
+  return NextResponse.json({ success: false, error: 'Internal server error', detail }, { status: 500 });
 }
 
 /**
