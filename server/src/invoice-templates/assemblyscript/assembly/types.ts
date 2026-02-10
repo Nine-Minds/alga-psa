@@ -62,6 +62,11 @@ export abstract class LayoutElement {
 
 @json
 export class ElementStyle {
+  display: string | null = null;
+  flexDirection: string | null = null;
+  justifyContent: string | null = null;
+  alignItems: string | null = null;
+  gap: string | null = null;
   width: string | null = null;
   height: string | null = null;
   textAlign: string | null = null;
@@ -75,13 +80,40 @@ export class ElementStyle {
   paddingBottom: string | null = null;
   borderBottom: string | null = null;
   borderTop: string | null = null;
+  borderRight: string | null = null;
   border: string | null = null;
+  borderRadius: string | null = null;
   marginBottom: string | null = null;
 
   toJsonString(): string {
     let json = "{";
     let isFirst = true;
 
+    if (this.display != null) {
+      if (!isFirst) json += ", ";
+      json += `"display": "${this.display!}"`;
+      isFirst = false;
+    }
+    if (this.flexDirection != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexDirection": "${this.flexDirection!}"`;
+      isFirst = false;
+    }
+    if (this.justifyContent != null) {
+      if (!isFirst) json += ", ";
+      json += `"justifyContent": "${this.justifyContent!}"`;
+      isFirst = false;
+    }
+    if (this.alignItems != null) {
+      if (!isFirst) json += ", ";
+      json += `"alignItems": "${this.alignItems!}"`;
+      isFirst = false;
+    }
+    if (this.gap != null) {
+      if (!isFirst) json += ", ";
+      json += `"gap": "${this.gap!}"`;
+      isFirst = false;
+    }
     if (this.width != null) {
       if (!isFirst) json += ", ";
       json += `"width": "${this.width!}"`;
@@ -147,9 +179,19 @@ export class ElementStyle {
       json += `"borderTop": "${this.borderTop!}"`;
       isFirst = false;
     }
+    if (this.borderRight != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderRight": "${this.borderRight!}"`;
+      isFirst = false;
+    }
     if (this.border != null) {
       if (!isFirst) json += ", ";
       json += `"border": "${this.border!}"`;
+      isFirst = false;
+    }
+    if (this.borderRadius != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderRadius": "${this.borderRadius!}"`;
       isFirst = false;
     }
     if (this.marginBottom != null) {

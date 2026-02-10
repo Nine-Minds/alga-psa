@@ -127,6 +127,66 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).toContain('Amount Due: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")');
   });
 
+  it('emits section, field, and table border styles from GUI metadata', () => {
+    const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
+    const pageNode = createNode('page', 'page', 'doc', {
+      childIds: ['section-strong', 'field-none', 'field-underline', 'table-plain', 'table-grid'],
+    });
+    const sectionNode = createNode('section-strong', 'section', 'page', {
+      metadata: { sectionBorderStyle: 'strong' },
+    });
+    const fieldNoneNode = createNode('field-none', 'field', 'page', {
+      metadata: { bindingKey: 'invoice.poNumber', fieldBorderStyle: 'none' },
+    });
+    const fieldUnderlineNode = createNode('field-underline', 'field', 'page', {
+      metadata: { bindingKey: 'invoice.issueDate', fieldBorderStyle: 'underline' },
+    });
+    const plainTableNode = createNode('table-plain', 'table', 'page', {
+      metadata: {
+        tableOuterBorder: false,
+        tableRowDividers: false,
+        tableColumnDividers: false,
+        columns: [
+          { header: 'Description', key: 'item.description', type: 'text' },
+          { header: 'Amount', key: 'item.total', type: 'currency' },
+        ],
+      },
+    });
+    const gridTableNode = createNode('table-grid', 'table', 'page', {
+      metadata: {
+        tableOuterBorder: true,
+        tableRowDividers: true,
+        tableColumnDividers: true,
+        columns: [
+          { header: 'Description', key: 'item.description', type: 'text' },
+          { header: 'Qty', key: 'item.quantity', type: 'number' },
+        ],
+      },
+    });
+    const workspace = createWorkspace([
+      documentNode,
+      pageNode,
+      sectionNode,
+      fieldNoneNode,
+      fieldUnderlineNode,
+      plainTableNode,
+      gridTableNode,
+    ]);
+
+    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
+
+    expect(generated.source).toContain('const nodeStyle = ensureElementStyle(node);');
+    expect(generated.source).toContain('nodeStyle.border = "1px solid #94a3b8";');
+    expect(generated.source).toContain('nodeStyle.borderRadius = "6px";');
+    expect(generated.source).toContain('nodeStyle.borderBottom = "1px solid #cbd5e1";');
+    expect(generated.source).toContain('headerRowStyle.borderBottom = "0px";');
+    expect(generated.source).toContain('rowStyle.borderBottom = "0px";');
+    expect(generated.source).toContain('nodeStyle.border = "0px";');
+    expect(generated.source).toContain('headerCell0Style.borderRight = "1px solid #e2e8f0";');
+    expect(generated.source).toContain('rowCell0Style.borderRight = "1px solid #e2e8f0";');
+    expect(generated.source).toContain('rowStyle.borderBottom = "1px solid #e2e8f0";');
+  });
+
   it('infers common invoice bindings from node names when metadata binding keys are missing', () => {
     const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
     const pageNode = createNode('page', 'page', 'doc', { childIds: ['field-1', 'text-from', 'text-client'] });
@@ -241,12 +301,20 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).toContain('function applyGeneratedLayoutStyle');
     expect(generated.source).toContain('style.marginLeft = x.toString() + "px";');
     expect(generated.source).not.toContain('style.paddingLeft = x.toString() + "px";');
+    expect(generated.source).toContain('style.display = "flex";');
+    expect(generated.source).toContain('style.justifyContent = "space-between";');
+    expect(generated.source).toContain('style.alignItems = "center";');
+    expect(generated.source).toContain('style.gap = gap.toString() + "px";');
     expect(generated.source).toContain('style.paddingRight = px;');
     expect(generated.source).toContain('style.height = height.toString() + "px";');
     expect(generated.source).not.toContain('style.borderTop = height.toString() + "px solid transparent";');
     expect(generated.source).toContain('layout-mode:flex; sizing:hug');
-    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 640, 300, 32, 48, 14, 20, "center", "space-between")');
-    expect(generated.source).toContain('applyGeneratedLayoutStyle(node, 320, 48, -8, -4, 0, 0, "start", "start")');
+    expect(generated.source).toContain(
+      'applyGeneratedLayoutStyle(node, 640, 300, 32, 48, 14, 20, "center", "space-between", "flex", "column", "hug")'
+    );
+    expect(generated.source).toContain(
+      'applyGeneratedLayoutStyle(node, 320, 48, 0, 0, 0, 0, "start", "start", "canvas", "column", "fixed")'
+    );
   });
 
   it('matches deterministic golden snapshots for representative design fixtures', () => {

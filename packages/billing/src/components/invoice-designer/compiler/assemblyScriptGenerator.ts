@@ -26,6 +26,21 @@ const escapeSourceString = (value: string): string =>
     .replace(/\n/g, '\\n');
 
 const makeNodeSymbol = (nodeId: string) => `createNode_${nodeId.replace(/[^A-Za-z0-9_]/g, '_')}`;
+const INVOICE_BORDER_SUBTLE = '1px solid #e2e8f0';
+const INVOICE_BORDER_LIGHT = '1px solid #cbd5e1';
+const INVOICE_BORDER_STRONG = '1px solid #94a3b8';
+
+type SectionBorderStyle = 'none' | 'light' | 'strong';
+type FieldBorderStyle = 'none' | 'underline' | 'box';
+type TableBorderConfig = {
+  outer: boolean;
+  rowDividers: boolean;
+  columnDividers: boolean;
+};
+type SectionBorderCss = {
+  border: string;
+  borderRadius: string;
+};
 
 const createDeterministicSourceHash = (value: string): string => {
   let hash = 2166136261;
@@ -256,6 +271,39 @@ const resolveFieldFormat = (node: InvoiceDesignerIrTreeNode, fallback: 'text' | 
   return fallback;
 };
 
+const resolveSectionBorderStyle = (metadata: Record<string, unknown>): SectionBorderStyle => {
+  const candidate = asTrimmedString(metadata.sectionBorderStyle ?? metadata.sectionBorder).toLowerCase();
+  if (candidate === 'none' || candidate === 'strong') {
+    return candidate;
+  }
+  return 'light';
+};
+
+const resolveSectionBorderCss = (metadata: Record<string, unknown>): SectionBorderCss => {
+  const style = resolveSectionBorderStyle(metadata);
+  if (style === 'none') {
+    return { border: '0px', borderRadius: '0px' };
+  }
+  if (style === 'strong') {
+    return { border: INVOICE_BORDER_STRONG, borderRadius: '6px' };
+  }
+  return { border: INVOICE_BORDER_LIGHT, borderRadius: '4px' };
+};
+
+const resolveFieldBorderStyle = (metadata: Record<string, unknown>): FieldBorderStyle => {
+  const candidate = asTrimmedString(metadata.fieldBorderStyle).toLowerCase();
+  if (candidate === 'none' || candidate === 'underline') {
+    return candidate;
+  }
+  return 'underline';
+};
+
+const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => ({
+  outer: metadata.tableOuterBorder !== false,
+  rowDividers: metadata.tableRowDividers !== false,
+  columnDividers: metadata.tableColumnDividers === true,
+});
+
 const resolveTotalBindingFallback = (node: InvoiceDesignerIrTreeNode): string => {
   if (node.type === 'subtotal') return 'invoice.subtotal';
   if (node.type === 'tax') return 'invoice.tax';
@@ -298,26 +346,7 @@ const resolveNormalizedMarginLeft = (
   if (!parent || parent.layout?.mode !== 'flex') {
     return rawX;
   }
-
-  const parentPadding = Math.max(0, Math.round(parent.layout?.padding ?? 0));
-  if (parent.layout.direction === 'column') {
-    return rawX - parentPadding;
-  }
-
-  const siblingIds = parent.childIds;
-  const siblingIndex = siblingIds.indexOf(node.id);
-  if (siblingIndex <= 0) {
-    return rawX - parentPadding;
-  }
-
-  const previousSiblingId = siblingIds[siblingIndex - 1];
-  const previousSibling = nodesById.get(previousSiblingId);
-  if (!previousSibling) {
-    return rawX - parentPadding;
-  }
-
-  const previousSiblingRight = Math.round(previousSibling.position.x) + Math.round(previousSibling.size.width);
-  return rawX - previousSiblingRight;
+  return 0;
 };
 
 const resolveNormalizedMarginTop = (
@@ -333,26 +362,7 @@ const resolveNormalizedMarginTop = (
   if (!parent || parent.layout?.mode !== 'flex') {
     return rawY;
   }
-
-  const parentPadding = Math.max(0, Math.round(parent.layout?.padding ?? 0));
-  if (parent.layout.direction === 'row') {
-    return rawY - parentPadding;
-  }
-
-  const siblingIds = parent.childIds;
-  const siblingIndex = siblingIds.indexOf(node.id);
-  if (siblingIndex <= 0) {
-    return rawY - parentPadding;
-  }
-
-  const previousSiblingId = siblingIds[siblingIndex - 1];
-  const previousSibling = nodesById.get(previousSiblingId);
-  if (!previousSibling) {
-    return rawY - parentPadding;
-  }
-
-  const previousSiblingBottom = Math.round(previousSibling.position.y) + Math.round(previousSibling.size.height);
-  return rawY - previousSiblingBottom;
+  return 0;
 };
 
 const resolveLayoutStyleArgs = (
@@ -368,7 +378,8 @@ const resolveLayoutStyleArgs = (
   align: node.layout?.align ?? 'start',
   justify: node.layout?.justify ?? 'start',
   mode: node.layout?.mode ?? 'canvas',
-  sizing: node.layout?.sizing ?? 'fixed',
+  direction: node.layout?.direction ?? 'column',
+  sizing: node.type === 'page' ? 'fixed' : node.layout?.sizing ?? 'fixed',
 });
 
 const emitLayoutStyleCall = (
@@ -379,18 +390,45 @@ const emitLayoutStyleCall = (
   const args = resolveLayoutStyleArgs(node, nodesById);
   lines.push(`  // layout-mode:${args.mode}; sizing:${args.sizing}`);
   lines.push(
-    `  applyGeneratedLayoutStyle(node, ${args.width}, ${args.height}, ${args.x}, ${args.y}, ${args.gap}, ${args.padding}, "${args.align}", "${args.justify}");`
+    `  applyGeneratedLayoutStyle(node, ${args.width}, ${args.height}, ${args.x}, ${args.y}, ${args.gap}, ${args.padding}, "${args.align}", "${args.justify}", "${args.mode}", "${args.direction}", "${args.sizing}");`
   );
 };
 
 const emitLayoutHelpers = (lines: string[]) => {
   lines.push(
-    'function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string): void {'
+    'function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32, x: i32, y: i32, gap: i32, padding: i32, align: string, justify: string, mode: string, direction: string, sizing: string): void {'
   );
   lines.push('  const style = new ElementStyle();');
   lines.push('  style.width = width.toString() + "px";');
   lines.push('  style.marginLeft = x.toString() + "px";');
   lines.push('  style.marginTop = y.toString() + "px";');
+  lines.push('  if (mode == "flex") {');
+  lines.push('    style.display = "flex";');
+  lines.push('    style.flexDirection = direction == "row" ? "row" : "column";');
+  lines.push('    if (align == "center") {');
+  lines.push('      style.alignItems = "center";');
+  lines.push('    } else if (align == "end") {');
+  lines.push('      style.alignItems = "flex-end";');
+  lines.push('    } else if (align == "stretch") {');
+  lines.push('      style.alignItems = "stretch";');
+  lines.push('    } else {');
+  lines.push('      style.alignItems = "flex-start";');
+  lines.push('    }');
+  lines.push('    if (justify == "center") {');
+  lines.push('      style.justifyContent = "center";');
+  lines.push('    } else if (justify == "end") {');
+  lines.push('      style.justifyContent = "flex-end";');
+  lines.push('    } else if (justify == "space-between") {');
+  lines.push('      style.justifyContent = "space-between";');
+  lines.push('    } else {');
+  lines.push('      style.justifyContent = "flex-start";');
+  lines.push('    }');
+  lines.push('    if (gap > 0) {');
+  lines.push('      style.gap = gap.toString() + "px";');
+  lines.push('    }');
+  lines.push('  } else if (gap > 0) {');
+  lines.push('    style.marginBottom = gap.toString() + "px";');
+  lines.push('  }');
   lines.push('  if (padding > 0) {');
   lines.push('    const px = padding.toString() + "px";');
   lines.push('    style.paddingTop = px;');
@@ -398,20 +436,26 @@ const emitLayoutHelpers = (lines: string[]) => {
   lines.push('    style.paddingBottom = px;');
   lines.push('    style.paddingLeft = px;');
   lines.push('  }');
-  lines.push('  if (gap > 0) {');
-  lines.push('    style.marginBottom = gap.toString() + "px";');
-  lines.push('  }');
   lines.push('  if (align == "center") {');
   lines.push('    style.textAlign = "center";');
   lines.push('  }');
   lines.push('  if (align == "end") {');
   lines.push('    style.textAlign = "right";');
   lines.push('  }');
-  lines.push('  if (justify == "space-between") {');
-  lines.push('    style.borderBottom = "0px";');
+  lines.push('  if (!(mode == "flex" && sizing == "hug")) {');
+  lines.push('    style.height = height.toString() + "px";');
   lines.push('  }');
-  lines.push('  style.height = height.toString() + "px";');
   lines.push('  node.style = style;');
+  lines.push('}');
+  lines.push('');
+};
+
+const emitStyleHelpers = (lines: string[]) => {
+  lines.push('function ensureElementStyle(node: LayoutElement): ElementStyle {');
+  lines.push('  if (node.style == null) {');
+  lines.push('    node.style = new ElementStyle();');
+  lines.push('  }');
+  lines.push('  return node.style as ElementStyle;');
   lines.push('}');
   lines.push('');
 };
@@ -484,6 +528,12 @@ const emitNodeFactory = (
       lines.push('  const node = new SectionElement(children);');
     }
     emitLayoutStyleCall(node, lines, nodesById);
+    if (node.type === 'section') {
+      const sectionBorder = resolveSectionBorderCss(asRecord(node.metadata));
+      lines.push('  const nodeStyle = ensureElementStyle(node);');
+      lines.push(`  nodeStyle.border = "${escapeSourceString(sectionBorder.border)}";`);
+      lines.push(`  nodeStyle.borderRadius = "${escapeSourceString(sectionBorder.borderRadius)}";`);
+    }
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -512,6 +562,7 @@ const emitNodeFactory = (
   if (node.type === 'table' || node.type === 'dynamic-table' || node.type === 'totals') {
     lines.push('  const children = new Array<LayoutElement>();');
     const metadata = asRecord(node.metadata);
+    const tableBorderConfig = resolveTableBorderConfig(metadata);
     if (node.type === 'table' || node.type === 'dynamic-table') {
       const columns = Array.isArray(metadata.columns) ? (metadata.columns as Array<Record<string, unknown>>) : [];
       const resolvedColumns =
@@ -523,33 +574,60 @@ const emitNodeFactory = (
               { header: 'Rate', key: 'item.unitPrice', type: 'currency' },
               { header: 'Amount', key: 'item.total', type: 'currency' },
             ];
+      const visibleColumns = resolvedColumns.slice(0, 4);
       lines.push('  const headerCells = new Array<LayoutElement>();');
-      resolvedColumns.slice(0, 4).forEach((column) => {
+      visibleColumns.forEach((column, columnIndex) => {
         const header = asTrimmedString(column.header) || asTrimmedString(column.key) || 'Column';
+        const cellVar = `headerCell${columnIndex}`;
         lines.push(
-          `  headerCells.push(new ColumnElement([new TextElement("${escapeSourceString(header)}", "label")]));`
+          `  const ${cellVar} = new ColumnElement([new TextElement("${escapeSourceString(header)}", "label")]);`
         );
+        if (tableBorderConfig.columnDividers && columnIndex < visibleColumns.length - 1) {
+          lines.push(`  const ${cellVar}Style = new ElementStyle();`);
+          lines.push(`  ${cellVar}Style.borderRight = "${INVOICE_BORDER_SUBTLE}";`);
+          lines.push(`  ${cellVar}.style = ${cellVar}Style;`);
+        }
+        lines.push(`  headerCells.push(${cellVar});`);
       });
       lines.push('  const headerRow = new RowElement(headerCells);');
       lines.push('  const headerRowStyle = new ElementStyle();');
       lines.push('  headerRowStyle.marginBottom = "0px";');
+      lines.push(
+        `  headerRowStyle.borderBottom = "${tableBorderConfig.rowDividers ? INVOICE_BORDER_LIGHT : '0px'}";`
+      );
       lines.push('  headerRow.style = headerRowStyle;');
       lines.push('  children.push(headerRow);');
       lines.push('  for (let itemIndex = 0; itemIndex < viewModel.items.length; itemIndex++) {');
       lines.push('    const rowItem = viewModel.items[itemIndex];');
       lines.push('    const rowCells = new Array<LayoutElement>();');
-      resolvedColumns.slice(0, 4).forEach((column) => {
+      visibleColumns.forEach((column, columnIndex) => {
         const key = asTrimmedString(column.key) || 'item.description';
         const format = asTrimmedString(column.type) || 'text';
+        const cellVar = `rowCell${columnIndex}`;
         lines.push(
-          `    rowCells.push(new ColumnElement([new TextElement(resolveItemBinding(viewModel, rowItem, "${escapeSourceString(
+          `    const ${cellVar} = new ColumnElement([new TextElement(resolveItemBinding(viewModel, rowItem, "${escapeSourceString(
             key
-          )}", "${escapeSourceString(format)}"))]));`
+          )}", "${escapeSourceString(format)}"))]);`
         );
+        if (tableBorderConfig.columnDividers && columnIndex < visibleColumns.length - 1) {
+          lines.push(`    const ${cellVar}Style = new ElementStyle();`);
+          lines.push(`    ${cellVar}Style.borderRight = "${INVOICE_BORDER_SUBTLE}";`);
+          lines.push(`    ${cellVar}.style = ${cellVar}Style;`);
+        }
+        lines.push(`    rowCells.push(${cellVar});`);
       });
       lines.push('    const row = new RowElement(rowCells);');
       lines.push('    const rowStyle = new ElementStyle();');
       lines.push('    rowStyle.marginBottom = "0px";');
+      if (tableBorderConfig.rowDividers) {
+        lines.push('    if (itemIndex < viewModel.items.length - 1) {');
+        lines.push(`      rowStyle.borderBottom = "${INVOICE_BORDER_SUBTLE}";`);
+        lines.push('    } else {');
+        lines.push('      rowStyle.borderBottom = "0px";');
+        lines.push('    }');
+      } else {
+        lines.push('    rowStyle.borderBottom = "0px";');
+      }
       lines.push('    row.style = rowStyle;');
       lines.push('    children.push(row);');
       lines.push('  }');
@@ -568,6 +646,11 @@ const emitNodeFactory = (
     });
     lines.push('  const node = new SectionElement(children);');
     emitLayoutStyleCall(node, lines, nodesById);
+    if (node.type === 'table' || node.type === 'dynamic-table') {
+      lines.push('  const nodeStyle = ensureElementStyle(node);');
+      lines.push(`  nodeStyle.border = "${tableBorderConfig.outer ? INVOICE_BORDER_STRONG : '0px'}";`);
+      lines.push(`  nodeStyle.borderRadius = "${tableBorderConfig.outer ? '6px' : '0px'}";`);
+    }
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -595,11 +678,26 @@ const emitNodeFactory = (
   if (node.type === 'field') {
     const bindingKey = resolveFieldBindingKey(node);
     const format = resolveFieldFormat(node);
+    const fieldBorderStyle = resolveFieldBorderStyle(asRecord(node.metadata));
     const textExpr = bindingKey
       ? `resolveInvoiceBinding(viewModel, "${escapeSourceString(bindingKey)}", "${escapeSourceString(format)}")`
       : `"${escapeSourceString(node.name)}"`;
     lines.push(`  const node = new TextElement(${textExpr});`);
     emitLayoutStyleCall(node, lines, nodesById);
+    lines.push('  const nodeStyle = ensureElementStyle(node);');
+    if (fieldBorderStyle === 'underline') {
+      lines.push('  nodeStyle.border = "0px";');
+      lines.push(`  nodeStyle.borderBottom = "${INVOICE_BORDER_LIGHT}";`);
+      lines.push('  nodeStyle.borderRadius = "0px";');
+    } else if (fieldBorderStyle === 'none') {
+      lines.push('  nodeStyle.border = "0px";');
+      lines.push('  nodeStyle.borderBottom = "0px";');
+      lines.push('  nodeStyle.borderRadius = "0px";');
+    } else {
+      lines.push(`  nodeStyle.border = "${INVOICE_BORDER_LIGHT}";`);
+      lines.push('  nodeStyle.borderBottom = "0px";');
+      lines.push('  nodeStyle.borderRadius = "4px";');
+    }
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');
@@ -703,6 +801,7 @@ export const generateAssemblyScriptFromIr = (
   );
   lines.push('');
   emitLayoutHelpers(lines);
+  emitStyleHelpers(lines);
   emitBindingHelpers(lines);
 
   treeNodes.forEach((node) => {

@@ -76,26 +76,7 @@ const resolveNormalizedXExpectation = (
   if (!parent || parent.layout?.mode !== 'flex') {
     return Math.round(absoluteX);
   }
-
-  const parentPadding = Math.max(0, Math.round(parent.layout.padding ?? 0));
-  if (parent.layout.direction === 'column') {
-    return Math.round(absoluteX) - parentPadding;
-  }
-
-  const siblingIds = parent.childIds;
-  const siblingIndex = siblingIds.indexOf(node.id);
-  if (siblingIndex <= 0) {
-    return Math.round(absoluteX) - parentPadding;
-  }
-
-  const previousSibling = byId.get(siblingIds[siblingIndex - 1]);
-  if (!previousSibling) {
-    return Math.round(absoluteX) - parentPadding;
-  }
-
-  const previousSiblingRight =
-    Math.round(previousSibling.position.x) + Math.round(previousSibling.size.width);
-  return Math.round(absoluteX) - previousSiblingRight;
+  return 0;
 };
 
 const resolveNormalizedYExpectation = (
@@ -111,26 +92,7 @@ const resolveNormalizedYExpectation = (
   if (!parent || parent.layout?.mode !== 'flex') {
     return Math.round(absoluteY);
   }
-
-  const parentPadding = Math.max(0, Math.round(parent.layout.padding ?? 0));
-  if (parent.layout.direction === 'row') {
-    return Math.round(absoluteY) - parentPadding;
-  }
-
-  const siblingIds = parent.childIds;
-  const siblingIndex = siblingIds.indexOf(node.id);
-  if (siblingIndex <= 0) {
-    return Math.round(absoluteY) - parentPadding;
-  }
-
-  const previousSibling = byId.get(siblingIds[siblingIndex - 1]);
-  if (!previousSibling) {
-    return Math.round(absoluteY) - parentPadding;
-  }
-
-  const previousSiblingBottom =
-    Math.round(previousSibling.position.y) + Math.round(previousSibling.size.height);
-  return Math.round(absoluteY) - previousSiblingBottom;
+  return 0;
 };
 
 export const collectRenderedGeometryFromLayout = (
@@ -215,14 +177,18 @@ export const extractExpectedLayoutConstraintsFromIr = (
         tolerance,
         category: 'sizing',
       });
-      constraints.push({
-        id: `${node.id}:height`,
-        nodeId: node.id,
-        metric: 'height',
-        expected: node.size.height,
-        tolerance,
-        category: 'sizing',
-      });
+      const nodeSizing = node.layout?.sizing ?? 'fixed';
+      const shouldExpectHeight = !(node.layout?.mode === 'flex' && nodeSizing === 'hug' && node.type !== 'page');
+      if (shouldExpectHeight) {
+        constraints.push({
+          id: `${node.id}:height`,
+          nodeId: node.id,
+          metric: 'height',
+          expected: node.size.height,
+          tolerance,
+          category: 'sizing',
+        });
+      }
 
       if (parent?.layout?.mode === 'flex') {
         const parentPadding = Math.max(0, parent.layout.padding ?? 0);

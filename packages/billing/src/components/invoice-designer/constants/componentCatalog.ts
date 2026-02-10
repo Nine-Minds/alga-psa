@@ -18,6 +18,9 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     description: 'Logical grouping with shared layout rules.',
     category: 'Structure',
     defaultSize: { width: 520, height: 200 },
+    defaultMetadata: {
+      sectionBorderStyle: 'light',
+    },
   },
   {
     type: 'container',
@@ -67,6 +70,9 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
         { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 100 },
         { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency', width: 120 },
       ],
+      tableOuterBorder: true,
+      tableRowDividers: true,
+      tableColumnDividers: false,
     },
   },
   {
@@ -75,6 +81,11 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     description: 'Advanced data table with column bindings.',
     category: 'Dynamic',
     defaultSize: { width: 520, height: 240 },
+    defaultMetadata: {
+      tableOuterBorder: true,
+      tableRowDividers: true,
+      tableColumnDividers: false,
+    },
   },
   {
     type: 'field',
@@ -86,6 +97,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
       bindingKey: 'invoice.number',
       format: 'text',
       placeholder: 'Invoice Number',
+      fieldBorderStyle: 'underline',
     },
   },
   {

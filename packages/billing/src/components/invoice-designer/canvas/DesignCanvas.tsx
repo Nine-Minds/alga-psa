@@ -53,17 +53,29 @@ interface CanvasNodeProps {
 
 type SectionSemanticCue = {
   label: string;
-  surfaceClass: string;
+  toneClass: string;
   chipClass: string;
   accentClass: string;
 };
+
+type SectionBorderStyle = 'none' | 'light' | 'strong';
+type FieldBorderStyle = 'none' | 'underline' | 'box';
+type TableBorderConfig = {
+  outer: boolean;
+  rowDividers: boolean;
+  columnDividers: boolean;
+};
+
+const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300';
+const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200';
+const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400';
 
 const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   const name = sectionName.toLowerCase();
   if (/\b(item|line item|service|detail)\b/.test(name)) {
     return {
       label: 'Items',
-      surfaceClass: 'bg-cyan-100/45 border-cyan-300 border-dashed',
+      toneClass: 'bg-cyan-100/45',
       chipClass: 'border-cyan-300 bg-cyan-100 text-cyan-800',
       accentClass: 'bg-cyan-400/80',
     };
@@ -71,7 +83,7 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   if (/\b(total|summary|payment)\b/.test(name)) {
     return {
       label: 'Totals',
-      surfaceClass: 'bg-emerald-100/45 border-emerald-300 border-dashed',
+      toneClass: 'bg-emerald-100/45',
       chipClass: 'border-emerald-300 bg-emerald-100 text-emerald-800',
       accentClass: 'bg-emerald-400/80',
     };
@@ -79,7 +91,7 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   if (/\b(footer|approval|signature)\b/.test(name)) {
     return {
       label: 'Footer',
-      surfaceClass: 'bg-slate-100 border-slate-400 border-dashed',
+      toneClass: 'bg-slate-100',
       chipClass: 'border-slate-400 bg-white text-slate-700',
       accentClass: 'bg-slate-400/80',
     };
@@ -87,7 +99,7 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   if (/\b(billing|info|meta|details)\b/.test(name)) {
     return {
       label: 'Info',
-      surfaceClass: 'bg-blue-100/45 border-blue-300 border-dashed',
+      toneClass: 'bg-blue-100/45',
       chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
       accentClass: 'bg-blue-400/80',
     };
@@ -95,17 +107,59 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   if (/\b(header|masthead|top)\b/.test(name)) {
     return {
       label: 'Header',
-      surfaceClass: 'bg-amber-100/45 border-amber-300 border-dashed',
+      toneClass: 'bg-amber-100/45',
       chipClass: 'border-amber-300 bg-amber-100 text-amber-800',
       accentClass: 'bg-amber-400/80',
     };
   }
   return {
     label: 'Section',
-    surfaceClass: 'bg-blue-100/45 border-blue-300 border-dashed',
+    toneClass: 'bg-blue-100/45',
     chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
     accentClass: 'bg-blue-400/80',
   };
+};
+
+const resolveSectionBorderStyle = (metadata: Record<string, unknown>): SectionBorderStyle => {
+  const candidate = metadata.sectionBorderStyle ?? metadata.sectionBorder;
+  if (candidate === 'none' || candidate === 'strong') {
+    return candidate;
+  }
+  return 'light';
+};
+
+const resolveFieldBorderStyle = (metadata: Record<string, unknown>): FieldBorderStyle => {
+  const candidate = metadata.fieldBorderStyle;
+  if (candidate === 'none' || candidate === 'underline') {
+    return candidate;
+  }
+  return 'underline';
+};
+
+const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => ({
+  outer: metadata.tableOuterBorder !== false,
+  rowDividers: metadata.tableRowDividers !== false,
+  columnDividers: metadata.tableColumnDividers === true,
+});
+
+const resolveSectionBorderClasses = (style: SectionBorderStyle) => {
+  if (style === 'none') {
+    return 'border border-transparent';
+  }
+  if (style === 'strong') {
+    return `border ${INVOICE_BORDER_STRONG_COLOR_CLASS} rounded-md`;
+  }
+  return `border ${INVOICE_BORDER_COLOR_CLASS} rounded-sm`;
+};
+
+const resolveFieldBorderClasses = (style: FieldBorderStyle) => {
+  if (style === 'none') {
+    return 'px-1 py-0.5 flex items-center bg-transparent border border-transparent';
+  }
+  if (style === 'underline') {
+    return `px-1 py-0.5 flex items-center bg-transparent border-0 border-b ${INVOICE_BORDER_COLOR_CLASS} rounded-none`;
+  }
+  return `px-2 py-1.5 flex items-center border ${INVOICE_BORDER_COLOR_CLASS} rounded-sm bg-transparent`;
 };
 
 type PreviewContentResult = {
@@ -295,18 +349,14 @@ const resolveTotalsRowPreviewModel = (
 };
 
 const renderTablePreview = (
-  node: DesignerNode,
   metadata: Record<string, unknown>,
   previewData: WasmInvoiceViewModel | null
 ): React.ReactNode => {
+  const borderConfig = resolveTableBorderConfig(metadata);
   const columns = Array.isArray((metadata as { columns?: unknown }).columns)
     ? (metadata as { columns: Array<Record<string, unknown>> }).columns
     : [];
   const rows = previewData?.items ?? [];
-
-  if (rows.length === 0) {
-    return <span className="text-slate-400 italic">No line items</span>;
-  }
 
   const resolvedColumns =
     columns.length > 0
@@ -317,34 +367,71 @@ const renderTablePreview = (
           { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency' },
           { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency' },
         ];
+  const visibleColumns = resolvedColumns.slice(0, 4);
+  const visibleRows = rows.slice(0, 5);
 
   return (
-    <div className="h-full overflow-hidden text-[10px] text-slate-700">
-      <div className="grid grid-cols-4 gap-2 border-b border-slate-200 pb-1 font-semibold uppercase tracking-wide text-slate-500">
-        {resolvedColumns.slice(0, 4).map((column) => (
-          <span key={String(column.id ?? column.key ?? 'column')} className="truncate">
+    <div
+      className={clsx(
+        'h-full overflow-hidden text-[10px] text-slate-700 rounded-sm bg-white',
+        borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
+      )}
+    >
+      <div
+        className={clsx(
+          'grid grid-cols-4 gap-0 pb-1 font-semibold uppercase tracking-wide text-slate-500',
+          borderConfig.rowDividers && ['border-b', INVOICE_BORDER_COLOR_CLASS]
+        )}
+      >
+        {visibleColumns.map((column, index) => (
+          <span
+            key={String(column.id ?? column.key ?? 'column')}
+            className={clsx(
+              'truncate px-1 py-1',
+              borderConfig.columnDividers &&
+                index < visibleColumns.length - 1 && ['border-r', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+            )}
+          >
             {String(column.header ?? column.key ?? 'Column')}
           </span>
         ))}
       </div>
-      <div className="space-y-1 pt-1">
-        {rows.slice(0, 5).map((item) => (
-          <div key={item.id} className="grid grid-cols-4 gap-2">
-            {resolvedColumns.slice(0, 4).map((column) => {
-              const key = asTrimmedString(column.key);
-              const type = normalizeFieldFormat(column.type);
-              const rawValue = resolveTableItemBindingRawValue(previewData, item, key);
-              const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
-              return (
-                <span key={`${item.id}-${String(column.id ?? key)}`} className="truncate">
-                  {text}
-                </span>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-      {rows.length > 5 && <div className="pt-1 text-[10px] text-slate-400">+{rows.length - 5} more rows</div>}
+      {visibleRows.length === 0 ? (
+        <div className="px-2 py-2 text-slate-400 italic">No line items</div>
+      ) : (
+        <div className="pt-1">
+          {visibleRows.map((item, rowIndex) => (
+            <div
+              key={item.id}
+                className={clsx(
+                  'grid grid-cols-4 gap-0',
+                  borderConfig.rowDividers &&
+                    rowIndex < visibleRows.length - 1 && ['border-b', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+                )}
+              >
+              {visibleColumns.map((column, columnIndex) => {
+                const key = asTrimmedString(column.key);
+                const type = normalizeFieldFormat(column.type);
+                const rawValue = resolveTableItemBindingRawValue(previewData, item, key);
+                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
+                return (
+                  <span
+                    key={`${item.id}-${String(column.id ?? key)}`}
+                    className={clsx(
+                      'truncate px-1 py-0.5',
+                      borderConfig.columnDividers &&
+                        columnIndex < visibleColumns.length - 1 && ['border-r', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+                    )}
+                  >
+                    {text}
+                  </span>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+      {rows.length > 5 && <div className="px-1 pt-1 text-[10px] text-slate-400">+{rows.length - 5} more rows</div>}
     </div>
   );
 };
@@ -364,7 +451,7 @@ const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): R
         <span>Tax</span>
         <span className="tabular-nums font-medium">{tax}</span>
       </div>
-      <div className="flex items-center justify-between border-t border-slate-300 pt-1 font-semibold text-slate-900">
+      <div className={clsx('flex items-center justify-between border-t pt-1 font-semibold text-slate-900', INVOICE_BORDER_COLOR_CLASS)}>
         <span>Total</span>
         <span className="tabular-nums">{total}</span>
       </div>
@@ -460,7 +547,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
             <div
               className={clsx(
                 'flex min-h-[14px] items-baseline justify-between gap-3',
-                totalsRow.isGrandTotal && 'border-t border-slate-300 pt-1'
+                totalsRow.isGrandTotal && ['border-t pt-1', INVOICE_BORDER_COLOR_CLASS]
               )}
             >
               <span
@@ -498,7 +585,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'table':
     case 'dynamic-table': {
       return {
-        content: renderTablePreview(node, metadata, previewData),
+        content: renderTablePreview(metadata, previewData),
       };
     }
     case 'action-button':
@@ -510,7 +597,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'totals':
       return { content: renderTotalsSummaryPreview(previewData) };
     case 'divider':
-      return { content: <div className="w-full h-px bg-slate-300 my-1" /> };
+      return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
     case 'spacer':
       return {
         content: (
@@ -583,10 +670,19 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
+  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
-  const isInlineFieldLike = node.type === 'field' || isLabelNode;
+  const isFieldNode = node.type === 'field';
+  const sectionBorderStyle = node.type === 'section' ? resolveSectionBorderStyle(metadata) : 'light';
+  const fieldBorderStyle = isFieldNode ? resolveFieldBorderStyle(metadata) : 'box';
+  const sectionContainerClasses =
+    node.type === 'section'
+      ? clsx(sectionCue?.toneClass ?? 'bg-blue-100/45', resolveSectionBorderClasses(sectionBorderStyle))
+      : 'border bg-blue-50/40 border-blue-200 border-dashed';
+  const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
+  const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike;
 
   const combinedRef = useCallback(
@@ -704,10 +800,8 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
         isLabelNode
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
-              'border rounded-md',
-              isContainer
-                ? sectionCue?.surfaceClass ?? 'bg-blue-50/40 border-blue-200 border-dashed'
-                : 'bg-white shadow-sm border-slate-300',
+              'rounded-md',
+              isContainer ? sectionContainerClasses : `border bg-white shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
             ],
         isSelected &&
           (isLabelNode
@@ -750,8 +844,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
                 ? 'px-1 py-0.5 flex items-center bg-transparent text-slate-700 font-medium'
                 : isTotalsRow
                   ? 'p-1.5 whitespace-pre-wrap'
-                  : 'px-2 py-1.5 flex items-center',
-              !isLabelNode && isInlineFieldLike && 'bg-slate-50/60',
+                  : fieldSurfaceClasses,
               previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
               previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
             )}
@@ -1030,4 +1123,7 @@ export const __designCanvasSelectionTestUtils = {
 
 export const __designCanvasPreviewTestUtils = {
   resolveTotalsRowPreviewModel,
+  resolveSectionBorderStyle,
+  resolveFieldBorderStyle,
+  resolveTableBorderConfig,
 };

@@ -11,17 +11,27 @@ describe('designerStore preset metadata', () => {
     const invoiceNumberField = nodes.find((node) => node.name === 'Invoice Number');
     const fromAddressText = nodes.find((node) => node.name === 'From Address');
     const clientAddressText = nodes.find((node) => node.name === 'Client Address');
+    const headerSection = nodes.find((node) => node.name === 'Header');
+    const itemsTable = nodes.find((node) => node.name === 'Line Items');
 
     expect(invoiceNumberField).toBeTruthy();
     expect(invoiceNumberField?.metadata?.bindingKey).toBe('invoice.number');
     expect(invoiceNumberField?.metadata?.format).toBe('text');
     expect(invoiceNumberField?.metadata?.placeholder).toBe('Invoice Number');
+    expect(invoiceNumberField?.metadata?.fieldBorderStyle).toBe('underline');
 
     expect(fromAddressText).toBeTruthy();
     expect(fromAddressText?.metadata?.bindingKey).toBe('tenant.address');
 
     expect(clientAddressText).toBeTruthy();
     expect(clientAddressText?.metadata?.bindingKey).toBe('customer.address');
+
+    expect(headerSection).toBeTruthy();
+    expect(headerSection?.metadata?.sectionBorderStyle).toBe('none');
+
+    expect(itemsTable).toBeTruthy();
+    expect(itemsTable?.metadata?.tableOuterBorder).toBe(true);
+    expect(itemsTable?.metadata?.tableRowDividers).toBe(true);
+    expect(itemsTable?.metadata?.tableColumnDividers).toBe(false);
   });
 });
-

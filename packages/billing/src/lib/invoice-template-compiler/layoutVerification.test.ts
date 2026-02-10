@@ -230,7 +230,7 @@ describe('layoutVerification', () => {
     expect(byId.get('field-a:containment-x')?.category).toBe('containment');
     expect(byId.get('field-a:alignment-x')?.category).toBe('alignment');
     expect(byId.get('field-b:spacing-y')?.category).toBe('spacing');
-    expect(byId.get('field-b:spacing-y')?.expected).toBe(16);
+    expect(byId.get('field-b:spacing-y')?.expected).toBe(0);
   });
 
   it('omits derived spacing/alignment constraints when node positions are intentionally manual', () => {
@@ -360,5 +360,87 @@ describe('layoutVerification', () => {
     const geometry = collectRenderedGeometryFromLayout(renderedLayout);
     expect(estimateRenderedContentHeight(geometry, 640)).toBe(1233);
     expect(estimateRenderedContentHeight({}, 640)).toBe(640);
+  });
+
+  it('skips explicit height constraints for flex+hug nodes because rendered height is content-driven', () => {
+    const ir: InvoiceDesignerCompilerIr = {
+      version: 1,
+      rootNodeId: 'doc',
+      flatNodes: [
+        {
+          id: 'doc',
+          type: 'document',
+          name: 'Document',
+          parentId: null,
+          childIds: ['section-hug'],
+          position: { x: 0, y: 0 },
+          size: { width: 816, height: 1056 },
+          rotation: 0,
+          allowResize: false,
+          layoutPresetId: null,
+          layout: null,
+          metadata: {},
+        },
+        {
+          id: 'section-hug',
+          type: 'section',
+          name: 'Header',
+          parentId: 'doc',
+          childIds: ['field-a'],
+          position: { x: 24, y: 24 },
+          size: { width: 600, height: 150 },
+          rotation: 0,
+          allowResize: true,
+          layoutPresetId: null,
+          layout: {
+            mode: 'flex',
+            direction: 'row',
+            gap: 20,
+            padding: 20,
+            justify: 'space-between',
+            align: 'center',
+            sizing: 'hug',
+          },
+          metadata: {},
+        },
+        {
+          id: 'field-a',
+          type: 'field',
+          name: 'Invoice Number',
+          parentId: 'section-hug',
+          childIds: [],
+          position: { x: 368, y: 34 },
+          size: { width: 212, height: 40 },
+          rotation: 0,
+          allowResize: true,
+          layoutPresetId: null,
+          layout: null,
+          metadata: { bindingKey: 'invoice.number' },
+        },
+      ],
+      tree: {
+        id: 'doc',
+        type: 'document',
+        name: 'Document',
+        parentId: null,
+        childIds: ['section-hug'],
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        rotation: 0,
+        allowResize: false,
+        layoutPresetId: null,
+        layout: null,
+        metadata: {},
+        children: [],
+      },
+      constraints: [],
+    };
+
+    const constraints = extractExpectedLayoutConstraintsFromIr(ir, 2);
+    const constraintIds = new Set(constraints.map((constraint) => constraint.id));
+    expect(constraintIds.has('section-hug:height')).toBe(false);
+    expect(constraintIds.has('field-a:x')).toBe(true);
+    expect(constraints.find((constraint) => constraint.id === 'field-a:x')?.expected).toBe(0);
+    expect(constraints.find((constraint) => constraint.id === 'field-a:y')?.expected).toBe(0);
   });
 });

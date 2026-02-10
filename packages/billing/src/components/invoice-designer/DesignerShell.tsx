@@ -1055,6 +1055,27 @@ export const DesignerShell: React.FC = () => {
     const metadata = (selectedNode.metadata ?? {}) as Record<string, any>;
     const applyMetadata = (patch: Record<string, unknown>) => updateNodeMetadata(selectedNode.id, patch);
 
+    if (selectedNode.type === 'section') {
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Section Border</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Border style</label>
+            <select
+              id="designer-section-border-style"
+              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+              value={metadata.sectionBorderStyle ?? 'light'}
+              onChange={(event) => applyMetadata({ sectionBorderStyle: event.target.value })}
+            >
+              <option value="none">None</option>
+              <option value="light">Light</option>
+              <option value="strong">Strong</option>
+            </select>
+          </div>
+        </div>
+      );
+    }
+
     if (selectedNode.type === 'field') {
       return (
         <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
@@ -1088,6 +1109,19 @@ export const DesignerShell: React.FC = () => {
               onChange={(event) => applyMetadata({ placeholder: event.target.value })}
             />
           </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Border style</label>
+            <select
+              id="designer-field-border-style"
+              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+              value={metadata.fieldBorderStyle ?? 'underline'}
+              onChange={(event) => applyMetadata({ fieldBorderStyle: event.target.value })}
+            >
+              <option value="none">None</option>
+              <option value="underline">Underline</option>
+              <option value="box">Box</option>
+            </select>
+          </div>
         </div>
       );
     }
@@ -1107,6 +1141,9 @@ export const DesignerShell: React.FC = () => {
 
     if (selectedNode.type === 'table' || selectedNode.type === 'dynamic-table') {
       const columns: Array<Record<string, any>> = Array.isArray(metadata.columns) ? metadata.columns : [];
+      const tableOuterBorder = metadata.tableOuterBorder !== false;
+      const tableRowDividers = metadata.tableRowDividers !== false;
+      const tableColumnDividers = metadata.tableColumnDividers === true;
       const updateColumns = (next: Array<Record<string, any>>) => applyMetadata({ columns: next });
       const updateColumn = (columnId: string, patch: Record<string, unknown>) => {
         updateColumns(
@@ -1136,6 +1173,36 @@ export const DesignerShell: React.FC = () => {
             <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
               Add column
             </Button>
+          </div>
+          <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
+            <p className="font-semibold text-slate-700">Borders</p>
+            <label className="flex items-center gap-2">
+              <input
+                id="designer-table-border-outer"
+                type="checkbox"
+                checked={tableOuterBorder}
+                onChange={(event) => applyMetadata({ tableOuterBorder: event.target.checked })}
+              />
+              Outer border
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                id="designer-table-border-rows"
+                type="checkbox"
+                checked={tableRowDividers}
+                onChange={(event) => applyMetadata({ tableRowDividers: event.target.checked })}
+              />
+              Row dividers
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                id="designer-table-border-columns"
+                type="checkbox"
+                checked={tableColumnDividers}
+                onChange={(event) => applyMetadata({ tableColumnDividers: event.target.checked })}
+              />
+              Column dividers
+            </label>
           </div>
           {columns.length === 0 && (
             <p className="text-xs text-slate-500">No columns defined. Add at least one column.</p>

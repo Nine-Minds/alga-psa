@@ -414,6 +414,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 750, height: 150 },
         name: 'Header',
+        metadata: { sectionBorderStyle: 'none' },
         layout: { mode: 'flex', direction: 'row', gap: 20, padding: 20, justify: 'space-between', align: 'center', sizing: 'hug' }
       },
       {
@@ -461,6 +462,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
           bindingKey: 'invoice.number',
           format: 'text',
           placeholder: 'Invoice Number',
+          fieldBorderStyle: 'underline',
         },
       },
       
@@ -471,6 +473,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 750, height: 180 },
         name: 'Billing Info',
+        metadata: { sectionBorderStyle: 'none' },
         layout: { mode: 'flex', direction: 'row', gap: 40, padding: 20, justify: 'start', align: 'start', sizing: 'hug' }
       },
       {
@@ -539,6 +542,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 750, height: 300 },
         name: 'Items Area',
+        metadata: { sectionBorderStyle: 'none' },
         layout: { mode: 'flex', direction: 'column', gap: 0, padding: 20, justify: 'start', align: 'stretch', sizing: 'hug' }
       },
       {
@@ -547,7 +551,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'items-section',
         offset: { x: 0, y: 0 },
         size: { width: 710, height: 200 },
-        name: 'Line Items'
+        name: 'Line Items',
+        metadata: {
+          tableOuterBorder: true,
+          tableRowDividers: true,
+          tableColumnDividers: false,
+        },
       },
 
       // --- Footer Section ---
@@ -557,6 +566,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 750, height: 200 },
         name: 'Footer',
+        metadata: { sectionBorderStyle: 'none' },
         layout: { mode: 'flex', direction: 'row', gap: 20, padding: 20, justify: 'space-between', align: 'start', sizing: 'hug' }
       },
       {

@@ -54,3 +54,35 @@ describe('DesignCanvas totals preview model', () => {
     expect(model.isGrandTotal).toBe(true);
   });
 });
+
+describe('DesignCanvas border style resolution', () => {
+  it('resolves section and field border defaults safely', () => {
+    expect(__designCanvasPreviewTestUtils.resolveSectionBorderStyle({})).toBe('light');
+    expect(__designCanvasPreviewTestUtils.resolveSectionBorderStyle({ sectionBorderStyle: 'none' })).toBe('none');
+    expect(__designCanvasPreviewTestUtils.resolveSectionBorderStyle({ sectionBorderStyle: 'strong' })).toBe('strong');
+
+    expect(__designCanvasPreviewTestUtils.resolveFieldBorderStyle({})).toBe('underline');
+    expect(__designCanvasPreviewTestUtils.resolveFieldBorderStyle({ fieldBorderStyle: 'none' })).toBe('none');
+    expect(__designCanvasPreviewTestUtils.resolveFieldBorderStyle({ fieldBorderStyle: 'underline' })).toBe('underline');
+  });
+
+  it('normalizes table border config flags with professional defaults', () => {
+    expect(__designCanvasPreviewTestUtils.resolveTableBorderConfig({})).toEqual({
+      outer: true,
+      rowDividers: true,
+      columnDividers: false,
+    });
+
+    expect(
+      __designCanvasPreviewTestUtils.resolveTableBorderConfig({
+        tableOuterBorder: false,
+        tableRowDividers: false,
+        tableColumnDividers: true,
+      })
+    ).toEqual({
+      outer: false,
+      rowDividers: false,
+      columnDividers: true,
+    });
+  });
+});

@@ -287,7 +287,139 @@ describe('DesignCanvas preview mode', () => {
 
     expect(labelSurface?.className).toContain('bg-transparent');
     expect(labelSurface?.className).not.toContain('bg-slate-50/60');
-    expect(fieldSurface?.className).toContain('bg-slate-50/60');
+    expect(fieldSurface?.className).toContain('bg-transparent');
+  });
+
+  it('supports field border style variants (none and underline)', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'field-none',
+        type: 'field',
+        name: 'PO Number',
+        metadata: { bindingKey: 'invoice.poNumber', fieldBorderStyle: 'none' },
+        position: { x: 20, y: 20 },
+      }),
+      baseNode({
+        id: 'field-underline',
+        type: 'field',
+        name: 'Issue Date',
+        metadata: { bindingKey: 'invoice.issueDate', fieldBorderStyle: 'underline' },
+        position: { x: 20, y: 80 },
+      }),
+    ]);
+
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    const noneSurface = screen.getByText('PO-9').closest('div');
+    const underlineSurface = screen.getByText('2026-02-01').closest('div');
+
+    expect(noneSurface?.className).toContain('bg-transparent');
+    expect(noneSurface?.className).toContain('border-transparent');
+    expect(underlineSurface?.className).toContain('border-b');
+    expect(underlineSurface?.className).toContain('bg-transparent');
+  });
+
+  it('renders table border lines when enabled', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'table-bordered',
+        type: 'table',
+        name: 'Line Items',
+        size: { width: 520, height: 220 },
+        metadata: {
+          tableOuterBorder: true,
+          tableRowDividers: true,
+          tableColumnDividers: true,
+        },
+      }),
+    ]);
+
+    const { container } = render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    const borderedTableRoot = screen.getByText('Description').closest('.rounded-sm');
+    expect(borderedTableRoot?.className).toContain('border');
+    expect(borderedTableRoot?.className).toContain('border-slate-400');
+    expect(container.querySelectorAll('.border-r').length).toBeGreaterThan(0);
+  });
+
+  it('can disable outer, row, and column borders for table previews', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'table-plain',
+        type: 'dynamic-table',
+        name: 'Line Items Plain',
+        size: { width: 520, height: 220 },
+        metadata: {
+          tableOuterBorder: false,
+          tableRowDividers: false,
+          tableColumnDividers: false,
+        },
+      }),
+    ]);
+
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    const plainTableRoot = screen.getByText('Description').closest('.rounded-sm');
+    expect(plainTableRoot?.className).not.toContain('border border-slate-300');
+    expect(plainTableRoot?.querySelector('.border-r')).toBeNull();
+    expect(plainTableRoot?.querySelector('.border-b')).toBeNull();
   });
 
   it('renders valid empty state for table-like components when no items exist', () => {
