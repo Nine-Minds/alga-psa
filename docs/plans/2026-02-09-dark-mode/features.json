@@ -86,7 +86,7 @@
   {
     "id": "F012",
     "description": "On authenticated page load, fetch theme preference from `user_preferences` DB and apply it (overriding localStorage if different) — enables cross-device sync",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.7"]
   },
   {

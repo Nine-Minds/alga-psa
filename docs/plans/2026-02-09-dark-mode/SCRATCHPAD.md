@@ -33,6 +33,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Moved `ThemeToggle` and `useAppTheme` into `@alga-psa/ui` so both MSP and client portal can share them; added toggle to client portal nav.
 - (2026-02-10) next-themes provider now handles localStorage persistence and flash prevention without custom code.
 - (2026-02-10) useAppTheme now persists theme changes to `user_preferences` via the v1 preferences API.
+- (2026-02-10) useAppTheme loads the saved theme from `user_preferences` on auth and applies it.
 
 ## Discoveries / Constraints
 
