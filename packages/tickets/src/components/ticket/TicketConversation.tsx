@@ -34,7 +34,7 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
 import CommentItem from './CommentItem';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 
-// Stable tab IDs – never translated, used as internal Radix values
+/** Stable tab IDs – internal enum values, never translate. */
 export const TAB_CLIENT = 'Client';
 export const TAB_INTERNAL = 'Internal';
 export const TAB_RESOLUTION = 'Resolution';
@@ -124,7 +124,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
     prevActiveTab.current = activeTab;
 
-    // All Comments tab - both toggles off (no filtering)
+    // TAB_ALL_COMMENTS – both toggles off (no filtering)
     if (activeTab === TAB_ALL_COMMENTS) {
       setIsInternalToggle(false);
       setIsResolutionToggle(false);
@@ -214,8 +214,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         tabChangeFromToggle.current = true;
         onTabChange(TAB_RESOLUTION);
       } else {
-        // Both OFF → switch to Client tab
-        onTabChange(TAB_CLIENT);
+        // Both OFF → switch to default tab (Client for MSP, All Comments for client portal)
+        onTabChange(hideInternalTab ? TAB_ALL_COMMENTS : TAB_CLIENT);
       }
     }
   };
@@ -234,8 +234,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         tabChangeFromToggle.current = true;
         onTabChange(TAB_INTERNAL);
       } else {
-        // Both OFF → switch to Client tab
-        onTabChange(TAB_CLIENT);
+        // Both OFF → switch to default tab (Client for MSP, All Comments for client portal)
+        onTabChange(hideInternalTab ? TAB_ALL_COMMENTS : TAB_CLIENT);
       }
     }
   };
