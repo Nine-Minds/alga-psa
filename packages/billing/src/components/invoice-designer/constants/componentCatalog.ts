@@ -70,9 +70,11 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
         { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 100 },
         { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency', width: 120 },
       ],
+      tableBorderPreset: 'boxed',
       tableOuterBorder: true,
       tableRowDividers: true,
       tableColumnDividers: false,
+      tableHeaderFontWeight: 'semibold',
     },
   },
   {
@@ -82,9 +84,11 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     category: 'Dynamic',
     defaultSize: { width: 520, height: 240 },
     defaultMetadata: {
+      tableBorderPreset: 'boxed',
       tableOuterBorder: true,
       tableRowDividers: true,
       tableColumnDividers: false,
+      tableHeaderFontWeight: 'semibold',
     },
   },
   {
@@ -108,6 +112,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     defaultSize: { width: 120, height: 28 },
     defaultMetadata: {
       text: 'Label',
+      fontWeight: 'semibold',
     },
   },
   {

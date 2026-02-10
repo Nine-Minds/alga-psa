@@ -1135,15 +1135,50 @@ export const DesignerShell: React.FC = () => {
             value={selectedNode.name ?? ''}
             onChange={(event) => updateNodeName(selectedNode.id, event.target.value)}
           />
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Weight</label>
+            <select
+              id="designer-label-weight"
+              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+              value={metadata.fontWeight ?? metadata.labelFontWeight ?? 'semibold'}
+              onChange={(event) => applyMetadata({ fontWeight: event.target.value })}
+            >
+              <option value="normal">Normal</option>
+              <option value="medium">Medium</option>
+              <option value="semibold">Semibold</option>
+              <option value="bold">Bold</option>
+            </select>
+          </div>
         </div>
       );
     }
 
     if (selectedNode.type === 'table' || selectedNode.type === 'dynamic-table') {
       const columns: Array<Record<string, any>> = Array.isArray(metadata.columns) ? metadata.columns : [];
-      const tableOuterBorder = metadata.tableOuterBorder !== false;
-      const tableRowDividers = metadata.tableRowDividers !== false;
-      const tableColumnDividers = metadata.tableColumnDividers === true;
+      const tableBorderPreset =
+        metadata.tableBorderPreset === 'list' ||
+        metadata.tableBorderPreset === 'boxed' ||
+        metadata.tableBorderPreset === 'grid' ||
+        metadata.tableBorderPreset === 'none'
+          ? metadata.tableBorderPreset
+          : 'custom';
+      const tableBorderConfig =
+        tableBorderPreset === 'list'
+          ? { outer: false, rowDividers: true, columnDividers: false }
+          : tableBorderPreset === 'boxed'
+            ? { outer: true, rowDividers: true, columnDividers: false }
+            : tableBorderPreset === 'grid'
+              ? { outer: true, rowDividers: true, columnDividers: true }
+              : tableBorderPreset === 'none'
+                ? { outer: false, rowDividers: false, columnDividers: false }
+                : {
+                    outer: metadata.tableOuterBorder !== false,
+                    rowDividers: metadata.tableRowDividers !== false,
+                    columnDividers: metadata.tableColumnDividers === true,
+                  };
+      const tableOuterBorder = tableBorderConfig.outer;
+      const tableRowDividers = tableBorderConfig.rowDividers;
+      const tableColumnDividers = tableBorderConfig.columnDividers;
       const updateColumns = (next: Array<Record<string, any>>) => applyMetadata({ columns: next });
       const updateColumn = (columnId: string, patch: Record<string, unknown>) => {
         updateColumns(
@@ -1165,6 +1200,45 @@ export const DesignerShell: React.FC = () => {
       const handleRemoveColumn = (columnId: string) => {
         updateColumns(columns.filter((column) => column.id !== columnId));
       };
+      const applyTableBorderPreset = (preset: 'list' | 'boxed' | 'grid' | 'none' | 'custom') => {
+        if (preset === 'list') {
+          applyMetadata({
+            tableBorderPreset: 'list',
+            tableOuterBorder: false,
+            tableRowDividers: true,
+            tableColumnDividers: false,
+          });
+          return;
+        }
+        if (preset === 'boxed') {
+          applyMetadata({
+            tableBorderPreset: 'boxed',
+            tableOuterBorder: true,
+            tableRowDividers: true,
+            tableColumnDividers: false,
+          });
+          return;
+        }
+        if (preset === 'grid') {
+          applyMetadata({
+            tableBorderPreset: 'grid',
+            tableOuterBorder: true,
+            tableRowDividers: true,
+            tableColumnDividers: true,
+          });
+          return;
+        }
+        if (preset === 'none') {
+          applyMetadata({
+            tableBorderPreset: 'none',
+            tableOuterBorder: false,
+            tableRowDividers: false,
+            tableColumnDividers: false,
+          });
+          return;
+        }
+        applyMetadata({ tableBorderPreset: 'custom' });
+      };
 
       return (
         <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-3">
@@ -1176,12 +1250,31 @@ export const DesignerShell: React.FC = () => {
           </div>
           <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
             <p className="font-semibold text-slate-700">Borders</p>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Preset</label>
+              <select
+                id="designer-table-border-preset"
+                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+                value={tableBorderPreset}
+                onChange={(event) =>
+                  applyTableBorderPreset(event.target.value as 'list' | 'boxed' | 'grid' | 'none' | 'custom')
+                }
+              >
+                <option value="list">List</option>
+                <option value="boxed">Boxed</option>
+                <option value="grid">Grid</option>
+                <option value="none">None</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
             <label className="flex items-center gap-2">
               <input
                 id="designer-table-border-outer"
                 type="checkbox"
                 checked={tableOuterBorder}
-                onChange={(event) => applyMetadata({ tableOuterBorder: event.target.checked })}
+                onChange={(event) =>
+                  applyMetadata({ tableBorderPreset: 'custom', tableOuterBorder: event.target.checked })
+                }
               />
               Outer border
             </label>
@@ -1190,7 +1283,9 @@ export const DesignerShell: React.FC = () => {
                 id="designer-table-border-rows"
                 type="checkbox"
                 checked={tableRowDividers}
-                onChange={(event) => applyMetadata({ tableRowDividers: event.target.checked })}
+                onChange={(event) =>
+                  applyMetadata({ tableBorderPreset: 'custom', tableRowDividers: event.target.checked })
+                }
               />
               Row dividers
             </label>
@@ -1199,10 +1294,26 @@ export const DesignerShell: React.FC = () => {
                 id="designer-table-border-columns"
                 type="checkbox"
                 checked={tableColumnDividers}
-                onChange={(event) => applyMetadata({ tableColumnDividers: event.target.checked })}
+                onChange={(event) =>
+                  applyMetadata({ tableBorderPreset: 'custom', tableColumnDividers: event.target.checked })
+                }
               />
               Column dividers
             </label>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Header weight</label>
+              <select
+                id="designer-table-header-weight"
+                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+                value={metadata.tableHeaderFontWeight ?? 'semibold'}
+                onChange={(event) => applyMetadata({ tableHeaderFontWeight: event.target.value })}
+              >
+                <option value="normal">Normal</option>
+                <option value="medium">Medium</option>
+                <option value="semibold">Semibold</option>
+                <option value="bold">Bold</option>
+              </select>
+            </div>
           </div>
           {columns.length === 0 && (
             <p className="text-xs text-slate-500">No columns defined. Add at least one column.</p>

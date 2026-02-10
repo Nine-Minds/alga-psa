@@ -32,6 +32,8 @@ const INVOICE_BORDER_STRONG = '1px solid #94a3b8';
 
 type SectionBorderStyle = 'none' | 'light' | 'strong';
 type FieldBorderStyle = 'none' | 'underline' | 'box';
+type FontWeightStyle = 'normal' | 'medium' | 'semibold' | 'bold';
+type TableBorderPreset = 'custom' | 'list' | 'boxed' | 'grid' | 'none';
 type TableBorderConfig = {
   outer: boolean;
   rowDividers: boolean;
@@ -298,11 +300,63 @@ const resolveFieldBorderStyle = (metadata: Record<string, unknown>): FieldBorder
   return 'underline';
 };
 
-const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => ({
-  outer: metadata.tableOuterBorder !== false,
-  rowDividers: metadata.tableRowDividers !== false,
-  columnDividers: metadata.tableColumnDividers === true,
-});
+const resolveFontWeightStyle = (
+  value: unknown,
+  fallback: FontWeightStyle = 'normal'
+): FontWeightStyle => {
+  const candidate = asTrimmedString(value).toLowerCase();
+  if (candidate === 'normal' || candidate === 'medium' || candidate === 'semibold' || candidate === 'bold') {
+    return candidate;
+  }
+  return fallback;
+};
+
+const resolveFontWeightCssValue = (
+  value: unknown,
+  fallback: FontWeightStyle = 'normal'
+): string => {
+  const weight = resolveFontWeightStyle(value, fallback);
+  if (weight === 'normal') {
+    return 'normal';
+  }
+  if (weight === 'medium') {
+    return '500';
+  }
+  if (weight === 'semibold') {
+    return '600';
+  }
+  return 'bold';
+};
+
+const resolveTableBorderPreset = (metadata: Record<string, unknown>): TableBorderPreset => {
+  const candidate = asTrimmedString(metadata.tableBorderPreset).toLowerCase();
+  if (candidate === 'list' || candidate === 'boxed' || candidate === 'grid' || candidate === 'none') {
+    return candidate;
+  }
+  return 'custom';
+};
+
+const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => {
+  const preset = resolveTableBorderPreset(metadata);
+  if (preset === 'list') {
+    return { outer: false, rowDividers: true, columnDividers: false };
+  }
+  if (preset === 'boxed') {
+    return { outer: true, rowDividers: true, columnDividers: false };
+  }
+  if (preset === 'grid') {
+    return { outer: true, rowDividers: true, columnDividers: true };
+  }
+  if (preset === 'none') {
+    return { outer: false, rowDividers: false, columnDividers: false };
+  }
+
+  return {
+    outer: metadata.tableOuterBorder !== false,
+    rowDividers: metadata.tableRowDividers !== false,
+    columnDividers: metadata.tableColumnDividers === true,
+  };
+};
 
 const resolveTotalBindingFallback = (node: InvoiceDesignerIrTreeNode): string => {
   if (node.type === 'subtotal') return 'invoice.subtotal';
@@ -563,6 +617,7 @@ const emitNodeFactory = (
     lines.push('  const children = new Array<LayoutElement>();');
     const metadata = asRecord(node.metadata);
     const tableBorderConfig = resolveTableBorderConfig(metadata);
+    const tableHeaderFontWeight = resolveFontWeightCssValue(metadata.tableHeaderFontWeight, 'semibold');
     if (node.type === 'table' || node.type === 'dynamic-table') {
       const columns = Array.isArray(metadata.columns) ? (metadata.columns as Array<Record<string, unknown>>) : [];
       const resolvedColumns =
@@ -579,8 +634,22 @@ const emitNodeFactory = (
       visibleColumns.forEach((column, columnIndex) => {
         const header = asTrimmedString(column.header) || asTrimmedString(column.key) || 'Column';
         const cellVar = `headerCell${columnIndex}`;
+        const textVar = `headerText${columnIndex}`;
+        const textStyleVar = `headerTextStyle${columnIndex}`;
         lines.push(
-          `  const ${cellVar} = new ColumnElement([new TextElement("${escapeSourceString(header)}", "label")]);`
+          `  const ${textVar} = new TextElement("${escapeSourceString(header)}", "label");`
+        );
+        lines.push(`  const ${textStyleVar} = new ElementStyle();`);
+        lines.push(`  ${textStyleVar}.fontWeight = "${escapeSourceString(tableHeaderFontWeight)}";`);
+        lines.push(`  ${textVar}.style = ${textStyleVar};`);
+        lines.push(
+          `  ${textVar}.id = "${escapeSourceString(node.id)}__header_text_${columnIndex}";`
+        );
+        lines.push(
+          `  const ${cellVar} = new ColumnElement([${textVar}]);`
+        );
+        lines.push(
+          `  ${cellVar}.id = "${escapeSourceString(node.id)}__header_cell_${columnIndex}";`
         );
         if (tableBorderConfig.columnDividers && columnIndex < visibleColumns.length - 1) {
           lines.push(`  const ${cellVar}Style = new ElementStyle();`);
@@ -590,6 +659,7 @@ const emitNodeFactory = (
         lines.push(`  headerCells.push(${cellVar});`);
       });
       lines.push('  const headerRow = new RowElement(headerCells);');
+      lines.push(`  headerRow.id = "${escapeSourceString(node.id)}__header_row";`);
       lines.push('  const headerRowStyle = new ElementStyle();');
       lines.push('  headerRowStyle.marginBottom = "0px";');
       lines.push(
@@ -609,6 +679,9 @@ const emitNodeFactory = (
             key
           )}", "${escapeSourceString(format)}"))]);`
         );
+        lines.push(
+          `    ${cellVar}.id = "${escapeSourceString(node.id)}__row_cell_${columnIndex}_" + itemIndex.toString();`
+        );
         if (tableBorderConfig.columnDividers && columnIndex < visibleColumns.length - 1) {
           lines.push(`    const ${cellVar}Style = new ElementStyle();`);
           lines.push(`    ${cellVar}Style.borderRight = "${INVOICE_BORDER_SUBTLE}";`);
@@ -617,6 +690,7 @@ const emitNodeFactory = (
         lines.push(`    rowCells.push(${cellVar});`);
       });
       lines.push('    const row = new RowElement(rowCells);');
+      lines.push(`    row.id = "${escapeSourceString(node.id)}__row_" + itemIndex.toString();`);
       lines.push('    const rowStyle = new ElementStyle();');
       lines.push('    rowStyle.marginBottom = "0px";');
       if (tableBorderConfig.rowDividers) {
@@ -752,6 +826,26 @@ const emitNodeFactory = (
       lines.push(`  const node = new TextElement("${escapeSourceString(content)}");`);
     }
     emitLayoutStyleCall(node, lines, nodesById);
+    lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
+    lines.push('  return node;');
+    lines.push('}');
+    const endLine = lines.length;
+    sourceMap.push({ nodeId: node.id, symbol, startLine, endLine });
+    return;
+  }
+
+  if (node.type === 'label') {
+    const metadata = asRecord(node.metadata);
+    const labelText = normalizeScaffoldLabelLiteral(
+      pickRenderableLiteral(asTrimmedString(metadata.text), node.name)
+    );
+    const labelFontWeight = resolveFontWeightCssValue(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold');
+    lines.push(
+      `  const node = new TextElement("${escapeSourceString(labelText)}", "label");`
+    );
+    emitLayoutStyleCall(node, lines, nodesById);
+    lines.push('  const nodeStyle = ensureElementStyle(node);');
+    lines.push(`  nodeStyle.fontWeight = "${escapeSourceString(labelFontWeight)}";`);
     lines.push(`  node.id = "${escapeSourceString(node.id)}";`);
     lines.push('  return node;');
     lines.push('}');

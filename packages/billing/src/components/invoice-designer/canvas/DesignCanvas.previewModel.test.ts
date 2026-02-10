@@ -67,6 +67,9 @@ describe('DesignCanvas border style resolution', () => {
   });
 
   it('normalizes table border config flags with professional defaults', () => {
+    expect(__designCanvasPreviewTestUtils.resolveTableBorderPreset({})).toBe('custom');
+    expect(__designCanvasPreviewTestUtils.resolveTableBorderPreset({ tableBorderPreset: 'list' })).toBe('list');
+
     expect(__designCanvasPreviewTestUtils.resolveTableBorderConfig({})).toEqual({
       outer: true,
       rowDividers: true,
@@ -84,5 +87,24 @@ describe('DesignCanvas border style resolution', () => {
       rowDividers: false,
       columnDividers: true,
     });
+
+    expect(
+      __designCanvasPreviewTestUtils.resolveTableBorderConfig({
+        tableBorderPreset: 'list',
+        tableOuterBorder: true,
+        tableRowDividers: false,
+        tableColumnDividers: true,
+      })
+    ).toEqual({
+      outer: false,
+      rowDividers: true,
+      columnDividers: false,
+    });
+  });
+
+  it('normalizes supported font-weight variants with a fallback', () => {
+    expect(__designCanvasPreviewTestUtils.resolveFontWeightStyle('bold', 'normal')).toBe('bold');
+    expect(__designCanvasPreviewTestUtils.resolveFontWeightStyle('semibold', 'normal')).toBe('semibold');
+    expect(__designCanvasPreviewTestUtils.resolveFontWeightStyle('unexpected', 'medium')).toBe('medium');
   });
 });

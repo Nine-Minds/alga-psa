@@ -60,6 +60,8 @@ type SectionSemanticCue = {
 
 type SectionBorderStyle = 'none' | 'light' | 'strong';
 type FieldBorderStyle = 'none' | 'underline' | 'box';
+type FontWeightStyle = 'normal' | 'medium' | 'semibold' | 'bold';
+type TableBorderPreset = 'custom' | 'list' | 'boxed' | 'grid' | 'none';
 type TableBorderConfig = {
   outer: boolean;
   rowDividers: boolean;
@@ -69,6 +71,12 @@ type TableBorderConfig = {
 const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300';
 const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200';
 const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400';
+const FONT_WEIGHT_CLASS: Record<FontWeightStyle, string> = {
+  normal: 'font-normal',
+  medium: 'font-medium',
+  semibold: 'font-semibold',
+  bold: 'font-bold',
+};
 
 const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   const name = sectionName.toLowerCase();
@@ -136,11 +144,45 @@ const resolveFieldBorderStyle = (metadata: Record<string, unknown>): FieldBorder
   return 'underline';
 };
 
-const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => ({
-  outer: metadata.tableOuterBorder !== false,
-  rowDividers: metadata.tableRowDividers !== false,
-  columnDividers: metadata.tableColumnDividers === true,
-});
+const resolveFontWeightStyle = (
+  value: unknown,
+  fallback: FontWeightStyle = 'normal'
+): FontWeightStyle => {
+  if (value === 'normal' || value === 'medium' || value === 'semibold' || value === 'bold') {
+    return value;
+  }
+  return fallback;
+};
+
+const resolveTableBorderPreset = (metadata: Record<string, unknown>): TableBorderPreset => {
+  const candidate = metadata.tableBorderPreset;
+  if (candidate === 'list' || candidate === 'boxed' || candidate === 'grid' || candidate === 'none') {
+    return candidate;
+  }
+  return 'custom';
+};
+
+const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => {
+  const preset = resolveTableBorderPreset(metadata);
+  if (preset === 'list') {
+    return { outer: false, rowDividers: true, columnDividers: false };
+  }
+  if (preset === 'boxed') {
+    return { outer: true, rowDividers: true, columnDividers: false };
+  }
+  if (preset === 'grid') {
+    return { outer: true, rowDividers: true, columnDividers: true };
+  }
+  if (preset === 'none') {
+    return { outer: false, rowDividers: false, columnDividers: false };
+  }
+
+  return {
+    outer: metadata.tableOuterBorder !== false,
+    rowDividers: metadata.tableRowDividers !== false,
+    columnDividers: metadata.tableColumnDividers === true,
+  };
+};
 
 const resolveSectionBorderClasses = (style: SectionBorderStyle) => {
   if (style === 'none') {
@@ -353,6 +395,9 @@ const renderTablePreview = (
   previewData: WasmInvoiceViewModel | null
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
+  const headerWeightClass = FONT_WEIGHT_CLASS[
+    resolveFontWeightStyle(metadata.tableHeaderFontWeight, 'semibold')
+  ];
   const columns = Array.isArray((metadata as { columns?: unknown }).columns)
     ? (metadata as { columns: Array<Record<string, unknown>> }).columns
     : [];
@@ -379,7 +424,8 @@ const renderTablePreview = (
     >
       <div
         className={clsx(
-          'grid grid-cols-4 gap-0 pb-1 font-semibold uppercase tracking-wide text-slate-500',
+          'grid grid-cols-4 gap-0 pb-1 uppercase tracking-wide text-slate-500',
+          headerWeightClass,
           borderConfig.rowDividers && ['border-b', INVOICE_BORDER_COLOR_CLASS]
         )}
       >
@@ -675,6 +721,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
   const isFieldNode = node.type === 'field';
+  const labelWeightClass = FONT_WEIGHT_CLASS[
+    resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
+  ];
   const sectionBorderStyle = node.type === 'section' ? resolveSectionBorderStyle(metadata) : 'light';
   const fieldBorderStyle = isFieldNode ? resolveFieldBorderStyle(metadata) : 'box';
   const sectionContainerClasses =
@@ -841,7 +890,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
             className={clsx(
               'h-full text-[11px] text-slate-500',
               isLabelNode
-                ? 'px-1 py-0.5 flex items-center bg-transparent text-slate-700 font-medium'
+                ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
                 : isTotalsRow
                   ? 'p-1.5 whitespace-pre-wrap'
                   : fieldSurfaceClasses,
@@ -1125,5 +1174,7 @@ export const __designCanvasPreviewTestUtils = {
   resolveTotalsRowPreviewModel,
   resolveSectionBorderStyle,
   resolveFieldBorderStyle,
+  resolveFontWeightStyle,
+  resolveTableBorderPreset,
   resolveTableBorderConfig,
 };

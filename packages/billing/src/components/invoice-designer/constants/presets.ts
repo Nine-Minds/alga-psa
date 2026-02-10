@@ -449,7 +449,10 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'header-right',
         offset: { x: 0, y: 0 },
         size: { width: 96, height: 32 },
-        name: 'Invoice Number Label'
+        name: 'Invoice Number Label',
+        metadata: {
+          fontWeight: 'bold',
+        },
       },
       {
         key: 'field-inv-num',
@@ -491,7 +494,10 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'col-from',
         offset: { x: 0, y: 0 },
         size: { width: 100, height: 24 },
-        name: 'From Label'
+        name: 'From Label',
+        metadata: {
+          fontWeight: 'semibold',
+        },
       },
       {
         key: 'txt-from-addr',
@@ -520,7 +526,10 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'col-to',
         offset: { x: 0, y: 0 },
         size: { width: 100, height: 24 },
-        name: 'Bill To Label'
+        name: 'Bill To Label',
+        metadata: {
+          fontWeight: 'semibold',
+        },
       },
       {
         key: 'txt-to-addr',
@@ -553,9 +562,11 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 710, height: 200 },
         name: 'Line Items',
         metadata: {
-          tableOuterBorder: true,
+          tableBorderPreset: 'list',
+          tableOuterBorder: false,
           tableRowDividers: true,
           tableColumnDividers: false,
+          tableHeaderFontWeight: 'semibold',
         },
       },
 
@@ -584,7 +595,10 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         parentKey: 'footer-notes',
         offset: { x: 0, y: 0 },
         size: { width: 100, height: 24 },
-        name: 'Notes Label'
+        name: 'Notes Label',
+        metadata: {
+          fontWeight: 'semibold',
+        },
       },
       {
         key: 'txt-notes',

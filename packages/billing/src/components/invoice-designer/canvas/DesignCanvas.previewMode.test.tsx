@@ -338,6 +338,64 @@ describe('DesignCanvas preview mode', () => {
     expect(underlineSurface?.className).toContain('bg-transparent');
   });
 
+  it('applies table list border preset and explicit typography weights', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'label-weighted',
+        type: 'label',
+        name: 'Label',
+        metadata: { text: 'Billing Contact', fontWeight: 'bold' },
+        position: { x: 20, y: 20 },
+        size: { width: 180, height: 28 },
+      }),
+      baseNode({
+        id: 'table-list',
+        type: 'dynamic-table',
+        name: 'Line Items List',
+        position: { x: 20, y: 80 },
+        size: { width: 520, height: 220 },
+        metadata: {
+          tableBorderPreset: 'list',
+          tableHeaderFontWeight: 'bold',
+          tableOuterBorder: true,
+          tableRowDividers: false,
+          tableColumnDividers: true,
+        },
+      }),
+    ]);
+
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    const labelSurface = screen.getByText('Billing Contact').closest('div');
+    const listTableRoot = screen.getByText('Description').closest('.rounded-sm');
+    const tableHeaderRow = screen.getByText('Description').closest('div');
+
+    expect(labelSurface?.className).toContain('font-bold');
+    expect(tableHeaderRow?.className).toContain('font-bold');
+    expect(listTableRoot?.className).not.toContain('border-slate-400');
+    expect(listTableRoot?.querySelector('.border-r')).toBeNull();
+    expect(listTableRoot?.querySelector('.border-b')).toBeTruthy();
+  });
+
   it('renders table border lines when enabled', () => {
     const nodes = buildCanvasNodes([
       baseNode({
@@ -530,7 +588,7 @@ describe('DesignCanvas preview mode', () => {
         previewData={previewData}
       />
     );
-    const scaledContainer = container.querySelector('[style*=\"scale(1.25)\"]');
+    const scaledContainer = container.querySelector('[style*="scale(1.25)"]');
     expect(scaledContainer).toBeTruthy();
   });
 

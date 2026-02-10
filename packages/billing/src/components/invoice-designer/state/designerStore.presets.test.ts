@@ -9,6 +9,7 @@ describe('designerStore preset metadata', () => {
 
     const nodes = useInvoiceDesignerStore.getState().nodes;
     const invoiceNumberField = nodes.find((node) => node.name === 'Invoice Number');
+    const invoiceNumberLabel = nodes.find((node) => node.name === 'Invoice Number Label');
     const fromAddressText = nodes.find((node) => node.name === 'From Address');
     const clientAddressText = nodes.find((node) => node.name === 'Client Address');
     const headerSection = nodes.find((node) => node.name === 'Header');
@@ -19,6 +20,7 @@ describe('designerStore preset metadata', () => {
     expect(invoiceNumberField?.metadata?.format).toBe('text');
     expect(invoiceNumberField?.metadata?.placeholder).toBe('Invoice Number');
     expect(invoiceNumberField?.metadata?.fieldBorderStyle).toBe('underline');
+    expect(invoiceNumberLabel?.metadata?.fontWeight).toBe('bold');
 
     expect(fromAddressText).toBeTruthy();
     expect(fromAddressText?.metadata?.bindingKey).toBe('tenant.address');
@@ -30,8 +32,10 @@ describe('designerStore preset metadata', () => {
     expect(headerSection?.metadata?.sectionBorderStyle).toBe('none');
 
     expect(itemsTable).toBeTruthy();
-    expect(itemsTable?.metadata?.tableOuterBorder).toBe(true);
+    expect(itemsTable?.metadata?.tableBorderPreset).toBe('list');
+    expect(itemsTable?.metadata?.tableOuterBorder).toBe(false);
     expect(itemsTable?.metadata?.tableRowDividers).toBe(true);
     expect(itemsTable?.metadata?.tableColumnDividers).toBe(false);
+    expect(itemsTable?.metadata?.tableHeaderFontWeight).toBe('semibold');
   });
 });

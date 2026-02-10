@@ -127,13 +127,16 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).toContain('Amount Due: " + resolveInvoiceBinding(viewModel, "invoice.total", "currency")');
   });
 
-  it('emits section, field, and table border styles from GUI metadata', () => {
+  it('emits section, field, table border styles, and typography weights from GUI metadata', () => {
     const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
     const pageNode = createNode('page', 'page', 'doc', {
-      childIds: ['section-strong', 'field-none', 'field-underline', 'table-plain', 'table-grid'],
+      childIds: ['section-strong', 'label-bold', 'field-none', 'field-underline', 'table-plain', 'table-grid'],
     });
     const sectionNode = createNode('section-strong', 'section', 'page', {
       metadata: { sectionBorderStyle: 'strong' },
+    });
+    const labelNode = createNode('label-bold', 'label', 'page', {
+      metadata: { text: 'Invoice #', fontWeight: 'bold' },
     });
     const fieldNoneNode = createNode('field-none', 'field', 'page', {
       metadata: { bindingKey: 'invoice.poNumber', fieldBorderStyle: 'none' },
@@ -143,9 +146,10 @@ describe('generateAssemblyScriptFromIr', () => {
     });
     const plainTableNode = createNode('table-plain', 'table', 'page', {
       metadata: {
-        tableOuterBorder: false,
-        tableRowDividers: false,
-        tableColumnDividers: false,
+        tableBorderPreset: 'none',
+        tableOuterBorder: true,
+        tableRowDividers: true,
+        tableColumnDividers: true,
         columns: [
           { header: 'Description', key: 'item.description', type: 'text' },
           { header: 'Amount', key: 'item.total', type: 'currency' },
@@ -154,9 +158,11 @@ describe('generateAssemblyScriptFromIr', () => {
     });
     const gridTableNode = createNode('table-grid', 'table', 'page', {
       metadata: {
-        tableOuterBorder: true,
-        tableRowDividers: true,
-        tableColumnDividers: true,
+        tableBorderPreset: 'grid',
+        tableOuterBorder: false,
+        tableRowDividers: false,
+        tableColumnDividers: false,
+        tableHeaderFontWeight: 'bold',
         columns: [
           { header: 'Description', key: 'item.description', type: 'text' },
           { header: 'Qty', key: 'item.quantity', type: 'number' },
@@ -167,6 +173,7 @@ describe('generateAssemblyScriptFromIr', () => {
       documentNode,
       pageNode,
       sectionNode,
+      labelNode,
       fieldNoneNode,
       fieldUnderlineNode,
       plainTableNode,
@@ -178,7 +185,15 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).toContain('const nodeStyle = ensureElementStyle(node);');
     expect(generated.source).toContain('nodeStyle.border = "1px solid #94a3b8";');
     expect(generated.source).toContain('nodeStyle.borderRadius = "6px";');
+    expect(generated.source).toContain('nodeStyle.fontWeight = "bold";');
     expect(generated.source).toContain('nodeStyle.borderBottom = "1px solid #cbd5e1";');
+    expect(generated.source).toContain('headerTextStyle0.fontWeight = "600";');
+    expect(generated.source).toContain('headerTextStyle0.fontWeight = "bold";');
+    expect(generated.source).toContain('headerText0.id = "table-grid__header_text_0";');
+    expect(generated.source).toContain('headerCell0.id = "table-grid__header_cell_0";');
+    expect(generated.source).toContain('headerRow.id = "table-grid__header_row";');
+    expect(generated.source).toContain('rowCell0.id = "table-grid__row_cell_0_" + itemIndex.toString();');
+    expect(generated.source).toContain('row.id = "table-grid__row_" + itemIndex.toString();');
     expect(generated.source).toContain('headerRowStyle.borderBottom = "0px";');
     expect(generated.source).toContain('rowStyle.borderBottom = "0px";');
     expect(generated.source).toContain('nodeStyle.border = "0px";');
