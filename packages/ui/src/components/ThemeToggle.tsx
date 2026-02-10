@@ -16,7 +16,7 @@ const themeOptions: Array<{ value: ThemeOption; label: string; icon: typeof Sun 
 ];
 
 export function ThemeToggle() {
-  const { enabled: themesEnabled } = useFeatureFlag('themes-enabled');
+  const { enabled: themesEnabled, loading: themesLoading } = useFeatureFlag('themes-enabled');
   const { theme, resolvedTheme, setTheme } = useAppTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -34,7 +34,7 @@ export function ThemeToggle() {
     return Monitor;
   }, [resolvedTheme]);
 
-  if (!mounted || !themesEnabled) {
+  if (!mounted || themesLoading || !themesEnabled) {
     return null;
   }
 

@@ -36,20 +36,20 @@ export function useAppTheme() {
   const themeApi = useTheme();
   const { theme, setTheme } = themeApi;
   const { status } = useSession();
-  const { enabled: themesEnabled } = useFeatureFlag('themes-enabled');
+  const { enabled: themesEnabled, loading: themesLoading } = useFeatureFlag('themes-enabled');
   const actions = useContext(ThemeActionsContext);
   const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
   const lastSyncedTheme = useRef<ThemePreference | null>(null);
 
-  // Force light theme when feature flag is disabled
+  // Force light theme when feature flag is disabled (but not while still loading)
   useEffect(() => {
-    if (!themesEnabled && theme !== 'light') {
+    if (!themesLoading && !themesEnabled && theme !== 'light') {
       setTheme('light');
     }
-  }, [themesEnabled, theme, setTheme]);
+  }, [themesLoading, themesEnabled, theme, setTheme]);
 
   useEffect(() => {
-    if (!themesEnabled || !actions) return;
+    if (themesLoading || !themesEnabled || !actions) return;
     if (status !== 'authenticated' || hasLoadedFromDb) {
       return;
     }
@@ -71,7 +71,7 @@ export function useAppTheme() {
   }, [themesEnabled, actions, hasLoadedFromDb, status, theme, setTheme]);
 
   useEffect(() => {
-    if (!themesEnabled || !actions) return;
+    if (themesLoading || !themesEnabled || !actions) return;
     if (status !== 'authenticated') {
       return;
     }
