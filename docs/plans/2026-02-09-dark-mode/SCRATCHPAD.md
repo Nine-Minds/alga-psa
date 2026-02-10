@@ -25,6 +25,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Added theme-aware `--color-background`/`--color-card` CSS variables and switched Tailwind `background`/`card` colors to use them.
 - (2026-02-10) Added theme-aware status color CSS variables and wired Tailwind `success`/`warning`/`error` colors to them.
 - (2026-02-10) Replaced the light-locked ThemeContext with `next-themes` via `AppThemeProvider` in the root layout and removed the old context file.
+- (2026-02-10) Added `useAppTheme()` hook to load theme preference from `/api/v1/users/:id/preferences` and persist changes back to the DB.
 
 ## Discoveries / Constraints
 

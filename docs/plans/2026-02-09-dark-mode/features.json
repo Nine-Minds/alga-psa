@@ -32,7 +32,7 @@
   {
     "id": "F004b",
     "description": "Create `useAppTheme()` wrapper hook that combines `next-themes` `useTheme()` with DB persistence — syncs theme changes to `user_preferences` table via `UserPreferences.upsert()`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.6"]
   },
   {
