@@ -21,6 +21,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-09) **TOGGLE FOR PREVIEW** — single toggle switch in branding settings, not side-by-side comparison.
 - (2026-02-09) **SELECTORS VERIFIED COMPATIBLE** — globals.css `.dark`/`.light` are bare class selectors (not `body.dark` or `html.dark`). They match `<html class="dark">` (next-themes default target) correctly. CSS variables cascade to all descendants. No selector changes needed.
 - (2026-02-10) Installed `next-themes` in `server` workspace via npm workspaces to satisfy FR-1.1.
+- (2026-02-10) Enabled Tailwind dark mode via `darkMode: 'class'` in `server/tailwind.config.ts`.
 
 ## Discoveries / Constraints
 

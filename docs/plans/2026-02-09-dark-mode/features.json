@@ -8,7 +8,7 @@
   {
     "id": "F001b",
     "description": "Add `darkMode: 'class'` to `server/tailwind.config.ts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.2"]
   },
   {
