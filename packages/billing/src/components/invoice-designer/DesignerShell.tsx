@@ -19,7 +19,7 @@ import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
 import type { DesignerComponentType, DesignerConstraint, DesignerNode, Point, Size } from './state/designerStore';
 import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
-import { AlignmentGuide, calculateGuides, clampPositionToParent } from './utils/layout';
+import { AlignmentGuide, calculateGuides, clampPositionToParent, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import {
@@ -213,7 +213,7 @@ const getSectionFitSizeFromChildren = (
     return null;
   }
 
-  const padding = section.layout?.mode === 'flex' ? Math.max(0, section.layout.padding ?? 0) : 0;
+  const padding = resolveFlexPadding(section);
   const furthestRight = sectionChildren.reduce((max, child) => {
     const right = Math.max(0, child.position.x) + Math.max(0, child.size.width);
     return right > max ? right : max;

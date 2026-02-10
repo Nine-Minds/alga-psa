@@ -137,4 +137,19 @@ describe('previewScaffolds', () => {
     expect(populatedPreview.isPlaceholder).toBe(false);
     expect(populatedPreview.text).toBe('PO Number');
   });
+
+  it('uses metadata.label for label text when metadata.text is empty', () => {
+    const node = createNode({
+      type: 'label',
+      name: 'label 12',
+      metadata: {
+        text: '',
+        label: 'Billing Contact',
+      },
+    });
+
+    const preview = resolveLabelPreviewScaffold(node);
+    expect(preview.isPlaceholder).toBe(false);
+    expect(preview.text).toBe('Billing Contact');
+  });
 });

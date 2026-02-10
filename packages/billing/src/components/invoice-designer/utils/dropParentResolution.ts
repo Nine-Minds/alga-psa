@@ -1,5 +1,6 @@
 import type { DesignerComponentType, DesignerNode, Size } from '../state/designerStore';
 import { canNestWithinParent } from '../state/hierarchy';
+import { getNodeInnerFrame, resolveFlexPadding } from './layout';
 
 const HEADER_NAME_PATTERN = /\b(header|masthead|top)\b/i;
 const HEADER_SCORE_PENALTY = 180;
@@ -79,23 +80,6 @@ const getSemanticScore = (type: DesignerComponentType, sectionName: string) => {
 const getSectionChildNodes = (section: DesignerNode, nodesById: Map<string, DesignerNode>): DesignerNode[] =>
   section.childIds.map((childId) => nodesById.get(childId)).filter((node): node is DesignerNode => Boolean(node));
 
-const getSectionInnerSize = (section: DesignerNode) => {
-  const padding = section.layout?.mode === 'flex' ? Math.max(0, section.layout.padding ?? 0) : 0;
-  return {
-    width: Math.max(0, section.size.width - padding * 2),
-    height: Math.max(0, section.size.height - padding * 2),
-    padding,
-  };
-};
-
-const getNodeInnerSize = (node: DesignerNode) => {
-  const padding = node.layout?.mode === 'flex' ? Math.max(0, node.layout.padding ?? 0) : 0;
-  return {
-    width: Math.max(0, node.size.width - padding * 2),
-    height: Math.max(0, node.size.height - padding * 2),
-  };
-};
-
 const getFlowAvailableMainSpace = (section: DesignerNode, nodesById: Map<string, DesignerNode>) => {
   const layout = section.layout;
   if (layout?.mode !== 'flex') {
@@ -104,7 +88,7 @@ const getFlowAvailableMainSpace = (section: DesignerNode, nodesById: Map<string,
   const children = getSectionChildNodes(section, nodesById);
   const direction = layout.direction ?? 'column';
   const gap = Math.max(0, layout.gap ?? 0);
-  const { width: innerWidth, height: innerHeight } = getSectionInnerSize(section);
+  const { width: innerWidth, height: innerHeight } = getNodeInnerFrame(section);
   const usedMainSpace = children.reduce((total, child) => {
     return total + (direction === 'row' ? child.size.width : child.size.height);
   }, 0);
@@ -121,7 +105,7 @@ const canParentFitComponent = (
   desiredSize?: Size
 ) => {
   const layout = parent.layout;
-  const { width: innerWidth, height: innerHeight } = getNodeInnerSize(parent);
+  const { width: innerWidth, height: innerHeight } = getNodeInnerFrame(parent);
   const practicalMinimum = getPracticalMinimumSizeForType(componentType);
   const minInnerWidth = Math.max(MIN_SECTION_INNER_WIDTH, practicalMinimum.width);
   const minInnerHeight = Math.max(MIN_SECTION_INNER_HEIGHT, practicalMinimum.height);
@@ -211,14 +195,14 @@ const estimateSectionVerticalSpace = (section: DesignerNode, nodesById: Map<stri
 
   if (layout?.mode === 'flex' && layout.direction === 'column') {
     const gap = Math.max(0, layout.gap ?? 0);
-    const padding = Math.max(0, layout.padding ?? 0);
+    const padding = resolveFlexPadding(section);
     const childrenHeight = children.reduce((total, child) => total + Math.max(0, child.size.height), 0);
     const gapHeight = children.length > 1 ? gap * (children.length - 1) : 0;
     const consumedHeight = padding * 2 + childrenHeight + gapHeight;
     return Math.max(0, section.size.height - consumedHeight);
   }
 
-  const padding = layout?.mode === 'flex' ? Math.max(0, layout.padding ?? 0) : 0;
+  const padding = resolveFlexPadding(section);
   const furthestBottom = children.reduce((max, child) => {
     const bottom = Math.max(0, child.position.y + child.size.height);
     return bottom > max ? bottom : max;
@@ -421,7 +405,7 @@ const planRowLocalReflow = (
 
   const children = getSectionChildNodes(parent, nodesById);
   const gap = Math.max(0, parent.layout.gap ?? 0);
-  const { width: innerWidth } = getNodeInnerSize(parent);
+  const { width: innerWidth } = getNodeInnerFrame(parent);
   const currentUsed = children.reduce((sum, child) => sum + child.size.width, 0) + (children.length > 1 ? gap * (children.length - 1) : 0);
   const additionalGap = children.length > 0 ? gap : 0;
   const deficit = Math.max(0, currentUsed + requiredWidth + additionalGap - innerWidth);

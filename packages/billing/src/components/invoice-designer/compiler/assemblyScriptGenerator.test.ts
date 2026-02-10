@@ -290,6 +290,20 @@ describe('generateAssemblyScriptFromIr', () => {
     expect(generated.source).not.toContain('invoice.custom');
   });
 
+  it('uses metadata.label as fallback label text when metadata.text is empty', () => {
+    const workspace = createWorkspace([
+      createNode('doc', 'document', null, { childIds: ['page'] }),
+      createNode('page', 'page', 'doc', { childIds: ['label-legacy'] }),
+      createNode('label-legacy', 'label', 'page', {
+        name: 'label 12',
+        metadata: { text: '', label: 'Billing Contact' },
+      }),
+    ]);
+
+    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
+    expect(generated.source).toContain('new TextElement("Billing Contact", "label")');
+  });
+
   it('emits layout/style declarations derived from node size, position, and layout metadata', () => {
     const documentNode = createNode('doc', 'document', null, { childIds: ['page'] });
     const pageNode = createNode('page', 'page', 'doc', { childIds: ['section-1'] });

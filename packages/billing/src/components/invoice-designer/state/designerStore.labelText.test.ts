@@ -168,4 +168,14 @@ describe('designerStore label text authority', () => {
     expect(label?.name).toBe('INVOICE');
     expect(label?.metadata?.text).toBe('INVOICE');
   });
+
+  it('syncs label node name and metadata.text from metadata.label for legacy nodes', () => {
+    const store = useInvoiceDesignerStore.getState();
+    store.updateNodeMetadata('label', { text: '', label: 'Billing Contact' });
+
+    const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
+    expect(label?.name).toBe('Billing Contact');
+    expect(label?.metadata?.text).toBe('Billing Contact');
+    expect(label?.metadata?.label).toBe('Billing Contact');
+  });
 });

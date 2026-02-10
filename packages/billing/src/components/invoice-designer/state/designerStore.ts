@@ -12,8 +12,9 @@ import {
   sanitizeConstraints,
   validatePairConstraintNodes,
 } from '../utils/constraints';
-import { clampPositionToParent } from '../utils/layout';
+import { clampPositionToParent, resolveFlexPadding } from '../utils/layout';
 import { canNestWithinParent, getAllowedChildrenForType, getAllowedParentsForType } from './hierarchy';
+import { resolveLabelText } from '../labelText';
 
 export type DesignerComponentType =
   | 'document'
@@ -226,7 +227,7 @@ const getNodeParentInnerBounds = (node: Pick<DesignerNode, 'parentId'>, nodesByI
     };
   }
 
-  const padding = parent.layout?.mode === 'flex' ? Math.max(0, parent.layout.padding ?? 0) : 0;
+  const padding = resolveFlexPadding(parent);
   const hugExpandsHeight = parent.layout?.mode === 'flex' && parent.layout.sizing === 'hug' && parent.layout.direction === 'column';
   const hugExpandsWidth = parent.layout?.mode === 'flex' && parent.layout.sizing === 'hug' && parent.layout.direction === 'row';
   return {
@@ -655,7 +656,7 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
 
         const parent = node.parentId ? nodeMap.get(node.parentId) : undefined;
         if (parent) {
-          const parentPadding = parent.layout?.mode === 'flex' ? Math.max(0, parent.layout.padding ?? 0) : 0;
+          const parentPadding = resolveFlexPadding(parent);
           const maxInnerWidth = Math.max(1, parent.size.width - parentPadding * 2);
           const maxInnerHeight = Math.max(1, parent.size.height - parentPadding * 2);
           node.size.width = Math.min(node.size.width, maxInnerWidth);
@@ -1200,16 +1201,19 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           if (node.type !== 'label') {
             return { ...node, metadata: nextMetadata };
           }
-          const nextText = typeof nextMetadata.text === 'string' ? nextMetadata.text.trim() : '';
-          if (!nextText) {
+          const syncedLabelText = resolveLabelText(
+            { name: node.name, metadata: nextMetadata },
+            { includeNameFallback: false }
+          ).text;
+          if (!syncedLabelText) {
             return { ...node, metadata: nextMetadata };
           }
           return {
             ...node,
-            name: nextText,
+            name: syncedLabelText,
             metadata: {
               ...nextMetadata,
-              text: nextText,
+              text: syncedLabelText,
             },
           };
         });

@@ -1,4 +1,5 @@
 import type { DesignerNode } from '../state/designerStore';
+import { resolveLabelText } from '../labelText';
 
 type NodeMetadata = Record<string, unknown>;
 
@@ -150,16 +151,15 @@ export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewSc
 };
 
 export const resolveLabelPreviewScaffold = (node: DesignerNode): EditorPreviewScaffold => {
-  const metadata = (node.metadata ?? {}) as NodeMetadata;
-  const text = asTrimmedString(metadata.text);
-  if (text.length > 0) {
+  const explicitLabel = resolveLabelText(node, { includeNameFallback: false }).text;
+  if (explicitLabel.length > 0) {
     return {
-      text,
+      text: explicitLabel,
       isPlaceholder: false,
     };
   }
   return {
-    text: inferContextualLabelScaffold(node.name),
+    text: inferContextualLabelScaffold(resolveLabelText(node).text),
     isPlaceholder: true,
   };
 };

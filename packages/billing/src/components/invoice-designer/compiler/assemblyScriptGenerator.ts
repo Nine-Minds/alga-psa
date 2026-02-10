@@ -1,4 +1,5 @@
 import type { InvoiceDesignerCompilerIr, InvoiceDesignerIrTreeNode } from './guiIr';
+import { resolveLabelText } from '../labelText';
 
 export type InvoiceDesignerSourceMapEntry = {
   nodeId: string;
@@ -137,7 +138,7 @@ const resolveNodeText = (node: InvoiceDesignerIrTreeNode): { content: string; va
 
   if (node.type === 'label') {
     const labelContent = normalizeScaffoldLabelLiteral(
-      pickRenderableLiteral(asTrimmedString(metadata.text), node.name)
+      resolveLabelText(node, { shouldSkip: isGenericScaffoldLiteral }).text
     );
     return {
       content: labelContent,
@@ -875,7 +876,7 @@ const emitNodeFactory = (
   if (node.type === 'label') {
     const metadata = asRecord(node.metadata);
     const labelText = normalizeScaffoldLabelLiteral(
-      pickRenderableLiteral(asTrimmedString(metadata.text), node.name)
+      resolveLabelText(node, { shouldSkip: isGenericScaffoldLiteral }).text
     );
     const labelFontWeight = resolveFontWeightCssValue(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold');
     lines.push(

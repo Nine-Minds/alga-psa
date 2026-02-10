@@ -18,6 +18,22 @@ const ALIGN_THRESHOLD = 6;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+export const resolveFlexPadding = (node: Pick<DesignerNode, 'layout'>): number =>
+  node.layout?.mode === 'flex' ? Math.max(0, node.layout.padding ?? 0) : 0;
+
+export const getNodeInnerFrame = (node: Pick<DesignerNode, 'size' | 'layout'>): {
+  width: number;
+  height: number;
+  padding: number;
+} => {
+  const padding = resolveFlexPadding(node);
+  return {
+    width: Math.max(0, node.size.width - padding * 2),
+    height: Math.max(0, node.size.height - padding * 2),
+    padding,
+  };
+};
+
 export const calculateGuides = (activeNode: DesignerNode, nodes: DesignerNode[]): AlignmentGuide[] => {
   const guides: AlignmentGuide[] = [];
   nodes.forEach((node) => {
