@@ -53,6 +53,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) ThemeBridge now feeds Mantine color scheme, marking Mantine components as theme-aware.
 - (2026-02-10) Added dark-mode overrides for react-day-picker, react-big-calendar, and Tiptap/ProseMirror surfaces.
 - (2026-02-10) Marked client portal core pages as dark-ready after shared token and layout updates.
+- (2026-02-10) Marked MSP domain pages (tickets, projects, billing, scheduling, dashboard, settings) as dark-ready after shared overrides and CSS module updates.
 
 ## Discoveries / Constraints
 

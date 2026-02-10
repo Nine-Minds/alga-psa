@@ -206,43 +206,43 @@
   {
     "id": "F032",
     "description": "Ticket list and detail views render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.1"]
   },
   {
     "id": "F033",
     "description": "Project views (board and list) render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.2"]
   },
   {
     "id": "F034",
     "description": "Billing and invoice screens render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.3"]
   },
   {
     "id": "F035",
     "description": "Scheduling and calendar views render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.4"]
   },
   {
     "id": "F036",
     "description": "Dashboard widgets and chart components render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.5"]
   },
   {
     "id": "F037",
     "description": "Document editor (Tiptap/ProseMirror) renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.6"]
   },
   {
     "id": "F038",
     "description": "Settings pages render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.7"]
   },
   {
