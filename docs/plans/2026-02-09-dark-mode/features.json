@@ -350,25 +350,25 @@
   {
     "id": "F054",
     "description": "Client portal tickets page renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.6"]
   },
   {
     "id": "F055",
     "description": "Client portal invoices/billing page renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.6"]
   },
   {
     "id": "F056",
     "description": "Client portal approvals page renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.6"]
   },
   {
     "id": "F057",
     "description": "Client portal profile page renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.6"]
   },
   {
