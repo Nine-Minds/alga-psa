@@ -140,6 +140,12 @@ interface TicketDetailsProps {
         id: string;
         client: IClient;
     }) => React.ReactNode;
+
+    /**
+     * Optional injected UI for interval management (e.g. @alga-psa/scheduling IntervalManagement).
+     * Shows auto-tracked time intervals below the ticket timer.
+     */
+    renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -180,7 +186,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
-    renderClientDetails
+    renderClientDetails,
+    renderIntervalManagement
 }) => {
     const { t } = useTranslation('clientPortal');
     const { data: session } = useSession();
@@ -1858,6 +1865,7 @@ const handleClose = () => {
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
                                 surveySummary={surveySummary}
+                                renderIntervalManagement={renderIntervalManagement}
                             />
                         </Suspense>
                         
