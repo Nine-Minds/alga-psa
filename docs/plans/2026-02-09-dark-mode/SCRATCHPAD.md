@@ -29,6 +29,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Removed hardcoded `className="light"` from root `<body>` so next-themes controls the theme class.
 - (2026-02-10) Added `ThemeBridge` to map resolved theme to Radix `appearance` and Mantine `forceColorScheme`.
 - (2026-02-10) Created `ThemeToggle` dropdown (Light/Dark/System) powered by `useAppTheme`.
+- (2026-02-10) Added `ThemeToggle` to the MSP header actions area.
 
 ## Discoveries / Constraints
 

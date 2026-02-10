@@ -62,7 +62,7 @@
   {
     "id": "F009",
     "description": "Place the `ThemeToggle` component in the MSP portal header bar, accessible from every page",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.2"]
   },
   {

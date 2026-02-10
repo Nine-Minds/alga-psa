@@ -32,6 +32,7 @@ import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -379,6 +380,7 @@ export default function Header({
       <div className="flex items-center gap-3">
         <TenantBadge tenant={userData?.tenant} />
         <QuickCreateMenu />
+        <ThemeToggle />
         <NotificationBell />
         <JobActivityIndicator />
         <DropdownMenu>
