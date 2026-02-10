@@ -55,6 +55,22 @@ export const adaptColorsForDarkMode = (colors: ColorResult): ColorResult => {
   return { background: adaptedBg, text: adaptedText };
 };
 
+/**
+ * Darken a hex color by moving it toward black.
+ * `amount` is 0–1 where 1 = fully black.
+ * Counterpart to the `lightenColor` helpers used in kanban columns.
+ */
+export const darkenColor = (hex: string, amount: number): string => {
+  const color = hex.replace('#', '');
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+  const newR = Math.round(r * (1 - amount));
+  const newG = Math.round(g * (1 - amount));
+  const newB = Math.round(b * (1 - amount));
+  return `#${((newR << 16) | (newG << 8) | newB).toString(16).padStart(6, '0')}`;
+};
+
 export const generateAvatarColor = (str: string): ColorResult => {
   const hue = hashString(str) % 360;
   const color = tinycolor({ h: hue, s: 75, l: 60 });

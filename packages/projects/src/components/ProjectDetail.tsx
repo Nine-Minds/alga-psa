@@ -43,6 +43,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { useTheme } from 'next-themes';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -112,6 +113,17 @@ const lightenHexColor = (hex: string, amount: number): string | null => {
   return `#${next}`;
 };
 
+const darkenHexColor = (hex: string, amount: number): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  const blend = (channel: number) => Math.max(0, Math.round(channel * (1 - amount)));
+  const next = [blend(r), blend(g), blend(b)]
+    .map((channel) => channel.toString(16).padStart(2, '0'))
+    .join('');
+  return `#${next}`;
+};
+
 interface ProjectDetailProps {
   project: IProject;
   phases: IProjectPhase[];
@@ -140,6 +152,8 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   // View mode state with persistence
   type ProjectViewMode = 'kanban' | 'list';
@@ -1879,6 +1893,24 @@ export default function ProjectDetail({
     const getStatusStripStyles = (status: ProjectStatus, index: number) => {
       if (status.color) {
         const base = status.color;
+        if (isDark) {
+          const itemBgHex = darkenHexColor(base, 0.75) ?? base;
+          const itemBorderHex = darkenHexColor(base, 0.55) ?? base;
+          const badgeBgHex = darkenHexColor(base, 0.65) ?? base;
+          const textColor = lightenHexColor(base, 0.40) ?? base;
+
+          return {
+            itemStyle: {
+              backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
+              borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
+              color: textColor,
+            } as React.CSSProperties,
+            countStyle: {
+              backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
+              color: textColor,
+            } as React.CSSProperties,
+          };
+        }
         const itemBgHex = lightenHexColor(base, 0.72) ?? base;
         const itemBorderHex = lightenHexColor(base, 0.45) ?? base;
         const badgeBgHex = lightenHexColor(base, 0.62) ?? base;
@@ -1892,6 +1924,20 @@ export default function ProjectDetail({
           countStyle: {
             backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
             color: base,
+          } as React.CSSProperties,
+        };
+      }
+
+      if (isDark) {
+        return {
+          itemStyle: {
+            backgroundColor: 'rgb(var(--color-border-100))',
+            borderColor: 'rgb(var(--color-border-200))',
+            color: 'rgb(var(--color-text-700))',
+          } as React.CSSProperties,
+          countStyle: {
+            backgroundColor: 'rgb(var(--color-border-200))',
+            color: 'rgb(var(--color-text-700))',
           } as React.CSSProperties,
         };
       }
@@ -1956,7 +2002,7 @@ export default function ProjectDetail({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-64 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
                 {searchQuery && (
                   <button
@@ -2005,7 +2051,7 @@ export default function ProjectDetail({
 
             {/* Agent Filter */}
             <div className="flex items-center gap-2">
-              <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+              <div className="[&_button]:bg-background [&_button]:dark:bg-[rgb(var(--color-card))] [&_button>span]:!text-gray-700 [&_button>span]:dark:!text-gray-300">
                 <MultiUserPicker
                   id="task-agent-filter-list"
                   values={selectedAgentFilter}
@@ -2181,7 +2227,7 @@ export default function ProjectDetail({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-64 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
                 {searchQuery && (
                   <button
@@ -2230,7 +2276,7 @@ export default function ProjectDetail({
 
             {/* Agent Filter */}
             <div className="flex items-center gap-2">
-              <div className="[&_button]:bg-white [&_button>span]:!text-gray-700">
+              <div className="[&_button]:bg-background [&_button]:dark:bg-[rgb(var(--color-card))] [&_button>span]:!text-gray-700 [&_button>span]:dark:!text-gray-300">
                 <MultiUserPicker
                   id="task-agent-filter-kanban"
                   values={selectedAgentFilter}
