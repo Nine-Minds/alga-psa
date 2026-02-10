@@ -42,7 +42,7 @@ import ContractLineFixedConfig from '@alga-psa/billing/models/contractLineFixedC
 import { string, number } from 'zod';
 import contractLine from '@alga-psa/billing/models/contractLine';
 import service from '@alga-psa/billing/models/service';
-import { TaxService } from '../services/taxService';
+import { TaxService } from '@alga-psa/billing/services/taxService';
 import { ClientContractServiceConfigurationService } from '../services/clientContractServiceConfigurationService';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 // Workflow imports removed as event emission is moved back to the calling action

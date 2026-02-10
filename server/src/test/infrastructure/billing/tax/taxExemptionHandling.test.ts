@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { TaxService } from 'server/src/lib/services/taxService';
+import { TaxService } from '@alga-psa/billing/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { v4 as uuidv4 } from 'uuid';

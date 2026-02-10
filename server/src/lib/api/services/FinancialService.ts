@@ -18,7 +18,7 @@ import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
-import { TaxService } from '../../services/taxService';
+import { TaxService } from '@alga-psa/billing/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';

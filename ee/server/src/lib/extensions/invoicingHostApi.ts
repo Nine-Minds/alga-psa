@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { getConnection } from '@/lib/db/db'
 
-import { TaxService } from 'server/src/lib/services/taxService'
+import { TaxService } from '@alga-psa/billing/services/taxService'
 import { NumberingService } from 'server/src/lib/services/numberingService'
 import {
   calculateAndDistributeTax,
