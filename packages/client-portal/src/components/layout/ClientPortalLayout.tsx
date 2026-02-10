@@ -81,7 +81,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   return (
     <DrawerProvider>
       <ActivityDrawerProvider>
-        <div className="min-h-screen bg-gray-100 flex flex-col">
+        <div className="min-h-screen bg-background flex flex-col">
         {/* Navigation Bar */}
         <nav className="bg-transparent shadow-[0_5px_10px_rgba(0,0,0,0.1)]">
         <div className="w-full px-6">

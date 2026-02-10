@@ -320,7 +320,7 @@
   {
     "id": "F051",
     "description": "Replace hardcoded `bg-gray-100` in `ClientPortalLayout.tsx` with theme-aware CSS variable reference",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.3"]
   },
   {

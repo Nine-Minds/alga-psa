@@ -47,6 +47,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Replaced hardcoded hex colors in dashboard/editor/ticket/project/billing CSS modules with CSS variable references.
 - (2026-02-10) Extension loading overlay already uses CSS variables, marked as dark-mode ready.
 - (2026-02-10) Added AppThemeProvider + ThemeBridge to client portal layout for theme class + data-theme sync.
+- (2026-02-10) Updated client portal layout background to use `bg-background` instead of hardcoded gray.
 
 ## Discoveries / Constraints
 
