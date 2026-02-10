@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Make status colors (success, warning, error) in Tailwind config theme-aware by defining CSS variables for them in both `.light` and `.dark` blocks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.3"]
   },
   {

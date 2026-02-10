@@ -50,16 +50,16 @@ const config: Config = {
         },
         // Status colors
         success: {
-          DEFAULT: '#22c55e', // green-500
-          foreground: '#ffffff',
+          DEFAULT: 'rgb(var(--color-status-success) / <alpha-value>)',
+          foreground: 'rgb(var(--color-status-success-foreground) / <alpha-value>)',
         },
         warning: {
-          DEFAULT: '#f59e0b', // amber-500
-          foreground: '#ffffff',
+          DEFAULT: 'rgb(var(--color-status-warning) / <alpha-value>)',
+          foreground: 'rgb(var(--color-status-warning-foreground) / <alpha-value>)',
         },
         error: {
-          DEFAULT: '#ef4444', // red-500
-          foreground: '#ffffff',
+          DEFAULT: 'rgb(var(--color-status-error) / <alpha-value>)',
+          foreground: 'rgb(var(--color-status-error-foreground) / <alpha-value>)',
         },
         card: 'rgb(var(--color-card) / <alpha-value>)',
         'card-foreground': 'rgb(var(--color-text-900))',

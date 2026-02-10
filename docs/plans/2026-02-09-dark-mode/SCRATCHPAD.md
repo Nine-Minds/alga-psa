@@ -23,6 +23,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Installed `next-themes` in `server` workspace via npm workspaces to satisfy FR-1.1.
 - (2026-02-10) Enabled Tailwind dark mode via `darkMode: 'class'` in `server/tailwind.config.ts`.
 - (2026-02-10) Added theme-aware `--color-background`/`--color-card` CSS variables and switched Tailwind `background`/`card` colors to use them.
+- (2026-02-10) Added theme-aware status color CSS variables and wired Tailwind `success`/`warning`/`error` colors to them.
 
 ## Discoveries / Constraints
 
