@@ -118,8 +118,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
     prevActiveTab.current = activeTab;
 
-    // All Comments tab - leave toggles as-is
+    // All Comments tab - both toggles off (no filtering)
     if (activeTab === 'All Comments') {
+      setIsInternalToggle(false);
+      setIsResolutionToggle(false);
       return;
     }
 

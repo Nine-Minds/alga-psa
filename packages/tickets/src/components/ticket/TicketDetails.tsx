@@ -254,7 +254,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             styles: {}
         }]
     }]);
-    const [activeTab, setActiveTab] = useState('Comments');
+    const [activeTab, setActiveTab] = useState('Client');
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
@@ -797,7 +797,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     }
                 }
                 
-                // Reset the comment input
+                // Reset the editor and comment input
+                setEditorKey(prev => prev + 1);
                 setNewCommentContent([{
                     type: "paragraph",
                     props: {
@@ -811,7 +812,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         styles: {}
                     }]
                 }]);
-                
+
                 return true;
             } else {
                 // Use the regular createComment action for MSP portal
@@ -830,8 +831,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         setConversations(updatedComments);
-                        
-                        // Reset the comment input
+
+                        // Reset the editor and comment input
+                        setEditorKey(prev => prev + 1);
                         setNewCommentContent([{
                             type: "paragraph",
                             props: {
