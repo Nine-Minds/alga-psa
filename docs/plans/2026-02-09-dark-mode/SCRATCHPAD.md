@@ -40,6 +40,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Added dark-mode utility overrides for common Tailwind classes plus base body/header/main backgrounds to avoid white patches.
 - (2026-02-10) Added dark-mode form field styling for inputs, selects, and textareas to use theme-aware colors.
 - (2026-02-10) Replaced switch thumb hardcoded white with `--color-switch-thumb` and added checkbox/radio accent colors for dark mode.
+- (2026-02-10) Updated `time-slot-working` background to use theme-aware card color.
 
 ## Discoveries / Constraints
 

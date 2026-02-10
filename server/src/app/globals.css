@@ -770,7 +770,7 @@ body {
 
 /* Working hours styles */
 .time-slot-working {
-  background-color: white;
+  background-color: rgb(var(--color-card));
 }
 
 .time-slot-non-working {

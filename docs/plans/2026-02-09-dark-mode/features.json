@@ -302,7 +302,7 @@
   {
     "id": "F048",
     "description": "Hardcoded `time-slot-working` background `white` in globals.css replaced with CSS variable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.1"]
   },
   {
