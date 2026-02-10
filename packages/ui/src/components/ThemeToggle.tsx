@@ -5,6 +5,7 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './DropdownMenu';
 import { Button } from './Button';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 
@@ -15,6 +16,7 @@ const themeOptions: Array<{ value: ThemeOption; label: string; icon: typeof Sun 
 ];
 
 export function ThemeToggle() {
+  const { enabled: themesEnabled } = useFeatureFlag('themes-enabled');
   const { theme, resolvedTheme, setTheme } = useAppTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -32,7 +34,7 @@ export function ThemeToggle() {
     return Monitor;
   }, [resolvedTheme]);
 
-  if (!mounted) {
+  if (!mounted || !themesEnabled) {
     return null;
   }
 
