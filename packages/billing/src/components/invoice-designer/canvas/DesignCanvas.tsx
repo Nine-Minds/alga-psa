@@ -17,6 +17,8 @@ import {
 interface DesignCanvasProps {
   nodes: DesignerNode[];
   selectedNodeId: string | null;
+  activeReferenceNodeId?: string | null;
+  constrainedCounterpartNodeIds?: Set<string>;
   showGuides: boolean;
   showRulers: boolean;
   gridSize: number;
@@ -38,6 +40,8 @@ const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 interface CanvasNodeProps {
   node: DesignerNode;
   isSelected: boolean;
+  isReferenceNode: boolean;
+  isConstraintCounterpart: boolean;
   isInSelectionContext: boolean;
   hasActiveSelection: boolean;
   isDragActive: boolean;
@@ -662,6 +666,8 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 const CanvasNode: React.FC<CanvasNodeProps> = ({
   node,
   isSelected,
+  isReferenceNode,
+  isConstraintCounterpart,
   isInSelectionContext,
   hasActiveSelection,
   isDragActive,
@@ -844,6 +850,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     <div
       ref={combinedRef}
       style={nodeStyle}
+      data-automation-id={`designer-canvas-node-${node.id}`}
       className={clsx(
         'select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
         isLabelNode
@@ -856,6 +863,12 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           (isLabelNode
             ? 'ring-2 ring-blue-600/70 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]'
             : 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500'),
+        !isSelected &&
+          isReferenceNode &&
+          'ring-2 ring-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.2)]',
+        !isSelected &&
+          isConstraintCounterpart &&
+          'ring-2 ring-cyan-500 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]',
         ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
           'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
         shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
@@ -935,6 +948,8 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
 export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   nodes,
   selectedNodeId,
+  activeReferenceNodeId = null,
+  constrainedCounterpartNodeIds = new Set<string>(),
   showGuides,
   showRulers,
   gridSize,
@@ -1028,6 +1043,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
           isSelected={selectedNodeId === node.id}
+          isReferenceNode={activeReferenceNodeId === node.id}
+          isConstraintCounterpart={constrainedCounterpartNodeIds.has(node.id)}
           isInSelectionContext={selectionContextNodeIds.has(node.id)}
           hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
@@ -1042,8 +1059,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
         />
       ));
   }, [
+    activeReferenceNodeId,
     childExtentsMap,
     childrenMap,
+    constrainedCounterpartNodeIds,
     forcedDropTarget,
     hasActiveRenderableSelection,
     isDragActive,

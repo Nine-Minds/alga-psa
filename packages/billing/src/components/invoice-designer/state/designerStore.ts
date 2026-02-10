@@ -6,6 +6,12 @@ import { getDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS, getPresetById, LayoutPresetConstraintDefinition } from '../constants/presets';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import { supportsAspectRatioLock } from '../utils/aspectRatio';
+import {
+  buildPairConstraint,
+  buildPairConstraintId,
+  sanitizeConstraints,
+  validatePairConstraintNodes,
+} from '../utils/constraints';
 import { clampPositionToParent } from '../utils/layout';
 import { canNestWithinParent, getAllowedChildrenForType, getAllowedParentsForType } from './hierarchy';
 
@@ -115,7 +121,7 @@ interface DesignerState {
   showRulers: boolean;
   canvasScale: number;
   metrics: DesignerMetrics;
-  history: DesignerNode[][];
+  history: DesignerHistoryEntry[];
   historyIndex: number;
   constraintError: string | null;
   addNodeFromPalette: (
@@ -150,6 +156,11 @@ interface DesignerState {
   recordDropResult: (success: boolean) => void;
   setLayoutMode: (nodeId: string, mode: 'canvas' | 'flex', options?: Partial<DesignerNode['layout']>) => void;
 }
+
+type DesignerHistoryEntry = {
+  nodes: DesignerNode[];
+  constraints: DesignerConstraint[];
+};
 
 const MAX_HISTORY_LENGTH = 50;
 const DEFAULT_SIZE: Size = { width: 160, height: 64 };
@@ -401,6 +412,24 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
     allowedChildren: [...node.allowedChildren],
     layout: node.layout ? { ...node.layout } : undefined,
   }));
+
+const snapshotConstraint = (constraint: DesignerConstraint): DesignerConstraint => {
+  if (constraint.type === 'aspect-ratio') {
+    return { ...constraint };
+  }
+  return {
+    ...constraint,
+    nodes: [...constraint.nodes] as [string, string],
+  };
+};
+
+const snapshotConstraints = (constraints: DesignerConstraint[]): DesignerConstraint[] =>
+  constraints.map((constraint) => snapshotConstraint(constraint));
+
+const createHistoryEntry = (nodes: DesignerNode[], constraints: DesignerConstraint[]): DesignerHistoryEntry => ({
+  nodes: snapshotNodes(nodes),
+  constraints: snapshotConstraints(constraints),
+});
 
 const resolveWithConstraints = (nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
   try {
@@ -692,8 +721,56 @@ export const __designerResolveLayoutTestUtils = {
   resolveLayout,
 };
 
-const appendHistory = (state: DesignerState, nodes: DesignerNode[]) => {
-  const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
+export const __designerConstraintTestUtils = {
+  sanitizeConstraints,
+  buildPairConstraintId,
+  validatePairConstraintNodes,
+};
+
+const normalizeAuthoredConstraint = (
+  nodesById: Map<string, DesignerNode>,
+  constraint: DesignerConstraint
+): { constraint: DesignerConstraint } | { error: string } => {
+  if (constraint.type === 'aspect-ratio') {
+    const node = nodesById.get(constraint.nodeId);
+    if (!node) {
+      return { error: 'Cannot lock aspect ratio because the selected node no longer exists.' };
+    }
+    if (!supportsAspectRatioLock(node.type)) {
+      return { error: 'Aspect ratio lock is not available for this node type.' };
+    }
+    const fallbackRatio =
+      Number.isFinite(node.size.width) && Number.isFinite(node.size.height) && node.size.height > 0
+        ? Number((node.size.width / node.size.height).toFixed(4))
+        : null;
+    if (!fallbackRatio) {
+      return { error: 'Cannot lock aspect ratio because this node has an invalid size.' };
+    }
+    const ratio =
+      Number.isFinite(constraint.ratio) && constraint.ratio > 0 ? constraint.ratio : fallbackRatio;
+    return {
+      constraint: {
+        id: `aspect-${constraint.nodeId}`,
+        type: 'aspect-ratio',
+        nodeId: constraint.nodeId,
+        ratio,
+        strength: constraint.strength ?? 'strong',
+      },
+    };
+  }
+
+  const validation = validatePairConstraintNodes(nodesById, constraint.nodes[0], constraint.nodes[1]);
+  if (!validation.ok) {
+    return { error: validation.message };
+  }
+
+  return {
+    constraint: buildPairConstraint(constraint.type, validation.orderedNodeIds[0], validation.orderedNodeIds[1]),
+  };
+};
+
+const appendHistory = (state: DesignerState, nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
+  const nextHistory = [...state.history.slice(0, state.historyIndex + 1), createHistoryEntry(nodes, constraints)];
   if (nextHistory.length > MAX_HISTORY_LENGTH) {
     nextHistory.shift();
   }
@@ -797,7 +874,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const appendedNodes = [...state.nodes, node];
         const withParentLink = attachChild(appendedNodes, resolvedParentId, node.id);
         const { nodes: resolvedNodes, constraintError } = resolveLayout(withParentLink, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, state.constraints);
         return {
           nodes: resolvedNodes,
           history,
@@ -934,7 +1011,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
               const nodeId = keyToId.get(constraint.node);
               if (!nodeId) return null;
               const aspect: DesignerConstraint = {
-                id: generateId(),
+                id: `aspect-${nodeId}`,
                 type: 'aspect-ratio',
                 nodeId,
                 ratio: constraint.ratio,
@@ -947,11 +1024,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             const first = keyToId.get(constraint.nodes[0]);
             const second = keyToId.get(constraint.nodes[1]);
             if (!first || !second) return null;
-            const align: DesignerConstraint = {
-              id: generateId(),
-              type: constraint.type,
-              nodes: [first, second],
-            };
+            const align = buildPairConstraint(constraint.type, first, second);
             if (constraint.strength) {
               align.strength = constraint.strength;
             }
@@ -959,9 +1032,9 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           })
           .filter((constraint): constraint is DesignerConstraint => constraint !== null);
 
-        const constraints = [...state.constraints, ...presetConstraints];
+        const { constraints } = sanitizeConstraints(nodes, [...state.constraints, ...presetConstraints]);
         const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, constraints);
 
         return {
           nodes: resolvedNodes,
@@ -1018,7 +1091,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         }
 
         const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, state.constraints);
         return {
           nodes: resolvedNodes,
           history,
@@ -1057,7 +1130,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           return { nodes };
         }
         const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, state.constraints);
         return {
           nodes: resolvedNodes,
           history,
@@ -1082,7 +1155,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           return { nodes };
         }
         const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, state.constraints);
         return {
           nodes: resolvedNodes,
           history,
@@ -1109,14 +1182,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             },
           };
         });
-        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
-        if (nextHistory.length > MAX_HISTORY_LENGTH) {
-          nextHistory.shift();
-        }
+        const { history, historyIndex } = appendHistory(state, nodes, state.constraints);
         return {
           nodes,
-          history: nextHistory,
-          historyIndex: nextHistory.length - 1,
+          history,
+          historyIndex,
         };
       }, false, 'designer/updateNodeName');
     },
@@ -1143,14 +1213,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             },
           };
         });
-        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
-        if (nextHistory.length > MAX_HISTORY_LENGTH) {
-          nextHistory.shift();
-        }
+        const { history, historyIndex } = appendHistory(state, nodes, state.constraints);
         return {
           nodes,
-          history: nextHistory,
-          historyIndex: nextHistory.length - 1,
+          history,
+          historyIndex,
         };
       }, false, 'designer/updateNodeMetadata');
     },
@@ -1177,10 +1244,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const idsToRemove = collectDescendants(state.nodes, selected);
         let nodes = state.nodes.filter((node) => !idsToRemove.has(node.id));
         nodes = detachChild(nodes, nodeToDelete.parentId, nodeToDelete.id);
-        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { constraints } = sanitizeConstraints(nodes, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, constraints);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, constraints);
         return {
           nodes: resolvedNodes,
+          constraints,
           selectedNodeId: null,
           history,
           historyIndex,
@@ -1190,9 +1259,36 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     addConstraint: (constraint) =>
       set((state) => {
-        const constraints = [...state.constraints.filter((existing) => existing.id !== constraint.id), constraint];
+        const nodesById = new Map(state.nodes.map((node) => [node.id, node]));
+        const normalized = normalizeAuthoredConstraint(nodesById, constraint);
+        if ('error' in normalized) {
+          return {
+            ...state,
+            constraintError: normalized.error,
+          };
+        }
+        const duplicatePairConstraintId =
+          normalized.constraint.type !== 'aspect-ratio'
+            ? buildPairConstraintId(
+                normalized.constraint.type,
+                normalized.constraint.nodes[0],
+                normalized.constraint.nodes[1]
+              )
+            : null;
+        const hasDuplicate = state.constraints.some((existing) =>
+          duplicatePairConstraintId
+            ? existing.id === duplicatePairConstraintId
+            : existing.type === 'aspect-ratio' && existing.nodeId === normalized.constraint.nodeId
+        );
+        if (hasDuplicate) {
+          return {
+            ...state,
+            constraintError: 'This constraint already exists.',
+          };
+        }
+        const { constraints } = sanitizeConstraints(state.nodes, [...state.constraints, normalized.constraint]);
         const { nodes, constraintError } = resolveLayout(state.nodes, constraints);
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, constraints);
         return {
           constraints,
           nodes,
@@ -1203,9 +1299,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/addConstraint'),
     removeConstraint: (constraintId) =>
       set((state) => {
-        const constraints = state.constraints.filter((constraint) => constraint.id !== constraintId);
+        const { constraints } = sanitizeConstraints(
+          state.nodes,
+          state.constraints.filter((constraint) => constraint.id !== constraintId)
+        );
         const { nodes, constraintError } = resolveLayout(state.nodes, constraints);
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, constraints);
         return {
           constraints,
           nodes,
@@ -1217,14 +1316,18 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     toggleAspectRatioLock: (nodeId) =>
       set((state) => {
         const constraintId = `aspect-${nodeId}`;
-        const hasConstraint = state.constraints.some((constraint) => constraint.id === constraintId);
+        const hasConstraint = state.constraints.some(
+          (constraint) => constraint.type === 'aspect-ratio' && constraint.nodeId === nodeId
+        );
         const node = state.nodes.find((candidate) => candidate.id === nodeId);
         if (!node) {
           return state;
         }
         let constraints = state.constraints;
         if (hasConstraint) {
-          constraints = state.constraints.filter((constraint) => constraint.id !== constraintId);
+          constraints = state.constraints.filter(
+            (constraint) => !(constraint.type === 'aspect-ratio' && constraint.nodeId === nodeId)
+          );
         } else {
           if (!supportsAspectRatioLock(node.type) || node.size.height === 0) {
             return state;
@@ -1240,8 +1343,9 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             },
           ];
         }
+        constraints = sanitizeConstraints(state.nodes, constraints).constraints;
         const { nodes, constraintError } = resolveLayout(state.nodes, constraints);
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, constraints);
         return {
           constraints,
           nodes,
@@ -1264,10 +1368,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (state.historyIndex <= 0) {
           return state;
         }
-        const previousNodes = snapshotNodes(state.history[state.historyIndex - 1]);
+        const previous = state.history[state.historyIndex - 1];
         return {
-          nodes: previousNodes,
+          nodes: snapshotNodes(previous.nodes),
+          constraints: snapshotConstraints(previous.constraints),
           historyIndex: state.historyIndex - 1,
+          constraintError: null,
         };
       }, false, 'designer/undo');
     },
@@ -1276,10 +1382,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (state.historyIndex >= state.history.length - 1) {
           return state;
         }
-        const nextNodes = snapshotNodes(state.history[state.historyIndex + 1]);
+        const next = state.history[state.historyIndex + 1];
         return {
-          nodes: nextNodes,
+          nodes: snapshotNodes(next.nodes),
+          constraints: snapshotConstraints(next.constraints),
           historyIndex: state.historyIndex + 1,
+          constraintError: null,
         };
       }, false, 'designer/redo');
     },
@@ -1300,20 +1408,31 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }), false, 'designer/resetWorkspace');
     },
     loadNodes: (nodes) => {
-      set(() => ({
-        nodes: snapshotNodes(nodes),
-        history: [snapshotNodes(nodes)],
-        historyIndex: 0,
-      }), false, 'designer/loadNodes');
+      set((state) => {
+        const nextNodes = snapshotNodes(nodes);
+        const { constraints } = sanitizeConstraints(nextNodes, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nextNodes, constraints);
+        return {
+          nodes: resolvedNodes,
+          constraints,
+          history: [createHistoryEntry(resolvedNodes, constraints)],
+          historyIndex: 0,
+          constraintError,
+        };
+      }, false, 'designer/loadNodes');
     },
     loadWorkspace: (workspace) => {
       set((state) => {
         const nextNodes = snapshotNodes(workspace.nodes);
-        const nextConstraints = Array.isArray(workspace.constraints) ? [...workspace.constraints] : state.constraints;
+        const incomingConstraints = Array.isArray(workspace.constraints)
+          ? snapshotConstraints(workspace.constraints)
+          : state.constraints;
+        const { constraints } = sanitizeConstraints(nextNodes, incomingConstraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nextNodes, constraints);
 
         return {
-          nodes: nextNodes,
-          constraints: nextConstraints,
+          nodes: resolvedNodes,
+          constraints,
           snapToGrid: typeof workspace.snapToGrid === 'boolean' ? workspace.snapToGrid : state.snapToGrid,
           gridSize: typeof workspace.gridSize === 'number' ? workspace.gridSize : state.gridSize,
           showGuides: typeof workspace.showGuides === 'boolean' ? workspace.showGuides : state.showGuides,
@@ -1321,9 +1440,9 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           canvasScale: typeof workspace.canvasScale === 'number' ? workspace.canvasScale : state.canvasScale,
           selectedNodeId: null,
           hoverNodeId: null,
-          history: [nextNodes],
+          history: [createHistoryEntry(resolvedNodes, constraints)],
           historyIndex: 0,
-          constraintError: null,
+          constraintError,
         };
       }, false, 'designer/loadWorkspace');
     },
@@ -1331,7 +1450,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       const state = get();
       return {
         nodes: snapshotNodes(state.nodes),
-        constraints: [...state.constraints],
+        constraints: snapshotConstraints(state.constraints),
         snapToGrid: state.snapToGrid,
         gridSize: state.gridSize,
         showGuides: state.showGuides,
@@ -1402,7 +1521,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         }
         
         const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, state.constraints);
         return {
           nodes: resolvedNodes,
           history,

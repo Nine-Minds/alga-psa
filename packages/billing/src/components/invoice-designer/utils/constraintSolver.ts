@@ -79,10 +79,11 @@ export const solveConstraints = (
       const width = new kiwi.Variable(`${node.id}-w`);
       const height = new kiwi.Variable(`${node.id}-h`);
 
-      solver.addEditVariable(x, kiwi.Strength.strong);
-      solver.addEditVariable(y, kiwi.Strength.strong);
-      solver.addEditVariable(width, kiwi.Strength.medium);
-      solver.addEditVariable(height, kiwi.Strength.medium);
+      // Keep authored geometry as a preference, but let explicit authored constraints win.
+      solver.addEditVariable(x, kiwi.Strength.medium);
+      solver.addEditVariable(y, kiwi.Strength.medium);
+      solver.addEditVariable(width, kiwi.Strength.weak);
+      solver.addEditVariable(height, kiwi.Strength.weak);
 
       solver.suggestValue(x, node.position.x);
       solver.suggestValue(y, node.position.y);

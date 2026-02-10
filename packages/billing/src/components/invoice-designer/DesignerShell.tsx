@@ -34,6 +34,16 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
 import { supportsAspectRatioLock } from './utils/aspectRatio';
+import {
+  buildPairConstraint,
+  canNodeParticipateInPairConstraint,
+  doesConstraintInvolveNode,
+  getPairConstraintCounterpartNodeId,
+  isPairConstraint,
+  PAIR_CONSTRAINT_LABELS,
+  PAIR_CONSTRAINT_TYPES,
+  validatePairConstraintNodes,
+} from './utils/constraints';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -302,6 +312,8 @@ export const DesignerShell: React.FC = () => {
   const metrics = useInvoiceDesignerStore((state) => state.metrics);
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
   const toggleAspectRatioLock = useInvoiceDesignerStore((state) => state.toggleAspectRatioLock);
+  const addConstraint = useInvoiceDesignerStore((state) => state.addConstraint);
+  const removeConstraint = useInvoiceDesignerStore((state) => state.removeConstraint);
   const constraintError = useInvoiceDesignerStore((state) => state.constraintError);
   const aspectConstraint = selectedNodeId
     ? constraints.find(
@@ -311,8 +323,10 @@ export const DesignerShell: React.FC = () => {
     : undefined;
   const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
   const setLayoutMode = useInvoiceDesignerStore((state) => state.setLayoutMode);
+  const [referenceNodeId, setReferenceNodeId] = useState<string | null>(null);
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
   const canLockAspectRatio = selectedNode ? supportsAspectRatioLock(selectedNode.type) : false;
+  const canUsePairConstraints = selectedNode ? canNodeParticipateInPairConstraint(selectedNode) : false;
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -326,6 +340,82 @@ export const DesignerShell: React.FC = () => {
     }
     return getSectionFitSizeFromChildren(selectedNode, new Map(nodes.map((node) => [node.id, node])));
   }, [nodes, selectedNode]);
+  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
+  const referenceNode = useMemo(
+    () => (referenceNodeId ? nodesById.get(referenceNodeId) ?? null : null),
+    [nodesById, referenceNodeId]
+  );
+  const selectedNodeConstraints = useMemo(
+    () => (selectedNodeId ? constraints.filter((constraint) => doesConstraintInvolveNode(constraint, selectedNodeId)) : []),
+    [constraints, selectedNodeId]
+  );
+  const selectedNodePairConstraints = useMemo(
+    () => selectedNodeConstraints.filter((constraint): constraint is Extract<DesignerConstraint, { nodes: [string, string] }> => isPairConstraint(constraint)),
+    [selectedNodeConstraints]
+  );
+  const selectedCounterpartNodeIds = useMemo(() => {
+    if (!selectedNodeId) {
+      return new Set<string>();
+    }
+    const counterparts = new Set<string>();
+    selectedNodePairConstraints.forEach((constraint) => {
+      const counterpartId = getPairConstraintCounterpartNodeId(constraint, selectedNodeId);
+      if (counterpartId) {
+        counterparts.add(counterpartId);
+      }
+    });
+    return counterparts;
+  }, [selectedNodeId, selectedNodePairConstraints]);
+  const pairAuthoringValidation = useMemo(() => {
+    if (!selectedNodeId || !referenceNodeId) {
+      return null;
+    }
+    return validatePairConstraintNodes(nodesById, referenceNodeId, selectedNodeId);
+  }, [nodesById, referenceNodeId, selectedNodeId]);
+  const pairAuthoringBaseError = useMemo(() => {
+    if (!selectedNode) {
+      return 'Select a target node to apply constraints.';
+    }
+    if (!canUsePairConstraints) {
+      return 'Constraints are only available for editable canvas nodes.';
+    }
+    if (!referenceNodeId) {
+      return 'Set a reference node first.';
+    }
+    if (!referenceNode || !canNodeParticipateInPairConstraint(referenceNode)) {
+      return 'Reference node is not available. Set a new reference node.';
+    }
+    if (pairAuthoringValidation && !pairAuthoringValidation.ok) {
+      return pairAuthoringValidation.message;
+    }
+    return null;
+  }, [canUsePairConstraints, pairAuthoringValidation, referenceNode, referenceNodeId, selectedNode]);
+  const pairConstraintActionState = useMemo(() => {
+    return PAIR_CONSTRAINT_TYPES.reduce(
+      (acc, type) => {
+        if (pairAuthoringBaseError) {
+          acc[type] = { disabled: true, reason: pairAuthoringBaseError };
+          return acc;
+        }
+        if (!pairAuthoringValidation || !pairAuthoringValidation.ok) {
+          acc[type] = { disabled: true, reason: 'Select a valid node pair.' };
+          return acc;
+        }
+        const duplicateConstraintId = buildPairConstraint(type, pairAuthoringValidation.orderedNodeIds[0], pairAuthoringValidation.orderedNodeIds[1]).id;
+        const isDuplicate = constraints.some((constraint) => constraint.id === duplicateConstraintId);
+        if (isDuplicate) {
+          acc[type] = { disabled: true, reason: 'Constraint already exists.' };
+          return acc;
+        }
+        acc[type] = { disabled: false, reason: null };
+        return acc;
+      },
+      {} as Record<
+        (typeof PAIR_CONSTRAINT_TYPES)[number],
+        { disabled: boolean; reason: string | null }
+      >
+    );
+  }, [constraints, pairAuthoringBaseError, pairAuthoringValidation]);
 
   useDesignerShortcuts();
 
@@ -389,6 +479,15 @@ export const DesignerShell: React.FC = () => {
       selectNode(null);
     }
   }, [selectedNode, selectedNodeId, selectNode]);
+
+  React.useEffect(() => {
+    if (!referenceNodeId) {
+      return;
+    }
+    if (!nodesById.has(referenceNodeId)) {
+      setReferenceNodeId(null);
+    }
+  }, [nodesById, referenceNodeId]);
 
   const updatePointerLocation = useCallback((point: { x: number; y: number } | null) => {
     pointerRef.current = point;
@@ -1903,6 +2002,70 @@ export const DesignerShell: React.FC = () => {
     });
   }, [runSectionFitAction, selectedMediaParentSection]);
 
+  const handleSetReferenceNode = useCallback(() => {
+    if (!selectedNode) {
+      showDropFeedback('info', 'Select a node to set it as reference.');
+      return;
+    }
+    if (!canNodeParticipateInPairConstraint(selectedNode)) {
+      showDropFeedback('error', 'Only editable canvas nodes can be used as pair-constraint references.');
+      return;
+    }
+    setReferenceNodeId(selectedNode.id);
+    showDropFeedback('info', `"${selectedNode.name}" is now the active reference node.`);
+  }, [selectedNode, showDropFeedback]);
+
+  const handleClearReferenceNode = useCallback(() => {
+    setReferenceNodeId(null);
+    showDropFeedback('info', 'Reference node cleared.');
+  }, [showDropFeedback]);
+
+  const applyPairConstraint = useCallback(
+    (type: (typeof PAIR_CONSTRAINT_TYPES)[number]) => {
+      if (!selectedNodeId || !referenceNodeId) {
+        showDropFeedback('info', 'Set a reference node and select a target node.');
+        return;
+      }
+      const validation = validatePairConstraintNodes(nodesById, referenceNodeId, selectedNodeId);
+      if (!validation.ok) {
+        showDropFeedback('error', validation.message);
+        return;
+      }
+      const nextConstraint = buildPairConstraint(type, validation.orderedNodeIds[0], validation.orderedNodeIds[1]);
+      const isDuplicate = constraints.some((constraint) => constraint.id === nextConstraint.id);
+      if (isDuplicate) {
+        showDropFeedback('info', 'Constraint already exists for this relation and node pair.');
+        return;
+      }
+      addConstraint(nextConstraint);
+      showDropFeedback('info', `${PAIR_CONSTRAINT_LABELS[type]} constraint applied.`);
+    },
+    [addConstraint, constraints, nodesById, referenceNodeId, selectedNodeId, showDropFeedback]
+  );
+
+  const removeListedConstraint = useCallback(
+    (constraintId: string) => {
+      removeConstraint(constraintId);
+      showDropFeedback('info', 'Constraint removed.');
+    },
+    [removeConstraint, showDropFeedback]
+  );
+
+  const jumpToConstraintCounterpart = useCallback(
+    (constraint: Extract<DesignerConstraint, { nodes: [string, string] }>) => {
+      if (!selectedNodeId) {
+        return;
+      }
+      const counterpartId = getPairConstraintCounterpartNodeId(constraint, selectedNodeId);
+      if (!counterpartId) {
+        showDropFeedback('error', 'Counterpart node could not be resolved.');
+        return;
+      }
+      selectNode(counterpartId);
+    },
+    [selectNode, selectedNodeId, showDropFeedback]
+  );
+
   return (
     <div className="flex flex-col h-full border border-slate-200 rounded-lg overflow-hidden">
       <DesignerToolbar
@@ -1983,6 +2146,8 @@ export const DesignerShell: React.FC = () => {
           <DesignerWorkspace
             nodes={renderedNodes}
             selectedNodeId={selectedNodeId}
+            activeReferenceNodeId={referenceNodeId}
+            constrainedCounterpartNodeIds={selectedCounterpartNodeIds}
             showGuides={showGuides}
             showRulers={showRulers}
             gridSize={gridSize}
@@ -2006,8 +2171,14 @@ export const DesignerShell: React.FC = () => {
           {selectedNode ? (
             <div className="space-y-3">
               {constraintError && (
-                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {constraintError}
+                <div
+                  className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 space-y-1"
+                  data-automation-id="designer-constraint-error"
+                >
+                  <p>{constraintError}</p>
+                  <p className="text-[11px] text-red-600">
+                    Try removing a conflicting constraint or clear the reference and choose a different node pair.
+                  </p>
                 </div>
               )}
               <div>
@@ -2053,29 +2224,146 @@ export const DesignerShell: React.FC = () => {
                 </div>
               )}
               {renderLayoutInspector()}
-              {(canLockAspectRatio || aspectConstraint) && (
-                <div className="pt-2 border-t border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">Lock aspect ratio</span>
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
-                      checked={Boolean(aspectConstraint)}
-                      onChange={() => toggleAspectRatioLock(selectedNode.id)}
-                    />
-                  </div>
-                  {aspectConstraint && (
-                    <p className="text-[11px] text-slate-500">
-                      Preserves width/height ratio ≈ {aspectConstraint.ratio.toFixed(2)}
-                    </p>
-                  )}
-                  {!canLockAspectRatio && aspectConstraint && (
-                    <p className="text-[11px] text-amber-700">
-                      This node type is best resized freely. Turn this off if dimensions keep snapping.
-                    </p>
+              <div
+                className="rounded border border-slate-200 bg-white p-3 space-y-3"
+                data-automation-id="designer-constraints-section"
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">Constraints</h4>
+                  {referenceNode && (
+                    <span
+                      className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800"
+                      data-automation-id="designer-constraint-reference-badge"
+                    >
+                      Ref: {referenceNode.name}
+                    </span>
                   )}
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    id="designer-set-reference"
+                    variant="outline"
+                    onClick={handleSetReferenceNode}
+                    disabled={!canUsePairConstraints}
+                    data-automation-id="designer-constraint-set-reference"
+                  >
+                    Set As Reference
+                  </Button>
+                  <Button
+                    id="designer-clear-reference"
+                    variant="outline"
+                    onClick={handleClearReferenceNode}
+                    disabled={!referenceNodeId}
+                    data-automation-id="designer-constraint-clear-reference"
+                  >
+                    Clear Reference
+                  </Button>
+                </div>
+                {canUsePairConstraints ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PAIR_CONSTRAINT_TYPES.map((type) => {
+                        const actionState = pairConstraintActionState[type];
+                        return (
+                          <Button
+                            key={type}
+                            id={`designer-constraint-action-${type}`}
+                            variant="outline"
+                            onClick={() => applyPairConstraint(type)}
+                            disabled={actionState.disabled}
+                            title={actionState.reason ?? undefined}
+                            data-automation-id={`designer-constraint-action-${type}`}
+                          >
+                            {PAIR_CONSTRAINT_LABELS[type]}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    {pairAuthoringBaseError && (
+                      <p
+                        className="text-[11px] text-slate-500"
+                        data-automation-id="designer-constraint-action-hint"
+                      >
+                        {pairAuthoringBaseError}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[11px] text-slate-500" data-automation-id="designer-constraint-unsupported-message">
+                    Pair constraints are unavailable for this node type.
+                  </p>
+                )}
+                <div className="space-y-2 border-t border-slate-200 pt-2">
+                  <div className="text-xs text-slate-600">Constraints on this node</div>
+                  {selectedNodePairConstraints.length === 0 ? (
+                    <p className="text-[11px] text-slate-500" data-automation-id="designer-constraint-list-empty">
+                      No pair constraints for this node.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {selectedNodePairConstraints.map((constraint) => {
+                        const counterpartNodeId = getPairConstraintCounterpartNodeId(constraint, selectedNode.id);
+                        const counterpartNode = counterpartNodeId ? nodesById.get(counterpartNodeId) : null;
+                        const rowAutomationId = `designer-constraint-row-${constraint.type}-${counterpartNodeId ?? 'missing'}`;
+                        return (
+                          <li
+                            key={constraint.id}
+                            className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600 space-y-1"
+                            data-automation-id={rowAutomationId}
+                          >
+                            <div className="font-medium text-slate-700">
+                              {PAIR_CONSTRAINT_LABELS[constraint.type]}
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                className="truncate text-blue-700 hover:underline"
+                                onClick={() => jumpToConstraintCounterpart(constraint)}
+                                disabled={!counterpartNodeId}
+                                data-automation-id={`${rowAutomationId}-jump`}
+                              >
+                                {counterpartNode?.name ?? counterpartNodeId ?? 'Unknown node'}
+                              </button>
+                              <button
+                                type="button"
+                                className="text-red-600 hover:underline"
+                                onClick={() => removeListedConstraint(constraint.id)}
+                                data-automation-id={`${rowAutomationId}-remove`}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+                {(canLockAspectRatio || aspectConstraint) && (
+                  <div className="space-y-2 border-t border-slate-200 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Lock aspect ratio</span>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={Boolean(aspectConstraint)}
+                        onChange={() => toggleAspectRatioLock(selectedNode.id)}
+                        data-automation-id="designer-constraint-aspect-toggle"
+                      />
+                    </div>
+                    {aspectConstraint && (
+                      <p className="text-[11px] text-slate-500">
+                        Preserves width/height ratio ≈ {aspectConstraint.ratio.toFixed(2)}
+                      </p>
+                    )}
+                    {!canLockAspectRatio && aspectConstraint && (
+                      <p className="text-[11px] text-amber-700">
+                        This node type is best resized freely. Turn this off if dimensions keep snapping.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
               {selectedNode.type === 'section' && (
                 <div className="space-y-1">
                   <Button
@@ -2108,6 +2396,8 @@ export const DesignerShell: React.FC = () => {
 type DesignerWorkspaceProps = {
   nodes: DesignerNode[];
   selectedNodeId: string | null;
+  activeReferenceNodeId: string | null;
+  constrainedCounterpartNodeIds: Set<string>;
   showGuides: boolean;
   showRulers: boolean;
   gridSize: number;
@@ -2130,6 +2420,8 @@ type DesignerWorkspaceProps = {
 const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   nodes,
   selectedNodeId,
+  activeReferenceNodeId,
+  constrainedCounterpartNodeIds,
   showGuides,
   showRulers,
   gridSize,
@@ -2157,10 +2449,12 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
 
   return (
     <div className="flex-1 flex">
-      <DesignCanvas
-        nodes={nodes}
-        selectedNodeId={selectedNodeId}
-        showGuides={showGuides}
+        <DesignCanvas
+          nodes={nodes}
+          selectedNodeId={selectedNodeId}
+          activeReferenceNodeId={activeReferenceNodeId}
+          constrainedCounterpartNodeIds={constrainedCounterpartNodeIds}
+          showGuides={showGuides}
         showRulers={showRulers}
         gridSize={gridSize}
         canvasScale={canvasScale}
