@@ -9,8 +9,9 @@ import {
   TimeSheetStatus 
 } from '@alga-psa/types';
 import { addCommentToTimeSheet, fetchTimeSheetComments } from '../../../actions/timeSheetActions';
-import { Check, Clock, Undo, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Clock, Undo, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { IWorkItem } from '@alga-psa/types';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -39,21 +40,35 @@ interface StatusIconProps {
   status: TimeSheetStatus;
 }
 
-const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
-  const iconProps = {
-    className: 'w-5 h-5',
-  };
-
-  switch (status) {
-    case 'APPROVED':
-      return <Check {...iconProps} className={`${iconProps.className} text-green-500`} />;
-    case 'CHANGES_REQUESTED':
-      return <Undo {...iconProps} className={`${iconProps.className} text-orange-500`} />;
-    case 'DRAFT':
-    default:
-      return <Clock {...iconProps} className={`${iconProps.className} text-gray-500`} />;
-  }
+// Badge variants align with TimePeriodList, TimeSheetHeader, and ManagerApprovalDashboard
+const statusConfig: Record<string, { icon: typeof Check; iconColor: string; label: string; badgeVariant: 'secondary' | 'success' | 'warning' | 'outline' }> = {
+  SUBMITTED: { icon: Send, iconColor: 'text-secondary-600', label: 'Submitted', badgeVariant: 'secondary' },
+  APPROVED: { icon: Check, iconColor: 'text-green-800', label: 'Approved', badgeVariant: 'success' },
+  CHANGES_REQUESTED: { icon: Undo, iconColor: 'text-orange-800', label: 'Changes Requested', badgeVariant: 'warning' },
 };
+
+const getStatusConfig = (status: string) =>
+  statusConfig[status] ?? { icon: Clock, iconColor: 'text-gray-500', label: status, badgeVariant: 'outline' as const };
+
+const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
+  const config = getStatusConfig(status);
+  const Icon = config.icon;
+  return <Icon className={`w-5 h-5 ${config.iconColor}`} />;
+};
+
+const StatusBadge: React.FC<StatusIconProps> = ({ status }) => {
+  const config = getStatusConfig(status);
+  return <Badge variant={config.badgeVariant} className="py-1">{config.label}</Badge>;
+};
+
+const formatDuration = (decimalHours: number) => {
+  const h = Math.floor(decimalHours);
+  const m = Math.round((decimalHours - h) * 60);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
 const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUpdateApprovalStatus }) => {
   const [approvalStatus, setApprovalStatus] = useState<TimeSheetStatus>(entry.approval_status);
 
@@ -70,38 +85,44 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
   }> = [
     { status: 'APPROVED', icon: Check, label: 'Approve', variant: 'default' },
     { status: 'CHANGES_REQUESTED', icon: Undo, label: 'Request Changes', variant: 'destructive' },
-    { status: 'DRAFT', icon: Clock, label: 'Set to Draft', variant: 'outline' },
   ];
+
+  const formatType = (type: string) =>
+    type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
     <div className="p-4 bg-[rgb(var(--color-border-100))] border-t border-b border-[rgb(var(--color-border-200))]">
-      <h4 className="font-semibold mb-2 text-[rgb(var(--color-text-900))]">Time Entry Details</h4>
-      <p className="text-[rgb(var(--color-text-700))]"><strong>Work Item:</strong> {entry.workItem ? `${entry.workItem.name} (${entry.workItem.type})` : 'N/A'}</p>
-      <p className="text-[rgb(var(--color-text-700))]"><strong>Duration:</strong> {((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours</p>
-      <p className="text-[rgb(var(--color-text-700))]"><strong>Billable Duration:</strong> {(entry.billable_duration / 60).toFixed(2)} hours</p>
-      <div className="mt-2">
-        <strong className="text-[rgb(var(--color-text-700))]">Notes:</strong>
-        <p className="whitespace-pre-wrap text-[rgb(var(--color-text-600))]">{entry.notes || 'No notes provided.'}</p>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold text-[rgb(var(--color-text-900))]">Time Entry Details</h4>
+        <StatusBadge status={entry.approval_status} />
       </div>
-      <div className="mt-4">
-        <strong className="text-[rgb(var(--color-text-700))]">Current Status:</strong> <span className="text-[rgb(var(--color-text-600))]">{entry.approval_status}</span>
+      <div className="grid grid-cols-2 gap-y-2 text-sm mb-3">
+        <span className="font-medium text-[rgb(var(--color-text-900))]">Work Item</span>
+        <span className="text-[rgb(var(--color-text-700))]">{entry.workItem ? `${entry.workItem.name} (${formatType(entry.workItem.type)})` : 'N/A'}</span>
+        <span className="font-medium text-[rgb(var(--color-text-900))]">Duration</span>
+        <span className="text-[rgb(var(--color-text-700))]">{formatDuration((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60))}</span>
+        <span className="font-medium text-[rgb(var(--color-text-900))]">Billable</span>
+        <span className="text-[rgb(var(--color-text-700))]">{formatDuration(entry.billable_duration / 60)}</span>
       </div>
-      <div className="mt-4">
-        <strong className="text-[rgb(var(--color-text-700))]">Update Status:</strong>
-        <div className="flex space-x-2 mt-2">
-          {statusButtons.map(({ status, icon: Icon, label, variant }): React.JSX.Element => (
-            <Button
-              id={`update-status-${status}-btn`}
-              key={status}
-              onClick={() => handleStatusChange(status)}
-              variant={variant}
-              disabled={entry.approval_status === status}
-            >
-              <Icon className="mr-2 h-4 w-4" />
-              {label}
-            </Button>
-          ))}
+      {entry.notes && (
+        <div className="mb-3">
+          <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">Notes</span>
+          <p className="text-sm whitespace-pre-wrap text-[rgb(var(--color-text-600))] mt-1">{entry.notes}</p>
         </div>
+      )}
+      <div className="flex space-x-2 pt-3 border-t border-[rgb(var(--color-border-200))]">
+        {statusButtons.map(({ status, icon: Icon, label, variant }): React.JSX.Element => (
+          <Button
+            id={`update-status-${status}-btn`}
+            key={status}
+            onClick={() => handleStatusChange(status)}
+            variant={variant}
+            disabled={entry.approval_status === status}
+          >
+            <Icon className="mr-2 h-4 w-4" />
+            {label}
+          </Button>
+        ))}
       </div>
     </div>
   );
@@ -246,16 +267,31 @@ export function TimeSheetApproval({
     return `${workItem.name} (${workItem.type})`;
   };
 
+  const formatWorkItemType = (type: string) =>
+    type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const formatSubmittedDate = (date?: Date | string | null) => {
+    if (!date) return 'N/A';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Time Sheet Approval for {timeSheet.employee_name}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Time Sheet Approval for {timeSheet.employee_name}</CardTitle>
+            <StatusBadge status={timeSheet.approval_status} />
+          </div>
         </CardHeader>
         <CardContent>
-          <p>Period: {timeSheet.time_period?.start_date ? parseISO(timeSheet.time_period.start_date).toLocaleDateString() : "N/A"} - {timeSheet.time_period?.end_date ? parseISO(timeSheet.time_period.end_date).toLocaleDateString() : "N/A"}</p>
-          <p>Status: {timeSheet.approval_status}</p>
-          <p>Submitted: {timeSheet.submitted_at?.toLocaleString()}</p>
+          <div className="grid grid-cols-2 gap-y-2 text-sm text-[rgb(var(--color-text-700))]">
+            <span className="font-medium text-[rgb(var(--color-text-900))]">Period</span>
+            <span>{timeSheet.time_period?.start_date ? parseISO(timeSheet.time_period.start_date).toLocaleDateString() : "N/A"} – {timeSheet.time_period?.end_date ? parseISO(timeSheet.time_period.end_date).toLocaleDateString() : "N/A"}</span>
+            <span className="font-medium text-[rgb(var(--color-text-900))]">Submitted</span>
+            <span>{formatSubmittedDate(timeSheet.submitted_at)}</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -264,10 +300,20 @@ export function TimeSheetApproval({
           <CardTitle>Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Total Hours: {totalHours.toFixed(2)}</p>
-          <p>Billable Hours: {totalBillableHours.toFixed(2)}</p>
-          <p>Non-Billable Hours: {totalNonBillableHours.toFixed(2)}</p>
-          {/* Add overtime calculation if applicable */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-3 rounded-lg bg-[rgb(var(--color-border-100))]">
+              <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{formatDuration(totalHours)}</p>
+              <p className="text-xs text-[rgb(var(--color-text-600))]">Total</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-[rgb(var(--color-border-100))]">
+              <p className="text-2xl font-bold text-[rgb(var(--color-primary-500))]">{formatDuration(totalBillableHours)}</p>
+              <p className="text-xs text-[rgb(var(--color-text-600))]">Billable</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-[rgb(var(--color-border-100))]">
+              <p className="text-2xl font-bold text-[rgb(var(--color-text-600))]">{formatDuration(totalNonBillableHours)}</p>
+              <p className="text-xs text-[rgb(var(--color-text-600))]">Non-Billable</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -276,9 +322,14 @@ export function TimeSheetApproval({
           <CardTitle>Breakdown by Work Item Type</CardTitle>
         </CardHeader>
         <CardContent>
-          {Object.entries(entriesByType).map(([type, hours]): React.JSX.Element => (
-            <p key={type}>{type}: {hours.toFixed(2)} hours</p>
-          ))}
+          <div className="space-y-2">
+            {Object.entries(entriesByType).map(([type, hours]): React.JSX.Element => (
+              <div key={type} className="flex items-center justify-between py-1.5 border-b border-[rgb(var(--color-border-200))] last:border-0">
+                <span className="text-sm text-[rgb(var(--color-text-700))]">{formatWorkItemType(type)}</span>
+                <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours)}</span>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -287,9 +338,14 @@ export function TimeSheetApproval({
           <CardTitle>Daily Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          {Object.entries(entriesByDate).map(([date, hours]): React.JSX.Element => (
-            <p key={date}>{date}: {hours.toFixed(2)} hours</p>
-          ))}
+          <div className="space-y-2">
+            {Object.entries(entriesByDate).map(([date, hours]): React.JSX.Element => (
+              <div key={date} className="flex items-center justify-between py-1.5 border-b border-[rgb(var(--color-border-200))] last:border-0">
+                <span className="text-sm text-[rgb(var(--color-text-700))]">{new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours)}</span>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -299,31 +355,31 @@ export function TimeSheetApproval({
           <CardTitle>Detailed Time Entries</CardTitle>
         </CardHeader>
         <CardContent>
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))]">
             <thead>
-              <tr>
-                <th>Date</th>
-                <th>Work Item</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Billable Hours</th>
-                <th>Status</th>
-                <th>Actions</th>
+              <tr className="text-left text-xs font-medium text-[rgb(var(--color-text-600))] uppercase tracking-wider">
+                <th className="py-2 pr-3">Date</th>
+                <th className="py-2 pr-3">Work Item</th>
+                <th className="py-2 pr-3">Start</th>
+                <th className="py-2 pr-3">End</th>
+                <th className="py-2 pr-3">Billable</th>
+                <th className="py-2 pr-3 text-center">Status</th>
+                <th className="py-2"></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[rgb(var(--color-border-100))]">
               {entriesWithWorkItems.map((entry): React.JSX.Element => (
                 <React.Fragment key={entry.entry_id}>
                   <tr
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-[rgb(var(--color-border-100))] text-sm text-[rgb(var(--color-text-700))]"
                     onClick={() => toggleEntryDetails(entry.entry_id as string)}
                   >
-                    <td>{new Date(entry.start_time).toLocaleDateString()}</td>
-                    <td>{formatWorkItem(entry.workItem)}</td>
-                    <td>{new Date(entry.start_time).toLocaleTimeString()}</td>
-                    <td>{new Date(entry.end_time).toLocaleTimeString()}</td>
-                    <td>{(entry.billable_duration / 60).toFixed(2)}</td>
-                    <td className="text-center">
+                    <td className="py-2.5 pr-3">{new Date(entry.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+                    <td className="py-2.5 pr-3">{formatWorkItem(entry.workItem)}</td>
+                    <td className="py-2.5 pr-3">{new Date(entry.start_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
+                    <td className="py-2.5 pr-3">{new Date(entry.end_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
+                    <td className="py-2.5 pr-3 font-medium">{formatDuration(entry.billable_duration / 60)}</td>
+                    <td className="py-2.5 pr-3 text-center">
                       <StatusIcon status={entry.approval_status} />
                     </td>
                     <td>
@@ -361,10 +417,7 @@ export function TimeSheetApproval({
         </CardContent>
       </Card>
 
-      {/* Add sections for Leave and Time Off, Previous Period Comparison if data is available */}
-
-
-      <Card className="bg-orange-50">
+      <Card className={timeSheet.approval_status === 'CHANGES_REQUESTED' ? 'bg-orange-50' : ''}>
         <CardHeader>
           <CardTitle>
             Comments {timeSheet.approval_status === 'CHANGES_REQUESTED' && 

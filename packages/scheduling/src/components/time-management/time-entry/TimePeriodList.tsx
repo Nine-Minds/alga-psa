@@ -1,5 +1,6 @@
 import React from 'react';
 import { ITimePeriodWithStatusView, TimeSheetStatus } from '@alga-psa/types';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Settings } from 'lucide-react';
@@ -20,20 +21,16 @@ interface TimePeriodListProps {
   onSelectTimePeriod: (timePeriod: ITimePeriodWithStatusView) => void;
 }
 
-const getStatusDisplay = (status: TimeSheetStatus): { text: string; color: string } => {
-  switch (status) {
-    case 'DRAFT':
-      return { text: 'In Progress', color: 'blue' };
-    case 'SUBMITTED':
-      return { text: 'Submitted', color: 'yellow' };
-    case 'APPROVED':
-      return { text: 'Approved', color: 'green' };
-    case 'CHANGES_REQUESTED':
-      return { text: 'Changes Requested', color: 'orange' };
-    default:
-      return { text: 'Unknown', color: 'gray' };
-  }
+// Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
+const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
+  DRAFT: { variant: 'outline', label: 'In Progress' },
+  SUBMITTED: { variant: 'secondary', label: 'Submitted' },
+  APPROVED: { variant: 'success', label: 'Approved' },
+  CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
 };
+
+const getStatusBadgeConfig = (status: string) =>
+  statusBadgeConfig[status] ?? { variant: 'outline' as const, label: 'Unknown' };
 
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
   const router = useRouter();
@@ -89,16 +86,14 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
             dataIndex: 'timeSheetStatus',
             width: '25%',
             render: (status: TimeSheetStatus, record) => {
-              const { text, color } = getStatusDisplay(status);
+              const config = getStatusBadgeConfig(status);
               return (
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800`}>
-                    {text}
-                  </span>
+                  <Badge variant={config.variant} className="py-1">{config.label}</Badge>
                   {isCurrentPeriod(record.start_date, record.end_date) && (
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]">
+                    <Badge variant="primary" className="py-1">
                       Current
-                    </span>
+                    </Badge>
                   )}
                 </div>
               );

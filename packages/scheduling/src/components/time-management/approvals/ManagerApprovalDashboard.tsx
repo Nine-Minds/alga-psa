@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Users } from 'lucide-react';
 import {
@@ -211,17 +212,16 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Status',
             dataIndex: 'approval_status',
             width: '20%',
-            render: (status) => (
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                status === 'APPROVED'
-                  ? 'bg-green-100 text-green-800'
-                  : status === 'SUBMITTED'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {status}
-              </span>
-            )
+            // Badge variants align with TimeSheetApproval.tsx statusConfig
+            render: (status) => {
+              const badgeMap: Record<string, { variant: 'secondary' | 'success' | 'warning' | 'outline'; label: string }> = {
+                SUBMITTED: { variant: 'secondary', label: 'Submitted' },
+                APPROVED: { variant: 'success', label: 'Approved' },
+                CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
+              };
+              const config = badgeMap[status] ?? { variant: 'outline' as const, label: status };
+              return <Badge variant={config.variant} className="py-1">{config.label}</Badge>;
+            }
           },
           {
             title: 'Actions',
