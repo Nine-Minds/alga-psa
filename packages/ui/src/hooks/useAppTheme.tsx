@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState, createContext, useContext } from 'react';
 import { useTheme } from 'next-themes';
 import { useSession } from 'next-auth/react';
 import { useFeatureFlag } from './useFeatureFlag';
@@ -11,18 +11,35 @@ function isThemePreference(value: unknown): value is ThemePreference {
   return value === 'light' || value === 'dark' || value === 'system';
 }
 
+interface ThemeActions {
+  getPreference: () => Promise<ThemePreference | null>;
+  savePreference: (theme: ThemePreference) => Promise<void>;
+}
+
+const ThemeActionsContext = createContext<ThemeActions | null>(null);
+
+export function ThemeActionsProvider({
+  children,
+  actions,
+}: {
+  children: React.ReactNode;
+  actions: ThemeActions;
+}) {
+  return (
+    <ThemeActionsContext.Provider value={actions}>
+      {children}
+    </ThemeActionsContext.Provider>
+  );
+}
+
 export function useAppTheme() {
   const themeApi = useTheme();
   const { theme, setTheme } = themeApi;
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const { enabled: themesEnabled } = useFeatureFlag('themes-enabled');
+  const actions = useContext(ThemeActionsContext);
   const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
   const lastSyncedTheme = useRef<ThemePreference | null>(null);
-
-  const userId = useMemo(() => {
-    const user = session?.user as { id?: string; user_id?: string } | undefined;
-    return user?.id ?? user?.user_id ?? null;
-  }, [session?.user]);
 
   // Force light theme when feature flag is disabled
   useEffect(() => {
@@ -32,22 +49,14 @@ export function useAppTheme() {
   }, [themesEnabled, theme, setTheme]);
 
   useEffect(() => {
-    if (!themesEnabled) return;
-    if (status !== 'authenticated' || !userId || hasLoadedFromDb) {
+    if (!themesEnabled || !actions) return;
+    if (status !== 'authenticated' || hasLoadedFromDb) {
       return;
     }
 
     const loadPreference = async () => {
       try {
-        const response = await fetch(`/api/v1/users/${userId}/preferences`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to load preferences (${response.status})`);
-        }
-        const result = await response.json();
-        const preference = result?.data?.theme;
+        const preference = await actions.getPreference();
         if (isThemePreference(preference) && preference !== theme) {
           setTheme(preference);
         }
@@ -59,11 +68,11 @@ export function useAppTheme() {
     };
 
     loadPreference();
-  }, [themesEnabled, hasLoadedFromDb, status, theme, setTheme, userId]);
+  }, [themesEnabled, actions, hasLoadedFromDb, status, theme, setTheme]);
 
   useEffect(() => {
-    if (!themesEnabled) return;
-    if (status !== 'authenticated' || !userId) {
+    if (!themesEnabled || !actions) return;
+    if (status !== 'authenticated') {
       return;
     }
 
@@ -76,18 +85,14 @@ export function useAppTheme() {
 
     const persistPreference = async () => {
       try {
-        await fetch(`/api/v1/users/${userId}/preferences`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ theme: currentTheme }),
-        });
+        await actions.savePreference(currentTheme);
       } catch (error) {
         console.error('Failed to save theme preference:', error);
       }
     };
 
     persistPreference();
-  }, [themesEnabled, status, theme, userId]);
+  }, [themesEnabled, actions, status, theme]);
 
   return {
     ...themeApi,
