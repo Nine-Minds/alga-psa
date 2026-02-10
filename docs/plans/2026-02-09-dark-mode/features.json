@@ -140,13 +140,13 @@
   {
     "id": "F021",
     "description": "Cards and panels use theme-aware backgrounds instead of `bg-white`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.1"]
   },
   {
     "id": "F022",
     "description": "Form components (inputs, selects, textareas) use theme-aware borders, backgrounds, and text colors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.2"]
   },
   {
