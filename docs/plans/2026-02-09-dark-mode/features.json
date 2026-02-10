@@ -260,7 +260,7 @@
   {
     "id": "F041",
     "description": "Radix UI Tables custom overrides in globals.css support dark mode — fix hardcoded `rgba(0, 0, 0, 0.05)` hover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.3"]
   },
   {
@@ -296,7 +296,7 @@
   {
     "id": "F047",
     "description": "Replace hardcoded `rgba(0, 0, 0, ...)` in table hover rows and `bg-dotted` background with theme-aware values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.4"]
   },
   {

@@ -42,6 +42,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Replaced switch thumb hardcoded white with `--color-switch-thumb` and added checkbox/radio accent colors for dark mode.
 - (2026-02-10) Updated `time-slot-working` background to use theme-aware card color.
 - (2026-02-10) Replaced collaboration cursor hardcoded color with theme-aware text color variable.
+- (2026-02-10) Updated table hover and dotted background colors to use theme-aware CSS variables.
 
 ## Discoveries / Constraints
 

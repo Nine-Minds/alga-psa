@@ -559,7 +559,7 @@ body {
 }
 
 .bg-dotted {
-    background-image: radial-gradient(circle, rgba(209, 213, 219, 0.8) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgb(var(--color-border-300) / 0.6) 1px, transparent 1px);
     background-size: 20px 20px;
 }
 
@@ -574,7 +574,7 @@ body {
 /* Table styles */
 .radix-themes {
     --table-header-bg: transparent;
-    --table-row-hover: rgba(0, 0, 0, 0.05);
+    --table-row-hover: rgb(var(--color-border-100) / 0.6);
     width: 100%;
 }
 
@@ -604,7 +604,7 @@ body {
 }
 
 .rt-TableRow:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgb(var(--color-border-100) / 0.6);
 }
 
 .rt-TableCell,
