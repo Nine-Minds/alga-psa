@@ -28,6 +28,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Added `useAppTheme()` hook to load theme preference from `/api/v1/users/:id/preferences` and persist changes back to the DB.
 - (2026-02-10) Removed hardcoded `className="light"` from root `<body>` so next-themes controls the theme class.
 - (2026-02-10) Added `ThemeBridge` to map resolved theme to Radix `appearance` and Mantine `forceColorScheme`.
+- (2026-02-10) Created `ThemeToggle` dropdown (Light/Dark/System) powered by `useAppTheme`.
 
 ## Discoveries / Constraints
 

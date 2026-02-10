@@ -56,7 +56,7 @@
   {
     "id": "F008",
     "description": "Create a `ThemeToggle` component with three options: Light, Dark, System — using sun/moon icons",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.1"]
   },
   {
