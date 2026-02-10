@@ -80,7 +80,7 @@
   {
     "id": "F011",
     "description": "On theme change, sync preference to `user_preferences` DB table via `UserPreferences.upsert(knex, { user_id, setting_name: 'theme', setting_value: JSON.stringify(theme) })`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.6"]
   },
   {
