@@ -48,6 +48,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Extension loading overlay already uses CSS variables, marked as dark-mode ready.
 - (2026-02-10) Added AppThemeProvider + ThemeBridge to client portal layout for theme class + data-theme sync.
 - (2026-02-10) Updated client portal layout background to use `bg-background` instead of hardcoded gray.
+- (2026-02-10) Added inverted branding shade generation and `.dark` scoped variables for both server-side and client branding injections.
 
 ## Discoveries / Constraints
 

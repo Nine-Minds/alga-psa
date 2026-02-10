@@ -326,19 +326,19 @@
   {
     "id": "F052",
     "description": "Update `generateColorShades()` in `packages/tenancy/src/lib/generateBrandingStyles.ts` to also produce an inverted dark-mode scale (swap 50↔900, 100↔800, 200↔700, 300↔600, keep 400/500 similar) — same RGB lerp algorithm, inverted step mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.4"]
   },
   {
     "id": "F052b",
     "description": "Update `generateBrandingStyles()` to emit branded CSS variables scoped under `.dark` selector for dark mode shades, in addition to existing unscoped (light mode) variables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.4"]
   },
   {
     "id": "F052c",
     "description": "Update `BrandingProvider` client-side injection to also inject `.dark`-scoped branded variables (inverted shades) alongside the existing light-mode variables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.4"]
   },
   {
