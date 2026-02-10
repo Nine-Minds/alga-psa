@@ -1,0 +1,326 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration adds tickets.ticket_origin column successfully in existing DB",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Newly inserted tickets default ticket_origin to internal when not explicitly provided",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Backfill marks tickets with email_metadata as inbound_email",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Backfill marks tickets created by client users as client_portal when no email_metadata",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Backfill marks unresolved legacy tickets as internal",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "TicketOrigin typecheck accepts internal/client_portal/inbound_email/api and rejects invalid values",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "MSP server action create path persists ticket_origin=internal",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F010"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Client portal create path persists ticket_origin=client_portal",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F010"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Inbound email create path persists ticket_origin=inbound_email",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F010"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "API create path persists ticket_origin=api",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Workflow/automation ticket creation without explicit origin persists internal default",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F010"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Resolver returns stored ticket_origin when present and valid",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Resolver maps null legacy row with email_metadata to inbound_email",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Resolver maps null legacy row with creator user_type client to client_portal",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Resolver maps null legacy row with no signal to internal",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Resolver handles unknown future origin values without crashing and returns safe fallback classification",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F011"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "MSP getTicketById payload includes normalized ticket_origin for internal ticket",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "MSP getTicketById payload includes normalized ticket_origin for client_portal ticket",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "MSP getTicketById payload includes normalized ticket_origin for inbound_email ticket",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "MSP getTicketById payload includes normalized ticket_origin for api ticket",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Client portal getClientTicketDetails payload includes normalized ticket_origin for internal ticket",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Client portal getClientTicketDetails payload includes normalized ticket_origin for client_portal ticket",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Client portal getClientTicketDetails payload includes normalized ticket_origin for inbound_email ticket",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Client portal getClientTicketDetails payload includes normalized ticket_origin for api ticket",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "TicketOriginBadge renders Created Internally label and data attribute for internal",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "TicketOriginBadge renders Created via Client Portal label and data attribute for client_portal",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "TicketOriginBadge renders Created via Inbound Email label and data attribute for inbound_email",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "TicketOriginBadge renders Created via API label and data attribute for api",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "TicketOriginBadge renders safe fallback label for unknown future origin value",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F014"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "MSP TicketDetails renders API origin badge when ticket_origin=api",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "MSP TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Client portal TicketDetails renders API origin badge when ticket_origin=api",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Client portal TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "English common locale includes ticket origin keys for internal/client_portal/inbound_email/api/other",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "English clientPortal locale includes ticket origin keys for internal/client_portal/inbound_email/api/other",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Existing comment ResponseSourceBadge tests continue to pass after ticket-origin changes",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Existing response-state badge behavior remains unchanged in MSP and client portal ticket details",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "End-to-end: API-created ticket displays Created via API badge in MSP ticket details",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F015",
+      "F020"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "End-to-end: API-created ticket displays Created via API badge in client portal ticket details when ticket is visible to the client",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F016",
+      "F020"
+    ]
+  }
+]

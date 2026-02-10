@@ -10,6 +10,7 @@ import type {
   IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
+import { TICKET_ORIGINS } from '@alga-psa/types';
 import Ticket from '../models/ticket';
 import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from '@alga-psa/auth/actions';
@@ -43,6 +44,7 @@ import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -268,7 +270,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         itil_urgency: itil_urgency ? parseInt(itil_urgency as string) : undefined,
         due_date: due_date === '' ? undefined : (due_date as string),
         entered_by: user.user_id,
-        source: 'web_app'
+        source: 'web_app',
+        ticket_origin: TICKET_ORIGINS.INTERNAL,
       };
 
       // Server-specific: Create adapters for dependency injection
@@ -1383,6 +1386,7 @@ export type DetailedTicket = ITicket & {
   tenant: string;
   status_name: string;
   is_closed: boolean;
+  ticket_origin: ResolvedTicketOrigin;
   board_name?: string;
   assigned_to_first_name?: string;
   assigned_to_last_name?: string;
@@ -1409,6 +1413,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       board_name?: string;
       assigned_to_first_name?: string;
       assigned_to_last_name?: string;
+      entered_by_user_type?: string | null;
       contact_name?: string;
       client_name?: string;
     };
@@ -1421,6 +1426,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         'ch.board_name as board_name',
         'u_assignee.first_name as assigned_to_first_name',
         'u_assignee.last_name as assigned_to_last_name',
+        'u_creator.user_type as entered_by_user_type',
         'ct.full_name as contact_name',
         'co.client_name'
       )
@@ -1435,6 +1441,10 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       .leftJoin('users as u_assignee', function() {
         this.on('t.assigned_to', 'u_assignee.user_id')
            .andOn('t.tenant', 'u_assignee.tenant');
+      })
+      .leftJoin('users as u_creator', function() {
+        this.on('t.entered_by', 'u_creator.user_id')
+           .andOn('t.tenant', 'u_creator.tenant');
       })
       .leftJoin('contacts as ct', function() {
         this.on('t.contact_name_id', 'ct.contact_name_id')
@@ -1476,6 +1486,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       tenant: tenant,
       status_name: ticket.status_name || 'Unknown',
       is_closed: ticket.is_closed || false,
+      ticket_origin: getTicketOrigin(ticket),
       board_name: ticket.board_name || undefined,
       assigned_to_name: assigned_to_name,
       contact_name: ticket.contact_name || undefined,
@@ -1486,6 +1497,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
 
     delete (detailedTicket as any).assigned_to_first_name;
     delete (detailedTicket as any).assigned_to_last_name;
+    delete (detailedTicket as any).entered_by_user_type;
 
     // Track ticket view analytics
     captureAnalytics('ticket_viewed', {
