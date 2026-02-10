@@ -21,7 +21,7 @@ export { default as AgentScheduleDrawer } from './ticket/AgentScheduleDrawer';
 export * from './ticket/AgentScheduleDrawerStyles';
 export { default as CommentItem } from './ticket/CommentItem';
 export { default as TicketAppointmentRequests, type ITicketAppointmentRequest } from './ticket/TicketAppointmentRequests';
-export { default as TicketConversation } from './ticket/TicketConversation';
+export { default as TicketConversation, TAB_CLIENT, TAB_INTERNAL, TAB_RESOLUTION, TAB_ALL_COMMENTS } from './ticket/TicketConversation';
 export { default as TicketDetails } from './ticket/TicketDetails';
 export { TicketDetailsSkeleton } from './ticket/TicketDetailsSkeleton';
 export { default as TicketDocumentsSection } from './ticket/TicketDocumentsSection';

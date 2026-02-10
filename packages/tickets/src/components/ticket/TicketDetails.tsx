@@ -30,7 +30,7 @@ import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
-import TicketConversation from "./TicketConversation";
+import TicketConversation, { TAB_CLIENT } from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "@alga-psa/ui";
@@ -254,7 +254,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             styles: {}
         }]
     }]);
-    const [activeTab, setActiveTab] = useState('Client');
+    const [activeTab, setActiveTab] = useState(TAB_CLIENT);
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 

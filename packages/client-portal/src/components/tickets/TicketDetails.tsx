@@ -5,7 +5,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
-import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, type ITicketAppointmentRequest, TAB_ALL_COMMENTS, TAB_INTERNAL } from '@alga-psa/tickets/components';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
@@ -55,7 +55,7 @@ export function TicketDetails({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
-  const [activeTab, setActiveTab] = useState(t('tickets.conversation.allComments', 'All Comments'));
+  const [activeTab, setActiveTab] = useState(TAB_ALL_COMMENTS);
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -602,7 +602,7 @@ export function TicketDetails({
                 documents={ticket.documents || []}
                 userMap={ticket.userMap || {}}
                 currentUser={currentUser}
-                activeTab={activeTab === 'Internal' ? t('tickets.messages.comments', 'Comments') : activeTab}
+                activeTab={activeTab === TAB_INTERNAL ? TAB_ALL_COMMENTS : activeTab}
                 hideInternalTab={true}
                 isEditing={isEditing}
                 currentComment={currentComment}
@@ -610,7 +610,7 @@ export function TicketDetails({
                 onNewCommentContentChange={handleNewCommentContentChange}
                 onAddNewComment={handleAddNewComment}
                 onTabChange={(tab) => {
-                  if (tab !== 'Internal') {
+                  if (tab !== TAB_INTERNAL) {
                     setActiveTab(tab);
                   }
                 }}

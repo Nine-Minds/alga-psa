@@ -7,6 +7,8 @@ import { LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
   label: string;
+  /** Stable ID used as the Radix tab value. Falls back to label when omitted. */
+  value?: string;
   content: React.ReactNode;
   icon?: LucideIcon | React.ReactNode;
 }
@@ -88,7 +90,7 @@ export const CustomTabs = ({
   const [internalValue, setInternalValue] = React.useState(() => {
     if (controlledValue) return controlledValue;
     if (defaultTab) return defaultTab;
-    if (allTabs && allTabs.length > 0) return allTabs[0].label;
+    if (allTabs && allTabs.length > 0) return allTabs[0].value ?? allTabs[0].label;
     return '';
   });
 
@@ -122,7 +124,7 @@ export const CustomTabs = ({
       // Auto-expand the section containing the default tab
       if (groups && groups.length > 0) {
         groups.forEach((group, groupIndex) => {
-          if (group.tabs.some(tab => tab.label === defaultTab)) {
+          if (group.tabs.some(tab => (tab.value ?? tab.label) === defaultTab)) {
             setExpandedSections(prev => ({
               ...prev,
               [groupIndex]: true
@@ -137,7 +139,7 @@ export const CustomTabs = ({
   React.useEffect(() => {
     if (groups && groups.length > 0 && value) {
       groups.forEach((group, groupIndex) => {
-        if (group.tabs.some(tab => tab.label === value)) {
+        if (group.tabs.some(tab => (tab.value ?? tab.label) === value)) {
           setExpandedSections(prev => {
             if (prev[groupIndex] === false) {
               return { ...prev, [groupIndex]: true };
@@ -216,12 +218,13 @@ export const CustomTabs = ({
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
                   const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
+                  const tabId = tab.value ?? tab.label;
                   return (
                     <Tabs.Trigger
-                      key={tab.label}
+                      key={tabId}
                       id={`${prefix}-trigger-${globalIndex}`}
                       className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
-                      value={tab.label}
+                      value={tabId}
                     >
                       {renderIcon(IconComponent)}
                       {tab.label}
@@ -238,12 +241,13 @@ export const CustomTabs = ({
             const iconClassName = hasIcon
               ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
               : '';
+            const tabId = tab.value ?? tab.label;
             return (
               <Tabs.Trigger
-                key={tab.label}
+                key={tabId}
                 id={`${prefix}-trigger-${index}`}
                 className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
-                value={tab.label}
+                value={tabId}
               >
                 {renderIcon(IconComponent)}
                 {tab.label}
@@ -253,16 +257,19 @@ export const CustomTabs = ({
         )}
         {extraContent}
       </Tabs.List>
-      {allTabs.map((tab, index): React.JSX.Element => (
-        <Tabs.Content 
-          key={tab.label}
-          id={`${prefix}-content-${index}`}
-          value={tab.label} 
-          className={`focus:outline-none ${tabStyles?.content || ''}`}
-        >
-          {tab.content}
-        </Tabs.Content>
-      ))}
+      {allTabs.map((tab, index): React.JSX.Element => {
+        const tabId = tab.value ?? tab.label;
+        return (
+          <Tabs.Content
+            key={tabId}
+            id={`${prefix}-content-${index}`}
+            value={tabId}
+            className={`focus:outline-none ${tabStyles?.content || ''}`}
+          >
+            {tab.content}
+          </Tabs.Content>
+        );
+      })}
     </Tabs.Root>
   );
 };

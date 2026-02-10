@@ -33,6 +33,12 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
 }];
 import CommentItem from './CommentItem';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
+
+// Stable tab IDs – never translated, used as internal Radix values
+export const TAB_CLIENT = 'Client';
+export const TAB_INTERNAL = 'Internal';
+export const TAB_RESOLUTION = 'Resolution';
+export const TAB_ALL_COMMENTS = 'All Comments';
 import styles from './TicketDetails.module.css';
 import { Button } from '@alga-psa/ui/components/Button';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -119,7 +125,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     prevActiveTab.current = activeTab;
 
     // All Comments tab - both toggles off (no filtering)
-    if (activeTab === 'All Comments') {
+    if (activeTab === TAB_ALL_COMMENTS) {
       setIsInternalToggle(false);
       setIsResolutionToggle(false);
       return;
@@ -127,13 +133,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
     if (!hideInternalTab) {
       // MSP Portal
-      if (activeTab === 'Internal') {
+      if (activeTab === TAB_INTERNAL) {
         setIsInternalToggle(true);
         // Only turn off Resolution if this was a direct tab click (not from toggle)
         if (!fromToggle) {
           setIsResolutionToggle(false);
         }
-      } else if (activeTab === 'Resolution') {
+      } else if (activeTab === TAB_RESOLUTION) {
         setIsResolutionToggle(true);
         // Only turn off Internal if this was a direct tab click (not from toggle)
         if (!fromToggle) {
@@ -146,7 +152,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       }
     } else {
       // Client Portal: only handle resolution tab
-      if (activeTab === 'Resolution') {
+      if (activeTab === TAB_RESOLUTION) {
         setIsResolutionToggle(true);
       } else {
         setIsResolutionToggle(false);
@@ -200,16 +206,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     if (checked) {
       // Turn ON Internal → go to Internal tab, preserve Resolution toggle
       tabChangeFromToggle.current = true;
-      onTabChange('Internal');
+      onTabChange(TAB_INTERNAL);
     } else {
       // Turn OFF Internal
       if (isResolutionToggle) {
         // Resolution still ON → switch to Resolution tab
         tabChangeFromToggle.current = true;
-        onTabChange('Resolution');
+        onTabChange(TAB_RESOLUTION);
       } else {
         // Both OFF → switch to Client tab
-        onTabChange('Client');
+        onTabChange(TAB_CLIENT);
       }
     }
   };
@@ -220,16 +226,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     if (checked) {
       // Turn ON Resolution → go to Resolution tab, preserve Internal toggle
       tabChangeFromToggle.current = true;
-      onTabChange('Resolution');
+      onTabChange(TAB_RESOLUTION);
     } else {
       // Turn OFF Resolution
       if (isInternalToggle) {
         // Internal still ON → switch to Internal tab
         tabChangeFromToggle.current = true;
-        onTabChange('Internal');
+        onTabChange(TAB_INTERNAL);
       } else {
         // Both OFF → switch to Client tab
-        onTabChange('Client');
+        onTabChange(TAB_CLIENT);
       }
     }
   };
@@ -379,6 +385,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const baseTabs = [
     {
       label: t('tickets.conversation.client', 'Client'),
+      value: TAB_CLIENT,
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
           {renderComments(conversations.filter(conversation => !conversation.is_internal))}
@@ -388,6 +395,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     },
     {
       label: t('tickets.conversation.internal', 'Internal'),
+      value: TAB_INTERNAL,
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
           <h3 className="text-lg font-medium mb-4">{t('tickets.conversation.internalComments', 'Internal Comments')}</h3>
@@ -397,10 +405,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     },
     {
       label: t('tickets.conversation.resolution', 'Resolution'),
+      value: TAB_RESOLUTION,
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
           <h3 className="text-lg font-medium mb-4">{t('tickets.conversation.resolutionComments', 'Resolution Comments')}</h3>
-          {renderComments(conversations.filter(conversation => 
+          {renderComments(conversations.filter(conversation =>
             conversation.is_resolution && (!hideInternalTab || !conversation.is_internal)
           ))}
         </ReflectionContainer>
@@ -408,6 +417,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     },
     {
       label: t('tickets.conversation.allComments', 'All Comments'),
+      value: TAB_ALL_COMMENTS,
       content: (
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
           {renderComments(hideInternalTab
@@ -525,7 +535,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <CustomTabs
           tabs={tabContent}
-          defaultTab={hideInternalTab ? t('tickets.conversation.allComments', 'All Comments') : t('tickets.conversation.client', 'Client')}
+          defaultTab={hideInternalTab ? TAB_ALL_COMMENTS : TAB_CLIENT}
           value={activeTab}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
