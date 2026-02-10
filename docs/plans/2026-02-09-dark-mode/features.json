@@ -248,13 +248,13 @@
   {
     "id": "F039",
     "description": "react-day-picker custom overrides in globals.css support dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.1"]
   },
   {
     "id": "F040",
     "description": "react-big-calendar has dark mode overrides (CDN CSS + custom overrides)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.2"]
   },
   {
@@ -272,7 +272,7 @@
   {
     "id": "F043",
     "description": "Tiptap/ProseMirror editor area has appropriate dark mode styles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.5"]
   },
   {

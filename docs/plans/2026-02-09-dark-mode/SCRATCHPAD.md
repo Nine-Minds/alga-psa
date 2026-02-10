@@ -51,6 +51,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Added inverted branding shade generation and `.dark` scoped variables for both server-side and client branding injections.
 - (2026-02-10) Added client-portal auth layout to wrap sign-in/forgot-password flows with theme providers.
 - (2026-02-10) ThemeBridge now feeds Mantine color scheme, marking Mantine components as theme-aware.
+- (2026-02-10) Added dark-mode overrides for react-day-picker, react-big-calendar, and Tiptap/ProseMirror surfaces.
 
 ## Discoveries / Constraints
 

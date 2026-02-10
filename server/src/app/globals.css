@@ -818,6 +818,66 @@ body {
   margin: 0 !important;
 }
 
+.dark .rdp {
+  --rdp-accent-color: rgb(var(--color-primary-400)) !important;
+  --rdp-background-color: rgb(var(--color-border-50)) !important;
+  background-color: rgb(var(--color-border-50));
+  color: rgb(var(--color-text-900));
+}
+
+.dark .rdp button {
+  color: rgb(var(--color-text-700));
+}
+
+.dark .rdp .rdp-day_selected,
+.dark .rdp .rdp-day_selected:focus-visible,
+.dark .rdp .rdp-day_selected:hover {
+  background-color: rgb(var(--color-primary-500));
+  color: rgb(var(--color-text-50));
+}
+
+/* react-big-calendar dark overrides */
+.dark .rbc-calendar {
+  background-color: rgb(var(--color-background));
+  color: rgb(var(--color-text-700));
+}
+
+.dark .rbc-toolbar button {
+  background-color: transparent;
+  color: rgb(var(--color-text-700));
+  border-color: rgb(var(--color-border-200));
+}
+
+.dark .rbc-toolbar button.rbc-active,
+.dark .rbc-toolbar button:hover {
+  background-color: rgb(var(--color-border-100));
+  color: rgb(var(--color-text-900));
+}
+
+.dark .rbc-header,
+.dark .rbc-time-header-content,
+.dark .rbc-time-content,
+.dark .rbc-time-view,
+.dark .rbc-month-view,
+.dark .rbc-agenda-view {
+  border-color: rgb(var(--color-border-200));
+}
+
+.dark .rbc-off-range-bg {
+  background-color: rgb(var(--color-border-50));
+}
+
+.dark .rbc-today {
+  background-color: rgb(var(--color-border-100));
+}
+
+/* Tiptap / ProseMirror dark background */
+.dark .tiptap,
+.dark .ProseMirror {
+  background-color: rgb(var(--color-border-50));
+  color: rgb(var(--color-text-900));
+}
+
 .rdp-button:focus:not([disabled]) {
   background-color: rgb(var(--color-primary-50)) !important;
   border: none !important;
