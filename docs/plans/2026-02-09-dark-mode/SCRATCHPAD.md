@@ -49,6 +49,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-10) Added AppThemeProvider + ThemeBridge to client portal layout for theme class + data-theme sync.
 - (2026-02-10) Updated client portal layout background to use `bg-background` instead of hardcoded gray.
 - (2026-02-10) Added inverted branding shade generation and `.dark` scoped variables for both server-side and client branding injections.
+- (2026-02-10) Added client-portal auth layout to wrap sign-in/forgot-password flows with theme providers.
 
 ## Discoveries / Constraints
 

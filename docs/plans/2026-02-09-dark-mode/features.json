@@ -344,7 +344,7 @@
   {
     "id": "F053",
     "description": "Add `next-themes` provider to client portal auth pages (`server/src/app/auth/client-portal/`) so login/signup forms support dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.5"]
   },
   {
