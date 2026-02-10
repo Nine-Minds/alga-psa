@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { Extension } from '../../../lib/extensions/types';
 import ExtensionDetailsModal from './ExtensionDetailsModal';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 // Define local interface to match UI expectations
 interface ExtensionUI {
@@ -46,6 +47,7 @@ export default function Extensions() {
   const [error, setError] = useState<string | null>(null);
   const [selectedExtension, setSelectedExtension] = useState<ExtensionUI | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
   
   // Fetch extensions
   useEffect(() => {
@@ -88,23 +90,27 @@ export default function Extensions() {
   };
   
   // Handle removing extensions
-  const handleRemoveExtension = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this extension? This action cannot be undone.')) {
-      return;
-    }
-    
+  const handleRemoveExtension = (id: string) => {
+    setRemoveTarget(id);
+  };
+
+  const confirmRemoveExtension = async () => {
+    if (!removeTarget) return;
+    const id = removeTarget;
+    setRemoveTarget(null);
+
     try {
       const result = await uninstallExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;
       }
-      
+
       // Update local state
-      setExtensions(prevExtensions => 
+      setExtensions(prevExtensions =>
         prevExtensions.filter((ext): boolean => ext.id !== id)
       );
-      
+
       console.log('Extension removed', { id });
     } catch (err) {
       console.error('Failed to remove extension', { id, error: err });
@@ -281,6 +287,16 @@ export default function Extensions() {
         }}
         onToggle={(id, status) => void handleToggleExtension(id, status)}
         onRemove={(id) => void handleRemoveExtension(id)}
+      />
+      <ConfirmationDialog
+        isOpen={removeTarget !== null}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={confirmRemoveExtension}
+        title="Remove Extension"
+        message="Are you sure you want to remove this extension? This action cannot be undone."
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        id="remove-extension-confirm"
       />
     </div>
   );

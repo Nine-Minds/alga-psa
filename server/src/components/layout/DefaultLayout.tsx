@@ -29,9 +29,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
   const isOnBillingPage = pathname?.startsWith('/msp/billing') ?? false;
+  const isOnExtensionsPage = pathname?.startsWith('/msp/extensions') ?? false;
 
   // Determine default sidebar mode based on current route
-  const defaultSidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : 'main';
+  const defaultSidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : isOnExtensionsPage ? 'extensions' : 'main';
 
   // Allow overriding the mode (e.g., show main menu while on settings page)
   const [modeOverride, setModeOverride] = useState<'main' | null>(null);

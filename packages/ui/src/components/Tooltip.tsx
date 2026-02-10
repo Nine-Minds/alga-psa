@@ -20,7 +20,7 @@ export const Tooltip = ({ // Removed AutomationProps from here as it's in the in
   className,
   side,
   align,
-  sideOffset = 4, // Default offset like Radix
+  sideOffset = 6, // Default offset like Radix
   ...props // Pass down automation props if needed, though Radix might handle accessibility
 }: TooltipProps) => {
   // Removed useState, useCallback, useRef, handleMouseMove
@@ -37,10 +37,8 @@ export const Tooltip = ({ // Removed AutomationProps from here as it's in the in
             side={side}
             align={align}
             className={cn(
-              // Standard Radix styles (adjust if needed based on project theme)
-              "z-[9999] overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-              // Original custom styling
-              "w-64 px-4 py-3 text-base text-white bg-gray-800 rounded shadow-sm",
+              "z-[9999] overflow-hidden rounded-md px-2.5 py-1.5 text-xs font-medium text-white bg-gray-900 shadow-md",
+              "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
               className // Allow overriding/extending styles
             )}
             {...props} // Spread any remaining props, potentially for data attributes

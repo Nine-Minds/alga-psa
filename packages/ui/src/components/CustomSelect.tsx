@@ -23,6 +23,14 @@ export interface StyleProps {
   itemIndicator?: string;
 }
 
+type SelectSize = 'sm' | 'md' | 'lg';
+
+const sizeClasses: Record<SelectSize, string> = {
+  sm: 'h-8 text-xs px-2',
+  md: 'h-10 text-sm p-2',
+  lg: 'h-12 text-base px-4',
+};
+
 interface CustomSelectProps {
   options: SelectOption[];
   value?: string | null;
@@ -42,6 +50,8 @@ interface CustomSelectProps {
   modal?: boolean;
   /** Whether to show the placeholder as a disabled option in the dropdown (default: true) */
   showPlaceholderInDropdown?: boolean;
+  /** Size variant for the select trigger */
+  size?: SelectSize;
 }
 
 const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
@@ -63,6 +73,7 @@ const CustomSelect = ({
   allowClear = false,
   modal,
   showPlaceholderInDropdown = true,
+  size = 'md',
   ...props
 }: CustomSelectProps & AutomationProps) => {
   const { modal: parentModal } = useModality();
@@ -149,7 +160,7 @@ const CustomSelect = ({
   return (
     <div className={label ? 'mb-4' : ''} id={containerId} data-automation-type={dataAutomationType} suppressHydrationWarning>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-foreground mb-1">
           {label}
         </label>
       )}
@@ -186,15 +197,15 @@ const CustomSelect = ({
           data-automation-type={dataAutomationType}
           className={`
             inline-flex items-center justify-between
-            rounded-lg p-2 h-10
-            text-sm font-medium transition-colors w-full
-            bg-white cursor-pointer
+            rounded-lg ${sizeClasses[size]}
+            font-medium transition-colors w-full
+            bg-background cursor-pointer
             border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
             hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
             disabled:pointer-events-none disabled:cursor-not-allowed
-            disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200
-            disabled:hover:bg-gray-100 disabled:hover:text-gray-400
+            disabled:bg-muted disabled:text-muted-foreground disabled:border-border
+            disabled:hover:bg-muted disabled:hover:text-muted-foreground
             ${className}
             ${customStyles?.trigger || ''}
           `}
@@ -211,20 +222,20 @@ const CustomSelect = ({
             placeholder={placeholder}
             className="flex-1 text-left"
           >
-            <span className={!selectedOption || disabled ? 'text-gray-400' : ''}>
+            <span className={!selectedOption || disabled ? 'text-muted-foreground' : ''}>
               {selectedOption?.label || placeholder}
             </span>
           </RadixSelect.Value>
           <RadixSelect.Icon>
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </RadixSelect.Icon>
         </RadixSelect.Trigger>
 
         <RadixSelect.Portal>
           <RadixSelect.Content
             className={`
-              overflow-hidden bg-white rounded-md shadow-lg pointer-events-auto
-              border border-gray-200 mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
+              overflow-hidden bg-background rounded-md shadow-lg pointer-events-auto
+              border border-border mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
               [&[data-side=top]]:mb-2 [&[data-side=bottom]]:mt-2
               ${customStyles?.content || ''}
             `}
@@ -234,7 +245,7 @@ const CustomSelect = ({
             onCloseAutoFocus={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.stopPropagation()}
           >
-            <RadixSelect.ScrollUpButton className="flex items-center justify-center h-6 bg-white text-gray-700 cursor-default">
+            <RadixSelect.ScrollUpButton className="flex items-center justify-center h-6 bg-background text-foreground cursor-default">
               <ChevronDown className="w-4 h-4 rotate-180" />
             </RadixSelect.ScrollUpButton>
             
@@ -244,8 +255,8 @@ const CustomSelect = ({
                 <RadixSelect.Item
                   value={PLACEHOLDER_VALUE}
                   className={`
-                    relative flex items-center px-3 py-2 text-sm rounded text-gray-500
-                    cursor-default bg-white select-none
+                    relative flex items-center px-3 py-2 text-sm rounded text-muted-foreground
+                    cursor-default bg-background select-none
                     ${customStyles?.item || ''}
                   `}
                   disabled
@@ -275,25 +286,25 @@ const CustomSelect = ({
                   value={option.radixValue}
                   textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : undefined)}
                   className={`
-                    relative flex items-center px-3 py-2 text-sm rounded text-gray-900
-                    cursor-pointer hover:bg-gray-100 focus:bg-gray-100
+                    relative flex items-center px-3 py-2 text-sm rounded text-foreground
+                    cursor-pointer hover:bg-muted focus:bg-muted
                     focus:outline-none select-none whitespace-nowrap
-                    data-[highlighted]:bg-gray-100
-                    ${option.className || 'bg-white'}
+                    data-[highlighted]:bg-muted
+                    ${option.className || 'bg-background'}
                     ${customStyles?.item || ''}
                   `}
                 >
                   <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
                   {customStyles?.itemIndicator && (
                     <RadixSelect.ItemIndicator className={customStyles.itemIndicator}>
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     </RadixSelect.ItemIndicator>
                   )}
                 </RadixSelect.Item>
               ))}
             </RadixSelect.Viewport>
 
-            <RadixSelect.ScrollDownButton className="flex items-center justify-center h-6 bg-white text-gray-700 cursor-default">
+            <RadixSelect.ScrollDownButton className="flex items-center justify-center h-6 bg-background text-foreground cursor-default">
               <ChevronDown className="w-4 h-4" />
             </RadixSelect.ScrollDownButton>
           </RadixSelect.Content>

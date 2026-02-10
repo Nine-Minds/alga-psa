@@ -129,6 +129,16 @@ const config: Config = {
       backgroundColor: { // Extend background colors specifically
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',
       },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+      },
+      transitionDuration: {
+        fast: 'var(--duration-fast)',
+        normal: 'var(--duration-normal)',
+        slow: 'var(--duration-slow)',
+      },
       borderColor: {
         main: {
           base: 'rgb(var(--color-border-base))',

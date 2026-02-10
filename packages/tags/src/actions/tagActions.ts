@@ -298,7 +298,34 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   });
 });
 
-export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, id: string): Promise<void> => {
+export const getTagMappingUsageCount = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, mappingId: string): Promise<{ tagId: string; tagText: string; usageCount: number }> => {
+  const { knex: db } = await createTenantKnex();
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const mapping = await trx('tag_mappings as tm')
+      .join('tag_definitions as td', function() {
+        this.on('tm.tenant', '=', 'td.tenant')
+            .andOn('tm.tag_id', '=', 'td.tag_id');
+      })
+      .where('tm.mapping_id', mappingId)
+      .where('tm.tenant', tenant)
+      .select('td.tag_id', 'td.tag_text')
+      .first();
+
+    if (!mapping) {
+      throw new Error(`Tag mapping with id ${mappingId} not found`);
+    }
+
+    const usageCount = await TagMapping.getUsageCount(trx, tenant, mapping.tag_id);
+
+    return {
+      tagId: mapping.tag_id,
+      tagText: mapping.tag_text,
+      usageCount,
+    };
+  });
+});
+
+export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, id: string, deleteDefinition?: boolean): Promise<void> => {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -349,8 +376,12 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       }
 
       // id is actually mapping_id - just delete the mapping
-      // Note: Orphaned tag definitions are cleaned up by a nightly scheduled job
       await TagMapping.delete(trx, tenant, id);
+
+      // If caller explicitly wants to delete the orphaned definition, do so
+      if (deleteDefinition) {
+        await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+      }
 
       const occurredAt = new Date().toISOString();
       await publishWorkflowEvent({

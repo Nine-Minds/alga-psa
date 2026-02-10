@@ -14,6 +14,12 @@ export interface ExtProxyUserInfo {
   additional_fields?: Record<string, string>;
 }
 
+function toNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function addScalarField(
   target: Record<string, string>,
   source: Record<string, unknown>,
@@ -33,6 +39,7 @@ function addScalarField(
 function extractAdditionalFields(user: Record<string, unknown>): Record<string, string> {
   const fields: Record<string, string> = {};
   addScalarField(fields, user, 'contact_id');
+  addScalarField(fields, user, 'contactId');
   addScalarField(fields, user, 'username');
   addScalarField(fields, user, 'locale');
   addScalarField(fields, user, 'timezone');
@@ -118,12 +125,20 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   const tenantId = user.tenant || '';
   const clientName = tenantId ? await getTenantClientName(tenantId) : '';
 
-  // Look up user's client_id if they are a client portal user
+  // Use the client ID carried in the auth token/session when available.
+  // This is the most reliable source for client portal sessions.
+  const sessionClientId =
+    toNonEmptyString((user as Record<string, unknown>).client_id) ??
+    toNonEmptyString((user as Record<string, unknown>).clientId);
+
+  // Fall back to DB lookup only when needed.
   const userId = user.user_id || user.id || '';
-  const userType = user.user_type || 'internal';
-  const clientId = (userType === 'client' && userId && tenantId)
-    ? await getUserClientId(userId, tenantId)
-    : undefined;
+  const userType = user.user_type || user.userType || 'internal';
+  const clientId =
+    sessionClientId ||
+    ((userType === 'client' && userId && tenantId)
+      ? await getUserClientId(userId, tenantId)
+      : undefined);
 
   const userInfo: ExtProxyUserInfo = {
     user_id: userId,
@@ -140,6 +155,7 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     userEmail: userInfo.user_email,
     userName: userInfo.user_name,
     userType: userInfo.user_type,
+    clientId: userInfo.client_id,
   });
 
   return userInfo;

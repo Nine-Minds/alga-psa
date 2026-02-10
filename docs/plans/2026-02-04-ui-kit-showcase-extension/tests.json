@@ -1,0 +1,1003 @@
+[
+  {
+    "id": "T001",
+    "description": "Extension scaffolding: manifest.json contains valid name, publisher, version, runtime fields",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Extension scaffolding: manifest.json specifies iframe UI type with correct entry path",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Extension scaffolding: manifest.json has appMenu hook configured",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Extension scaffolding: package.json includes @alga/ui-kit as file dependency",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Extension scaffolding: package.json includes react and react-dom dependencies",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Extension scaffolding: vite config builds to ui/dist/iframe/main.js",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Extension scaffolding: vite config aliases @alga/ui-kit correctly",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Extension scaffolding: index.html has root div and loads main.js",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Theme bridge: --alga-bg maps to host --color-background",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Theme bridge: --alga-fg maps to host --color-text-900",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Theme bridge: --alga-primary maps to host --color-primary-500",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Theme bridge: --alga-border maps to host --color-border-200",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Theme bridge: --alga-danger maps to host danger color",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Theme bridge: Dark mode applies different variable values",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Theme bridge: Theme toggle switches between light and dark",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Theme bridge: Components visually update when theme changes",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Layout: Header displays 'UI Kit Showcase' title",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Layout: Theme toggle button is visible in header",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Layout: Six category tabs are displayed (Core, Data, Dialogs, Feedback, Form, Navigation)",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Layout: Clicking a tab switches the displayed content",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Layout: Default tab is 'Core' when extension loads",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "DemoSection: Renders title text",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "DemoSection: Renders description text",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "DemoSection: Renders children in demo area",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Button demo: Primary variant renders with purple background",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Button demo: Secondary variant renders with muted background",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Button demo: Ghost variant renders with transparent background",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Button demo: Danger variant renders with red background",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Button demo: Small size button is visually smaller than medium",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Button demo: Large size button is visually larger than medium",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Button demo: Disabled button has reduced opacity and is non-interactive",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Input demo: Input accepts text input",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Input demo: Placeholder text is visible when empty",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Input demo: Disabled input cannot receive focus",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "CustomSelect demo: Dropdown opens on click",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "CustomSelect demo: Selected option is displayed",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "CustomSelect demo: Disabled select does not open",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Card demo: Card renders with border and padding",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Card demo: Card content is displayed inside",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Alert demo: Info tone has correct styling",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Alert demo: Success tone has green styling",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Alert demo: Warning tone has amber/orange styling",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Alert demo: Danger tone has red styling",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Text demo: Different size props change font size",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Text demo: Weight prop changes font weight",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Text demo: 'as' prop renders correct HTML element",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Stack demo: Horizontal direction displays items in a row",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Stack demo: Vertical direction displays items in a column",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Stack demo: Gap prop adds spacing between items",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Badge demo: Default tone renders neutral styling",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Badge demo: Success tone renders green styling",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Badge demo: Warning and danger tones render correctly",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "DataTable demo: Table renders with column headers",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "DataTable demo: Clicking sortable column header sorts data",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "DataTable demo: Pagination controls are visible",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "DataTable demo: Page size selector changes rows per page",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "DataTable demo: Responsive mode hides columns when container is narrow",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "DataTable demo: Custom cell render function displays Badge",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Dialog demo: Dialog opens when trigger is clicked",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Dialog demo: Dialog closes when close button is clicked",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Dialog demo: Dialog displays title in header",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "ConfirmDialog demo: Confirm button triggers onConfirm callback",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "ConfirmDialog demo: Cancel button triggers onCancel callback",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "ConfirmDialog demo: Danger variant shows red confirm button",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Spinner demo: Spinner animates (spins)",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Spinner demo: Different sizes render correctly",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "LoadingIndicator demo: Text is displayed alongside spinner",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Tooltip demo: Tooltip appears on hover",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Tooltip demo: Tooltip positions correctly (top, bottom, left, right)",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Progress demo: Progress bar fills to specified value",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Progress demo: Striped variant shows stripe pattern",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Progress demo: Animated variant has moving animation",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Progress demo: Size variants change bar height",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Progress demo: Indeterminate mode shows continuous animation",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Skeleton demo: Basic skeleton renders with pulse animation",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Skeleton demo: SkeletonText renders multiple lines",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Skeleton demo: SkeletonCircle renders as circle shape",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Skeleton demo: SkeletonRectangle renders with specified dimensions",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "Checkbox demo: Checkbox toggles between checked and unchecked",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "Checkbox demo: Indeterminate state shows dash/minus icon",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "Checkbox demo: Label is clickable and toggles checkbox",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Checkbox demo: Disabled checkbox cannot be toggled",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Switch demo: Switch toggles between on and off",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Switch demo: Size variants render at different scales",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Switch demo: Disabled switch cannot be toggled",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "TextArea demo: TextArea accepts multi-line input",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "TextArea demo: Rows prop changes visible rows",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "TextArea demo: Resize option controls resize behavior",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "TextArea demo: Disabled textarea cannot be edited",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Label demo: Label text is rendered",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Label demo: Required indicator (asterisk) is shown when required=true",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Label demo: Size variants change font size",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "SearchInput demo: Search icon is visible",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "SearchInput demo: Clear button appears when input has value",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "SearchInput demo: Clear button clears input value",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "SearchInput demo: Loading state shows spinner instead of clear button",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "SearchInput demo: Size variants render at different scales",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "SearchInput demo: Debounce delays onSearch callback",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Tabs demo: Default variant shows border-bottom indicator",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Tabs demo: Pills variant shows pill-shaped active state",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Tabs demo: Underline variant shows underline indicator",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Tabs demo: Disabled tab cannot be selected",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Tabs demo: Tab content changes when tab is selected",
+    "implemented": true,
+    "featureIds": [
+      "F066",
+      "F067",
+      "F068"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Drawer demo: Right drawer slides in from right edge",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Drawer demo: Left drawer slides in from left edge",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Drawer demo: Bottom drawer slides up from bottom",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Drawer demo: Different sizes change drawer width/height",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Drawer demo: Title is displayed in drawer header",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Drawer demo: Close button closes drawer",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Drawer demo: Escape key closes drawer",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Drawer demo: Overlay click closes drawer",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "DropdownMenu demo: Menu opens on trigger click",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "DropdownMenu demo: Menu items are clickable",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "DropdownMenu demo: Dividers separate menu sections",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "DropdownMenu demo: Disabled items are not clickable",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "DropdownMenu demo: Danger items have red text",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "DropdownMenu demo: Right-aligned menu aligns to right edge of trigger",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "DropdownMenu demo: Menu closes on item click",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "DropdownMenu demo: Menu closes on outside click",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Build: npm run build completes without errors",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Build: Output files are generated in ui/dist/iframe/",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Integration: Extension appears in app menu after installation",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Integration: Extension iframe loads without console errors",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Integration: All UI kit components render correctly in iframe context",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  }
+]

@@ -345,7 +345,7 @@ export function Dialog({
           aria-modal="true"
           aria-label={title || 'Dialog'}
           tabIndex={-1}
-          className={`relative bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col focus:outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
+          className={`relative bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
         >
           {/* Title bar */}
           {title ? (
@@ -371,7 +371,7 @@ export function Dialog({
           {!hideCloseButton && (
             <button
               onClick={onClose}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+              className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
               aria-label="Close"
             >
               <Cross2Icon />
@@ -409,7 +409,7 @@ export function Dialog({
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
           {...(!hasDescription ? { 'aria-describedby': undefined } : {})}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 max-h-[90vh] flex flex-col outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
           style={dialogStyle}
           onKeyDown={(e) => {
             // Handle Escape key manually when focus trap is disabled
@@ -445,7 +445,7 @@ export function Dialog({
           {/* Drag handle area - always present for consistent dragging */}
           <div
             data-drag-handle
-            className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
+            className={`${draggable ? 'cursor-move hover:bg-muted' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
             onMouseDown={handleMouseDown}
           >
             {title ? (
@@ -456,7 +456,7 @@ export function Dialog({
                   <RadixDialog.Title>Dialog</RadixDialog.Title>
                 </VisuallyHidden.Root>
                 <div className="flex items-center justify-center">
-                  <div className="w-12 h-1 bg-gray-300 rounded-full" /> {/* Visual drag indicator */}
+                  <div className="w-12 h-1 bg-[rgb(var(--color-border-300))] rounded-full" /> {/* Visual drag indicator */}
                 </div>
               </>
             )}
@@ -476,7 +476,7 @@ export function Dialog({
             disableFocusTrap ? (
               <button
                 onClick={onClose}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+                className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                 aria-label="Close"
               >
                 <Cross2Icon />
@@ -484,7 +484,7 @@ export function Dialog({
             ) : (
               <RadixDialog.Close asChild>
                 <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                   aria-label="Close"
                 >
                   <Cross2Icon />
@@ -518,6 +518,6 @@ export const DialogTrigger = RadixDialog.Trigger;
 
 export function DialogDescription({ children }: { children: ReactNode }): React.ReactElement {
   return (
-    <RadixDialog.Description className="text-sm text-gray-500 mb-4">{children}</RadixDialog.Description>
+    <RadixDialog.Description className="text-sm text-muted-foreground mb-4">{children}</RadixDialog.Description>
   );
 }

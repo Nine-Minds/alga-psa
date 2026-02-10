@@ -79,8 +79,8 @@
     justify-content: center;
     border-style: solid;
     border-radius: 9999px;
-    border-color: rgba(var(--color-primary-500));
-    border-top-color: rgb(var(--color-secondary-500));
+    border-color: rgb(var(--color-primary-500));
+    border-top-color: rgb(var(--color-primary-100));
     animation: spinner-spin 0.9s linear infinite;
     background-color: transparent;
   }
@@ -175,6 +175,16 @@ body,
 
 .dark {
     --background: 0, 0, 0;
+
+    /* Border radius tokens */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Animation duration tokens */
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
 
     /* SEMANTIC BADGE COLORS - not affected by branding */
     --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
@@ -271,6 +281,16 @@ body,
 
 .light {
     --background: 255, 255, 255;
+
+    /* Border radius tokens */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Animation duration tokens */
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
 
     /* SEMANTIC BADGE COLORS - not affected by branding */
     --badge-info-bg: 219 234 254;       /* blue-100 */

@@ -65,6 +65,10 @@ const routes: Route[] = [
   { pattern: /^\/access$/, handler: handleCheckAccess },
   // List audit logs (platform-reports)
   { pattern: /^\/audit/, handler: handleListAuditLogs },
+  // Feature flags
+  { pattern: /^\/feature-flags$/, handler: handleFeatureFlags },
+  { pattern: /^\/feature-flags\/(\d+)$/, handler: handleFeatureFlagById },
+  { pattern: /^\/feature-flags\/(\d+)\/tenants$/, handler: handleFeatureFlagTenants },
   // Health check
   { pattern: /^\/health$/, handler: handleHealth },
   // Tenant Management API - pass through to host
@@ -103,9 +107,9 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
     return await processRequest(request, host);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] unhandled error build=${BUILD_STAMP} reason=${reason}`);
+    await safeLog(host, 'error', `[nineminds-control-panel] unhandled error build=${BUILD_STAMP} reason=${reason}`);
     return jsonResponse(
-      { error: 'handler_failed', message: 'Nine Minds Reporting handler encountered an unexpected error.', detail: reason, build: BUILD_STAMP },
+      { error: 'handler_failed', message: 'NineMinds Control Panel handler encountered an unexpected error.', detail: reason, build: BUILD_STAMP },
       { status: 500 }
     );
   }
@@ -118,7 +122,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   const tenantId = request.context.tenantId;
   const extensionId = request.context.extensionId;
 
-  await safeLog(host, 'info', `[nineminds-reporting] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`);
+  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`);
 
   for (const route of routes) {
     const match = url.match(route.pattern);
@@ -131,8 +135,8 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
 
   return jsonResponse({
     ok: true,
-    message: 'Nine Minds Reporting Extension',
-    version: '0.2.1',
+    message: 'NineMinds Control Panel',
+    version: '0.3.0',
     build: BUILD_STAMP,
     endpoints: [
       'GET /reports - List all platform reports',
@@ -141,6 +145,12 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       'PUT /reports/:id - Update a report',
       'DELETE /reports/:id - Delete a report',
       'POST /reports/:id/execute - Execute a report',
+      'GET /feature-flags - List all feature flags',
+      'POST /feature-flags - Create a new feature flag',
+      'GET /feature-flags/:id - Get feature flag by ID',
+      'PUT /feature-flags/:id - Update a feature flag',
+      'DELETE /feature-flags/:id - Delete a feature flag',
+      'POST /feature-flags/:id/tenants - Add/remove tenant from flag',
       'GET /audit - List audit logs',
       'GET /health - Health check',
     ],
@@ -150,14 +160,14 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
 
 // Handler: List all platform reports
 async function handleListReports(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] listing platform reports via uiProxy');
+  await safeLog(host, 'info', '[nineminds-control-panel] listing platform reports via uiProxy');
   const result = await callPlatformApi(host, '/api/v1/platform-reports');
   return jsonResponse(result.data, { status: result.status });
 }
 
 // Handler: Create a new platform report
 async function handleCreateReport(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] creating platform report via uiProxy');
+  await safeLog(host, 'info', '[nineminds-control-panel] creating platform report via uiProxy');
 
   let body: unknown = {};
   if (request.http.body && request.http.body.length > 0) {
@@ -173,7 +183,7 @@ async function handleCreateReport(request: ExecuteRequest, host: HostBindings): 
 // Handler: Get report by ID
 async function handleGetReportById(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
   const reportId = params.param0;
-  await safeLog(host, 'info', `[nineminds-reporting] fetching report id=${reportId} via uiProxy`);
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching report id=${reportId} via uiProxy`);
   const result = await callPlatformApi(host, `/api/v1/platform-reports/${reportId}`);
   return jsonResponse(result.data, { status: result.status });
 }
@@ -181,7 +191,7 @@ async function handleGetReportById(request: ExecuteRequest, host: HostBindings, 
 // Handler: Update a report
 async function handleUpdateReport(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
   const reportId = params.param0;
-  await safeLog(host, 'info', `[nineminds-reporting] updating report id=${reportId} via uiProxy`);
+  await safeLog(host, 'info', `[nineminds-control-panel] updating report id=${reportId} via uiProxy`);
 
   let body: unknown = {};
   if (request.http.body && request.http.body.length > 0) {
@@ -197,7 +207,7 @@ async function handleUpdateReport(request: ExecuteRequest, host: HostBindings, p
 // Handler: Delete a report
 async function handleDeleteReport(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
   const reportId = params.param0;
-  await safeLog(host, 'info', `[nineminds-reporting] deleting report id=${reportId} via uiProxy`);
+  await safeLog(host, 'info', `[nineminds-control-panel] deleting report id=${reportId} via uiProxy`);
   const result = await callPlatformApi(host, `/api/v1/platform-reports/${reportId}`, { __method: 'DELETE' });
   return jsonResponse(result.data, { status: result.status });
 }
@@ -205,7 +215,7 @@ async function handleDeleteReport(request: ExecuteRequest, host: HostBindings, p
 // Handler: Execute a report
 async function handleExecuteReport(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
   const reportId = params.param0;
-  await safeLog(host, 'info', `[nineminds-reporting] executing report id=${reportId} via uiProxy`);
+  await safeLog(host, 'info', `[nineminds-control-panel] executing report id=${reportId} via uiProxy`);
 
   let body: unknown = {};
   if (request.http.body && request.http.body.length > 0) {
@@ -225,7 +235,7 @@ async function handleListAuditLogs(request: ExecuteRequest, host: HostBindings):
   const queryStart = url.indexOf('?');
   const queryString = queryStart >= 0 ? url.substring(queryStart) : '';
 
-  await safeLog(host, 'info', `[nineminds-reporting] listing audit logs via uiProxy`);
+  await safeLog(host, 'info', `[nineminds-control-panel] listing audit logs via uiProxy`);
   const result = await callPlatformApi(host, `/api/v1/platform-reports/audit${queryString}`);
   return jsonResponse(result.data, { status: result.status });
 }
@@ -243,7 +253,7 @@ async function handleHealth(_request: ExecuteRequest, _host: HostBindings): Prom
 // Handler: Proxy tenant-management API calls via uiProxy
 async function handleTenantManagementProxy(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
   const url = request.http.url || '';
-  await safeLog(host, 'info', `[nineminds-reporting] proxying tenant-management request via uiProxy: ${url}`);
+  await safeLog(host, 'info', `[nineminds-control-panel] proxying tenant-management request via uiProxy: ${url}`);
 
   let body: unknown = undefined;
   if (request.http.body && request.http.body.length > 0) {
@@ -258,14 +268,14 @@ async function handleTenantManagementProxy(request: ExecuteRequest, host: HostBi
 
 // Handler: Get schema
 async function handleGetSchema(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] fetching schema via uiProxy');
+  await safeLog(host, 'info', '[nineminds-control-panel] fetching schema via uiProxy');
   const result = await callPlatformApi(host, '/api/v1/platform-reports/schema');
   return jsonResponse(result.data, { status: result.status });
 }
 
 // Handler: Check access permissions
 async function handleCheckAccess(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] checking access via uiProxy');
+  await safeLog(host, 'info', '[nineminds-control-panel] checking access via uiProxy');
 
   let body: unknown = {};
   if (request.http.body && request.http.body.length > 0) {
@@ -275,6 +285,103 @@ async function handleCheckAccess(request: ExecuteRequest, host: HostBindings): P
   }
 
   const result = await callPlatformApi(host, '/api/v1/platform-reports/access', body);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Dispatcher for /feature-flags endpoint
+async function handleFeatureFlags(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      if (body.__action === 'create' || body.key) {
+        return handleCreateFeatureFlag(request, host, _params);
+      }
+    } catch { /* treat as list */ }
+  }
+  return handleListFeatureFlags(request, host, _params);
+}
+
+// Handler: List all feature flags
+async function handleListFeatureFlags(_request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-control-panel] listing feature flags via uiProxy');
+  const result = await callPlatformApi(host, '/api/v1/platform-feature-flags');
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Handler: Create a new feature flag
+async function handleCreateFeatureFlag(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-control-panel] creating feature flag via uiProxy');
+
+  let body: unknown = {};
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+    } catch { /* ignore */ }
+  }
+
+  const result = await callPlatformApi(host, '/api/v1/platform-feature-flags', { ...body as object, __method: 'POST' });
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Dispatcher for /feature-flags/:id endpoint
+async function handleFeatureFlagById(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      if (body.__action === 'delete') return handleDeleteFeatureFlag(request, host, params);
+      if (body.__action === 'update' || body.filters || body.active !== undefined) {
+        return handleUpdateFeatureFlag(request, host, params);
+      }
+    } catch { /* treat as get */ }
+  }
+  return handleGetFeatureFlag(request, host, params);
+}
+
+// Handler: Get feature flag by ID
+async function handleGetFeatureFlag(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const flagId = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching feature flag id=${flagId} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}`);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Handler: Update a feature flag
+async function handleUpdateFeatureFlag(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const flagId = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] updating feature flag id=${flagId} via uiProxy`);
+
+  let body: unknown = {};
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+    } catch { /* ignore */ }
+  }
+
+  const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}`, { ...body as object, __method: 'PATCH' });
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Handler: Delete a feature flag
+async function handleDeleteFeatureFlag(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const flagId = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] deleting feature flag id=${flagId} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}`, { __method: 'DELETE' });
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Handler: Manage tenants on a feature flag
+async function handleFeatureFlagTenants(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const flagId = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] managing tenants for feature flag id=${flagId} via uiProxy`);
+
+  let body: unknown = {};
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+    } catch { /* ignore */ }
+  }
+
+  const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}/tenants`, body);
   return jsonResponse(result.data, { status: result.status });
 }
 

@@ -388,7 +388,7 @@ export const updateScheduleEntry = withAuth(async (
     };
 
     const updatedEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await ScheduleEntry.update(trx, tenant, masterEntryId, updateData);
+      return await ScheduleEntry.update(trx, tenant, entry_id, updateData, entry.updateType);
     });
 
     if (updatedEntry) {
@@ -682,16 +682,8 @@ export const deleteScheduleEntry = withAuth(async (
     }
     // --- End Permission Check ---
 
-    if (isVirtualId && deleteType === IEditScope.SINGLE) {
-      return {
-        success: false,
-        error: 'Deleting a single occurrence of a recurring entry is not supported yet.',
-      };
-    }
-
-    const entryIdToDelete = deleteType === IEditScope.SINGLE ? masterEntryId : masterEntryId;
     const success = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return ScheduleEntry.delete(trx, tenant, entryIdToDelete);
+      return ScheduleEntry.delete(trx, tenant, entry_id, deleteType);
     });
 
     if (success) {

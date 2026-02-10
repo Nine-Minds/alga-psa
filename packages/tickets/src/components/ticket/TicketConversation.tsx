@@ -240,6 +240,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         onClose={onClose}
         onEdit={() => onEdit(mergedConversation)}
         onDelete={onDelete}
+        hideInternalTab={hideInternalTab}
       />
     );
     });
@@ -280,6 +281,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 onClose={() => {}}
                 onEdit={() => {}}
                 onDelete={() => {}}
+                hideInternalTab={hideInternalTab}
               />
             </div>
           );

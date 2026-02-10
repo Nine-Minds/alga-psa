@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Button,
@@ -12,8 +12,17 @@ import {
   ConfirmDialog,
   Spinner,
   LoadingIndicator,
+  Tabs,
+  Switch,
+  DropdownMenu,
+  Drawer,
+  TextArea,
+  Label,
+  Separator,
   type Column,
   type SelectOption,
+  type TabItem,
+  type DropdownMenuItem,
 } from '@alga-psa/ui-kit';
 
 // ============================================================================
@@ -208,6 +217,17 @@ function mapApiPathToHandlerRoute(path: string): string {
     // For report-specific routes like /report-id, /report-id/execute
     return `/reports${suffix}`;
   }
+
+  // Handle feature flags prefix
+  const ffPrefix = '/api/v1/platform-feature-flags';
+  if (path.startsWith(ffPrefix)) {
+    const suffix = path.slice(ffPrefix.length);
+    if (suffix === '' || suffix === '/') {
+      return '/feature-flags';
+    }
+    return `/feature-flags${suffix}`;
+  }
+
   // Return as-is if it doesn't match the expected prefix
   return path;
 }
@@ -243,6 +263,9 @@ async function proxyApiCall<T>(
     bodyData = bodyData || {};
     bodyData.__action = 'update';
   } else if (method === 'POST' && handlerRoute === '/reports') {
+    bodyData = bodyData || {};
+    bodyData.__action = 'create';
+  } else if (method === 'POST' && handlerRoute === '/feature-flags') {
     bodyData = bodyData || {};
     bodyData.__action = 'create';
   }
@@ -422,6 +445,76 @@ async function callExtensionApi<T>(path: string, options: RequestInit = {}): Pro
     console.error('API call failed:', error);
     return { success: false, error: String(error) };
   }
+}
+
+// API client for feature flag endpoints
+async function callFeatureFlagApi<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  const route = `/api/v1/platform-feature-flags${path}`;
+
+  try {
+    let body: any = undefined;
+    if (options.body && typeof options.body === 'string') {
+      try {
+        body = JSON.parse(options.body);
+      } catch {
+        body = options.body;
+      }
+    }
+
+    const result = await proxyApiCall<any>(route, {
+      method: options.method as string || 'GET',
+      body,
+    });
+
+    if (result && typeof result === 'object') {
+      if ('success' in result) {
+        return result as ApiResponse<T>;
+      }
+      if ('data' in result) {
+        return { success: true, data: result.data as T };
+      }
+      return { success: true, data: result as T };
+    }
+    return { success: true, data: result as T };
+  } catch (error) {
+    console.error('Feature Flag API call failed:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// ============================================================================
+// PostHog Feature Flag Types
+// ============================================================================
+
+interface PostHogFlagProperty {
+  key: string;
+  type: string;
+  value: string[];
+  operator: string;
+}
+
+interface PostHogFlagGroup {
+  properties: PostHogFlagProperty[];
+  rollout_percentage: number | null;
+  variant: string | null;
+}
+
+interface PostHogFeatureFlag {
+  id: number;
+  key: string;
+  name: string;
+  active: boolean;
+  filters: {
+    groups: PostHogFlagGroup[];
+    multivariate: {
+      variants: { key: string; rollout_percentage: number }[];
+    } | null;
+  };
+  created_at: string;
+  tags: string[];
 }
 
 // ============================================================================
@@ -1041,7 +1134,6 @@ function ReportsList() {
       sortable: false,
       render: (row) => (
         <Button
-          variant="secondary"
           size="sm"
           onClick={() => setSelectedReport(row)}
         >
@@ -1055,7 +1147,7 @@ function ReportsList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Platform Reports</h2>
-        <Button variant="secondary" onClick={fetchReports}>
+        <Button variant="outline" onClick={fetchReports}>
           Refresh
         </Button>
       </div>
@@ -1220,20 +1312,6 @@ function ReportDetail({
     </div>
   );
 }
-
-// Shared textarea style to match Input component
-const textareaStyle: React.CSSProperties = {
-  borderRadius: 'var(--alga-radius)',
-  border: '1px solid var(--alga-border)',
-  background: 'var(--alga-bg)',
-  color: 'var(--alga-fg)',
-  padding: '8px 10px',
-  fontSize: 14,
-  lineHeight: '20px',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontFamily: 'inherit',
-};
 
 
 // Metric type options for Select
@@ -1519,29 +1597,29 @@ function CreateReport() {
           <h3 style={{ marginTop: 0 }}>Basic Information</h3>
 
           <div style={{ marginBottom: '16px' }}>
-            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Report Name *</Text>
+            <Label required>Report Name</Label>
             <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Tenant User Summary"
-              style={{ width: '100%' }}
+              style={{ width: '100%', marginTop: '6px' }}
             />
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Description</Text>
-            <textarea
-              style={{ ...textareaStyle, resize: 'vertical' }}
+            <Label>Description</Label>
+            <TextArea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what this report shows..."
               rows={3}
+              style={{ marginTop: '6px' }}
             />
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Category</Text>
+            <Label>Category</Label>
             <CategorySelect value={category} onChange={setCategory} />
           </div>
         </Card>
@@ -1549,7 +1627,7 @@ function CreateReport() {
         <Card style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ margin: 0 }}>Metrics</h3>
-            <Button type="button" variant="secondary" onClick={addMetric}>
+            <Button type="button" onClick={addMetric}>
               + Add Metric
             </Button>
           </div>
@@ -1742,7 +1820,6 @@ function CreateReport() {
                       <Text style={{ fontWeight: 500 }}>Joins</Text>
                       <Button
                         type="button"
-                        variant="secondary"
                         size="sm"
                         onClick={() => addJoin(index)}
                       >
@@ -2445,12 +2522,12 @@ function ExecuteReport() {
                 </Card>
               )}
 
-              <textarea
-                style={{ ...textareaStyle, fontFamily: 'monospace', resize: 'vertical', fontSize: '0.875rem' }}
+              <TextArea
                 value={parameters}
                 onChange={(e) => setParameters(e.target.value)}
                 rows={3}
                 placeholder='{}'
+                style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}
               />
               <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
                 Leave empty <code>{'{}'}</code> to use default parameters
@@ -2501,113 +2578,7 @@ const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
   { value: 'tenant.cancel_subscription', label: 'Cancel Subscription' },
 ];
 
-// ============================================================================
-// Action Menu Component
-// ============================================================================
-
-interface ActionMenuItem {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-  icon?: React.ReactNode;
-}
-
-interface ActionMenuProps {
-  items: ActionMenuItem[];
-  disabled?: boolean;
-  loading?: boolean;
-}
-
-function ActionMenu({ items, disabled, loading }: ActionMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = React.useRef<HTMLDivElement>(null);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  return (
-    <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={disabled || loading}
-        style={{ minWidth: '80px' }}
-      >
-        {loading ? (
-          <><Spinner size="button" style={{ marginRight: '4px' }} /> Working...</>
-        ) : (
-          <>Actions ▾</>
-        )}
-      </Button>
-      {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: '4px',
-            backgroundColor: 'var(--alga-bg, #fff)',
-            border: '1px solid var(--alga-border)',
-            borderRadius: 'var(--alga-radius, 6px)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            zIndex: 1000,
-            minWidth: '160px',
-            overflow: 'hidden',
-          }}
-        >
-          {items.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                setIsOpen(false);
-                item.onClick();
-              }}
-              disabled={item.disabled}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '8px 12px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: item.danger ? 'var(--alga-danger, #dc2626)' : 'var(--alga-fg)',
-                fontSize: '0.875rem',
-                textAlign: 'left',
-                cursor: item.disabled ? 'not-allowed' : 'pointer',
-                opacity: item.disabled ? 0.5 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!item.disabled) {
-                  e.currentTarget.style.backgroundColor = 'var(--alga-hover, #f3f4f6)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              {item.icon && <span style={{ width: '16px', display: 'flex', alignItems: 'center' }}>{item.icon}</span>}
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ActionMenu has been replaced with DropdownMenu from ui-kit
 
 // ============================================================================
 // Tenant Management Types and API
@@ -3210,16 +3181,19 @@ function TenantManagementView() {
       sortable: false,
       render: (row) => {
         const isPending = hasPendingDeletion(row.tenant);
-        const menuItems: ActionMenuItem[] = [
+        const menuItems: DropdownMenuItem[] = [
           {
+            key: 'resend',
             label: 'Resend Welcome Email',
             onClick: () => handleResendWelcomeEmail(row.tenant, row.client_name),
           },
           {
+            key: 'export',
             label: 'Export Data',
             onClick: () => handleExportTenant(row),
           },
           {
+            key: 'delete',
             label: isPending ? 'Deletion in Progress...' : 'Delete Tenant',
             onClick: () => {
               setSelectedTenantForDeletion(row);
@@ -3227,14 +3201,28 @@ function TenantManagementView() {
             },
             disabled: isPending,
             danger: !isPending,
+            divider: true,
           },
         ];
 
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ActionMenu
+            <DropdownMenu
+              trigger={
+                <Button
+                  size="sm"
+                  disabled={actionInProgress === row.tenant}
+                  style={{ minWidth: '80px' }}
+                >
+                  {actionInProgress === row.tenant ? (
+                    <><Spinner size="button" style={{ marginRight: '4px' }} /> Working...</>
+                  ) : (
+                    <>Actions</>
+                  )}
+                </Button>
+              }
               items={menuItems}
-              loading={actionInProgress === row.tenant}
+              align="right"
             />
             {isPending && (
               <Badge tone="warning" style={{ fontSize: '0.7rem' }}>
@@ -3312,7 +3300,7 @@ function TenantManagementView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Tenant Management</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
+          <Button variant="outline" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
           <Button onClick={() => setShowCreateForm(true)}>
@@ -3927,7 +3915,7 @@ function AuditLogs() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Audit Logs</h2>
-        <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
+        <Button variant="outline" onClick={fetchLogs} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </Button>
       </div>
@@ -4273,29 +4261,29 @@ function EditReport({
         <h3 style={{ marginTop: 0 }}>Basic Information</h3>
 
         <div style={{ marginBottom: '16px' }}>
-          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Report Name *</Text>
+          <Label required>Report Name</Label>
           <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Tenant User Summary"
-            style={{ width: '100%' }}
+            style={{ width: '100%', marginTop: '6px' }}
           />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Description</Text>
-          <textarea
-            style={{ ...textareaStyle, resize: 'vertical' }}
+          <Label>Description</Label>
+          <TextArea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe what this report shows..."
             rows={3}
+            style={{ marginTop: '6px' }}
           />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Category</Text>
+          <Label>Category</Label>
           <CategorySelect value={category} onChange={setCategory} />
         </div>
 
@@ -4317,7 +4305,7 @@ function EditReport({
       <Card style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ margin: 0 }}>Metrics</h3>
-          <Button type="button" variant="secondary" onClick={addMetric}>
+          <Button type="button" onClick={addMetric}>
             + Add Metric
           </Button>
         </div>
@@ -4510,7 +4498,6 @@ function EditReport({
                     <Text style={{ fontWeight: 500 }}>Joins</Text>
                     <Button
                       type="button"
-                      variant="secondary"
                       size="sm"
                       onClick={() => addJoin(index)}
                     >
@@ -4847,8 +4834,690 @@ function EditReport({
   );
 }
 
+// ============================================================================
+// Feature Flags View
+// ============================================================================
+
+function FeatureFlagsView() {
+  const [flags, setFlags] = useState<PostHogFeatureFlag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFlag, setSelectedFlag] = useState<PostHogFeatureFlag | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchFlags = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const result = await callFeatureFlagApi<PostHogFeatureFlag[]>('');
+    if (result.success && result.data) {
+      setFlags(result.data);
+    } else {
+      setError(result.error || 'Failed to fetch feature flags');
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchFlags();
+  }, [fetchFlags]);
+
+  // Get tenant IDs from a flag's release conditions
+  const getFlagTenants = (flag: PostHogFeatureFlag): string[] => {
+    const tenants: string[] = [];
+    if (flag.filters?.groups) {
+      for (const group of flag.filters.groups) {
+        for (const prop of group.properties || []) {
+          if (prop.key === 'tenant_id' && Array.isArray(prop.value)) {
+            tenants.push(...prop.value);
+          }
+        }
+      }
+    }
+    return [...new Set(tenants)];
+  };
+
+  // Get rollout summary
+  const getRolloutSummary = (flag: PostHogFeatureFlag): string => {
+    if (!flag.filters?.groups?.length) return 'No conditions';
+    const tenants = getFlagTenants(flag);
+    if (tenants.length > 0) {
+      return `${tenants.length} tenant(s)`;
+    }
+    const group = flag.filters.groups[0];
+    if (group.rollout_percentage != null) {
+      return `${group.rollout_percentage}% rollout`;
+    }
+    return `${flag.filters.groups.length} group(s)`;
+  };
+
+  const columns: Column<PostHogFeatureFlag>[] = [
+    {
+      key: 'key',
+      header: 'Key',
+      render: (row) => (
+        <div>
+          <strong style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{row.key}</strong>
+          {row.name && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+              {row.name}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'active',
+      header: 'Status',
+      render: (row) => (
+        <Badge tone={row.active ? 'success' : 'warning'}>
+          {row.active ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'filters',
+      header: 'Rollout',
+      sortable: false,
+      render: (row) => (
+        <Text tone="muted" style={{ fontSize: '0.875rem' }}>
+          {getRolloutSummary(row)}
+        </Text>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      render: (row) => (
+        <Text tone="muted" style={{ fontSize: '0.875rem' }}>
+          {new Date(row.created_at).toLocaleDateString()}
+        </Text>
+      ),
+    },
+    {
+      key: 'id',
+      header: 'Actions',
+      sortable: false,
+      render: (row) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setSelectedFlag(row);
+            setDrawerOpen(true);
+          }}
+        >
+          Manage
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>Feature Flags</h2>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="outline" onClick={fetchFlags} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
+          <Button onClick={() => setShowCreateForm(true)}>
+            Create Flag
+          </Button>
+        </div>
+      </div>
+
+      {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
+
+      {statusMessage && (
+        <Alert
+          tone={statusMessage.type === 'success' ? 'success' : 'danger'}
+          style={{ marginBottom: '16px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{statusMessage.text}</span>
+            <Button variant="ghost" size="sm" onClick={() => setStatusMessage(null)}>X</Button>
+          </div>
+        </Alert>
+      )}
+
+      {/* Create Flag Form */}
+      {showCreateForm && (
+        <CreateFeatureFlagForm
+          onClose={() => setShowCreateForm(false)}
+          onCreated={() => {
+            setShowCreateForm(false);
+            fetchFlags();
+            setStatusMessage({ type: 'success', text: 'Feature flag created successfully' });
+          }}
+        />
+      )}
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <LoadingIndicator size="md" text="Loading feature flags..." layout="stacked" />
+        </div>
+      ) : flags.length === 0 ? (
+        <Card>
+          <Text tone="muted">
+            No feature flags found. Create your first flag to get started.
+          </Text>
+        </Card>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={flags}
+          paginate
+          defaultPageSize={10}
+          initialSortKey="created_at"
+        />
+      )}
+
+      {/* Flag Detail Drawer */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setSelectedFlag(null);
+        }}
+        title={selectedFlag ? selectedFlag.key : 'Flag Details'}
+        width="500px"
+      >
+        {selectedFlag && (
+          <FeatureFlagDetail
+            flag={selectedFlag}
+            onUpdate={() => {
+              fetchFlags();
+              setStatusMessage({ type: 'success', text: 'Flag updated successfully' });
+            }}
+            onDelete={() => {
+              setDrawerOpen(false);
+              setSelectedFlag(null);
+              fetchFlags();
+              setStatusMessage({ type: 'success', text: 'Flag deleted successfully' });
+            }}
+          />
+        )}
+      </Drawer>
+    </div>
+  );
+}
+
+function CreateFeatureFlagForm({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [key, setKey] = useState('');
+  const [name, setName] = useState('');
+  const [active, setActive] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!key.trim()) {
+      setError('Flag key is required');
+      return;
+    }
+    setCreating(true);
+    setError(null);
+
+    const result = await callFeatureFlagApi('', {
+      method: 'POST',
+      body: JSON.stringify({
+        key: key.trim(),
+        name: name.trim() || undefined,
+        active,
+      }),
+    });
+
+    if (result.success) {
+      onCreated();
+    } else {
+      setError(result.error || 'Failed to create feature flag');
+    }
+    setCreating(false);
+  };
+
+  return (
+    <Card style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 style={{ margin: 0 }}>Create Feature Flag</h3>
+        <Button variant="ghost" size="sm" onClick={onClose}>X</Button>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <Label required>Flag Key</Label>
+            <Input
+              type="text"
+              value={key}
+              onChange={(e) => setKey(e.target.value.replace(/[^a-z0-9_-]/gi, '-').toLowerCase())}
+              placeholder="e.g., enable-new-dashboard"
+              style={{ width: '100%', marginTop: '6px' }}
+            />
+            <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+              Lowercase, hyphens, underscores only
+            </Text>
+          </div>
+
+          <div>
+            <Label>Display Name</Label>
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Enable New Dashboard"
+              style={{ width: '100%', marginTop: '6px' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Switch
+              checked={active}
+              onCheckedChange={setActive}
+              size="sm"
+            />
+            <Text>{active ? 'Active' : 'Inactive'}</Text>
+          </div>
+
+          {error && <Alert tone="danger">{error}</Alert>}
+
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={creating}>
+              {creating ? 'Creating...' : 'Create Flag'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function TenantPicker({
+  excludeIds,
+  onSelect,
+  disabled,
+}: {
+  excludeIds: string[];
+  onSelect: (tenantId: string) => void;
+  disabled?: boolean;
+}) {
+  const [allTenants, setAllTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    callTenantManagementApi<Tenant[]>('/tenants').then(result => {
+      if (result.success && result.data) {
+        setAllTenants(result.data);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = allTenants.filter(t => {
+    if (excludeIds.includes(t.tenant)) return false;
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      t.client_name.toLowerCase().includes(q) ||
+      (t.email && t.email.toLowerCase().includes(q)) ||
+      t.tenant.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <Input
+        type="text"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setShowDropdown(true);
+        }}
+        onFocus={() => setShowDropdown(true)}
+        placeholder={loading ? 'Loading tenants...' : 'Search by name, email, or ID...'}
+        disabled={disabled || loading}
+      />
+      {showDropdown && !loading && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          maxHeight: '240px',
+          overflowY: 'auto',
+          background: 'var(--alga-background)',
+          border: '1px solid var(--alga-border)',
+          borderRadius: 'var(--alga-radius)',
+          zIndex: 50,
+          marginTop: '4px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+              <Text tone="muted" style={{ fontSize: '0.8125rem' }}>No matching tenants</Text>
+            </div>
+          ) : (
+            filtered.map(t => (
+              <div
+                key={t.tenant}
+                onClick={() => {
+                  onSelect(t.tenant);
+                  setQuery('');
+                  setShowDropdown(false);
+                }}
+                style={{
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid var(--alga-border)',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = 'var(--alga-muted)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{t.client_name}</div>
+                {t.email && (
+                  <Text tone="muted" style={{ fontSize: '0.75rem', display: 'block' }}>
+                    {t.email}
+                  </Text>
+                )}
+                <Text tone="muted" style={{ fontSize: '0.6875rem', fontFamily: 'monospace', display: 'block' }}>
+                  {t.tenant}
+                </Text>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FeatureFlagDetail({
+  flag,
+  onUpdate,
+  onDelete,
+}: {
+  flag: PostHogFeatureFlag;
+  onUpdate: () => void;
+  onDelete: () => void;
+}) {
+  const [toggling, setToggling] = useState(false);
+  const [addingTenant, setAddingTenant] = useState(false);
+  const [removingTenant, setRemovingTenant] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRawFilters, setShowRawFilters] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tenantMap, setTenantMap] = useState<Record<string, Tenant>>({});
+
+  useEffect(() => {
+    callTenantManagementApi<Tenant[]>('/tenants').then(result => {
+      if (result.success && result.data) {
+        const map: Record<string, Tenant> = {};
+        for (const t of result.data) {
+          map[t.tenant] = t;
+        }
+        setTenantMap(map);
+      }
+    });
+  }, []);
+
+  const tenants = (() => {
+    const ids: string[] = [];
+    if (flag.filters?.groups) {
+      for (const group of flag.filters.groups) {
+        for (const prop of group.properties || []) {
+          if (prop.key === 'tenant_id' && Array.isArray(prop.value)) {
+            ids.push(...prop.value);
+          }
+        }
+      }
+    }
+    return [...new Set(ids)];
+  })();
+
+  const handleToggle = async (active: boolean) => {
+    setToggling(true);
+    setError(null);
+    const result = await callFeatureFlagApi(`/${flag.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ active }),
+    });
+    if (result.success) {
+      onUpdate();
+    } else {
+      setError(result.error || 'Failed to toggle flag');
+    }
+    setToggling(false);
+  };
+
+  const handleAddTenant = async (tenantId: string) => {
+    setAddingTenant(true);
+    setError(null);
+    const result = await callFeatureFlagApi(`/${flag.id}/tenants`, {
+      method: 'POST',
+      body: JSON.stringify({ __action: 'add', tenantId }),
+    });
+    if (result.success) {
+      onUpdate();
+    } else {
+      setError(result.error || 'Failed to add tenant');
+    }
+    setAddingTenant(false);
+  };
+
+  const handleRemoveTenant = async (tenantId: string) => {
+    setRemovingTenant(tenantId);
+    setError(null);
+    const result = await callFeatureFlagApi(`/${flag.id}/tenants`, {
+      method: 'POST',
+      body: JSON.stringify({ __action: 'remove', tenantId }),
+    });
+    if (result.success) {
+      onUpdate();
+    } else {
+      setError(result.error || 'Failed to remove tenant');
+    }
+    setRemovingTenant(null);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    const result = await callFeatureFlagApi(`/${flag.id}`, {
+      method: 'DELETE',
+    });
+    if (result.success) {
+      onDelete();
+    } else {
+      setError(result.error || 'Failed to delete flag');
+    }
+    setShowDeleteConfirm(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px' }}>
+      {error && <Alert tone="danger">{error}</Alert>}
+
+      {/* Status Toggle */}
+      <div>
+        <Label>Status</Label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+          <Switch
+            checked={flag.active}
+            onCheckedChange={handleToggle}
+            disabled={toggling}
+            size="sm"
+          />
+          <Text>{flag.active ? 'Active' : 'Inactive'}</Text>
+          {toggling && <Spinner size="button" />}
+        </div>
+      </div>
+
+      {flag.name && (
+        <div>
+          <Label>Name</Label>
+          <Text style={{ display: 'block', marginTop: '4px' }}>{flag.name}</Text>
+        </div>
+      )}
+
+      <div>
+        <Label>Created</Label>
+        <Text style={{ display: 'block', marginTop: '4px' }}>
+          {new Date(flag.created_at).toLocaleString()}
+        </Text>
+      </div>
+
+      {flag.tags && flag.tags.length > 0 && (
+        <div>
+          <Label>Tags</Label>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+            {flag.tags.map(tag => (
+              <Badge key={tag} tone="info">{tag}</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Tenant Release Conditions */}
+      <div>
+        <Label>Tenant Release Conditions</Label>
+        <div style={{ marginTop: '8px' }}>
+          {tenants.length === 0 ? (
+            <Text tone="muted" style={{ fontSize: '0.875rem' }}>
+              No tenant-specific conditions. Flag applies to all users (or based on other filters).
+            </Text>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {tenants.map(tenantId => {
+                const tenant = tenantMap[tenantId];
+                return (
+                  <div
+                    key={tenantId}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      background: 'var(--alga-muted)',
+                      borderRadius: 'var(--alga-radius)',
+                    }}
+                  >
+                    <div>
+                      {tenant && (
+                        <Text style={{ fontWeight: 600, fontSize: '0.875rem', display: 'block' }}>
+                          {tenant.client_name}
+                        </Text>
+                      )}
+                      <Text style={{ fontFamily: 'monospace', fontSize: '0.75rem' }} tone="muted">
+                        {tenantId}
+                      </Text>
+                    </div>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleRemoveTenant(tenantId)}
+                      disabled={removingTenant === tenantId}
+                    >
+                      {removingTenant === tenantId ? 'Removing...' : 'Remove'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{ marginTop: '12px' }}>
+            <TenantPicker
+              excludeIds={tenants}
+              onSelect={handleAddTenant}
+              disabled={addingTenant}
+            />
+            {addingTenant && (
+              <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Spinner size="button" />
+                <Text tone="muted" style={{ fontSize: '0.8125rem' }}>Adding tenant...</Text>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Raw Filters */}
+      <div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowRawFilters(!showRawFilters)}
+          style={{ fontSize: '0.875rem' }}
+        >
+          {showRawFilters ? 'Hide' : 'Show'} Raw Filters JSON
+        </Button>
+        {showRawFilters && (
+          <pre style={{
+            marginTop: '8px',
+            fontSize: '0.75rem',
+            background: 'var(--alga-muted)',
+            padding: '12px',
+            borderRadius: 'var(--alga-radius)',
+            overflow: 'auto',
+            maxHeight: '300px',
+          }}>
+            {JSON.stringify(flag.filters, null, 2)}
+          </pre>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Delete */}
+      <div>
+        <Button variant="danger" onClick={() => setShowDeleteConfirm(true)}>
+          Delete Flag
+        </Button>
+      </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Feature Flag"
+        message={`Are you sure you want to delete the feature flag "${flag.key}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+    </div>
+  );
+}
+
 // Main App
-type View = 'reports' | 'create' | 'execute' | 'tenants' | 'audit';
+type View = 'reports' | 'create' | 'execute' | 'tenants' | 'feature-flags' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('reports');
@@ -4868,39 +5537,27 @@ function App() {
         });
       } catch (error) {
         // Silently fail - access logging shouldn't break the app
-        console.debug('[nineminds-reporting] Failed to log access:', error);
+        console.debug('[nineminds-control-panel] Failed to log access:', error);
       }
     };
     logAccess();
   }, []);
 
-  // Handle navigation from header buttons
-  useEffect(() => {
-    const nav = document.getElementById('nav');
-    if (!nav) return;
-
-    const handleClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'BUTTON' && target.dataset.view) {
-        // Update button states
-        nav.querySelectorAll('button').forEach((btn) => btn.classList.remove('active'));
-        target.classList.add('active');
-        setCurrentView(target.dataset.view as View);
-      }
-    };
-
-    nav.addEventListener('click', handleClick);
-    return () => nav.removeEventListener('click', handleClick);
-  }, []);
+  const tabItems: TabItem[] = [
+    { key: 'reports', label: 'Reports', content: <ReportsList /> },
+    { key: 'create', label: 'Create Report', content: <CreateReport /> },
+    { key: 'execute', label: 'Execute', content: <ExecuteReport /> },
+    { key: 'tenants', label: 'Tenant Management', content: <TenantManagementView /> },
+    { key: 'feature-flags', label: 'Feature Flags', content: <FeatureFlagsView /> },
+    { key: 'audit', label: 'Audit Logs', content: <AuditLogs /> },
+  ];
 
   return (
-    <>
-      {currentView === 'reports' && <ReportsList />}
-      {currentView === 'create' && <CreateReport />}
-      {currentView === 'execute' && <ExecuteReport />}
-      {currentView === 'tenants' && <TenantManagementView />}
-      {currentView === 'audit' && <AuditLogs />}
-    </>
+    <Tabs
+      tabs={tabItems}
+      activeKey={currentView}
+      onChange={(key) => setCurrentView(key as View)}
+    />
   );
 }
 

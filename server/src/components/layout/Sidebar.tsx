@@ -14,6 +14,7 @@ import {
   navigationSections as defaultNavigationSections,
   settingsNavigationSections,
   billingNavigationSections,
+  extensionsNavigationSections,
   type NavigationSection,
   type NavMode,
 } from '@/config/menuConfig';
@@ -81,7 +82,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const isSettingsMode = mode === 'settings';
   const isBillingMode = mode === 'billing';
-  const isSubMode = isSettingsMode || isBillingMode;
+  const isExtensionsMode = mode === 'extensions';
+  const isSubMode = isSettingsMode || isBillingMode || isExtensionsMode;
 
   const isActive = (path: string) => {
     if (!path) {
@@ -206,14 +208,18 @@ const Sidebar: React.FC<SidebarProps> = ({
     ? settingsNavigationSections
     : isBillingMode
       ? billingNavigationSections
-      : (menuSections ?? defaultNavigationSections);
+      : isExtensionsMode
+        ? extensionsNavigationSections
+        : (menuSections ?? defaultNavigationSections);
 
   // Determine automation ID based on mode
   const sidebarAutomationId = isSettingsMode
     ? 'settings-sidebar'
     : isBillingMode
       ? 'billing-sidebar'
-      : 'main-sidebar';
+      : isExtensionsMode
+        ? 'extensions-sidebar'
+        : 'main-sidebar';
 
   return (
     <aside
@@ -337,8 +343,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             </ul>
           </div>
         ))}
-        {/* Extension navigation items - only in main mode */}
-        {!isSubMode && (
+        {/* Extension navigation items - shown in extensions mode as installed extensions */}
+        {isExtensionsMode && (
           <div className="mt-4 border-t border-gray-700 pt-4 px-2">
             <DynamicNavigationSlot collapsed={!sidebarOpen} />
           </div>
@@ -413,7 +419,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         variant="default"
         size="icon"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute -right-3 top-12 transform w-6 h-6 rounded-full flex items-center justify-center"
+        className="absolute -right-3 top-12 z-10 transform w-6 h-6 rounded-full flex items-center justify-center"
         aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
       >
         <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />

@@ -54,6 +54,7 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
+  renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
 }
 
 export default function TicketDetailsContainer({
@@ -63,6 +64,7 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderClientDetails,
+  renderIntervalManagement,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -250,6 +252,7 @@ export default function TicketDetailsContainer({
           renderContactDetails={renderContactDetails}
           renderCreateProjectTask={renderCreateProjectTask}
             renderClientDetails={renderClientDetails}
+            renderIntervalManagement={renderIntervalManagement}
         />
         </Suspense>
       </div>

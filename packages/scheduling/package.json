@@ -41,6 +41,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
+    "rrule": "^2.7.2",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

@@ -9,6 +9,8 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Label } from '@alga-psa/ui/components/Label';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -35,6 +37,7 @@ interface CommentItemProps {
   onClose: () => void;
   onEdit: (conversation: IComment) => void;
   onDelete: (comment: IComment) => void;
+  hideInternalTab?: boolean;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -50,10 +53,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onSave,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
+  hideInternalTab = false
 }) => {
   const { t } = useTranslation('clientPortal');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
+  const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
     const noteContent = conversation.note || '';
     // Check if content looks like JSON array before parsing
@@ -122,7 +128,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const handleSave = () => {
     const updates: Partial<IComment> = {
-      note: JSON.stringify(editedContent)
+      note: JSON.stringify(editedContent),
+      is_internal: isInternalToggle,
+      is_resolution: isResolutionToggle
     };
 
     onSave(updates);
@@ -138,6 +146,31 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
     return (
       <div>
+        {/* Toggle switches above the editor - same pattern as TicketConversation */}
+        <div className="flex items-center space-x-4 mt-2 mb-4">
+          {!hideInternalTab && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id={`${commentId}-edit-internal-toggle`}
+                checked={isInternalToggle}
+                onCheckedChange={setIsInternalToggle}
+              />
+              <Label htmlFor={`${commentId}-edit-internal-toggle`}>
+                {isInternalToggle ? t('tickets.conversation.markedAsInternal', 'Marked as Internal') : t('tickets.conversation.markAsInternal', 'Mark as Internal')}
+              </Label>
+            </div>
+          )}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`${commentId}-edit-resolution-toggle`}
+              checked={isResolutionToggle}
+              onCheckedChange={setIsResolutionToggle}
+            />
+            <Label htmlFor={`${commentId}-edit-resolution-toggle`}>
+              {isResolutionToggle ? t('tickets.conversation.markedAsResolution', 'Marked as Resolution') : t('tickets.conversation.markAsResolution', 'Mark as Resolution')}
+            </Label>
+          </div>
+        </div>
         <TextEditor
           {...withDataAutomationId({ id: `${commentId}-text-editor` })}
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
@@ -173,17 +206,24 @@ const CommentItem: React.FC<CommentItemProps> = ({
     handleContentChange,
     handleSave,
     onClose,
-    t
+    t,
+    hideInternalTab,
+    isInternalToggle,
+    isResolutionToggle
   ]);
 
   const authorFirstName = conversation.user_id ? userMap[conversation.user_id]?.first_name || '' : '';
   const authorLastName = conversation.user_id ? userMap[conversation.user_id]?.last_name || '' : '';
 
-  // Reset editor content when entering edit mode - always use conversation.note (persisted value)
-  // NOTE: Do NOT depend on currentComment?.note - that would reload unsaved edits after cancel.
-  // We intentionally only use conversation.note (the persisted value from the database).
+  // Reset editor content and toggles when entering edit mode - always use conversation values (persisted)
+  // NOTE: Do NOT depend on currentComment values - that would reload unsaved edits after cancel.
+  // We intentionally only use conversation values (the persisted values from the database).
   useEffect(() => {
     if (isEditing && currentComment?.comment_id === conversation.comment_id) {
+      // Reset toggles to persisted values
+      setIsInternalToggle(conversation.is_internal ?? false);
+      setIsResolutionToggle(conversation.is_resolution ?? false);
+
       const noteContent = conversation.note || '';
       // Check if content looks like JSON array before parsing to avoid unnecessary exceptions
       if (noteContent.trim().startsWith('[')) {
@@ -222,7 +262,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         }
       ]);
     }
-  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note]);
+  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
 
   return (

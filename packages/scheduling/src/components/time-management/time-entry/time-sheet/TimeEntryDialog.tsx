@@ -177,10 +177,11 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     const isAdHoc = workItem.type === 'ad_hoc';
 
     // Skip service validation for ad_hoc items
-    if (!isAdHoc) {
-      // Validate required fields
+    const isBillable = entry.billable_duration > 0;
+    if (!isAdHoc && isBillable) {
+      // Validate required fields for billable entries
       if (!entry.service_id) {
-        toast.error('Please select a service');
+        toast.error('Please select a service for billable entries');
         return;
       }
 
@@ -237,9 +238,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         updated_at: formatISO(new Date()),
         notes: entry.notes || '',
         approval_status: 'DRAFT' as TimeSheetStatus,
-        // Ensure service_id and tax_region are null/undefined for ad_hoc if not selected
-        service_id: isAdHoc ? undefined : entry.service_id,
-        tax_region: isAdHoc ? undefined : entry.tax_region,
+        // Ensure service_id and tax_region are null/undefined when not applicable
+        service_id: entry.service_id || undefined,
+        tax_region: entry.tax_region || undefined,
       };
 
       console.log('Prepared time entry:', timeEntry);
@@ -266,6 +267,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       }
   
       toast.dismiss(loadingToast);
+      toast.success('Time entry saved');
       onClose();
     } catch (error) {
       toast.dismiss(loadingToast);

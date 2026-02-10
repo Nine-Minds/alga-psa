@@ -75,6 +75,7 @@ interface TicketPropertiesProps {
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
   surveySummary?: SurveyTicketSatisfactionSummary | null;
+  renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
 }
 
 // Helper function to format location display
@@ -147,6 +148,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onTagsChange,
   onItilFieldChange,
   surveySummary = null,
+  renderIntervalManagement,
 }) => {
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -345,7 +347,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </Button>
-          
+
+          {/* Interval Management Section */}
+          {ticket.ticket_id && userId && renderIntervalManagement && (
+            <div className="mt-2 border-t pt-4" {...withDataAutomationId({ id: `${id}-interval-management` })}>
+              <h3 className="text-sm font-medium mb-2">Tracked Intervals</h3>
+              {renderIntervalManagement({ ticketId: ticket.ticket_id, userId })}
+            </div>
+          )}
+
         </div>
       </div>
 

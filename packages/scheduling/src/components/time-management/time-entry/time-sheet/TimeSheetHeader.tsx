@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TimeSheetStatus } from '@alga-psa/types';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -51,22 +52,17 @@ export function TimeSheetHeader({
     viewMode = 'grid',
     onViewModeChange
 }: TimeSheetHeaderProps): React.JSX.Element {
-    const getStatusDisplay = (status: TimeSheetStatus): { text: string; className: string } => {
-        switch (status) {
-            case 'DRAFT':
-                return { text: 'In Progress', className: 'text-blue-600' };
-            case 'SUBMITTED':
-                return { text: 'Submitted for Approval', className: 'text-yellow-600' };
-            case 'APPROVED':
-                return { text: 'Approved', className: 'text-green-600' };
-            case 'CHANGES_REQUESTED':
-                return { text: 'Changes Requested', className: 'text-orange-600' };
-            default:
-                return { text: 'Unknown', className: 'text-gray-600' };
-        }
+    // Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
+    const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
+        DRAFT: { variant: 'outline', label: 'In Progress' },
+        SUBMITTED: { variant: 'secondary', label: 'Submitted' },
+        APPROVED: { variant: 'success', label: 'Approved' },
+        CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
     };
+    const getStatusBadgeConfig = (s: string) =>
+        statusBadgeConfig[s] ?? { variant: 'outline' as const, label: 'Unknown' };
 
-    const statusDisplay = getStatusDisplay(status);
+    const statusDisplay = getStatusBadgeConfig(status);
     const showDelegationInfo = isDelegated && allowDelegatedEditing;
 
     return (
@@ -146,9 +142,9 @@ export function TimeSheetHeader({
                 )}
 
                 <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 w-full lg:w-auto lg:ml-auto">
-                    <span className="text-sm font-medium flex items-center whitespace-nowrap">
-                        Status:&nbsp;
-                        <span className={statusDisplay.className}>{statusDisplay.text}</span>
+                    <span className="text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+                        Status:
+                        <Badge variant={statusDisplay.variant} className="py-1">{statusDisplay.label}</Badge>
                     </span>
 
                     {onToggleIntervals && (
