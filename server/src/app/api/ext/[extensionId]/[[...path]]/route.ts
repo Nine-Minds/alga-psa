@@ -97,6 +97,7 @@ interface UserInfo {
   user_name: string;
   company_name: string;
   user_type: string;
+  client_id?: string;
 }
 
 async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
@@ -108,8 +109,9 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
       return null;
     }
 
-    // Fetch tenant company name
+    // Fetch tenant company name (and resolve client_id for client portal users).
     let companyName = '';
+    let clientId: string | undefined;
     try {
       const { knex } = await createTenantKnex();
       const tenant = await knex('tenants')
@@ -117,8 +119,29 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
         .where('tenant', tenantId)
         .first();
       companyName = tenant?.client_name || '';
+
+      const currentUserRecord = currentUser as Record<string, unknown>;
+      const sessionClientId =
+        (typeof currentUserRecord.client_id === 'string' && currentUserRecord.client_id.length > 0)
+          ? currentUserRecord.client_id
+          : (typeof currentUserRecord.clientId === 'string' && currentUserRecord.clientId.length > 0)
+            ? currentUserRecord.clientId
+            : undefined;
+
+      if (sessionClientId) {
+        clientId = sessionClientId;
+      } else if (currentUser.user_type === 'client' && currentUser.contact_id) {
+        const contact = await knex('contacts')
+          .select('client_id')
+          .where({
+            tenant: tenantId,
+            contact_name_id: currentUser.contact_id,
+          })
+          .first();
+        clientId = contact?.client_id || undefined;
+      }
     } catch (err) {
-      console.error('[api/ext] Failed to fetch tenant company name:', err);
+      console.error('[api/ext] Failed to fetch tenant company name/client id:', err);
     }
 
     const info = {
@@ -127,6 +150,7 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
       user_name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
       company_name: companyName,
       user_type: currentUser.user_type,
+      client_id: clientId,
     };
     console.log('[api/ext] getUserInfo completed', { elapsed: Date.now() - start });
     return info;
