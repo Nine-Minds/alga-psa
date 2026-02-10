@@ -21,17 +21,16 @@ interface TimePeriodListProps {
   onSelectTimePeriod: (timePeriod: ITimePeriodWithStatusView) => void;
 }
 
-// Badge colors match contract status badges (Contracts.tsx renderStatusBadge),
-// TimeSheetApproval.tsx statusConfig, and ManagerApprovalDashboard.tsx badgeMap
-const statusBadgeConfig: Record<string, { className: string; label: string }> = {
-  DRAFT: { className: 'bg-gray-100 text-gray-800', label: 'In Progress' },
-  SUBMITTED: { className: 'bg-secondary-100 text-secondary-800', label: 'Submitted' },
-  APPROVED: { className: 'bg-green-100 text-green-800', label: 'Approved' },
-  CHANGES_REQUESTED: { className: 'bg-orange-100 text-orange-800', label: 'Changes Requested' },
+// Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
+const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
+  DRAFT: { variant: 'outline', label: 'In Progress' },
+  SUBMITTED: { variant: 'secondary', label: 'Submitted' },
+  APPROVED: { variant: 'success', label: 'Approved' },
+  CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
 };
 
 const getStatusBadgeConfig = (status: string) =>
-  statusBadgeConfig[status] ?? { className: 'bg-gray-100 text-gray-800', label: 'Unknown' };
+  statusBadgeConfig[status] ?? { variant: 'outline' as const, label: 'Unknown' };
 
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
   const router = useRouter();
@@ -90,9 +89,9 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
               const config = getStatusBadgeConfig(status);
               return (
                 <div className="flex items-center gap-2">
-                  <Badge className={`${config.className} py-1`}>{config.label}</Badge>
+                  <Badge variant={config.variant} className="py-1">{config.label}</Badge>
                   {isCurrentPeriod(record.start_date, record.end_date) && (
-                    <Badge className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))] py-1">
+                    <Badge variant="primary" className="py-1">
                       Current
                     </Badge>
                   )}

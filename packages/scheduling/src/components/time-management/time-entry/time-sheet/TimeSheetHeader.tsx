@@ -52,16 +52,15 @@ export function TimeSheetHeader({
     viewMode = 'grid',
     onViewModeChange
 }: TimeSheetHeaderProps): React.JSX.Element {
-    // Badge colors match contract status badges (Contracts.tsx renderStatusBadge),
-    // TimeSheetApproval.tsx statusConfig, and ManagerApprovalDashboard.tsx badgeMap
-    const statusBadgeConfig: Record<string, { className: string; label: string }> = {
-        DRAFT: { className: 'bg-gray-100 text-gray-800', label: 'In Progress' },
-        SUBMITTED: { className: 'bg-secondary-100 text-secondary-800', label: 'Submitted' },
-        APPROVED: { className: 'bg-green-100 text-green-800', label: 'Approved' },
-        CHANGES_REQUESTED: { className: 'bg-orange-100 text-orange-800', label: 'Changes Requested' },
+    // Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
+    const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
+        DRAFT: { variant: 'outline', label: 'In Progress' },
+        SUBMITTED: { variant: 'secondary', label: 'Submitted' },
+        APPROVED: { variant: 'success', label: 'Approved' },
+        CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
     };
     const getStatusBadgeConfig = (s: string) =>
-        statusBadgeConfig[s] ?? { className: 'bg-gray-100 text-gray-800', label: 'Unknown' };
+        statusBadgeConfig[s] ?? { variant: 'outline' as const, label: 'Unknown' };
 
     const statusDisplay = getStatusBadgeConfig(status);
     const showDelegationInfo = isDelegated && allowDelegatedEditing;
@@ -145,7 +144,7 @@ export function TimeSheetHeader({
                 <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 w-full lg:w-auto lg:ml-auto">
                     <span className="text-sm font-medium flex items-center gap-2 whitespace-nowrap">
                         Status:
-                        <Badge className={`${statusDisplay.className} py-1`}>{statusDisplay.label}</Badge>
+                        <Badge variant={statusDisplay.variant} className="py-1">{statusDisplay.label}</Badge>
                     </span>
 
                     {onToggleIntervals && (

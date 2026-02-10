@@ -40,19 +40,15 @@ interface StatusIconProps {
   status: TimeSheetStatus;
 }
 
-// Badge color pattern matches contract status badges in:
-// - packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx (renderStatusBadge)
-// - packages/billing/src/components/billing-dashboard/contracts/ContractHeader.tsx
-// - packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx
-// Submitted uses secondary CSS vars to stay distinct from the primary "Current" badge in TimePeriodList.
-const statusConfig: Record<string, { icon: typeof Check; iconColor: string; label: string; badgeClassName: string }> = {
-  SUBMITTED: { icon: Send, iconColor: 'text-secondary-600', label: 'Submitted', badgeClassName: 'bg-secondary-100 text-secondary-800' },
-  APPROVED: { icon: Check, iconColor: 'text-green-800', label: 'Approved', badgeClassName: 'bg-green-100 text-green-800' },
-  CHANGES_REQUESTED: { icon: Undo, iconColor: 'text-orange-800', label: 'Changes Requested', badgeClassName: 'bg-orange-100 text-orange-800' },
+// Badge variants align with TimePeriodList, TimeSheetHeader, and ManagerApprovalDashboard
+const statusConfig: Record<string, { icon: typeof Check; iconColor: string; label: string; badgeVariant: 'secondary' | 'success' | 'warning' | 'outline' }> = {
+  SUBMITTED: { icon: Send, iconColor: 'text-secondary-600', label: 'Submitted', badgeVariant: 'secondary' },
+  APPROVED: { icon: Check, iconColor: 'text-green-800', label: 'Approved', badgeVariant: 'success' },
+  CHANGES_REQUESTED: { icon: Undo, iconColor: 'text-orange-800', label: 'Changes Requested', badgeVariant: 'warning' },
 };
 
 const getStatusConfig = (status: string) =>
-  statusConfig[status] ?? { icon: Clock, iconColor: 'text-gray-500', label: status, badgeClassName: 'bg-gray-100 text-gray-800' };
+  statusConfig[status] ?? { icon: Clock, iconColor: 'text-gray-500', label: status, badgeVariant: 'outline' as const };
 
 const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
   const config = getStatusConfig(status);
@@ -62,7 +58,7 @@ const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
 
 const StatusBadge: React.FC<StatusIconProps> = ({ status }) => {
   const config = getStatusConfig(status);
-  return <Badge className={`${config.badgeClassName} py-1`}>{config.label}</Badge>;
+  return <Badge variant={config.badgeVariant} className="py-1">{config.label}</Badge>;
 };
 
 const formatDuration = (decimalHours: number) => {

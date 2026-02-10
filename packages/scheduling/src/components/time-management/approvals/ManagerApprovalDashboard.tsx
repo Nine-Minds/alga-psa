@@ -212,16 +212,15 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Status',
             dataIndex: 'approval_status',
             width: '20%',
-            // Badge colors match contract status badges (Contracts.tsx renderStatusBadge)
-            // and TimeSheetApproval.tsx statusConfig
+            // Badge variants align with TimeSheetApproval.tsx statusConfig
             render: (status) => {
-              const badgeMap: Record<string, { className: string; label: string }> = {
-                SUBMITTED: { className: 'bg-secondary-100 text-secondary-800', label: 'Submitted' },
-                APPROVED: { className: 'bg-green-100 text-green-800', label: 'Approved' },
-                CHANGES_REQUESTED: { className: 'bg-orange-100 text-orange-800', label: 'Changes Requested' },
+              const badgeMap: Record<string, { variant: 'secondary' | 'success' | 'warning' | 'outline'; label: string }> = {
+                SUBMITTED: { variant: 'secondary', label: 'Submitted' },
+                APPROVED: { variant: 'success', label: 'Approved' },
+                CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
               };
-              const config = badgeMap[status] ?? { className: 'bg-gray-100 text-gray-800', label: status };
-              return <Badge className={`${config.className} py-1`}>{config.label}</Badge>;
+              const config = badgeMap[status] ?? { variant: 'outline' as const, label: status };
+              return <Badge variant={config.variant} className="py-1">{config.label}</Badge>;
             }
           },
           {
