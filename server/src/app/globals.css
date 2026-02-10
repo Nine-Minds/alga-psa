@@ -175,6 +175,8 @@ body,
 
 .dark {
     --background: 0, 0, 0;
+    --color-background: 0 0 0;
+    --color-card: 15 23 42;
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -281,6 +283,8 @@ body,
 
 .light {
     --background: 255, 255, 255;
+    --color-background: 255 255 255;
+    --color-card: 255 255 255;
 
     /* Border radius tokens */
     --radius-sm: 4px;

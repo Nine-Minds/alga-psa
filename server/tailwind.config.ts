@@ -42,7 +42,7 @@ const config: Config = {
       colors: {
         // Base semantic colors for UI components
         border: 'rgb(var(--color-border-200))',
-        background: 'white',
+        background: 'rgb(var(--color-background) / <alpha-value>)',
         foreground: 'rgb(var(--color-text-900))',
         muted: {
           DEFAULT: 'rgb(var(--color-border-100))',
@@ -61,7 +61,7 @@ const config: Config = {
           DEFAULT: '#ef4444', // red-500
           foreground: '#ffffff',
         },
-        card: 'white',
+        card: 'rgb(var(--color-card) / <alpha-value>)',
         'card-foreground': 'rgb(var(--color-text-900))',
         primary: {
           DEFAULT: 'rgb(var(--color-primary-500) / <alpha-value>)',

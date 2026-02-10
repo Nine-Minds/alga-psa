@@ -14,7 +14,7 @@
   {
     "id": "F002",
     "description": "Replace hardcoded `background: 'white'` and `card: 'white'` in Tailwind config `colors` with CSS variable references that swap between themes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.2"]
   },
   {
