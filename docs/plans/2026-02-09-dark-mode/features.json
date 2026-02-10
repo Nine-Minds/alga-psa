@@ -290,7 +290,7 @@
   {
     "id": "F046",
     "description": "Migrate CSS module files (12 files) from hardcoded hex colors to CSS variable references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.3"]
   },
   {

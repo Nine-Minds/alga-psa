@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 20px;
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: rgb(var(--color-border-50));
   font-family: Arial, sans-serif;
 }
 
@@ -11,7 +11,7 @@
   display: flex;
   gap: 10px;
   padding: 10px;
-  background-color: #ffffff;
+  background-color: rgb(var(--color-card));
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -22,18 +22,18 @@
   align-items: center;
   cursor: move;
   padding: 10px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 5px;
 }
 
 .toolbarItem:hover {
-  background-color: #f0f0f0;
+  background-color: rgb(var(--color-border-100));
 }
 
 .toolbarButton {
   padding: 8px 16px;
-  background-color: #007bff;
-  color: #ffffff;
+  background-color: rgb(var(--color-secondary-500));
+  color: rgb(var(--color-text-50));
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -41,7 +41,7 @@
 }
 
 .toolbarButton:hover {
-  background-color: #0056b3;
+  background-color: rgb(var(--color-secondary-700));
 }
 
 .designerContent {
@@ -62,7 +62,7 @@
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: repeat(10, 1fr);
   gap: 1px;
-  background-color: #e0e0e0;
+  background-color: rgb(var(--color-border-200));
   padding: 1px;
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -74,7 +74,7 @@
 .section {
   display: grid;
   gap: 1px;
-  background-color: #e0e0e0;
+  background-color: rgb(var(--color-border-200));
   padding: 1px;
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -82,7 +82,7 @@
 
 .gridCell {
   background-color: transparent;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgb(var(--color-border-200));
   min-height: 20px;
   position: relative;
 }
@@ -93,8 +93,8 @@
 
 .invoiceBlock {
   position: relative;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background-color: rgb(var(--color-border-50));
+  border: 1px solid rgb(var(--color-border-200));
   padding: 10px;
   cursor: move;
   z-index: 1;
@@ -111,7 +111,7 @@
 }
 
 .invoiceBlock.selected {
-  outline: 2px solid #007bff;
+  outline: 2px solid rgb(var(--color-secondary-500));
 }
 
 .blockContent {
@@ -134,7 +134,7 @@
 .propertyEditor {
   width: 250px;
   padding: 20px;
-  background-color: #ffffff;
+  background-color: rgb(var(--color-card));
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
@@ -150,7 +150,7 @@
 .propertyLabel input,
 .propertyLabel select {
   padding: 8px;
-  border: 1px solid #ced4da;
+  border: 1px solid rgb(var(--color-border-300));
   border-radius: 4px;
   font-size: 14px;
 }
@@ -164,8 +164,8 @@
 .saveButton {
   align-self: flex-end;
   padding: 10px 20px;
-  background-color: #28a745;
-  color: #ffffff;
+  background-color: rgb(var(--color-status-success));
+  color: rgb(var(--color-text-50));
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -175,11 +175,11 @@
 }
 
 .saveButton:hover {
-  background-color: #218838;
+  background-color: rgb(var(--color-status-success));
 }
 
 .header, .lists, .footer {
-  background-color: #ffffff;
+  background-color: rgb(var(--color-card));
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 20px;

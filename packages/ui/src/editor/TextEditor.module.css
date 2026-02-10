@@ -1,7 +1,7 @@
 .editor {
     border-radius: var(--radius-md, 8px);
-    border: 1px solid var(--Colors-Border-border-primary, #D0D5DD);
-    background: var(--Colors-Background-bg-primary, #FFF);
+    border: 1px solid var(--Colors-Border-border-primary, rgb(var(--color-border-200)));
+    background: var(--Colors-Background-bg-primary, rgb(var(--color-background)));
 
     /* Shadows/shadow-xs */
     box-shadow: 0px 1px 2px 0px var(--Colors-Effects-Shadows-shadow-xs, rgba(16, 24, 40, 0.05));
@@ -9,8 +9,8 @@
 
 .editor {
     border-radius: var(--radius-md, 8px);
-    border: 1px solid var(--Colors-Border-border-primary, #D0D5DD);
-    background: var(--Colors-Background-bg-primary, #FFF);
+    border: 1px solid var(--Colors-Border-border-primary, rgb(var(--color-border-200)));
+    background: var(--Colors-Background-bg-primary, rgb(var(--color-background)));
     box-shadow: 0px 1px 2px 0px var(--Colors-Effects-Shadows-shadow-xs, rgba(16, 24, 40, 0.05));
 }
 
