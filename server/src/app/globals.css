@@ -109,6 +109,71 @@ body,
     margin: 0;
 }
 
+body {
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-text-900));
+}
+
+.dark .bg-white {
+    background-color: rgb(var(--color-card)) !important;
+}
+
+.dark .bg-gray-50 {
+    background-color: rgb(var(--color-border-50)) !important;
+}
+
+.dark .bg-gray-100 {
+    background-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .bg-gray-200 {
+    background-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark .text-gray-900,
+.dark .text-slate-900 {
+    color: rgb(var(--color-text-900)) !important;
+}
+
+.dark .text-gray-800,
+.dark .text-slate-800 {
+    color: rgb(var(--color-text-800)) !important;
+}
+
+.dark .text-gray-700,
+.dark .text-slate-700 {
+    color: rgb(var(--color-text-700)) !important;
+}
+
+.dark .text-gray-600,
+.dark .text-slate-600 {
+    color: rgb(var(--color-text-600)) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-slate-500 {
+    color: rgb(var(--color-text-500)) !important;
+}
+
+.dark .border-gray-200,
+.dark .border-slate-200 {
+    border-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark .border-gray-100,
+.dark .border-slate-100 {
+    border-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark header {
+    background-color: rgb(var(--color-background)) !important;
+    border-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark main {
+    background-color: rgb(var(--color-background));
+}
+
 /* Add placeholder styles */
 ::placeholder,
 [data-placeholder] {

@@ -110,13 +110,13 @@
   {
     "id": "F016",
     "description": "Sidebar renders correctly in dark mode — verify CSS variables and visual appearance",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.1"]
   },
   {
     "id": "F017",
     "description": "Header renders correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.2"]
   },
   {
@@ -128,13 +128,13 @@
   {
     "id": "F019",
     "description": "Main content area background switches to dark background in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.4"]
   },
   {
     "id": "F020",
     "description": "Page-level layout wrappers (e.g., content containers, split panes) use theme-aware backgrounds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.5"]
   },
   {
