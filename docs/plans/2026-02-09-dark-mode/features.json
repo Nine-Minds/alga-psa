@@ -158,49 +158,49 @@
   {
     "id": "F024",
     "description": "All button variants render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.3"]
   },
   {
     "id": "F025",
     "description": "Data tables and grids use theme-aware borders, row hovers, header backgrounds, and text colors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.4"]
   },
   {
     "id": "F026",
     "description": "Modals and dialogs have dark backgrounds and borders in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.5"]
   },
   {
     "id": "F027",
     "description": "Dropdowns and popovers use theme-aware backgrounds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.6"]
   },
   {
     "id": "F028",
     "description": "Tooltips use theme-aware backgrounds and text",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.7"]
   },
   {
     "id": "F029",
     "description": "Badges and status indicators are readable in dark mode — badge CSS variables already exist for both themes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.8"]
   },
   {
     "id": "F030",
     "description": "Alerts and notification toasts render correctly in dark mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.9"]
   },
   {
     "id": "F031",
     "description": "Tabs and navigation components use theme-aware colors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.10"]
   },
   {
