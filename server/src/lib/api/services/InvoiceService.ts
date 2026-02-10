@@ -29,7 +29,7 @@ import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRe
 import * as invoiceService from '../../services/invoiceService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '../../billing/billingEngine';
-import { TaxService } from '../../services/taxService';
+import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '../../services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '../../../services/pdf-generation.service';
 import { StorageService } from '../../storage/StorageService';

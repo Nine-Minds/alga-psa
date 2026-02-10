@@ -1,4 +1,4 @@
-import { TaxService } from '../../lib/services/taxService';
+import { TaxService } from '@alga-psa/billing/services/taxService';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../../interfaces/tax.interfaces';
 import ClientTaxSettings from '@alga-psa/billing/models/clientTaxSettings';
 

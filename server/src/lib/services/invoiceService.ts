@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { TaxService } from 'server/src/lib/services/taxService';
+import { TaxService } from '@alga-psa/billing/services/taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
