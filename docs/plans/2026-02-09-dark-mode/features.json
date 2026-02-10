@@ -374,7 +374,7 @@
   {
     "id": "F058",
     "description": "Add dark/light mode preview toggle to client portal branding settings page — when admin configures branding colors, they can preview how the client portal looks in both light and dark modes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.4"]
   }
 ]
