@@ -100,6 +100,18 @@ interface UserInfo {
   client_id?: string;
 }
 
+function getOptionalStringField(source: unknown, key: string): string | undefined {
+  if (!source || typeof source !== 'object') {
+    return undefined;
+  }
+  const value = (source as { [field: string]: unknown })[key];
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
   const start = Date.now();
   try {
@@ -120,13 +132,9 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
         .first();
       companyName = tenant?.client_name || '';
 
-      const currentUserRecord = currentUser as Record<string, unknown>;
       const sessionClientId =
-        (typeof currentUserRecord.client_id === 'string' && currentUserRecord.client_id.length > 0)
-          ? currentUserRecord.client_id
-          : (typeof currentUserRecord.clientId === 'string' && currentUserRecord.clientId.length > 0)
-            ? currentUserRecord.clientId
-            : undefined;
+        getOptionalStringField(currentUser, 'client_id') ??
+        getOptionalStringField(currentUser, 'clientId');
 
       if (sessionClientId) {
         clientId = sessionClientId;
