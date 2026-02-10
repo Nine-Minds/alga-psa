@@ -93,7 +93,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     label: 'Field Label',
     description: 'Static label paired with data fields.',
     category: 'Content',
-    defaultSize: { width: 160, height: 40 },
+    defaultSize: { width: 120, height: 28 },
     defaultMetadata: {
       text: 'Label',
     },

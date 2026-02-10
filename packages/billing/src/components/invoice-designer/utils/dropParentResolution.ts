@@ -478,6 +478,69 @@ type ForceSelectedInsertionPlan =
   | { ok: true; parentId: string; reflowAdjustments: LocalReflowAdjustment[] }
   | { ok: false; message: string; sectionId?: string; nextAction?: string };
 
+type SelectedPathInsertionPlan =
+  | { ok: true; parentId: string; reflowAdjustments: LocalReflowAdjustment[] }
+  | { ok: false; message: string; sectionId?: string; nextAction?: string };
+
+type PlanSelectedPathInsertionParams = {
+  selectedNodeId: string | null;
+  nodesById: Map<string, DesignerNode>;
+  componentType: DesignerComponentType;
+  desiredSize?: Size;
+};
+
+export const planSelectedPathInsertion = ({
+  selectedNodeId,
+  nodesById,
+  componentType,
+  desiredSize,
+}: PlanSelectedPathInsertionParams): SelectedPathInsertionPlan | null => {
+  if (!selectedNodeId) {
+    return null;
+  }
+
+  const selectedNode = nodesById.get(selectedNodeId);
+  if (!selectedNode) {
+    return null;
+  }
+
+  const selectedSectionId = findNearestSectionAncestor(selectedNodeId, nodesById) ?? undefined;
+  const requiredWidth = Math.max(getPracticalMinimumSizeForType(componentType).width, desiredSize?.width ?? 0);
+  let current: DesignerNode | null = selectedNode;
+
+  while (current) {
+    if (canNestWithinParent(componentType, current.type)) {
+      if (canParentFitComponent(current, componentType, nodesById, desiredSize)) {
+        return { ok: true, parentId: current.id, reflowAdjustments: [] };
+      }
+
+      const adjustments = planRowLocalReflow(current, nodesById, requiredWidth, selectedNodeId);
+      if (adjustments) {
+        return { ok: true, parentId: current.id, reflowAdjustments: adjustments };
+      }
+
+      return {
+        ok: false,
+        message:
+          current.id === selectedNodeId
+            ? 'No room in the selected parent. Resize or clear space, then try again.'
+            : 'No room in the selected ancestor parent. Resize or clear space, then try again.',
+        sectionId: selectedSectionId,
+        nextAction: 'Resize the selected parent, remove nearby blocks, or choose another parent in OUTLINE.',
+      };
+    }
+
+    current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+  }
+
+  return {
+    ok: false,
+    message: 'Selected node cannot contain this block. Select a compatible parent in OUTLINE and retry.',
+    sectionId: selectedSectionId,
+    nextAction: 'Select a section, column, or container in OUTLINE before inserting.',
+  };
+};
+
 export const planForceSelectedInsertion = ({
   selectedNodeId,
   pageNode,

@@ -242,6 +242,54 @@ describe('DesignCanvas preview mode', () => {
     expect(screen.getByText('Client Billing Address')).toBeTruthy();
   });
 
+  it('renders label nodes as transparent text rather than field-like boxed surfaces', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'label-2',
+        type: 'label',
+        name: 'Label',
+        metadata: { text: 'Invoice Date' },
+        position: { x: 20, y: 20 },
+        size: { width: 160, height: 28 },
+      }),
+      baseNode({
+        id: 'field-7',
+        type: 'field',
+        name: 'Invoice Date Value',
+        metadata: { bindingKey: 'invoice.issueDate', format: 'text' },
+        position: { x: 20, y: 64 },
+      }),
+    ]);
+
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    const labelSurface = screen.getByText('Invoice Date').closest('div');
+    const fieldSurface = screen.getByText('2026-02-01').closest('div');
+
+    expect(labelSurface?.className).toContain('bg-transparent');
+    expect(labelSurface?.className).not.toContain('bg-slate-50/60');
+    expect(fieldSurface?.className).toContain('bg-slate-50/60');
+  });
+
   it('renders valid empty state for table-like components when no items exist', () => {
     const nodes = buildCanvasNodes([
       baseNode({

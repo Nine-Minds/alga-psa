@@ -585,7 +585,8 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
   const isTotalsRow = isTotalsRowType(node.type);
-  const isInlineFieldLike = node.type === 'field' || node.type === 'label';
+  const isLabelNode = node.type === 'label';
+  const isInlineFieldLike = node.type === 'field' || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike;
 
   const combinedRef = useCallback(
@@ -699,11 +700,19 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       ref={combinedRef}
       style={nodeStyle}
       className={clsx(
-        'border rounded-md select-none transition-[opacity,box-shadow,border-color] duration-150',
-        isContainer
-          ? sectionCue?.surfaceClass ?? 'bg-blue-50/40 border-blue-200 border-dashed'
-          : 'bg-white shadow-sm border-slate-300',
-        isSelected && 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500',
+        'select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
+        isLabelNode
+          ? 'rounded-sm border border-transparent bg-transparent shadow-none'
+          : [
+              'border rounded-md',
+              isContainer
+                ? sectionCue?.surfaceClass ?? 'bg-blue-50/40 border-blue-200 border-dashed'
+                : 'bg-white shadow-sm border-slate-300',
+            ],
+        isSelected &&
+          (isLabelNode
+            ? 'ring-2 ring-blue-600/70 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]'
+            : 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500'),
         ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
           'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
         shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
@@ -737,10 +746,14 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           <div
             className={clsx(
               'h-full text-[11px] text-slate-500',
-              isTotalsRow ? 'p-1.5 whitespace-pre-wrap' : 'px-2 py-1.5 flex items-center',
-              isInlineFieldLike && 'bg-slate-50/60',
+              isLabelNode
+                ? 'px-1 py-0.5 flex items-center bg-transparent text-slate-700 font-medium'
+                : isTotalsRow
+                  ? 'p-1.5 whitespace-pre-wrap'
+                  : 'px-2 py-1.5 flex items-center',
+              !isLabelNode && isInlineFieldLike && 'bg-slate-50/60',
               previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
-              previewContent.isPlaceholder && 'text-slate-400'
+              previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
             )}
           >
             {previewContent.content}

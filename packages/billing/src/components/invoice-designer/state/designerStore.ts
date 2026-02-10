@@ -1093,7 +1093,22 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     updateNodeName: (id, name) => {
       set((state) => {
-        const nodes = state.nodes.map((node) => (node.id === id ? { ...node, name } : node));
+        const nodes = state.nodes.map((node) => {
+          if (node.id !== id) {
+            return node;
+          }
+          if (node.type !== 'label') {
+            return { ...node, name };
+          }
+          return {
+            ...node,
+            name,
+            metadata: {
+              ...(node.metadata ?? {}),
+              text: name,
+            },
+          };
+        });
         const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
         if (nextHistory.length > MAX_HISTORY_LENGTH) {
           nextHistory.shift();
@@ -1107,9 +1122,27 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     updateNodeMetadata: (id, metadata) => {
       set((state) => {
-        const nodes = state.nodes.map((node) =>
-          node.id === id ? { ...node, metadata: { ...(node.metadata ?? {}), ...metadata } } : node
-        );
+        const nodes = state.nodes.map((node) => {
+          if (node.id !== id) {
+            return node;
+          }
+          const nextMetadata = { ...(node.metadata ?? {}), ...metadata };
+          if (node.type !== 'label') {
+            return { ...node, metadata: nextMetadata };
+          }
+          const nextText = typeof nextMetadata.text === 'string' ? nextMetadata.text.trim() : '';
+          if (!nextText) {
+            return { ...node, metadata: nextMetadata };
+          }
+          return {
+            ...node,
+            name: nextText,
+            metadata: {
+              ...nextMetadata,
+              text: nextText,
+            },
+          };
+        });
         const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
         if (nextHistory.length > MAX_HISTORY_LENGTH) {
           nextHistory.shift();

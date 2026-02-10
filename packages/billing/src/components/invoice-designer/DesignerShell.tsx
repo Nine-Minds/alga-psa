@@ -24,6 +24,7 @@ import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import {
   findNearestSectionAncestor,
+  planSelectedPathInsertion,
   planForceSelectedInsertion,
   resolvePreferredParentFromSelection,
   resolveSectionParentForInsertion,
@@ -81,6 +82,9 @@ type ComponentInsertOptions = {
   dropMeta?: DropTargetMeta;
   dropPoint?: Point;
   requireCanvasPointer?: boolean;
+  strictSelectionPath?: boolean;
+  selectedNodeIdOverride?: string | null;
+  preserveSelectionId?: string | null;
 };
 
 type PresetInsertOptions = {
@@ -253,6 +257,23 @@ const getSectionFitNoopMessage = (section: DesignerNode) =>
   section.layout?.sizing === 'fill'
     ? 'Section is already fitted in Fill mode. Switch section sizing to Fixed to shrink dimensions.'
     : 'Section is already fitted.';
+
+const shouldPromoteParentToCanvasForManualPosition = (
+  node: DesignerNode | null,
+  parent: DesignerNode | null,
+  draft: { x: number; y: number }
+) => {
+  if (!node || node.type !== 'label') {
+    return false;
+  }
+  if (!parent || parent.layout?.mode !== 'flex') {
+    return false;
+  }
+  if (!Number.isFinite(draft.x) || !Number.isFinite(draft.y)) {
+    return false;
+  }
+  return Math.abs(draft.x - node.position.x) >= 0.5 || Math.abs(draft.y - node.position.y) >= 0.5;
+};
 
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -509,14 +530,19 @@ export const DesignerShell: React.FC = () => {
   );
 
   const resolveComponentDropParent = useCallback(
-    (componentType: DesignerComponentType, dropMeta: DropTargetMeta | undefined, dropPoint: Point): ComponentDropResolution => {
+    (
+      componentType: DesignerComponentType,
+      dropMeta: DropTargetMeta | undefined,
+      dropPoint: Point,
+      options: { strictSelectionPath?: boolean; selectedNodeIdOverride?: string | null } = {}
+    ): ComponentDropResolution => {
       const state = useInvoiceDesignerStore.getState();
       const nodesForDrop = state.nodes;
       const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
       const dropNode = dropMeta?.nodeId ? nodesById.get(dropMeta.nodeId) : undefined;
       const allowedParents = getAllowedParentsForType(componentType);
       const componentDefinition = getDefinition(componentType);
-      const liveSelectedNodeId = state.selectedNodeId;
+      const liveSelectedNodeId = options.selectedNodeIdOverride ?? state.selectedNodeId;
       const selectedSectionId = findNearestSectionAncestor(liveSelectedNodeId, nodesById);
 
       if (dropNode && canNestWithinParent(componentType, dropNode.type)) {
@@ -544,6 +570,39 @@ export const DesignerShell: React.FC = () => {
       }
 
       if (!dropNode && pageNode) {
+        if (options.strictSelectionPath) {
+          const selectedPathPlan = planSelectedPathInsertion({
+            selectedNodeId: liveSelectedNodeId,
+            nodesById,
+            componentType,
+            desiredSize: componentDefinition?.defaultSize,
+          });
+          if (!selectedPathPlan) {
+            return {
+              ok: false,
+              message: 'Select a parent in OUTLINE before using quick insert.',
+            };
+          }
+          if (!selectedPathPlan.ok) {
+            return {
+              ok: false,
+              message: selectedPathPlan.message,
+              reason: 'selected-section-no-room',
+              sectionId: selectedPathPlan.sectionId,
+              nextAction: selectedPathPlan.nextAction,
+            };
+          }
+          return {
+            ok: true,
+            parentId: selectedPathPlan.parentId,
+            reflowAdjustments: selectedPathPlan.reflowAdjustments,
+            notice:
+              selectedPathPlan.reflowAdjustments.length > 0
+                ? 'Inserted in selected parent with local reflow.'
+                : undefined,
+          };
+        }
+
         const forcePlan = planForceSelectedInsertion({
           selectedNodeId: liveSelectedNodeId,
           pageNode,
@@ -647,13 +706,16 @@ export const DesignerShell: React.FC = () => {
     [addNode, resolvePageForDrop]
   );
 
-  const getDefaultInsertionPoint = useCallback((): Point => {
-    if (pointerRef.current) {
+  const getDefaultInsertionPoint = useCallback((options?: { preferSelectionAnchor?: boolean; selectionAnchorId?: string | null }): Point => {
+    const preferSelectionAnchor = options?.preferSelectionAnchor ?? false;
+    const anchorNodeId = options?.selectionAnchorId ?? selectedNodeId;
+
+    if (!preferSelectionAnchor && pointerRef.current) {
       return pointerRef.current;
     }
 
-    if (selectedNodeId) {
-      const selected = nodes.find((node) => node.id === selectedNodeId);
+    if (anchorNodeId) {
+      const selected = nodes.find((node) => node.id === anchorNodeId);
       if (selected) {
         const absolute = getAbsolutePosition(selected.id, nodes);
         return {
@@ -663,7 +725,7 @@ export const DesignerShell: React.FC = () => {
       }
     }
 
-    const page = resolvePageForDrop(nodes, selectedNodeId ?? undefined);
+    const page = resolvePageForDrop(nodes, anchorNodeId ?? undefined);
     if (page) {
       const absolute = getAbsolutePosition(page.id, nodes);
       return { x: absolute.x + 64, y: absolute.y + 64 };
@@ -675,7 +737,14 @@ export const DesignerShell: React.FC = () => {
   const insertComponentWithResolution = useCallback(
     (componentType: DesignerComponentType, options: ComponentInsertOptions = {}) => {
       const dropMeta = options.dropMeta;
-      const dropPoint = options.dropPoint ?? getDefaultInsertionPoint();
+      const selectedNodeIdForResolution =
+        options.selectedNodeIdOverride ?? useInvoiceDesignerStore.getState().selectedNodeId;
+      const dropPoint =
+        options.dropPoint ??
+        getDefaultInsertionPoint({
+          preferSelectionAnchor: Boolean(options.strictSelectionPath),
+          selectionAnchorId: selectedNodeIdForResolution,
+        });
 
       if (options.requireCanvasPointer && !dropMeta && !pointerRef.current) {
         recordDropResult(false);
@@ -683,7 +752,10 @@ export const DesignerShell: React.FC = () => {
         return false;
       }
 
-      const resolution = resolveComponentDropParent(componentType, dropMeta, dropPoint);
+      const resolution = resolveComponentDropParent(componentType, dropMeta, dropPoint, {
+        strictSelectionPath: options.strictSelectionPath,
+        selectedNodeIdOverride: selectedNodeIdForResolution,
+      });
       if (!resolution.ok) {
         recordDropResult(false);
         showDropFeedback('error', resolution.message);
@@ -739,6 +811,14 @@ export const DesignerShell: React.FC = () => {
         showDropFeedback('error', 'Unable to add this component in the current context.');
         return false;
       }
+      if (options.preserveSelectionId) {
+        const preservedExists = useInvoiceDesignerStore
+          .getState()
+          .nodes.some((node) => node.id === options.preserveSelectionId);
+        if (preservedExists) {
+          selectNode(options.preserveSelectionId);
+        }
+      }
       if (resolution.notice) {
         showDropFeedback('info', resolution.notice);
       }
@@ -750,6 +830,7 @@ export const DesignerShell: React.FC = () => {
       getDefaultInsertionPoint,
       recordDropResult,
       resolveComponentDropParent,
+      selectNode,
       showDropFeedback,
       showInsertBlockCallout,
       updateNodeSize,
@@ -1017,8 +1098,8 @@ export const DesignerShell: React.FC = () => {
           <p className="text-xs font-semibold text-slate-700">Label Text</p>
           <Input
             id="designer-label-text"
-            value={metadata.text ?? selectedNode.name ?? ''}
-            onChange={(event) => applyMetadata({ text: event.target.value })}
+            value={selectedNode.name ?? ''}
+            onChange={(event) => updateNodeName(selectedNode.id, event.target.value)}
           />
         </div>
       );
@@ -1458,7 +1539,12 @@ export const DesignerShell: React.FC = () => {
   const handleQuickInsertComponent = useCallback(
     (componentType: DesignerComponentType) => {
       clearDropFeedback();
-      insertComponentWithResolution(componentType);
+      const selectionAnchorId = useInvoiceDesignerStore.getState().selectedNodeId;
+      insertComponentWithResolution(componentType, {
+        strictSelectionPath: true,
+        selectedNodeIdOverride: selectionAnchorId,
+        preserveSelectionId: selectionAnchorId,
+      });
     },
     [clearDropFeedback, insertComponentWithResolution]
   );
@@ -1589,6 +1675,21 @@ export const DesignerShell: React.FC = () => {
 
   const commitPropertyChanges = () => {
     if (!selectedNodeId) return;
+    const liveNodes = useInvoiceDesignerStore.getState().nodes;
+    const liveSelectedNode = liveNodes.find((node) => node.id === selectedNodeId) ?? null;
+    const liveParentNode =
+      liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
+
+    if (
+      shouldPromoteParentToCanvasForManualPosition(liveSelectedNode, liveParentNode, {
+        x: propertyDraft.x,
+        y: propertyDraft.y,
+      }) &&
+      liveParentNode
+    ) {
+      setLayoutMode(liveParentNode.id, 'canvas');
+    }
+
     setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
     updateNodeSize(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
 
@@ -1976,6 +2077,7 @@ export const __designerShellTestUtils = {
   resolveNearestAncestorSection,
   wasSizeConstrainedFromDraft,
   getSectionFitNoopMessage,
+  shouldPromoteParentToCanvasForManualPosition,
 };
 
 const createLocalId = () =>

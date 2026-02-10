@@ -5,6 +5,7 @@ import {
   chooseBestSectionForInsertion,
   findNearestSectionAncestor,
   planForceSelectedInsertion,
+  planSelectedPathInsertion,
   resolvePreferredParentFromSelection,
   resolveSectionParentForInsertion,
 } from './dropParentResolution';
@@ -602,6 +603,183 @@ describe('dropParentResolution', () => {
     });
 
     expect(picked?.id).toBe('notes-container');
+  });
+
+  it('returns nearest compatible parent on selected path for quick insert', () => {
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      childIds: ['section-a'],
+      allowedChildren: ['section'],
+    });
+    const section = createNode({
+      id: 'section-a',
+      type: 'section',
+      name: 'Section A',
+      parentId: 'page',
+      childIds: ['container-a'],
+      size: { width: 700, height: 300 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 12,
+        padding: 16,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+    const container = createNode({
+      id: 'container-a',
+      type: 'container',
+      parentId: 'section-a',
+      childIds: ['label-a'],
+      size: { width: 320, height: 160 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 8,
+        padding: 8,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+    const label = createNode({
+      id: 'label-a',
+      type: 'label',
+      parentId: 'container-a',
+      size: { width: 120, height: 24 },
+    });
+
+    const nodesById = new Map(
+      [page, section, container, label].map((node) => [node.id, node] satisfies [string, DesignerNode])
+    );
+
+    const plan = planSelectedPathInsertion({
+      selectedNodeId: 'label-a',
+      nodesById,
+      componentType: 'field',
+      desiredSize: { width: 200, height: 48 },
+    });
+
+    expect(plan).toEqual({
+      ok: true,
+      parentId: 'container-a',
+      reflowAdjustments: [],
+    });
+  });
+
+  it('does not fall back outside selected path when selected parent cannot fit', () => {
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      childIds: ['section-a', 'section-b'],
+      allowedChildren: ['section'],
+    });
+    const sectionA = createNode({
+      id: 'section-a',
+      type: 'section',
+      name: 'Section A',
+      parentId: 'page',
+      childIds: ['row-a', 'row-b'],
+      size: { width: 520, height: 200 },
+      layout: {
+        mode: 'flex',
+        direction: 'row',
+        gap: 20,
+        padding: 20,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+    const rowA = createNode({ id: 'row-a', type: 'totals', parentId: 'section-a', size: { width: 220, height: 120 } });
+    const rowB = createNode({ id: 'row-b', type: 'totals', parentId: 'section-a', size: { width: 220, height: 120 } });
+    const sectionB = createNode({
+      id: 'section-b',
+      type: 'section',
+      name: 'Section B',
+      parentId: 'page',
+      childIds: [],
+      size: { width: 700, height: 380 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 12,
+        padding: 16,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+
+    const nodesById = new Map(
+      [page, sectionA, rowA, rowB, sectionB].map((node) => [node.id, node] satisfies [string, DesignerNode])
+    );
+
+    const plan = planSelectedPathInsertion({
+      selectedNodeId: 'row-a',
+      nodesById,
+      componentType: 'signature',
+      desiredSize: { width: 320, height: 120 },
+    });
+
+    expect(plan && !plan.ok).toBe(true);
+    if (!plan || plan.ok) {
+      return;
+    }
+    expect(plan.sectionId).toBe('section-a');
+    expect(plan.message).toContain('No room');
+  });
+
+  it('returns incompatibility guidance when selection path has no compatible parent', () => {
+    const page = createNode({
+      id: 'page',
+      type: 'page',
+      childIds: ['section-a'],
+      allowedChildren: ['section'],
+    });
+    const section = createNode({
+      id: 'section-a',
+      type: 'section',
+      name: 'Section A',
+      parentId: 'page',
+      childIds: ['field-a'],
+      size: { width: 700, height: 260 },
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 12,
+        padding: 16,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+    const field = createNode({
+      id: 'field-a',
+      type: 'field',
+      parentId: 'section-a',
+      size: { width: 220, height: 48 },
+    });
+
+    const nodesById = new Map(
+      [page, section, field].map((node) => [node.id, node] satisfies [string, DesignerNode])
+    );
+
+    const plan = planSelectedPathInsertion({
+      selectedNodeId: 'field-a',
+      nodesById,
+      componentType: 'document',
+    });
+
+    expect(plan).toEqual({
+      ok: false,
+      message: 'Selected node cannot contain this block. Select a compatible parent in OUTLINE and retry.',
+      sectionId: 'section-a',
+      nextAction: 'Select a section, column, or container in OUTLINE before inserting.',
+    });
   });
 
   it('plans local row reflow inside selected section before inserting', () => {

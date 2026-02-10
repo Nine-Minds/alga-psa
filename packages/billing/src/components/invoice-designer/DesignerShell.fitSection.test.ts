@@ -276,4 +276,70 @@ describe('DesignerShell section fit utility', () => {
     );
     expect(__designerShellTestUtils.getSectionFitNoopMessage(fixedSection)).toBe('Section is already fitted.');
   });
+
+  it('promotes flex parent to canvas when label gets manual x/y edits', () => {
+    const label = createNode({
+      id: 'label-1',
+      type: 'label',
+      parentId: 'container-1',
+      position: { x: 24, y: 24 },
+      metadata: { text: 'Label' },
+    });
+    const flexParent = createNode({
+      id: 'container-1',
+      type: 'container',
+      layout: {
+        mode: 'flex',
+        direction: 'column',
+        gap: 8,
+        padding: 16,
+        justify: 'start',
+        align: 'stretch',
+        sizing: 'fixed',
+      },
+    });
+
+    expect(
+      __designerShellTestUtils.shouldPromoteParentToCanvasForManualPosition(label, flexParent, {
+        x: 120,
+        y: 96,
+      })
+    ).toBe(true);
+    expect(
+      __designerShellTestUtils.shouldPromoteParentToCanvasForManualPosition(label, flexParent, {
+        x: 24,
+        y: 24,
+      })
+    ).toBe(false);
+  });
+
+  it('does not promote parent layout for non-label nodes or non-flex parents', () => {
+    const text = createNode({
+      id: 'text-1',
+      type: 'text',
+      parentId: 'container-1',
+      position: { x: 24, y: 24 },
+    });
+    const canvasParent = createNode({
+      id: 'container-1',
+      type: 'container',
+      layout: {
+        mode: 'canvas',
+        direction: 'column',
+        gap: 0,
+        padding: 0,
+        justify: 'start',
+        align: 'start',
+        sizing: 'fixed',
+      },
+    });
+
+    expect(
+      __designerShellTestUtils.shouldPromoteParentToCanvasForManualPosition(text, canvasParent, {
+        x: 120,
+        y: 96,
+      })
+    ).toBe(false);
+  });
+
 });
