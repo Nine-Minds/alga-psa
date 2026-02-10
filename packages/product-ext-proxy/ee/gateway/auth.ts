@@ -14,6 +14,12 @@ export interface ExtProxyUserInfo {
   additional_fields?: Record<string, string>;
 }
 
+interface UserClientContext {
+  userType?: string;
+  contactId?: string;
+  clientId?: string;
+}
+
 function toNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -36,13 +42,22 @@ function addScalarField(
   }
 }
 
-function extractAdditionalFields(user: Record<string, unknown>): Record<string, string> {
+function extractAdditionalFields(
+  user: Record<string, unknown>,
+  fallback?: { contactId?: string }
+): Record<string, string> {
   const fields: Record<string, string> = {};
   addScalarField(fields, user, 'contact_id');
   addScalarField(fields, user, 'contactId');
   addScalarField(fields, user, 'username');
   addScalarField(fields, user, 'locale');
   addScalarField(fields, user, 'timezone');
+  if (!fields.contact_id && fallback?.contactId) {
+    fields.contact_id = fallback.contactId;
+  }
+  if (!fields.contactId && fallback?.contactId) {
+    fields.contactId = fallback.contactId;
+  }
   return fields;
 }
 
@@ -95,6 +110,34 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
 }
 
 /**
+ * Resolve authoritative user_type/contact_id/client_id from the database.
+ * This is a fallback for cases where session claims are incomplete.
+ */
+async function getUserClientContext(userId: string, tenantId: string): Promise<UserClientContext> {
+  try {
+    const knex = await getAdminConnection();
+    const row = await knex('users as u')
+      .leftJoin('contacts as c', function () {
+        this.on('c.contact_name_id', '=', 'u.contact_id')
+          .andOn('c.tenant', '=', 'u.tenant');
+      })
+      .select('u.user_type', 'u.contact_id', 'c.client_id')
+      .where('u.user_id', userId)
+      .andWhere('u.tenant', tenantId)
+      .first();
+
+    return {
+      userType: toNonEmptyString(row?.user_type),
+      contactId: toNonEmptyString(row?.contact_id),
+      clientId: toNonEmptyString(row?.client_id),
+    };
+  } catch (error) {
+    console.error('[auth] Failed to resolve user client context:', error);
+    return {};
+  }
+}
+
+/**
  * Get full user info from session for passing to runner.
  * Returns null if no valid session exists.
  */
@@ -109,6 +152,7 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
 
   const session = await getSession();
   const user = session?.user as any;
+  const userRecord = (user ?? {}) as Record<string, unknown>;
 
   console.log('[ext-proxy auth] Session check', {
     hasSession: !!session,
@@ -128,16 +172,31 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   // Use the client ID carried in the auth token/session when available.
   // This is the most reliable source for client portal sessions.
   const sessionClientId =
-    toNonEmptyString((user as Record<string, unknown>).client_id) ??
-    toNonEmptyString((user as Record<string, unknown>).clientId);
+    toNonEmptyString(userRecord.client_id) ??
+    toNonEmptyString(userRecord.clientId);
 
-  // Fall back to DB lookup only when needed.
+  const sessionUserType =
+    toNonEmptyString(userRecord.user_type) ??
+    toNonEmptyString(userRecord.userType);
+
+  const sessionContactId =
+    toNonEmptyString(userRecord.contact_id) ??
+    toNonEmptyString(userRecord.contactId);
+
+  // Fall back to DB lookup when session claims are missing/incomplete.
   const userId = user.user_id || user.id || '';
-  const userType = user.user_type || user.userType || 'internal';
+  const needsDbContext =
+    Boolean(userId && tenantId) &&
+    (!sessionClientId || !sessionUserType || !sessionContactId);
+  const dbContext = needsDbContext
+    ? await getUserClientContext(userId, tenantId)
+    : {};
+
+  const userType = sessionUserType || dbContext.userType || 'internal';
   const clientId =
     sessionClientId ||
     ((userType === 'client' && userId && tenantId)
-      ? await getUserClientId(userId, tenantId)
+      ? (dbContext.clientId || await getUserClientId(userId, tenantId))
       : undefined);
 
   const userInfo: ExtProxyUserInfo = {
@@ -147,7 +206,9 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     user_type: userType,
     client_name: clientName,
     client_id: clientId,
-    additional_fields: extractAdditionalFields(user as Record<string, unknown>),
+    additional_fields: extractAdditionalFields(userRecord, {
+      contactId: dbContext.contactId,
+    }),
   };
 
   console.log('[ext-proxy auth] Returning user info', {
@@ -156,6 +217,7 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     userName: userInfo.user_name,
     userType: userInfo.user_type,
     clientId: userInfo.client_id,
+    usedDbFallback: needsDbContext,
   });
 
   return userInfo;
