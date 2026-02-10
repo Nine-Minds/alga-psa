@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Replace custom `ThemeContext` with `next-themes` `ThemeProvider` in root layout — remove `server/src/context/ThemeContext.tsx` hardcoded light-only logic; `next-themes` handles localStorage, system preference, and flash prevention",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.5"]
   },
   {

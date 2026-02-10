@@ -7,7 +7,7 @@ import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { Theme } from '@radix-ui/themes';
-import { ThemeProvider } from '../context/ThemeContext';
+import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { TagProvider } from '@alga-psa/tags/context';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
@@ -58,7 +58,7 @@ async function MainContent({ children }: { children: React.ReactNode }) {
   return (
     <TenantProvider tenant={tenant}>
       <MantineProvider>
-        <ThemeProvider>
+        <AppThemeProvider>
           <Theme>
             <DynamicExtensionProvider>
               <ClientUIStateProvider
@@ -72,7 +72,7 @@ async function MainContent({ children }: { children: React.ReactNode }) {
               </ClientUIStateProvider>
             </DynamicExtensionProvider>
           </Theme>
-        </ThemeProvider>
+        </AppThemeProvider>
       </MantineProvider>
     </TenantProvider>
   );
