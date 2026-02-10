@@ -1002,16 +1002,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
                   End Date
                 </label>
-                <Input
-                  type="date"
+                <DatePicker
                   id="endDate"
-                  value={recurrencePattern.endDate ? format(recurrencePattern.endDate, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => setRecurrencePattern(prev => {
+                  value={recurrencePattern.endDate instanceof Date ? recurrencePattern.endDate : new Date(recurrencePattern.endDate)}
+                  onChange={(date: Date) => setRecurrencePattern(prev => {
                     if (prev === null) return null;
-                    return { ...prev, endDate: new Date(e.target.value) };
+                    return { ...prev, endDate: date };
                   })}
-                  className=""
-                  disabled={!canEditFields} // Disable based on permissions
+                  disabled={!canEditFields}
                 />
               </div>
             )}

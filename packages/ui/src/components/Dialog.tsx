@@ -345,7 +345,7 @@ export function Dialog({
           aria-modal="true"
           aria-label={title || 'Dialog'}
           tabIndex={-1}
-          className={`relative bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col focus:outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
+          className={`relative bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
         >
           {/* Title bar */}
           {title ? (
@@ -409,7 +409,7 @@ export function Dialog({
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
           {...(!hasDescription ? { 'aria-describedby': undefined } : {})}
-          className={`fixed top-1/2 left-1/2 bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 max-h-[90vh] flex flex-col outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
           style={dialogStyle}
           onKeyDown={(e) => {
             // Handle Escape key manually when focus trap is disabled

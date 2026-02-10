@@ -21,6 +21,7 @@ import type {
   CreateScheduleEntryOptions,
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { generateOccurrences } from '../utils/recurrenceUtils';
 
 /**
  * Schedule Entry model with tenant-explicit methods.
@@ -136,7 +137,121 @@ const ScheduleEntry = {
   },
 
   /**
-   * Get all schedule entries within a date range.
+   * Gets recurring entries within a date range by calculating virtual instances
+   * from master recurring entries and their recurrence patterns.
+   */
+  getRecurringEntriesInRange: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    start: Date,
+    end: Date
+  ): Promise<IScheduleEntry[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting recurring entries');
+    }
+
+    // Get master recurring entries that might have occurrences in the range
+    const masterEntries = await knexOrTrx('schedule_entries')
+      .where('schedule_entries.tenant', tenant)
+      .where('is_recurring', true)
+      .whereNotNull('recurrence_pattern')
+      .whereNull('original_entry_id')
+      .where('scheduled_start', '<=', end)
+      .andWhere(function () {
+        this.where('scheduled_end', '>=', start)
+          .orWhereRaw("(recurrence_pattern->>'endDate')::date >= ?", [start])
+          .orWhereRaw("(recurrence_pattern->>'endDate') IS NULL");
+      })
+      .select('*') as unknown as IScheduleEntry[];
+
+    if (masterEntries.length === 0) return [];
+
+    // Only return virtual instances — master entries are already included in getAll()
+    return ScheduleEntry.getRecurringEntriesWithAssignments(knexOrTrx, tenant, masterEntries, start, end);
+  },
+
+  /**
+   * Private helper: generates virtual recurring entries with user assignments.
+   */
+  getRecurringEntriesWithAssignments: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    entries: IScheduleEntry[],
+    start: Date,
+    end: Date
+  ): Promise<IScheduleEntry[]> => {
+    const result: IScheduleEntry[] = [];
+
+    // Get assigned user IDs for all master entries
+    const entryIds = entries.map((e): string => e.entry_id);
+    const assignedUserIds = await ScheduleEntry.getAssignedUserIds(knexOrTrx, tenant, entryIds);
+
+    for (const entry of entries) {
+      if (!entry.recurrence_pattern) continue;
+
+      try {
+        // If recurrence_pattern is a string (from DB), parse it
+        if (typeof entry.recurrence_pattern === 'string') {
+          const pattern = JSON.parse(entry.recurrence_pattern) as IRecurrencePattern;
+          if (!pattern || Object.keys(pattern).length === 0) continue;
+
+          pattern.startDate = new Date(pattern.startDate);
+          pattern.startDate.setHours(0, 0, 0, 0);
+
+          if (pattern.endDate) {
+            pattern.endDate = new Date(pattern.endDate);
+            if (pattern.endDate < start) continue;
+          }
+          if (pattern.exceptions) {
+            pattern.exceptions = (pattern.exceptions || []).map((d): Date => new Date(d));
+          }
+          entry.recurrence_pattern = pattern;
+        }
+
+        // Calculate occurrences within the range, respecting endDate
+        const effectiveEnd =
+          entry.recurrence_pattern.endDate && entry.recurrence_pattern.endDate < end
+            ? entry.recurrence_pattern.endDate
+            : end;
+        const occurrences = generateOccurrences(entry, start, effectiveEnd);
+
+        // Create virtual entries for each occurrence
+        const duration =
+          new Date(entry.scheduled_end).getTime() - new Date(entry.scheduled_start).getTime();
+        const virtualEntries = occurrences
+          .filter((occurrence) => {
+            const utcDate = new Date(occurrence);
+            utcDate.setUTCHours(0, 0, 0, 0);
+            return !entry.recurrence_pattern?.exceptions?.some((ex) => {
+              const exDate = new Date(ex);
+              exDate.setUTCHours(0, 0, 0, 0);
+              return exDate.getTime() === utcDate.getTime();
+            });
+          })
+          .map(
+            (occurrence): IScheduleEntry => ({
+              ...entry,
+              entry_id: `${entry.entry_id}_${occurrence.getTime()}`,
+              scheduled_start: occurrence,
+              scheduled_end: new Date(occurrence.getTime() + duration),
+              is_recurring: true,
+              original_entry_id: entry.entry_id,
+              assigned_user_ids: assignedUserIds[entry.entry_id] || [],
+            })
+          );
+
+        result.push(...virtualEntries);
+      } catch (error) {
+        console.error('Error processing recurring entry:', error);
+        continue;
+      }
+    }
+
+    return result;
+  },
+
+  /**
+   * Get all schedule entries within a date range, including virtual recurring instances.
    */
   getAll: async (
     knexOrTrx: Knex | Knex.Transaction,
@@ -148,10 +263,16 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting schedule entries');
     }
 
-    // Get all non-virtual entries (both regular and master recurring entries)
+    // Get all non-virtual, non-recurring-master entries.
+    // Recurring masters are excluded here because they are represented
+    // by the virtual instances generated below — including them would
+    // cause a duplicate on the first occurrence day.
     const regularEntries = (await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
       .whereNull('original_entry_id')
+      .andWhere(function () {
+        this.where('is_recurring', false).orWhereNull('is_recurring');
+      })
       .andWhere(function () {
         this.whereBetween('scheduled_start', [start, end]).orWhereBetween('scheduled_end', [
           start,
@@ -161,14 +282,23 @@ const ScheduleEntry = {
       .select('*')
       .orderBy('scheduled_start', 'asc')) as unknown as IScheduleEntry[];
 
-    if (regularEntries.length === 0) return regularEntries;
+    // Get recurring virtual instances
+    const virtualEntries = await ScheduleEntry.getRecurringEntriesInRange(
+      knexOrTrx,
+      tenant,
+      start,
+      end
+    );
 
-    // Get assigned user IDs for all entries
+    const allEntries = [...regularEntries, ...virtualEntries];
+    if (allEntries.length === 0) return allEntries;
+
+    // Get assigned user IDs for all non-virtual entries
     const entryIds = regularEntries.map((e): string => e.entry_id);
     const assignedUserIds = await ScheduleEntry.getAssignedUserIds(knexOrTrx, tenant, entryIds);
 
     // Merge assigned user IDs into entries
-    return regularEntries.map(
+    return allEntries.map(
       (entry): IScheduleEntry => ({
         ...entry,
         assigned_user_ids: entry.assigned_user_ids || assignedUserIds[entry.entry_id] || [],
@@ -295,32 +425,265 @@ const ScheduleEntry = {
   },
 
   /**
-   * Update an existing schedule entry.
-   * Note: Recurrence handling for SINGLE/FUTURE/ALL modes should be implemented
-   * by the calling code if needed.
+   * Update an existing schedule entry with recurrence scope support.
+   *
+   * updateType controls how recurring entries are modified:
+   * - SINGLE: Extract virtual instance to standalone entry, add exception to master
+   * - FUTURE: Split series at this point — truncate master, create new master for future
+   * - ALL: Update the master entry directly, preserving exceptions
+   *
+   * For non-recurring entries, updateType is ignored and a simple update is performed.
    */
   update: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     entry_id: string,
-    entry: Partial<IScheduleEntry> & { assigned_user_ids?: string[] }
+    entry: Partial<IScheduleEntry> & { assigned_user_ids?: string[] },
+    updateType?: IEditScope
   ): Promise<IScheduleEntry | undefined> => {
     if (!tenant) {
       throw new Error('Tenant context is required for updating schedule entry');
     }
 
-    // Get the original entry
+    // Parse entry ID to determine if it's a virtual instance
+    const isVirtualId = entry_id.includes('_');
+    const [masterId, timestamp] = isVirtualId ? entry_id.split('_') : [entry_id, null];
+    const masterEntryId = masterId;
+    const virtualTimestamp = timestamp ? new Date(parseInt(timestamp, 10)) : undefined;
+
+    // Get the master entry
     const originalEntry = await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+      .andWhere('entry_id', masterEntryId)
       .first();
 
     if (!originalEntry) {
       return undefined;
     }
 
+    // Handle recurring entries with scope
+    if (originalEntry.recurrence_pattern && updateType) {
+      const originalPattern = ScheduleEntry.parseRecurrencePattern(originalEntry.recurrence_pattern);
+
+      if (originalPattern) {
+        switch (updateType) {
+          case 'single': {
+            // SINGLE: Create a standalone concrete entry and add exception to master
+            const assignedUserIds = await ScheduleEntry.getAssignedUserIds(
+              knexOrTrx,
+              tenant,
+              [masterEntryId]
+            );
+
+            const standaloneId = uuidv4();
+            await knexOrTrx('schedule_entries').insert({
+              entry_id: standaloneId,
+              title: entry.title || originalEntry.title,
+              scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
+              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
+              notes: entry.notes || originalEntry.notes,
+              status: entry.status || originalEntry.status,
+              work_item_id: entry.work_item_id || originalEntry.work_item_id,
+              work_item_type: entry.work_item_type || originalEntry.work_item_type,
+              tenant,
+              is_recurring: false,
+              original_entry_id: null,
+              recurrence_pattern: null,
+              is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+            });
+
+            // Copy assignments from master to standalone entry
+            await ScheduleEntry.updateAssignees(
+              knexOrTrx,
+              tenant,
+              standaloneId,
+              entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
+            );
+
+            // Add exception date to master pattern
+            const exceptionDate = new Date(entry.scheduled_start || originalEntry.scheduled_start);
+            exceptionDate.setUTCHours(0, 0, 0, 0);
+            const updatedPattern = {
+              ...originalPattern,
+              exceptions: [...(originalPattern.exceptions || []), exceptionDate],
+            };
+
+            await knexOrTrx('schedule_entries')
+              .where('schedule_entries.tenant', tenant)
+              .andWhere('entry_id', masterEntryId)
+              .update({
+                recurrence_pattern: JSON.stringify(updatedPattern),
+              });
+
+            return {
+              ...originalEntry,
+              entry_id: standaloneId,
+              title: entry.title || originalEntry.title,
+              scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
+              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
+              notes: entry.notes || originalEntry.notes,
+              status: entry.status || originalEntry.status,
+              work_item_id: entry.work_item_id || originalEntry.work_item_id,
+              work_item_type: entry.work_item_type || originalEntry.work_item_type,
+              is_recurring: false,
+              original_entry_id: null,
+              is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || [],
+            };
+          }
+
+          case 'future': {
+            // FUTURE: Split the recurrence into two series
+            if (!virtualTimestamp) {
+              throw new Error('Virtual timestamp is required for future updates');
+            }
+
+            const newMasterId = uuidv4();
+
+            // Truncate original master to end before the current instance
+            const originalEndDate = new Date(virtualTimestamp);
+            originalEndDate.setDate(originalEndDate.getDate() - 1);
+            originalEndDate.setHours(23, 59, 59, 999);
+
+            const futureOriginalPattern = {
+              ...originalPattern,
+              endDate: originalEndDate,
+              exceptions: originalPattern.exceptions?.filter(
+                (d) => new Date(d) < virtualTimestamp
+              ),
+            };
+
+            await knexOrTrx('schedule_entries')
+              .where('schedule_entries.tenant', tenant)
+              .andWhere('entry_id', masterEntryId)
+              .update({
+                recurrence_pattern: JSON.stringify(futureOriginalPattern),
+              });
+
+            // Create new master starting at the current instance
+            const newStartDate = entry.scheduled_start || virtualTimestamp;
+            const newPattern = entry.recurrence_pattern
+              ? {
+                  ...entry.recurrence_pattern,
+                  startDate: newStartDate,
+                  exceptions: [],
+                }
+              : {
+                  ...originalPattern,
+                  startDate: newStartDate,
+                  endDate: originalPattern.endDate,
+                  exceptions: originalPattern.exceptions?.filter(
+                    (d) => new Date(d) >= virtualTimestamp
+                  ),
+                };
+
+            const newMasterEntry = {
+              entry_id: newMasterId,
+              title: entry.title || originalEntry.title,
+              scheduled_start: newStartDate,
+              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
+              notes: entry.notes || originalEntry.notes,
+              status: entry.status || originalEntry.status,
+              work_item_id: entry.work_item_id || originalEntry.work_item_id,
+              work_item_type: entry.work_item_type || originalEntry.work_item_type,
+              tenant,
+              recurrence_pattern: JSON.stringify(newPattern),
+              is_recurring: true,
+              original_entry_id: null,
+              is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+            };
+
+            await knexOrTrx('schedule_entries').insert(newMasterEntry);
+
+            const masterAssignees = await ScheduleEntry.getAssignedUserIds(
+              knexOrTrx,
+              tenant,
+              [masterEntryId]
+            );
+            await ScheduleEntry.updateAssignees(
+              knexOrTrx,
+              tenant,
+              newMasterId,
+              entry.assigned_user_ids || masterAssignees[masterEntryId] || []
+            );
+
+            return {
+              ...newMasterEntry,
+              assigned_user_ids:
+                entry.assigned_user_ids || masterAssignees[masterEntryId] || [],
+            } as IScheduleEntry;
+          }
+
+          case 'all': {
+            // ALL: Update the master entry directly, preserving exceptions
+            const allUpdatePattern = entry.recurrence_pattern
+              ? {
+                  frequency: entry.recurrence_pattern.frequency,
+                  interval: entry.recurrence_pattern.interval,
+                  startDate: originalPattern.startDate,
+                  endDate: entry.recurrence_pattern.endDate || originalPattern.endDate,
+                  exceptions: originalPattern.exceptions || [],
+                  daysOfWeek: entry.recurrence_pattern.daysOfWeek || originalPattern.daysOfWeek,
+                  dayOfMonth: entry.recurrence_pattern.dayOfMonth || originalPattern.dayOfMonth,
+                  monthOfYear:
+                    entry.recurrence_pattern.monthOfYear || originalPattern.monthOfYear,
+                  count: entry.recurrence_pattern.count || originalPattern.count,
+                }
+              : originalPattern;
+
+            const [updatedMasterEntry] = await knexOrTrx('schedule_entries')
+              .where('schedule_entries.tenant', tenant)
+              .andWhere('entry_id', masterEntryId)
+              .update({
+                title: entry.title || originalEntry.title,
+                scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
+                scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
+                notes: entry.notes || originalEntry.notes,
+                status: entry.status || originalEntry.status,
+                work_item_id: entry.work_item_id || originalEntry.work_item_id,
+                work_item_type: entry.work_item_type || originalEntry.work_item_type,
+                recurrence_pattern: JSON.stringify(allUpdatePattern),
+                is_recurring: true,
+              })
+              .returning('*');
+
+            if (entry.assigned_user_ids) {
+              await ScheduleEntry.updateAssignees(
+                knexOrTrx,
+                tenant,
+                masterEntryId,
+                entry.assigned_user_ids
+              );
+            }
+
+            const finalAssignees = entry.assigned_user_ids ||
+              (await ScheduleEntry.getAssignedUserIds(knexOrTrx, tenant, [masterEntryId]))[
+                masterEntryId
+              ] || [];
+
+            return {
+              ...updatedMasterEntry,
+              assigned_user_ids: finalAssignees,
+            };
+          }
+        }
+      }
+    }
+
+    // Non-recurring path (or recurring without updateType): simple field update
+    // Check if we're removing recurrence from a recurring entry
+    const isRemovingRecurrence =
+      originalEntry.is_recurring &&
+      entry.recurrence_pattern !== undefined &&
+      (!entry.recurrence_pattern || Object.keys(entry.recurrence_pattern).length === 0);
+
     // Build update data
     const updateData: Record<string, unknown> = {};
+
+    if (isRemovingRecurrence) {
+      updateData.recurrence_pattern = null;
+      updateData.is_recurring = false;
+    }
 
     if (entry.title !== undefined) updateData.title = entry.title;
     if (entry.scheduled_start !== undefined) updateData.scheduled_start = entry.scheduled_start;
@@ -331,7 +694,7 @@ const ScheduleEntry = {
     if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
     if (entry.is_private !== undefined) updateData.is_private = entry.is_private;
 
-    if (entry.recurrence_pattern !== undefined) {
+    if (entry.recurrence_pattern !== undefined && !isRemovingRecurrence) {
       updateData.recurrence_pattern =
         entry.recurrence_pattern &&
         typeof entry.recurrence_pattern === 'object' &&
@@ -348,36 +711,223 @@ const ScheduleEntry = {
     // Update the entry
     const [updatedEntry] = await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+      .andWhere('entry_id', masterEntryId)
       .update(updateData)
       .returning('*');
 
     // Update assignees if provided
     if (entry.assigned_user_ids) {
-      await ScheduleEntry.updateAssignees(knexOrTrx, tenant, entry_id, entry.assigned_user_ids);
+      await ScheduleEntry.updateAssignees(knexOrTrx, tenant, masterEntryId, entry.assigned_user_ids);
       updatedEntry.assigned_user_ids = entry.assigned_user_ids;
     } else {
-      // Get existing assigned user IDs
-      const assignedUserIds = await ScheduleEntry.getAssignedUserIds(knexOrTrx, tenant, [entry_id]);
-      updatedEntry.assigned_user_ids = assignedUserIds[entry_id] || [];
+      const assignedUserIds = await ScheduleEntry.getAssignedUserIds(knexOrTrx, tenant, [
+        masterEntryId,
+      ]);
+      updatedEntry.assigned_user_ids = assignedUserIds[masterEntryId] || [];
     }
 
     return updatedEntry;
   },
 
   /**
-   * Delete a schedule entry.
+   * Delete a schedule entry with recurrence scope support.
+   *
+   * deleteType controls how recurring entries are removed:
+   * - SINGLE (virtual): Add exception date to master pattern
+   * - SINGLE (master): Create new master from next occurrence, delete original
+   * - FUTURE (virtual): Truncate master series end date to before this instance
+   * - FUTURE (master): Delete the entire series
+   * - ALL: Delete the master entry entirely
+   *
+   * For non-recurring entries, deleteType is ignored.
    */
   delete: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    entry_id: string
+    entry_id: string,
+    deleteType?: IEditScope
   ): Promise<boolean> => {
     if (!tenant) {
       throw new Error('Tenant context is required for deleting schedule entry');
     }
 
-    // Delete assignees first (if foreign key constraints require it)
+    // Parse entry ID to determine if it's a virtual instance
+    const isVirtualId = entry_id.includes('_');
+    const [masterId, timestamp] = isVirtualId ? entry_id.split('_') : [entry_id, null];
+    const masterEntryId = masterId;
+    const virtualTimestamp = timestamp ? new Date(parseInt(timestamp, 10)) : undefined;
+
+    // Get the master entry
+    const originalEntry = await knexOrTrx('schedule_entries')
+      .where('schedule_entries.tenant', tenant)
+      .andWhere('entry_id', masterEntryId)
+      .first();
+
+    if (!originalEntry) {
+      return false;
+    }
+
+    // Handle recurring entries with scope
+    if (originalEntry.recurrence_pattern && deleteType) {
+      const originalPattern = ScheduleEntry.parseRecurrencePattern(
+        originalEntry.recurrence_pattern
+      );
+
+      if (originalPattern) {
+        switch (deleteType) {
+          case 'single': {
+            if (virtualTimestamp) {
+              // Virtual instance: add exception date to master pattern
+              const exceptionDate = new Date(virtualTimestamp);
+              exceptionDate.setUTCHours(0, 0, 0, 0);
+              const updatedPattern = {
+                ...originalPattern,
+                exceptions: [...(originalPattern.exceptions || []), exceptionDate],
+              };
+
+              await knexOrTrx('schedule_entries')
+                .where('schedule_entries.tenant', tenant)
+                .andWhere('entry_id', masterEntryId)
+                .update({
+                  recurrence_pattern: JSON.stringify(updatedPattern),
+                });
+
+              return true;
+            } else {
+              // Master entry: create new master from next occurrence, delete original
+              const now = new Date();
+              const futureDate = new Date(now);
+              futureDate.setFullYear(futureDate.getFullYear() + 1);
+
+              const occurrences = generateOccurrences(
+                { ...originalEntry, recurrence_pattern: originalPattern } as IScheduleEntry,
+                originalEntry.scheduled_start,
+                futureDate
+              );
+
+              const masterStartTime = new Date(originalEntry.scheduled_start).getTime();
+              const nextOccurrence = occurrences.find(
+                (occ) => occ.getTime() > masterStartTime
+              );
+
+              if (nextOccurrence) {
+                const newMasterId = uuidv4();
+                const duration =
+                  new Date(originalEntry.scheduled_end).getTime() -
+                  new Date(originalEntry.scheduled_start).getTime();
+
+                const exceptionDate = new Date(originalEntry.scheduled_start);
+                exceptionDate.setUTCHours(0, 0, 0, 0);
+
+                const newPattern = {
+                  ...originalPattern,
+                  startDate: nextOccurrence,
+                  exceptions: [...(originalPattern.exceptions || []), exceptionDate],
+                };
+
+                await knexOrTrx('schedule_entries').insert({
+                  entry_id: newMasterId,
+                  title: originalEntry.title,
+                  scheduled_start: nextOccurrence,
+                  scheduled_end: new Date(nextOccurrence.getTime() + duration),
+                  notes: originalEntry.notes,
+                  status: originalEntry.status,
+                  work_item_id: originalEntry.work_item_id,
+                  work_item_type: originalEntry.work_item_type,
+                  tenant,
+                  recurrence_pattern: JSON.stringify(newPattern),
+                  is_recurring: true,
+                  is_private: originalEntry.is_private,
+                });
+
+                // Copy assignees to new master
+                const assignedUserIds = await ScheduleEntry.getAssignedUserIds(
+                  knexOrTrx,
+                  tenant,
+                  [masterEntryId]
+                );
+                await ScheduleEntry.updateAssignees(
+                  knexOrTrx,
+                  tenant,
+                  newMasterId,
+                  assignedUserIds[masterEntryId] || []
+                );
+              }
+
+              // Delete assignees then original master
+              await knexOrTrx('schedule_entry_assignees')
+                .where('schedule_entry_assignees.tenant', tenant)
+                .andWhere('entry_id', masterEntryId)
+                .del();
+
+              await knexOrTrx('schedule_entries')
+                .where('schedule_entries.tenant', tenant)
+                .andWhere('entry_id', masterEntryId)
+                .del();
+
+              return true;
+            }
+          }
+
+          case 'future': {
+            if (virtualTimestamp) {
+              // Truncate series to end before this instance
+              const endDate = new Date(virtualTimestamp);
+              endDate.setDate(endDate.getDate() - 1);
+              endDate.setHours(23, 59, 59, 999);
+
+              const updatedPattern = {
+                ...originalPattern,
+                endDate,
+                exceptions:
+                  originalPattern.exceptions?.filter(
+                    (d) => new Date(d) < virtualTimestamp
+                  ) || [],
+              };
+
+              await knexOrTrx('schedule_entries')
+                .where('schedule_entries.tenant', tenant)
+                .andWhere('entry_id', masterEntryId)
+                .update({
+                  recurrence_pattern: JSON.stringify(updatedPattern),
+                });
+
+              return true;
+            } else {
+              // Master entry in FUTURE mode = delete entire series
+              await knexOrTrx('schedule_entry_assignees')
+                .where('schedule_entry_assignees.tenant', tenant)
+                .andWhere('entry_id', masterEntryId)
+                .del();
+
+              await knexOrTrx('schedule_entries')
+                .where('schedule_entries.tenant', tenant)
+                .andWhere('entry_id', masterEntryId)
+                .del();
+
+              return true;
+            }
+          }
+
+          case 'all': {
+            // Delete assignees first, then the master entry
+            await knexOrTrx('schedule_entry_assignees')
+              .where('schedule_entry_assignees.tenant', tenant)
+              .andWhere('entry_id', masterEntryId)
+              .del();
+
+            const deletedCount = await knexOrTrx('schedule_entries')
+              .where('schedule_entries.tenant', tenant)
+              .andWhere('entry_id', masterEntryId)
+              .del();
+
+            return deletedCount > 0;
+          }
+        }
+      }
+    }
+
+    // Non-recurring path: simple delete
     await knexOrTrx('schedule_entry_assignees')
       .where('schedule_entry_assignees.tenant', tenant)
       .andWhere('entry_id', entry_id)
