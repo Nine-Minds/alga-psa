@@ -1,0 +1,517 @@
+[
+  {
+    "id": "T001",
+    "description": "Visual editor renders nested `Design` and `Preview` tabs under `Visual`",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T002",
+    "description": "Top-level `Visual` and `Code` tab behavior remains intact after adding preview workflow",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T003",
+    "description": "Preview session state initializes with idle compile/render/verify statuses",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T004",
+    "description": "Switching preview source Sample<->Existing updates state without losing current design draft",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F030"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T005",
+    "description": "Sample source renders at least three curated scenarios",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T006",
+    "description": "Sample scenario payloads map to required renderer fields and numeric types",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T007",
+    "description": "Existing invoice selector queries paginated invoice list with tenant scope",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T008",
+    "description": "Existing invoice selector supports search term filtering",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T009",
+    "description": "Selecting existing invoice fetches detailed invoice payload",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T010",
+    "description": "Invoice payload normalization handles null/optional fields without crash",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T011",
+    "description": "GUI workspace is converted into compiler IR containing all supported node types",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T012",
+    "description": "IR extraction preserves parent-child hierarchy and layout metadata",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T013",
+    "description": "Equivalent workspace inputs produce deterministic AssemblyScript output text",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F032"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T014",
+    "description": "Code generation output includes field binding logic for supported field nodes",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T015",
+    "description": "Code generation output includes table and dynamic-table row rendering logic",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T016",
+    "description": "Code generation output includes totals calculations/formatting hooks",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T017",
+    "description": "Code generation output includes style/layout declarations derived from GUI constraints",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T018",
+    "description": "Compiler diagnostics map generated errors back to source GUI node ids when available",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F015"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T019",
+    "description": "Transient preview compile uses same AssemblyScript compiler flags/options as production compile",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T020",
+    "description": "Compile cache reuses artifacts when generated source hash is unchanged",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T021",
+    "description": "Compile cache invalidates and recompiles when generated source changes",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T022",
+    "description": "Compile failure state displays actionable error message in preview",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F021"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T023",
+    "description": "Preview compile action performs no invoice/template DB writes",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T024",
+    "description": "Preview render path executes compiled Wasm via same runtime used for real invoice rendering",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F033"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T025",
+    "description": "Preview HTML/CSS output shape matches output contract of real render pipeline",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T026",
+    "description": "Preview does not use design-canvas scaffold renderer for authoritative output",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T027",
+    "description": "Rapid design edits trigger debounced compile+render runs rather than immediate unbounded recompiles",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T028",
+    "description": "Manual rerun control triggers compile+render+verify even when no model delta is detected",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T029",
+    "description": "Preview shows loading indicator during compile/render lifecycle",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T030",
+    "description": "Preview shows empty state when no preview data is selected",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T031",
+    "description": "Preview shows distinct verification-error state when layout check fails to execute",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F026"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T032",
+    "description": "Preview mode blocks drag operations",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T033",
+    "description": "Preview mode blocks resize operations",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T034",
+    "description": "Preview mode ignores destructive shortcuts (delete/backspace)",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T035",
+    "description": "Expected layout constraints extraction covers spacing/alignment/sizing/containment fields",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T036",
+    "description": "Rendered geometry collector produces normalized bounding boxes for relevant rendered elements",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T037",
+    "description": "Layout comparator passes when rendered geometry is within configured tolerance thresholds",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F034"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T038",
+    "description": "Layout comparator fails when rendered geometry exceeds tolerance thresholds",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F034"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T039",
+    "description": "Verification mismatch report includes failing constraint id, expected value, actual value, and delta",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T040",
+    "description": "Preview UI displays pass badge when all layout constraints are satisfied",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T041",
+    "description": "Preview UI displays issue badge when one or more constraints fail",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T042",
+    "description": "Save action persists compiler-generated AssemblyScript source associated with current GUI design",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T043",
+    "description": "Save action persists compiled Wasm artifact from generated source (or recompiles equivalently)",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T044",
+    "description": "Code tab behavior for GUI templates follows defined source-of-truth rule",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T045",
+    "description": "Switching between Visual and Code does not desynchronize generated source and GUI model",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T046",
+    "description": "Workspace hydration from source/localStorage remains functional with compiler-enabled preview",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T047",
+    "description": "Preview controls expose stable automation IDs",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T048",
+    "description": "Compile/render/verify status indicators expose stable automation IDs",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T049",
+    "description": "Verification mismatch list exposes stable automation IDs",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T050",
+    "description": "Unit suite includes deterministic compiler golden tests for representative design fixtures",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T051",
+    "description": "Integration tests prove preview render output parity with real runtime for same generated template and invoice data",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T052",
+    "description": "Layout verification test fixture passes when design and render are aligned",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T053",
+    "description": "Layout verification test fixture fails with expected mismatch set when render diverges from design",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T054",
+    "description": "End-to-end flow covers design edit -> authoritative preview -> verification -> save",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "type": "e2e"
+  },
+  {
+    "id": "T055",
+    "description": "End-to-end flow covers existing invoice selection and authoritative preview update",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "type": "e2e"
+  },
+  {
+    "id": "T056",
+    "description": "Documentation is updated to describe GUI compiler pipeline and verification semantics",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ],
+    "type": "docs"
+  }
+]

@@ -1,0 +1,449 @@
+[
+  {
+    "id": "T001",
+    "description": "Inspector renders Constraints section for eligible node types (section/container/field/label/table/etc.)",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T002",
+    "description": "Inspector hides pair-constraint controls for unsupported nodes (`document`, `page`)",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F010"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T003",
+    "description": "Clicking `Set As Reference` stores selected node as active reference and displays it in inspector",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T004",
+    "description": "Clicking `Clear Reference` removes active reference state and resets UI",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T005",
+    "description": "Reference node remains active while selecting a different target node",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T006",
+    "description": "Pair-constraint action buttons are disabled when no reference node is set",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T007",
+    "description": "Pair-constraint action buttons are disabled when selected node equals reference node",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F010"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T008",
+    "description": "Applying `align-left` creates a store constraint of type `align-left` with expected node ids",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T009",
+    "description": "Applying `align-top` creates a store constraint of type `align-top` with expected node ids",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T010",
+    "description": "Applying `match-width` creates a store constraint of type `match-width` with expected node ids",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T011",
+    "description": "Applying `match-height` creates a store constraint of type `match-height` with expected node ids",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T012",
+    "description": "Newly-created pair constraints default to configured strength policy (`strong`)",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T013",
+    "description": "Adding duplicate same-type constraint for same ordered pair is blocked",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T014",
+    "description": "Adding duplicate same-type constraint for reversed pair is blocked by normalized pair key",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T015",
+    "description": "Constraint actions do not dispatch when either node is unsupported, missing, or not a same-parent pair",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T016",
+    "description": "Inspector lists only constraints that involve the currently selected node",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T017",
+    "description": "Constraint list rows show relation label and counterpart node name",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T018",
+    "description": "Removing a constraint from inspector dispatches `removeConstraint` and updates list",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T019",
+    "description": "Removing a constraint from inspector recomputes layout without stale lock behavior",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F019"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T020",
+    "description": "Aspect-ratio toggle remains functional after Constraints panel refactor",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T021",
+    "description": "Aspect-ratio constraints and pair constraints can coexist on separate nodes without regression",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T022",
+    "description": "Canvas renders distinct visual state for active reference node",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T023",
+    "description": "Canvas renders constrained-counterpart visual cues when selected node has pair constraints",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T024",
+    "description": "Constraint conflict message appears with actionable guidance when solver reports conflict",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T025",
+    "description": "Constraint conflict message clears after conflicting relation is removed",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F013"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T026",
+    "description": "Undo after adding a pair constraint removes that constraint and restores prior layout",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T027",
+    "description": "Redo after undoing pair-constraint add restores relation and aligned layout",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T028",
+    "description": "Undo after removing a pair constraint restores the removed constraint",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F013"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T029",
+    "description": "`exportWorkspace()` output contains authored pair constraints",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T030",
+    "description": "`loadWorkspace()` rehydrates pair constraints and produces expected aligned geometry",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T031",
+    "description": "Keyboard activation (Enter/Space) works for `Set As Reference` and `Clear Reference` controls",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T032",
+    "description": "Keyboard activation works for each pair-constraint action button",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T033",
+    "description": "Constraint remove action is keyboard operable for each list row",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F013"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T034",
+    "description": "Constraints section emits stable automation IDs for reference controls and action buttons",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T035",
+    "description": "Constraint list rows emit stable automation IDs including relation type and counterpart id",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T036",
+    "description": "Applying layout presets while constraints exist does not crash and keeps store consistency",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T037",
+    "description": "`Fit Section to Contents` continues to behave predictably when child nodes are pair-constrained",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T038",
+    "description": "Moving one node in an `align-left` pair keeps both nodes aligned post-solve",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F019"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T039",
+    "description": "Resizing one node in a `match-width` pair propagates width relationship post-solve",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F019"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T040",
+    "description": "Deleting one node from a constrained pair auto-prunes dangling constraints and keeps inspector rendering stable on surviving node",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F026"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T041",
+    "description": "End-to-end: author multiple pair constraints, save template, reload designer, and verify constraints persist",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F024"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T042",
+    "description": "End-to-end: remove a persisted pair constraint and verify geometry updates after reload",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F024"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T043",
+    "description": "Regression: existing preview workspace and layout verification tests remain green with constraints UI changes",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T044",
+    "description": "Regression: aspect-ratio lock tests remain green after constraints-section unification",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T045",
+    "description": "Clicking a constraint row counterpart control jumps selection to the related node",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T046",
+    "description": "Counterpart jump control is keyboard-operable and moves selection to related node",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F025"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T047",
+    "description": "Deleting a referenced node removes all constraints that reference that node from store state",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T048",
+    "description": "`loadWorkspace()` with dangling constraint references auto-prunes invalid constraints during hydration",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F026"
+    ],
+    "type": "integration"
+  }
+]

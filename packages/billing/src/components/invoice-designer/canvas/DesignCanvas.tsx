@@ -1,0 +1,1226 @@
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
+import clsx from 'clsx';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
+import { AlignmentGuide } from '../utils/layout';
+import { DesignerNode } from '../state/designerStore';
+import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
+import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
+import {
+  formatBoundValue,
+  normalizeFieldFormat,
+  resolveFieldPreviewValue,
+  resolveInvoiceBindingRawValue,
+  resolveTableItemBindingRawValue,
+} from '../preview/previewBindings';
+
+interface DesignCanvasProps {
+  nodes: DesignerNode[];
+  selectedNodeId: string | null;
+  activeReferenceNodeId?: string | null;
+  constrainedCounterpartNodeIds?: Set<string>;
+  showGuides: boolean;
+  showRulers: boolean;
+  gridSize: number;
+  canvasScale: number;
+  snapToGrid: boolean;
+  guides: AlignmentGuide[];
+  isDragActive: boolean;
+  forcedDropTarget: string | 'canvas' | null;
+  droppableId: string;
+  onPointerLocationChange: (point: { x: number; y: number } | null) => void;
+  onNodeSelect: (id: string | null) => void;
+  onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  readOnly?: boolean;
+  previewData?: WasmInvoiceViewModel | null;
+}
+
+const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
+
+interface CanvasNodeProps {
+  node: DesignerNode;
+  isSelected: boolean;
+  isReferenceNode: boolean;
+  isConstraintCounterpart: boolean;
+  isInSelectionContext: boolean;
+  hasActiveSelection: boolean;
+  isDragActive: boolean;
+  forcedDropTarget: string | 'canvas' | null;
+  onSelect: (id: string | null) => void;
+  onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  renderChildren: (parentId: string) => React.ReactNode;
+  childExtents?: { maxRight: number; maxBottom: number };
+  readOnly: boolean;
+  previewData: WasmInvoiceViewModel | null;
+  applySelectionDeemphasis: boolean;
+}
+
+type SectionSemanticCue = {
+  label: string;
+  toneClass: string;
+  chipClass: string;
+  accentClass: string;
+};
+
+type SectionBorderStyle = 'none' | 'light' | 'strong';
+type FieldBorderStyle = 'none' | 'underline' | 'box';
+type FontWeightStyle = 'normal' | 'medium' | 'semibold' | 'bold';
+type TableBorderPreset = 'custom' | 'list' | 'boxed' | 'grid' | 'none';
+type TableBorderConfig = {
+  outer: boolean;
+  rowDividers: boolean;
+  columnDividers: boolean;
+};
+
+const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300';
+const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200';
+const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400';
+const FONT_WEIGHT_CLASS: Record<FontWeightStyle, string> = {
+  normal: 'font-normal',
+  medium: 'font-medium',
+  semibold: 'font-semibold',
+  bold: 'font-bold',
+};
+
+const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
+  const name = sectionName.toLowerCase();
+  if (/\b(item|line item|service|detail)\b/.test(name)) {
+    return {
+      label: 'Items',
+      toneClass: 'bg-cyan-100/45',
+      chipClass: 'border-cyan-300 bg-cyan-100 text-cyan-800',
+      accentClass: 'bg-cyan-400/80',
+    };
+  }
+  if (/\b(total|summary|payment)\b/.test(name)) {
+    return {
+      label: 'Totals',
+      toneClass: 'bg-emerald-100/45',
+      chipClass: 'border-emerald-300 bg-emerald-100 text-emerald-800',
+      accentClass: 'bg-emerald-400/80',
+    };
+  }
+  if (/\b(footer|approval|signature)\b/.test(name)) {
+    return {
+      label: 'Footer',
+      toneClass: 'bg-slate-100',
+      chipClass: 'border-slate-400 bg-white text-slate-700',
+      accentClass: 'bg-slate-400/80',
+    };
+  }
+  if (/\b(billing|info|meta|details)\b/.test(name)) {
+    return {
+      label: 'Info',
+      toneClass: 'bg-blue-100/45',
+      chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
+      accentClass: 'bg-blue-400/80',
+    };
+  }
+  if (/\b(header|masthead|top)\b/.test(name)) {
+    return {
+      label: 'Header',
+      toneClass: 'bg-amber-100/45',
+      chipClass: 'border-amber-300 bg-amber-100 text-amber-800',
+      accentClass: 'bg-amber-400/80',
+    };
+  }
+  return {
+    label: 'Section',
+    toneClass: 'bg-blue-100/45',
+    chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
+    accentClass: 'bg-blue-400/80',
+  };
+};
+
+const resolveSectionBorderStyle = (metadata: Record<string, unknown>): SectionBorderStyle => {
+  const candidate = metadata.sectionBorderStyle ?? metadata.sectionBorder;
+  if (candidate === 'none' || candidate === 'strong') {
+    return candidate;
+  }
+  return 'light';
+};
+
+const resolveFieldBorderStyle = (metadata: Record<string, unknown>): FieldBorderStyle => {
+  const candidate = metadata.fieldBorderStyle;
+  if (candidate === 'none' || candidate === 'underline') {
+    return candidate;
+  }
+  return 'underline';
+};
+
+const resolveFontWeightStyle = (
+  value: unknown,
+  fallback: FontWeightStyle = 'normal'
+): FontWeightStyle => {
+  if (value === 'normal' || value === 'medium' || value === 'semibold' || value === 'bold') {
+    return value;
+  }
+  return fallback;
+};
+
+const resolveTableBorderPreset = (metadata: Record<string, unknown>): TableBorderPreset => {
+  const candidate = metadata.tableBorderPreset;
+  if (candidate === 'list' || candidate === 'boxed' || candidate === 'grid' || candidate === 'none') {
+    return candidate;
+  }
+  return 'custom';
+};
+
+const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorderConfig => {
+  const preset = resolveTableBorderPreset(metadata);
+  if (preset === 'list') {
+    return { outer: false, rowDividers: true, columnDividers: false };
+  }
+  if (preset === 'boxed') {
+    return { outer: true, rowDividers: true, columnDividers: false };
+  }
+  if (preset === 'grid') {
+    return { outer: true, rowDividers: true, columnDividers: true };
+  }
+  if (preset === 'none') {
+    return { outer: false, rowDividers: false, columnDividers: false };
+  }
+
+  return {
+    outer: metadata.tableOuterBorder !== false,
+    rowDividers: metadata.tableRowDividers !== false,
+    columnDividers: metadata.tableColumnDividers === true,
+  };
+};
+
+const TABLE_COLUMN_WIDTH_FALLBACKS = [220, 60, 100, 120];
+
+const resolveTableColumnPixelWidth = (column: Record<string, unknown>, index: number): number => {
+  const configuredWidth = Number(column.width);
+  if (Number.isFinite(configuredWidth) && configuredWidth > 0) {
+    return configuredWidth;
+  }
+  return TABLE_COLUMN_WIDTH_FALLBACKS[index] ?? 120;
+};
+
+const resolveTableGridTemplateColumns = (columns: Array<Record<string, unknown>>): string => {
+  if (columns.length === 0) {
+    return '1fr';
+  }
+  const widths = columns.map((column, index) => resolveTableColumnPixelWidth(column, index));
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+  if (!Number.isFinite(totalWidth) || totalWidth <= 0) {
+    return `repeat(${columns.length}, minmax(0, 1fr))`;
+  }
+  return widths
+    .map((width) => `${(Math.round((width / totalWidth) * 100000) / 1000).toFixed(3).replace(/\.?0+$/, '')}%`)
+    .join(' ');
+};
+
+const resolveSectionBorderClasses = (style: SectionBorderStyle) => {
+  if (style === 'none') {
+    return 'border border-transparent';
+  }
+  if (style === 'strong') {
+    return `border ${INVOICE_BORDER_STRONG_COLOR_CLASS} rounded-md`;
+  }
+  return `border ${INVOICE_BORDER_COLOR_CLASS} rounded-sm`;
+};
+
+const resolveFieldBorderClasses = (style: FieldBorderStyle) => {
+  if (style === 'none') {
+    return 'px-1 py-0.5 flex items-center bg-transparent border border-transparent';
+  }
+  if (style === 'underline') {
+    return `px-1 py-0.5 flex items-center bg-transparent border-0 border-b ${INVOICE_BORDER_COLOR_CLASS} rounded-none`;
+  }
+  return `px-2 py-1.5 flex items-center border ${INVOICE_BORDER_COLOR_CLASS} rounded-sm bg-transparent`;
+};
+
+type PreviewContentResult = {
+  content: React.ReactNode;
+  isPlaceholder?: boolean;
+  singleLine?: boolean;
+};
+
+type TotalsRowPreviewModel = {
+  label: string;
+  bindingKey: string;
+  previewValue: string;
+  isGrandTotal: boolean;
+};
+
+const placeholderPreviewClassName = 'block truncate text-[11px] font-normal text-slate-400/95 italic';
+
+const renderPlaceholderPreview = (text: string): React.ReactNode => (
+  <span className={placeholderPreviewClassName} title={text}>
+    {text}
+  </span>
+);
+
+const isRenderableCanvasNode = (node: DesignerNode | null | undefined): boolean =>
+  Boolean(node && node.type !== 'document' && node.type !== 'page');
+
+const hasRenderableActiveSelection = (nodes: DesignerNode[], selectedNodeId: string | null): boolean => {
+  if (!selectedNodeId) {
+    return false;
+  }
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+  return isRenderableCanvasNode(selectedNode);
+};
+
+const collectSelectionContextNodeIds = (nodes: DesignerNode[], selectedNodeId: string | null): Set<string> => {
+  const contextIds = new Set<string>();
+  if (!selectedNodeId) {
+    return contextIds;
+  }
+
+  const nodesById = new Map(nodes.map((node) => [node.id, node] as const));
+  const selectedNode = nodesById.get(selectedNodeId);
+  if (!selectedNode || !isRenderableCanvasNode(selectedNode)) {
+    return contextIds;
+  }
+
+  const childrenByParent = new Map<string, string[]>();
+  nodes.forEach((node) => {
+    if (!node.parentId) {
+      return;
+    }
+    const existing = childrenByParent.get(node.parentId);
+    if (existing) {
+      existing.push(node.id);
+    } else {
+      childrenByParent.set(node.parentId, [node.id]);
+    }
+  });
+
+  // Keep selected node and all ancestors fully opaque.
+  let current: DesignerNode | undefined = selectedNode;
+  while (current) {
+    contextIds.add(current.id);
+    current = current.parentId ? nodesById.get(current.parentId) : undefined;
+  }
+
+  // Keep selected node subtree fully opaque.
+  const stack = [selectedNode.id];
+  while (stack.length > 0) {
+    const parentId = stack.pop();
+    if (!parentId) {
+      continue;
+    }
+    const childIds = childrenByParent.get(parentId) ?? [];
+    childIds.forEach((childId) => {
+      if (contextIds.has(childId)) {
+        return;
+      }
+      contextIds.add(childId);
+      stack.push(childId);
+    });
+  }
+
+  return contextIds;
+};
+
+const hasMovedBeyondThreshold = (
+  start: { x: number; y: number } | null,
+  current: { x: number; y: number },
+  threshold = 3
+): boolean => {
+  if (!start) {
+    return false;
+  }
+  return Math.abs(current.x - start.x) > threshold || Math.abs(current.y - start.y) > threshold;
+};
+
+const shouldToggleSelectionOff = (wasSelectedOnPointerDown: boolean, pointerMoved: boolean): boolean =>
+  wasSelectedOnPointerDown && !pointerMoved;
+
+const shouldDeemphasizeNode = (
+  hasActiveSelection: boolean,
+  isInSelectionContext: boolean,
+  isDragging: boolean
+): boolean => hasActiveSelection && !isInSelectionContext && !isDragging;
+
+const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const isTotalsRowType = (type: DesignerNode['type']): type is 'subtotal' | 'tax' | 'discount' | 'custom-total' =>
+  type === 'subtotal' || type === 'tax' || type === 'discount' || type === 'custom-total';
+
+const resolveTotalsRowLabelFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+  switch (type) {
+    case 'subtotal':
+      return 'Subtotal';
+    case 'tax':
+      return 'Tax';
+    case 'discount':
+      return 'Discount';
+    case 'custom-total':
+      return 'Total';
+  }
+};
+
+const resolveTotalsRowBindingFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+  switch (type) {
+    case 'subtotal':
+      return 'invoice.subtotal';
+    case 'tax':
+      return 'invoice.tax';
+    case 'discount':
+      return 'invoice.discount';
+    case 'custom-total':
+      return 'invoice.total';
+  }
+};
+
+const resolveTotalsRowAmountFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+  switch (type) {
+    case 'subtotal':
+      return '$1,200.00';
+    case 'tax':
+      return '$96.00';
+    case 'discount':
+      return '-$50.00';
+    case 'custom-total':
+      return '$1,296.00';
+  }
+};
+
+const resolveTotalsRowPreviewModel = (
+  node: DesignerNode,
+  previewData: WasmInvoiceViewModel | null = null
+): TotalsRowPreviewModel => {
+  if (!isTotalsRowType(node.type)) {
+    return {
+      label: node.name,
+      bindingKey: 'binding',
+      previewValue: '$0.00',
+      isGrandTotal: false,
+    };
+  }
+
+  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
+  const label = asTrimmedString(metadata.label) || asTrimmedString(node.name) || fallbackLabel;
+  const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
+  const format = normalizeFieldFormat(metadata.format ?? 'currency');
+  const boundValue = formatBoundValue(
+    resolveInvoiceBindingRawValue(previewData, bindingKey),
+    format,
+    previewData?.currencyCode ?? 'USD'
+  );
+  const previewValue =
+    boundValue ||
+    asTrimmedString(metadata.previewValue) ||
+    asTrimmedString(metadata.sampleValue) ||
+    resolveTotalsRowAmountFallback(node.type);
+  const isGrandTotal = /\b(grand total|amount due|balance due|total due)\b/i.test(label);
+
+  return {
+    label,
+    bindingKey,
+    previewValue,
+    isGrandTotal,
+  };
+};
+
+const renderTablePreview = (
+  metadata: Record<string, unknown>,
+  previewData: WasmInvoiceViewModel | null
+): React.ReactNode => {
+  const borderConfig = resolveTableBorderConfig(metadata);
+  const headerWeightClass = FONT_WEIGHT_CLASS[
+    resolveFontWeightStyle(metadata.tableHeaderFontWeight, 'semibold')
+  ];
+  const columns = Array.isArray((metadata as { columns?: unknown }).columns)
+    ? (metadata as { columns: Array<Record<string, unknown>> }).columns
+    : [];
+  const rows = previewData?.items ?? [];
+
+  const resolvedColumns =
+    columns.length > 0
+      ? columns
+      : [
+          { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text' },
+          { id: 'col-qty', header: 'Qty', key: 'item.quantity', type: 'number' },
+          { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency' },
+          { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency' },
+        ];
+  const visibleColumns = resolvedColumns.slice(0, 4);
+  const tableGridTemplateColumns = resolveTableGridTemplateColumns(visibleColumns);
+  const visibleRows = rows.slice(0, 5);
+
+  return (
+    <div
+      className={clsx(
+        'h-full overflow-hidden text-[10px] text-slate-700 rounded-sm bg-white',
+        borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
+      )}
+    >
+      <div
+        className={clsx(
+          'grid gap-0 pb-1 uppercase tracking-wide text-slate-500',
+          headerWeightClass,
+          borderConfig.rowDividers && ['border-b', INVOICE_BORDER_COLOR_CLASS]
+        )}
+        style={{ gridTemplateColumns: tableGridTemplateColumns }}
+      >
+        {visibleColumns.map((column, index) => (
+          <span
+            key={String(column.id ?? column.key ?? 'column')}
+            className={clsx(
+              'truncate px-1 py-1',
+              borderConfig.columnDividers &&
+                index < visibleColumns.length - 1 && ['border-r', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+            )}
+          >
+            {String(column.header ?? column.key ?? 'Column')}
+          </span>
+        ))}
+      </div>
+      {visibleRows.length === 0 ? (
+        <div className="px-2 py-2 text-slate-400 italic">No line items</div>
+      ) : (
+        <div className="pt-1">
+          {visibleRows.map((item, rowIndex) => (
+            <div
+              key={item.id}
+                className={clsx(
+                  'grid gap-0',
+                  borderConfig.rowDividers &&
+                    rowIndex < visibleRows.length - 1 && ['border-b', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+                )}
+                style={{ gridTemplateColumns: tableGridTemplateColumns }}
+              >
+              {visibleColumns.map((column, columnIndex) => {
+                const key = asTrimmedString(column.key);
+                const type = normalizeFieldFormat(column.type);
+                const rawValue = resolveTableItemBindingRawValue(previewData, item, key);
+                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
+                return (
+                  <span
+                    key={`${item.id}-${String(column.id ?? key)}`}
+                    className={clsx(
+                      'truncate px-1 py-0.5',
+                      borderConfig.columnDividers &&
+                        columnIndex < visibleColumns.length - 1 && ['border-r', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+                    )}
+                  >
+                    {text}
+                  </span>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+      {rows.length > 5 && <div className="px-1 pt-1 text-[10px] text-slate-400">+{rows.length - 5} more rows</div>}
+    </div>
+  );
+};
+
+const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): React.ReactNode => {
+  const currencyCode = previewData?.currencyCode ?? 'USD';
+  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? '$0.00';
+  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? '$0.00';
+  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode) ?? '$0.00';
+  return (
+    <div className="space-y-1 text-[11px]">
+      <div className="flex items-center justify-between text-slate-600">
+        <span>Subtotal</span>
+        <span className="tabular-nums font-medium">{subtotal}</span>
+      </div>
+      <div className="flex items-center justify-between text-slate-600">
+        <span>Tax</span>
+        <span className="tabular-nums font-medium">{tax}</span>
+      </div>
+      <div className={clsx('flex items-center justify-between border-t pt-1 font-semibold text-slate-900', INVOICE_BORDER_COLOR_CLASS)}>
+        <span>Total</span>
+        <span className="tabular-nums">{total}</span>
+      </div>
+    </div>
+  );
+};
+
+const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null): PreviewContentResult => {
+  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  switch (node.type) {
+    case 'field': {
+      const bindingKey =
+        asTrimmedString(metadata.bindingKey) ||
+        asTrimmedString(metadata.binding) ||
+        asTrimmedString(metadata.key) ||
+        asTrimmedString(metadata.path);
+      const boundValue = resolveFieldPreviewValue({
+        invoice: previewData,
+        bindingKey,
+        format: metadata.format,
+      });
+      if (boundValue) {
+        return {
+          content: boundValue,
+          singleLine: true,
+        };
+      }
+      const preview = resolveFieldPreviewScaffold(node);
+      if (preview.isPlaceholder) {
+        return {
+          content: renderPlaceholderPreview(preview.text),
+          isPlaceholder: true,
+          singleLine: true,
+        };
+      }
+      return {
+        content: preview.text,
+        singleLine: true,
+      };
+    }
+    case 'label': {
+      const preview = resolveLabelPreviewScaffold(node);
+      if (preview.isPlaceholder) {
+        return {
+          content: renderPlaceholderPreview(preview.text),
+          isPlaceholder: true,
+          singleLine: true,
+        };
+      }
+      return {
+        content: preview.text,
+        singleLine: true,
+      };
+    }
+    case 'text': {
+      const text = typeof metadata.text === 'string' ? metadata.text : node.name;
+      const content = text.length > 0 ? text.slice(0, 140) : node.name;
+      
+      // Check for interpolation variables {{var}}
+      const parts = content.split(/(\{\{.*?\}\})/g);
+      if (parts.length === 1) {
+        return { content };
+      }
+      
+      return {
+        content: (
+          <span>
+            {parts.map((part, index) => {
+              if (part.startsWith('{{') && part.endsWith('}}')) {
+                return (
+                  <span
+                    key={index}
+                    className="text-blue-600 bg-blue-50 px-1 rounded font-mono text-[10px] mx-0.5 border border-blue-100"
+                  >
+                    {part}
+                  </span>
+                );
+              }
+              return part;
+            })}
+          </span>
+        ),
+      };
+    }
+    case 'subtotal':
+    case 'tax':
+    case 'discount':
+    case 'custom-total': {
+      const totalsRow = resolveTotalsRowPreviewModel(node, previewData);
+      return {
+        content: (
+          <div className="flex h-full flex-col justify-between gap-1">
+            <div
+              className={clsx(
+                'flex min-h-[14px] items-baseline justify-between gap-3',
+                totalsRow.isGrandTotal && ['border-t pt-1', INVOICE_BORDER_COLOR_CLASS]
+              )}
+            >
+              <span
+                className={clsx(
+                  'min-w-0 truncate',
+                  totalsRow.isGrandTotal ? 'text-[11px] font-semibold text-slate-800' : 'text-[11px] font-medium text-slate-600'
+                )}
+                title={totalsRow.label}
+              >
+                {totalsRow.label}
+              </span>
+              <span
+                className={clsx(
+                  'shrink-0 text-right tabular-nums',
+                  totalsRow.isGrandTotal ? 'text-[12px] font-bold text-slate-900' : 'text-[11px] font-semibold text-slate-700'
+                )}
+                title={totalsRow.previewValue}
+              >
+                {totalsRow.previewValue}
+              </span>
+            </div>
+            <div
+              className={clsx(
+                'truncate text-[10px] font-mono',
+                totalsRow.isGrandTotal ? 'text-slate-500' : 'text-slate-400'
+              )}
+              title={totalsRow.bindingKey}
+            >
+              {`{${totalsRow.bindingKey}}`}
+            </div>
+          </div>
+        ),
+      };
+    }
+    case 'table':
+    case 'dynamic-table': {
+      return {
+        content: renderTablePreview(metadata, previewData),
+      };
+    }
+    case 'action-button':
+      return { content: metadata.label ? `Button: ${metadata.label}` : 'Button' };
+    case 'signature':
+      return { content: metadata.signerLabel ? `Signature · ${metadata.signerLabel}` : 'Signature' };
+    case 'attachment-list':
+      return { content: metadata.title ? `Attachments: ${metadata.title}` : 'Attachments' };
+    case 'totals':
+      return { content: renderTotalsSummaryPreview(previewData) };
+    case 'divider':
+      return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
+    case 'spacer':
+      return {
+        content: (
+          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
+            Spacer
+          </div>
+        ),
+      };
+    case 'container':
+      return { content: null }; // Container renders children directly
+    default:
+      return { content: `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}` };
+  }
+};
+
+const CanvasNode: React.FC<CanvasNodeProps> = ({
+  node,
+  isSelected,
+  isReferenceNode,
+  isConstraintCounterpart,
+  isInSelectionContext,
+  hasActiveSelection,
+  isDragActive,
+  forcedDropTarget,
+  onSelect,
+  onResize,
+  renderChildren,
+  childExtents,
+  readOnly,
+  previewData,
+  applySelectionDeemphasis,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `node-${node.id}`,
+    disabled: readOnly,
+    data: {
+      nodeId: node.id,
+    },
+  });
+  const isContainer = node.allowedChildren.length > 0;
+  const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
+    id: `droppable-${node.id}`,
+    disabled: !isContainer || readOnly,
+    data: isContainer
+      ? {
+          nodeId: node.id,
+          nodeType: node.type,
+          allowedChildren: node.allowedChildren,
+        }
+      : undefined,
+  });
+
+  const inferredWidth =
+    isContainer && childExtents && Number.isFinite(childExtents.maxRight)
+      ? Math.max(node.size.width, childExtents.maxRight - node.position.x)
+      : node.size.width;
+  const inferredHeight =
+    isContainer && childExtents && Number.isFinite(childExtents.maxBottom)
+      ? Math.max(node.size.height, childExtents.maxBottom - node.position.y)
+      : node.size.height;
+  const localPosition = {
+    x: node.position.x,
+    y: node.position.y,
+  };
+  const nodeStyle: React.CSSProperties = {
+    width: inferredWidth,
+    height: inferredHeight,
+    top: localPosition.y,
+    left: localPosition.x,
+    position: 'absolute',
+    transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    zIndex: isDragging ? 40 : isSelected ? 30 : 10,
+  };
+  const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
+  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
+  const isTotalsRow = isTotalsRowType(node.type);
+  const isLabelNode = node.type === 'label';
+  const isFieldNode = node.type === 'field';
+  const labelWeightClass = FONT_WEIGHT_CLASS[
+    resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
+  ];
+  const sectionBorderStyle = node.type === 'section' ? resolveSectionBorderStyle(metadata) : 'light';
+  const fieldBorderStyle = isFieldNode ? resolveFieldBorderStyle(metadata) : 'box';
+  const sectionContainerClasses =
+    node.type === 'section'
+      ? clsx(sectionCue?.toneClass ?? 'bg-blue-100/45', resolveSectionBorderClasses(sectionBorderStyle))
+      : 'border bg-blue-50/40 border-blue-200 border-dashed';
+  const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
+  const isInlineFieldLike = isFieldNode || isLabelNode;
+  const isCompactLeaf = isTotalsRow || isInlineFieldLike;
+
+  const combinedRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      // dnd-kit refs are typed as HTMLElement; HTMLDivElement is compatible.
+      setNodeRef(element);
+      if (isContainer) {
+        setDropZoneRef(element);
+      }
+    },
+    [isContainer, setDropZoneRef, setNodeRef]
+  );
+
+  const draggablePointerDown = listeners?.onPointerDown;
+  const previewContent = useMemo(() => getPreviewContent(node, previewData), [node, previewData]);
+  const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerDownSelectedRef = useRef(false);
+  const pointerMovedRef = useRef(false);
+
+  const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    event.stopPropagation();
+    if (readOnly) {
+      return;
+    }
+    pointerDownPositionRef.current = { x: event.clientX, y: event.clientY };
+    pointerDownSelectedRef.current = isSelected;
+    pointerMovedRef.current = false;
+    onSelect(node.id);
+    draggablePointerDown?.(event);
+  };
+
+  const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly) {
+      return;
+    }
+    if (pointerMovedRef.current) {
+      return;
+    }
+    pointerMovedRef.current = hasMovedBeyondThreshold(pointerDownPositionRef.current, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly) {
+      return;
+    }
+    if (!pointerMovedRef.current) {
+      pointerMovedRef.current = hasMovedBeyondThreshold(pointerDownPositionRef.current, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+  };
+
+  const handlePointerCancel: React.PointerEventHandler<HTMLDivElement> = () => {
+    pointerDownPositionRef.current = null;
+    pointerDownSelectedRef.current = false;
+    pointerMovedRef.current = false;
+  };
+
+  const handleNodeClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    event.stopPropagation();
+    if (readOnly) {
+      return;
+    }
+    const shouldDeselect = shouldToggleSelectionOff(pointerDownSelectedRef.current, pointerMovedRef.current);
+    pointerDownPositionRef.current = null;
+    pointerDownSelectedRef.current = false;
+    pointerMovedRef.current = false;
+    if (shouldDeselect) {
+      onSelect(null);
+    }
+  };
+
+  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (readOnly) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const { width, height } = node.size;
+    let latestSize = node.size;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      latestSize = {
+        width: Math.max(40, width + deltaX),
+        height: Math.max(32, height + deltaY),
+      };
+      onResize(node.id, latestSize, false);
+    };
+
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      upEvent.preventDefault();
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      onResize(node.id, latestSize, true);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  };
+
+  return (
+    <div
+      ref={combinedRef}
+      style={nodeStyle}
+      data-automation-id={`designer-canvas-node-${node.id}`}
+      className={clsx(
+        'select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
+        isLabelNode
+          ? 'rounded-sm border border-transparent bg-transparent shadow-none'
+          : [
+              'rounded-md',
+              isContainer ? sectionContainerClasses : `border bg-white shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
+            ],
+        isSelected &&
+          (isLabelNode
+            ? 'ring-2 ring-blue-600/70 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]'
+            : 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500'),
+        !isSelected &&
+          isReferenceNode &&
+          'ring-2 ring-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.2)]',
+        !isSelected &&
+          isConstraintCounterpart &&
+          'ring-2 ring-cyan-500 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]',
+        ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
+          'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
+        shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
+        isDragging && 'opacity-80'
+      )}
+      {...(readOnly ? {} : listeners)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onClick={handleNodeClick}
+      {...(readOnly ? {} : attributes)}
+    >
+      {isContainer ? (
+        <div className="relative w-full h-full">
+          {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
+          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10 flex items-center gap-1.5">
+            <span>{node.name} · {node.type}</span>
+            {sectionCue && (
+              <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
+                {sectionCue.label}
+              </span>
+            )}
+          </div>
+          <div className="relative w-full h-full">
+            {renderChildren(node.id)}
+          </div>
+        </div>
+      ) : (
+        isCompactLeaf ? (
+          <div
+            className={clsx(
+              'h-full text-[11px] text-slate-500',
+              isLabelNode
+                ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
+                : isTotalsRow
+                  ? 'p-1.5 whitespace-pre-wrap'
+                  : fieldSurfaceClasses,
+              previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+              previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
+            )}
+          >
+            {previewContent.content}
+          </div>
+        ) : (
+          <>
+            <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
+              <span className="truncate">{node.name}</span>
+              <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
+            </div>
+            <div
+              className={clsx(
+                'text-[11px] text-slate-500',
+                node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
+                node.type === 'spacer' && 'h-full p-0',
+                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.isPlaceholder && 'text-slate-400'
+              )}
+            >
+              {previewContent.content}
+            </div>
+          </>
+        )
+      )}
+      {!readOnly && node.allowResize !== false && (
+        <div
+          role="button"
+          tabIndex={0}
+          onPointerDown={startResize}
+          className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-blue-500 bg-white cursor-se-resize"
+        />
+      )}
+    </div>
+  );
+};
+
+export const DesignCanvas: React.FC<DesignCanvasProps> = ({
+  nodes,
+  selectedNodeId,
+  activeReferenceNodeId = null,
+  constrainedCounterpartNodeIds = new Set<string>(),
+  showGuides,
+  showRulers,
+  gridSize,
+  canvasScale,
+  snapToGrid,
+  guides,
+  isDragActive,
+  forcedDropTarget,
+  droppableId,
+  onPointerLocationChange,
+  onNodeSelect,
+  onResize,
+  readOnly = false,
+  previewData = null,
+}) => {
+  const artboardRef = useRef<HTMLDivElement>(null);
+  const documentNode = useMemo(() => nodes.find((node) => node.parentId === null), [nodes]);
+  const defaultPageNode = useMemo(
+    () => nodes.find((node) => node.type === 'page' && node.parentId === documentNode?.id),
+    [nodes, documentNode?.id]
+  );
+  const rootDropMeta = defaultPageNode ?? documentNode;
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
+    id: droppableId,
+    data: rootDropMeta
+      ? {
+          nodeId: rootDropMeta.id,
+          nodeType: rootDropMeta.type,
+          allowedChildren: rootDropMeta.allowedChildren,
+        }
+      : undefined,
+  });
+  const setArtboardNodeRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      setDroppableNodeRef(node);
+      artboardRef.current = node;
+    },
+    [setDroppableNodeRef]
+  );
+
+  const backgroundStyle = useMemo<React.CSSProperties>(() => ({
+    backgroundSize: `${gridSize * canvasScale}px ${gridSize * canvasScale}px`,
+    backgroundImage: `linear-gradient(to right, ${GRID_COLOR} 1px, transparent 1px), linear-gradient(to bottom, ${GRID_COLOR} 1px, transparent 1px)`,
+  }), [gridSize, canvasScale]);
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, DesignerNode[]>();
+    nodes.forEach((node) => {
+      if (!node.parentId) return;
+      if (!map.has(node.parentId)) {
+        map.set(node.parentId, []);
+      }
+      map.get(node.parentId)!.push(node);
+    });
+    map.forEach((list) => {
+      list.sort((a, b) => (a.position.y - b.position.y) || (a.position.x - b.position.x));
+    });
+    return map;
+  }, [nodes]);
+
+  const childExtentsMap = useMemo(() => {
+    const map = new Map<string, { maxRight: number; maxBottom: number }>();
+    nodes.forEach((node) => {
+      if (!node.parentId) return;
+      const existing = map.get(node.parentId) ?? { maxRight: Number.NEGATIVE_INFINITY, maxBottom: Number.NEGATIVE_INFINITY };
+      const nodeRight = node.position.x + node.size.width;
+      const nodeBottom = node.position.y + node.size.height;
+      map.set(node.parentId, {
+        maxRight: Math.max(existing.maxRight, nodeRight),
+        maxBottom: Math.max(existing.maxBottom, nodeBottom),
+      });
+    });
+    return map;
+  }, [nodes]);
+
+  const hasActiveRenderableSelection = useMemo(
+    () => (readOnly ? false : hasRenderableActiveSelection(nodes, selectedNodeId)),
+    [nodes, readOnly, selectedNodeId]
+  );
+  const selectionContextNodeIds = useMemo(
+    () => (readOnly ? new Set<string>() : collectSelectionContextNodeIds(nodes, selectedNodeId)),
+    [nodes, readOnly, selectedNodeId]
+  );
+
+  const renderNodeTree = useCallback((parentId: string) => {
+    const children = childrenMap.get(parentId) ?? [];
+    return children
+      .filter((node) => node.type !== 'document' && node.type !== 'page')
+      .map((node) => (
+        <CanvasNode
+          key={`${node.id}-${(node as any)._version || 0}`}
+          node={node}
+          isSelected={selectedNodeId === node.id}
+          isReferenceNode={activeReferenceNodeId === node.id}
+          isConstraintCounterpart={constrainedCounterpartNodeIds.has(node.id)}
+          isInSelectionContext={selectionContextNodeIds.has(node.id)}
+          hasActiveSelection={hasActiveRenderableSelection}
+          isDragActive={isDragActive}
+          forcedDropTarget={forcedDropTarget}
+          onSelect={onNodeSelect}
+          onResize={onResize}
+          renderChildren={renderNodeTree}
+          childExtents={childExtentsMap.get(node.id)}
+          readOnly={readOnly}
+          previewData={previewData}
+          applySelectionDeemphasis={!readOnly}
+        />
+      ));
+  }, [
+    activeReferenceNodeId,
+    childExtentsMap,
+    childrenMap,
+    constrainedCounterpartNodeIds,
+    forcedDropTarget,
+    hasActiveRenderableSelection,
+    isDragActive,
+    onNodeSelect,
+    onResize,
+    previewData,
+    readOnly,
+    selectionContextNodeIds,
+    selectedNodeId,
+  ]);
+
+  const rootParentId = (defaultPageNode ?? documentNode)?.id;
+  const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
+  const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
+
+  const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly) {
+      return;
+    }
+    if (!artboardRef.current) {
+      return;
+    }
+    const rect = artboardRef.current.getBoundingClientRect();
+    const rawX = (event.clientX - rect.left) / canvasScale;
+    const rawY = (event.clientY - rect.top) / canvasScale;
+    const x = snapToGrid ? Math.round(rawX / gridSize) * gridSize : rawX;
+    const y = snapToGrid ? Math.round(rawY / gridSize) * gridSize : rawY;
+    onPointerLocationChange({ x, y });
+  };
+
+  const handlePointerLeave = () => {
+    if (!readOnly) {
+      onPointerLocationChange(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!readOnly) {
+      onPointerLocationChange(null);
+    }
+  }, [canvasScale, snapToGrid, gridSize, onPointerLocationChange, readOnly]);
+
+  return (
+    <div
+      className="relative flex-1 overflow-auto bg-slate-100"
+      onClick={() => {
+        if (!readOnly) {
+          onNodeSelect(null);
+        }
+      }}
+    >
+      {showRulers && (
+        <>
+          <div className="absolute top-0 left-12 right-0 h-8 bg-white border-b border-slate-200 flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
+            {Array.from({ length: Math.ceil(canvasWidth / 50) + 2 }).map((_, index) => (
+              <span key={`hr-${index}`}>{index * 50}</span>
+            ))}
+          </div>
+          <div className="absolute top-8 bottom-0 left-0 w-12 bg-white border-r border-slate-200 flex flex-col items-end text-[10px] text-slate-400 py-4 pr-1 gap-6 z-10">
+            {Array.from({ length: Math.ceil(canvasHeight / 50) + 2 }).map((_, index) => (
+              <span key={`vr-${index}`}>{index * 50}</span>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="relative flex-1" style={{ padding: showRulers ? '48px 0 0 48px' : '32px' }}>
+        <div
+          ref={setArtboardNodeRef}
+          className={clsx(
+            'relative mx-auto rounded-lg border border-slate-300 shadow-inner bg-white',
+            ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500'
+          )}
+          data-designer-canvas="true"
+          style={{ 
+            width: canvasWidth, 
+            height: canvasHeight, 
+            minHeight: DESIGNER_CANVAS_HEIGHT,
+            ...backgroundStyle 
+          }}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!readOnly) {
+              onNodeSelect(null);
+            }
+          }}
+        >
+          <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
+            Template Boundary
+          </div>
+          <div
+            className="absolute inset-0"
+            style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}
+          >
+            {rootParentId && renderNodeTree(rootParentId)}
+            {showGuides && guides.map((guide) => (
+              <div
+                key={`${guide.type}-${guide.position}`}
+                className={clsx(
+                  'absolute pointer-events-none',
+                  guide.type === 'vertical' ? 'w-px h-full bg-blue-400/60' : 'h-px w-full bg-blue-400/60'
+                )}
+                style={guide.type === 'vertical' ? { left: guide.position } : { top: guide.position }}
+              >
+                <span className="absolute text-[10px] bg-white px-1 text-blue-500">
+                  {guide.description}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const __designCanvasSelectionTestUtils = {
+  isRenderableCanvasNode,
+  hasRenderableActiveSelection,
+  collectSelectionContextNodeIds,
+  hasMovedBeyondThreshold,
+  shouldToggleSelectionOff,
+  shouldDeemphasizeNode,
+};
+
+export const __designCanvasPreviewTestUtils = {
+  resolveTotalsRowPreviewModel,
+  resolveSectionBorderStyle,
+  resolveFieldBorderStyle,
+  resolveFontWeightStyle,
+  resolveTableBorderPreset,
+  resolveTableBorderConfig,
+};

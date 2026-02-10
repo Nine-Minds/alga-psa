@@ -31,6 +31,7 @@ export class TenantClient {
 export class InvoiceViewModel {
   invoiceNumber: string = "";
   issueDate: string = "";
+  dueDate: string = "";
   currencyCode: string = "USD";
   poNumber: string | null = null;
   customer: Customer | null = null;
@@ -47,24 +48,179 @@ export class InvoiceViewModel {
 export abstract class LayoutElement {
   id: string = "";
   style: ElementStyle | null = null;
-  
+
+  protected appendBaseProperties(json: string): string {
+    json += `, "id": "${this.id}"`;
+    if (this.style != null) {
+      json += `, "style": ${this.style!.toJsonString()}`;
+    }
+    return json;
+  }
+
   abstract toJsonString(): string;
 }
 
 @json
 export class ElementStyle {
+  display: string | null = null;
+  flexDirection: string | null = null;
+  justifyContent: string | null = null;
+  alignItems: string | null = null;
+  gap: string | null = null;
+  flexGrow: string | null = null;
+  flexShrink: string | null = null;
+  flexBasis: string | null = null;
   width: string | null = null;
+  height: string | null = null;
   textAlign: string | null = null;
   fontWeight: string | null = null;
   marginTop: string | null = null;
+  marginLeft: string | null = null;
+  marginRight: string | null = null;
   paddingLeft: string | null = null;
   paddingRight: string | null = null;
   paddingTop: string | null = null;
   paddingBottom: string | null = null;
   borderBottom: string | null = null;
   borderTop: string | null = null;
+  borderRight: string | null = null;
   border: string | null = null;
+  borderRadius: string | null = null;
   marginBottom: string | null = null;
+
+  toJsonString(): string {
+    let json = "{";
+    let isFirst = true;
+
+    if (this.display != null) {
+      if (!isFirst) json += ", ";
+      json += `"display": "${this.display!}"`;
+      isFirst = false;
+    }
+    if (this.flexDirection != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexDirection": "${this.flexDirection!}"`;
+      isFirst = false;
+    }
+    if (this.justifyContent != null) {
+      if (!isFirst) json += ", ";
+      json += `"justifyContent": "${this.justifyContent!}"`;
+      isFirst = false;
+    }
+    if (this.alignItems != null) {
+      if (!isFirst) json += ", ";
+      json += `"alignItems": "${this.alignItems!}"`;
+      isFirst = false;
+    }
+    if (this.gap != null) {
+      if (!isFirst) json += ", ";
+      json += `"gap": "${this.gap!}"`;
+      isFirst = false;
+    }
+    if (this.flexGrow != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexGrow": "${this.flexGrow!}"`;
+      isFirst = false;
+    }
+    if (this.flexShrink != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexShrink": "${this.flexShrink!}"`;
+      isFirst = false;
+    }
+    if (this.flexBasis != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexBasis": "${this.flexBasis!}"`;
+      isFirst = false;
+    }
+    if (this.width != null) {
+      if (!isFirst) json += ", ";
+      json += `"width": "${this.width!}"`;
+      isFirst = false;
+    }
+    if (this.height != null) {
+      if (!isFirst) json += ", ";
+      json += `"height": "${this.height!}"`;
+      isFirst = false;
+    }
+    if (this.textAlign != null) {
+      if (!isFirst) json += ", ";
+      json += `"textAlign": "${this.textAlign!}"`;
+      isFirst = false;
+    }
+    if (this.fontWeight != null) {
+      if (!isFirst) json += ", ";
+      json += `"fontWeight": "${this.fontWeight!}"`;
+      isFirst = false;
+    }
+    if (this.marginTop != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginTop": "${this.marginTop!}"`;
+      isFirst = false;
+    }
+    if (this.marginLeft != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginLeft": "${this.marginLeft!}"`;
+      isFirst = false;
+    }
+    if (this.marginRight != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginRight": "${this.marginRight!}"`;
+      isFirst = false;
+    }
+    if (this.paddingLeft != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingLeft": "${this.paddingLeft!}"`;
+      isFirst = false;
+    }
+    if (this.paddingRight != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingRight": "${this.paddingRight!}"`;
+      isFirst = false;
+    }
+    if (this.paddingTop != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingTop": "${this.paddingTop!}"`;
+      isFirst = false;
+    }
+    if (this.paddingBottom != null) {
+      if (!isFirst) json += ", ";
+      json += `"paddingBottom": "${this.paddingBottom!}"`;
+      isFirst = false;
+    }
+    if (this.borderBottom != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderBottom": "${this.borderBottom!}"`;
+      isFirst = false;
+    }
+    if (this.borderTop != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderTop": "${this.borderTop!}"`;
+      isFirst = false;
+    }
+    if (this.borderRight != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderRight": "${this.borderRight!}"`;
+      isFirst = false;
+    }
+    if (this.border != null) {
+      if (!isFirst) json += ", ";
+      json += `"border": "${this.border!}"`;
+      isFirst = false;
+    }
+    if (this.borderRadius != null) {
+      if (!isFirst) json += ", ";
+      json += `"borderRadius": "${this.borderRadius!}"`;
+      isFirst = false;
+    }
+    if (this.marginBottom != null) {
+      if (!isFirst) json += ", ";
+      json += `"marginBottom": "${this.marginBottom!}"`;
+      isFirst = false;
+    }
+
+    json += "}";
+    return json;
+  }
 }
 
 export class TextElement extends LayoutElement {
@@ -78,7 +234,9 @@ export class TextElement extends LayoutElement {
   }
   
   toJsonString(): string {
-    return `{"type": "Text", "content": "${this.text}", "variant": "${this.tag || ""}", "id": "${this.id}"}`;
+    let json = `{"type": "Text", "content": "${this.text}", "variant": "${this.tag || ""}"`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -93,7 +251,9 @@ export class ImageElement extends LayoutElement {
   }
   
   toJsonString(): string {
-    return `{"type": "Image", "src": "${this.src}", "alt": "${this.alt}", "id": "${this.id}"}`;
+    let json = `{"type": "Image", "src": "${this.src}", "alt": "${this.alt}"`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -113,7 +273,9 @@ export class ColumnElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Column", "span": ${this.span}, "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Column", "span": ${this.span}, "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -132,7 +294,9 @@ export class RowElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Row", "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Row", "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -151,7 +315,9 @@ export class SectionElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Section", "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Section", "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
 
@@ -170,6 +336,8 @@ export class DocumentElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "Document", "children": ${childrenJson}, "id": "${this.id}"}`;
+    let json = `{"type": "Document", "children": ${childrenJson}`;
+    json = this.appendBaseProperties(json);
+    return json + "}";
   }
 }
