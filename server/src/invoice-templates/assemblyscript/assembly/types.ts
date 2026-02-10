@@ -67,6 +67,9 @@ export class ElementStyle {
   justifyContent: string | null = null;
   alignItems: string | null = null;
   gap: string | null = null;
+  flexGrow: string | null = null;
+  flexShrink: string | null = null;
+  flexBasis: string | null = null;
   width: string | null = null;
   height: string | null = null;
   textAlign: string | null = null;
@@ -112,6 +115,21 @@ export class ElementStyle {
     if (this.gap != null) {
       if (!isFirst) json += ", ";
       json += `"gap": "${this.gap!}"`;
+      isFirst = false;
+    }
+    if (this.flexGrow != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexGrow": "${this.flexGrow!}"`;
+      isFirst = false;
+    }
+    if (this.flexShrink != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexShrink": "${this.flexShrink!}"`;
+      isFirst = false;
+    }
+    if (this.flexBasis != null) {
+      if (!isFirst) json += ", ";
+      json += `"flexBasis": "${this.flexBasis!}"`;
       isFirst = false;
     }
     if (this.width != null) {

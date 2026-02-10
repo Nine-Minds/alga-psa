@@ -188,6 +188,30 @@ const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorde
   };
 };
 
+const TABLE_COLUMN_WIDTH_FALLBACKS = [220, 60, 100, 120];
+
+const resolveTableColumnPixelWidth = (column: Record<string, unknown>, index: number): number => {
+  const configuredWidth = Number(column.width);
+  if (Number.isFinite(configuredWidth) && configuredWidth > 0) {
+    return configuredWidth;
+  }
+  return TABLE_COLUMN_WIDTH_FALLBACKS[index] ?? 120;
+};
+
+const resolveTableGridTemplateColumns = (columns: Array<Record<string, unknown>>): string => {
+  if (columns.length === 0) {
+    return '1fr';
+  }
+  const widths = columns.map((column, index) => resolveTableColumnPixelWidth(column, index));
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+  if (!Number.isFinite(totalWidth) || totalWidth <= 0) {
+    return `repeat(${columns.length}, minmax(0, 1fr))`;
+  }
+  return widths
+    .map((width) => `${(Math.round((width / totalWidth) * 100000) / 1000).toFixed(3).replace(/\.?0+$/, '')}%`)
+    .join(' ');
+};
+
 const resolveSectionBorderClasses = (style: SectionBorderStyle) => {
   if (style === 'none') {
     return 'border border-transparent';
@@ -417,6 +441,7 @@ const renderTablePreview = (
           { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency' },
         ];
   const visibleColumns = resolvedColumns.slice(0, 4);
+  const tableGridTemplateColumns = resolveTableGridTemplateColumns(visibleColumns);
   const visibleRows = rows.slice(0, 5);
 
   return (
@@ -428,10 +453,11 @@ const renderTablePreview = (
     >
       <div
         className={clsx(
-          'grid grid-cols-4 gap-0 pb-1 uppercase tracking-wide text-slate-500',
+          'grid gap-0 pb-1 uppercase tracking-wide text-slate-500',
           headerWeightClass,
           borderConfig.rowDividers && ['border-b', INVOICE_BORDER_COLOR_CLASS]
         )}
+        style={{ gridTemplateColumns: tableGridTemplateColumns }}
       >
         {visibleColumns.map((column, index) => (
           <span
@@ -454,10 +480,11 @@ const renderTablePreview = (
             <div
               key={item.id}
                 className={clsx(
-                  'grid grid-cols-4 gap-0',
+                  'grid gap-0',
                   borderConfig.rowDividers &&
                     rowIndex < visibleRows.length - 1 && ['border-b', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
                 )}
+                style={{ gridTemplateColumns: tableGridTemplateColumns }}
               >
               {visibleColumns.map((column, columnIndex) => {
                 const key = asTrimmedString(column.key);

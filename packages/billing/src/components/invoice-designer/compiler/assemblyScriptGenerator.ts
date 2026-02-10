@@ -358,6 +358,33 @@ const resolveTableBorderConfig = (metadata: Record<string, unknown>): TableBorde
   };
 };
 
+const TABLE_COLUMN_WIDTH_FALLBACKS = [220, 60, 100, 120];
+
+const resolveTableColumnPixelWidth = (column: Record<string, unknown>, index: number): number => {
+  const configuredWidth = Number(column.width);
+  if (Number.isFinite(configuredWidth) && configuredWidth > 0) {
+    return configuredWidth;
+  }
+  return TABLE_COLUMN_WIDTH_FALLBACKS[index] ?? 120;
+};
+
+const formatPercentage = (value: number): string =>
+  `${(Math.round(value * 1000) / 1000).toFixed(3).replace(/\.?0+$/, '')}%`;
+
+const resolveTableColumnBasisPercentages = (columns: Array<Record<string, unknown>>): string[] => {
+  if (columns.length === 0) {
+    return [];
+  }
+
+  const widths = columns.map((column, index) => resolveTableColumnPixelWidth(column, index));
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+  if (!Number.isFinite(totalWidth) || totalWidth <= 0) {
+    const equalShare = formatPercentage(100 / columns.length);
+    return columns.map(() => equalShare);
+  }
+  return widths.map((width) => formatPercentage((width / totalWidth) * 100));
+};
+
 const resolveTotalBindingFallback = (node: InvoiceDesignerIrTreeNode): string => {
   if (node.type === 'subtotal') return 'invoice.subtotal';
   if (node.type === 'tax') return 'invoice.tax';
@@ -630,12 +657,14 @@ const emitNodeFactory = (
               { header: 'Amount', key: 'item.total', type: 'currency' },
             ];
       const visibleColumns = resolvedColumns.slice(0, 4);
+      const columnBasisPercentages = resolveTableColumnBasisPercentages(visibleColumns);
       lines.push('  const headerCells = new Array<LayoutElement>();');
       visibleColumns.forEach((column, columnIndex) => {
         const header = asTrimmedString(column.header) || asTrimmedString(column.key) || 'Column';
         const cellVar = `headerCell${columnIndex}`;
         const textVar = `headerText${columnIndex}`;
         const textStyleVar = `headerTextStyle${columnIndex}`;
+        const cellBasis = columnBasisPercentages[columnIndex] ?? '25%';
         lines.push(
           `  const ${textVar} = new TextElement("${escapeSourceString(header)}", "label");`
         );
@@ -648,14 +677,18 @@ const emitNodeFactory = (
         lines.push(
           `  const ${cellVar} = new ColumnElement([${textVar}]);`
         );
+        lines.push(`  const ${cellVar}Style = new ElementStyle();`);
+        lines.push(`  ${cellVar}Style.flexGrow = "0";`);
+        lines.push(`  ${cellVar}Style.flexShrink = "0";`);
+        lines.push(`  ${cellVar}Style.flexBasis = "${escapeSourceString(cellBasis)}";`);
+        lines.push(`  ${cellVar}Style.width = "${escapeSourceString(cellBasis)}";`);
         lines.push(
           `  ${cellVar}.id = "${escapeSourceString(node.id)}__header_cell_${columnIndex}";`
         );
         if (tableBorderConfig.columnDividers && columnIndex < visibleColumns.length - 1) {
-          lines.push(`  const ${cellVar}Style = new ElementStyle();`);
           lines.push(`  ${cellVar}Style.borderRight = "${INVOICE_BORDER_SUBTLE}";`);
-          lines.push(`  ${cellVar}.style = ${cellVar}Style;`);
         }
+        lines.push(`  ${cellVar}.style = ${cellVar}Style;`);
         lines.push(`  headerCells.push(${cellVar});`);
       });
       lines.push('  const headerRow = new RowElement(headerCells);');
@@ -674,19 +707,24 @@ const emitNodeFactory = (
         const key = asTrimmedString(column.key) || 'item.description';
         const format = asTrimmedString(column.type) || 'text';
         const cellVar = `rowCell${columnIndex}`;
+        const cellBasis = columnBasisPercentages[columnIndex] ?? '25%';
         lines.push(
           `    const ${cellVar} = new ColumnElement([new TextElement(resolveItemBinding(viewModel, rowItem, "${escapeSourceString(
             key
           )}", "${escapeSourceString(format)}"))]);`
         );
+        lines.push(`    const ${cellVar}Style = new ElementStyle();`);
+        lines.push(`    ${cellVar}Style.flexGrow = "0";`);
+        lines.push(`    ${cellVar}Style.flexShrink = "0";`);
+        lines.push(`    ${cellVar}Style.flexBasis = "${escapeSourceString(cellBasis)}";`);
+        lines.push(`    ${cellVar}Style.width = "${escapeSourceString(cellBasis)}";`);
         lines.push(
           `    ${cellVar}.id = "${escapeSourceString(node.id)}__row_cell_${columnIndex}_" + itemIndex.toString();`
         );
         if (tableBorderConfig.columnDividers && columnIndex < visibleColumns.length - 1) {
-          lines.push(`    const ${cellVar}Style = new ElementStyle();`);
           lines.push(`    ${cellVar}Style.borderRight = "${INVOICE_BORDER_SUBTLE}";`);
-          lines.push(`    ${cellVar}.style = ${cellVar}Style;`);
         }
+        lines.push(`    ${cellVar}.style = ${cellVar}Style;`);
         lines.push(`    rowCells.push(${cellVar});`);
       });
       lines.push('    const row = new RowElement(rowCells);');

@@ -28,7 +28,7 @@ function applyGeneratedLayoutStyle(node: LayoutElement, width: i32, height: i32,
   },
   {
     "name": "table-and-total",
-    "sourceHash": "fnv1a32-f50c1365",
+    "sourceHash": "fnv1a32-53c4df0d",
     "sourcePreview": "import { JSON } from "json-as";
 import { InvoiceViewModel, InvoiceItem, LayoutElement, ElementStyle, DocumentElement, SectionElement, RowElement, ColumnElement, TextElement, ImageElement } from "../assembly/types";
 

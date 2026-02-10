@@ -396,6 +396,53 @@ describe('DesignCanvas preview mode', () => {
     expect(listTableRoot?.querySelector('.border-b')).toBeTruthy();
   });
 
+  it('applies configured table column widths in preview grid tracks', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'table-widths',
+        type: 'dynamic-table',
+        name: 'Line Items Widths',
+        size: { width: 520, height: 220 },
+        metadata: {
+          columns: [
+            { id: 'c1', header: 'Description', key: 'item.description', type: 'text', width: 320 },
+            { id: 'c2', header: 'Qty', key: 'item.quantity', type: 'number', width: 70 },
+            { id: 'c3', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 110 },
+            { id: 'c4', header: 'Amount', key: 'item.total', type: 'currency', width: 140 },
+          ],
+        },
+      }),
+    ]);
+
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    const tableHeaderRow = screen.getByText('Description').closest('div');
+    const gridTemplateColumns = tableHeaderRow?.style.gridTemplateColumns ?? '';
+    const gridTracks = gridTemplateColumns.split(' ').filter((track) => track.length > 0);
+
+    expect(gridTracks.length).toBe(4);
+    expect(new Set(gridTracks).size).toBeGreaterThan(1);
+  });
+
   it('renders table border lines when enabled', () => {
     const nodes = buildCanvasNodes([
       baseNode({
