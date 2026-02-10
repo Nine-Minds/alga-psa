@@ -284,7 +284,7 @@
   {
     "id": "F045",
     "description": "Replace hardcoded hex colors for collaboration cursor (`#0d0d0d`) in globals.css with CSS variables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.2"]
   },
   {

@@ -521,8 +521,8 @@ body {
 
 /* Give a remote user a caret */
 .collaboration-cursor__caret {
-    border-left: 1px solid #0d0d0d;
-    border-right: 1px solid #0d0d0d;
+    border-left: 1px solid rgb(var(--color-text-900));
+    border-right: 1px solid rgb(var(--color-text-900));
     margin-left: -1px;
     margin-right: -1px;
     pointer-events: none;
@@ -533,7 +533,7 @@ body {
 /* Render the username above the caret */
 .collaboration-cursor__label {
     border-radius: 3px 3px 3px 0;
-    color: #0d0d0d;
+    color: rgb(var(--color-text-900));
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 600;
