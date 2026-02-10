@@ -103,21 +103,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Track the last activeTab to detect actual changes
   const prevActiveTab = useRef(activeTab);
 
-  // Stable tab identifiers (not translated) for comparison
-  const TAB_IDS = {
-    internal: 'Internal',
-    resolution: 'Resolution',
-    client: 'Client',
-    allComments: 'All Comments'
-  };
-
-  // Helper to match activeTab against stable IDs (handles translations)
-  const matchesTab = (tab: string, id: string): boolean => {
-    // Match against both the ID and the translated version
-    const translated = t(`tickets.conversation.${id.toLowerCase().replace(' ', '')}`, id);
-    return tab === id || tab === translated;
-  };
-
   // Auto-sync toggles with active tab
   // - Tab clicks: mutually exclusive (turn other OFF)
   // - Toggle clicks: preserve other toggle (tracked via ref)
@@ -134,19 +119,19 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     prevActiveTab.current = activeTab;
 
     // All Comments tab - leave toggles as-is
-    if (matchesTab(activeTab, TAB_IDS.allComments)) {
+    if (activeTab === 'All Comments') {
       return;
     }
 
     if (!hideInternalTab) {
       // MSP Portal
-      if (matchesTab(activeTab, TAB_IDS.internal)) {
+      if (activeTab === 'Internal') {
         setIsInternalToggle(true);
         // Only turn off Resolution if this was a direct tab click (not from toggle)
         if (!fromToggle) {
           setIsResolutionToggle(false);
         }
-      } else if (matchesTab(activeTab, TAB_IDS.resolution)) {
+      } else if (activeTab === 'Resolution') {
         setIsResolutionToggle(true);
         // Only turn off Internal if this was a direct tab click (not from toggle)
         if (!fromToggle) {
@@ -159,13 +144,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       }
     } else {
       // Client Portal: only handle resolution tab
-      if (matchesTab(activeTab, TAB_IDS.resolution)) {
+      if (activeTab === 'Resolution') {
         setIsResolutionToggle(true);
       } else {
         setIsResolutionToggle(false);
       }
     }
-  }, [activeTab, hideInternalTab, t]);
+  }, [activeTab, hideInternalTab]);
 
   const handleAddCommentClick = () => {
     setShowEditor(true);
@@ -213,16 +198,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     if (checked) {
       // Turn ON Internal → go to Internal tab, preserve Resolution toggle
       tabChangeFromToggle.current = true;
-      onTabChange(t('tickets.conversation.internal', 'Internal'));
+      onTabChange('Internal');
     } else {
       // Turn OFF Internal
       if (isResolutionToggle) {
         // Resolution still ON → switch to Resolution tab
         tabChangeFromToggle.current = true;
-        onTabChange(t('tickets.conversation.resolution', 'Resolution'));
+        onTabChange('Resolution');
       } else {
         // Both OFF → switch to Client tab
-        onTabChange(t('tickets.conversation.client', 'Client'));
+        onTabChange('Client');
       }
     }
   };
@@ -233,16 +218,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     if (checked) {
       // Turn ON Resolution → go to Resolution tab, preserve Internal toggle
       tabChangeFromToggle.current = true;
-      onTabChange(t('tickets.conversation.resolution', 'Resolution'));
+      onTabChange('Resolution');
     } else {
       // Turn OFF Resolution
       if (isInternalToggle) {
         // Internal still ON → switch to Internal tab
         tabChangeFromToggle.current = true;
-        onTabChange(t('tickets.conversation.internal', 'Internal'));
+        onTabChange('Internal');
       } else {
         // Both OFF → switch to Client tab
-        onTabChange(t('tickets.conversation.client', 'Client'));
+        onTabChange('Client');
       }
     }
   };
