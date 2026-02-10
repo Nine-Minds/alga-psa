@@ -427,6 +427,28 @@ const snapshotConstraint = (constraint: DesignerConstraint): DesignerConstraint 
 const snapshotConstraints = (constraints: DesignerConstraint[]): DesignerConstraint[] =>
   constraints.map((constraint) => snapshotConstraint(constraint));
 
+const collectSubtreeNodeIds = (rootId: string, nodesById: Map<string, DesignerNode>): Set<string> => {
+  const collected = new Set<string>();
+  const queue: string[] = [rootId];
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    if (!currentId || collected.has(currentId)) {
+      continue;
+    }
+    collected.add(currentId);
+    const current = nodesById.get(currentId);
+    if (!current) {
+      continue;
+    }
+    current.childIds.forEach((childId) => {
+      queue.push(childId);
+    });
+  }
+
+  return collected;
+};
+
 const createHistoryEntry = (nodes: DesignerNode[], constraints: DesignerConstraint[]): DesignerHistoryEntry => ({
   nodes: snapshotNodes(nodes),
   constraints: snapshotConstraints(constraints),
@@ -1523,11 +1545,28 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
              });
           }
         }
-        
-        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
-        const { history, historyIndex } = appendHistory(state, resolvedNodes, state.constraints);
+
+        let nextConstraints = state.constraints;
+        if (mode === 'flex') {
+          const nodesById = new Map(nodes.map((node) => [node.id, node]));
+          const subtreeIds = collectSubtreeNodeIds(nodeId, nodesById);
+          nextConstraints = nextConstraints.filter((constraint) => {
+            if (constraint.type === 'aspect-ratio') {
+              return true;
+            }
+            if (constraint.type !== 'align-left' && constraint.type !== 'align-top') {
+              return true;
+            }
+            return !constraint.nodes.some((id) => subtreeIds.has(id));
+          });
+        }
+
+        const { constraints } = sanitizeConstraints(nodes, nextConstraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, constraints);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes, constraints);
         return {
           nodes: resolvedNodes,
+          constraints,
           history,
           historyIndex,
           constraintError,
