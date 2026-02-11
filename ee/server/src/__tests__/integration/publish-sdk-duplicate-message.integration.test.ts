@@ -23,7 +23,7 @@ describe('CLI publish duplicate-version messaging', () => {
     );
 
     const fetchImpl = vi
-      .fn<typeof fetch>()
+      .fn()
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -45,7 +45,7 @@ describe('CLI publish duplicate-version messaging', () => {
           }),
           { status: 409, headers: { 'content-type': 'application/json' } }
         )
-      );
+      ) as unknown as typeof fetch;
 
     try {
       const result = await publishExtension({
