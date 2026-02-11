@@ -209,7 +209,7 @@ export async function POST(req: Request) {
     } catch (e: any) {
       const code = (e?.code || e?.name || '').toString();
       const message = typeof e?.message === 'string' ? e.message : 'unknown';
-      const cfgMissing = code === 'BUNDLE_CONFIG_MISSING' || /not configured/i.test(message);
+      const cfgMissing = code === 'BUNDLE_CONFIG_MISSING' || /not configured|Missing required environment variable/i.test(message);
       log("ext_bundles.upload_proxy.bucket_missing", { requestId, actor, message, code });
       const r = json(500, { error: cfgMissing ? "Extension bundle storage not configured" : "Storage bucket not found", code: cfgMissing ? "BUNDLE_CONFIG_MISSING" : "BUCKET_NOT_FOUND" });
       r.headers.set("x-request-id", requestId);

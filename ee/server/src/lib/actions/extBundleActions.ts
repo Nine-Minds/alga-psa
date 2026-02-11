@@ -165,7 +165,6 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
 
   const contentType: string = (file as any).type || "application/octet-stream";
 
-  const store = createS3BundleStore();
   const started = Date.now();
   // Preflight: verify bucket exists; surface clear error if not
   try {
@@ -174,11 +173,16 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
     await s3.send(new HeadBucketCommand({ Bucket } as any));
   } catch (e: any) {
     const code = (e?.code || e?.name || '').toString();
+    const message = typeof e?.message === 'string' ? e.message : '';
     if (code === 'BUNDLE_CONFIG_MISSING') {
-      throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUNDLE_BUCKET)');
+      throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUCKET and STORAGE_S3_REGION; optionally STORAGE_S3_BUNDLE_BUCKET)');
+    }
+    if (/Missing required environment variable/i.test(message)) {
+      throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUCKET and STORAGE_S3_REGION; optionally STORAGE_S3_BUNDLE_BUCKET)');
     }
     throw new HttpError(500, "BUCKET_NOT_FOUND", "Storage bucket not found. Please contact an administrator to configure extension storage.");
   }
+  const store = createS3BundleStore();
   try {
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
@@ -262,7 +266,7 @@ async function finalizeUploadInternal(params: FinalizeParamsInternal): Promise<F
   try {
     void getBundleBucket();
   } catch (e: any) {
-    throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUNDLE_BUCKET)');
+    throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUCKET and STORAGE_S3_REGION; optionally STORAGE_S3_BUNDLE_BUCKET)');
   }
 
   // Validate key
