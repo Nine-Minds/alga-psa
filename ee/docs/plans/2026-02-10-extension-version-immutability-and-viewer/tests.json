@@ -143,7 +143,7 @@
   {
     "id": "T016",
     "description": "Legacy data case: one version with multiple bundle rows still returns one deterministic viewer row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F017"
