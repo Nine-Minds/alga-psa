@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Add tenant-scoped foreign key and index for comments.contact_id -> contacts.contact_name_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
   },
   {
