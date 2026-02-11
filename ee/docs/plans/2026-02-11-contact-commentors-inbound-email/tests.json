@@ -1,0 +1,339 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration creates comments.contact_id as nullable UUID",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration adds tenant-scoped FK for comments.contact_id to contacts.contact_name_id",
+    "implemented": false,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Migration down path removes contact authorship column/constraints cleanly",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "TicketModel.createComment accepts author_type=contact with contact_id and no author_id",
+    "implemented": false,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "TicketModel.createComment rejects invalid contact_id format",
+    "implemented": false,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "TicketModel.createComment rejects contact_id that does not belong to tenant",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "TicketModel.createComment persists contact_id on inserted comment row",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "TicketModel.createComment persists both user_id and contact_id when both are provided",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F014"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Contact-authored public comment sets ticket response_state to awaiting_internal",
+    "implemented": false,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Contact-authored internal comment does not mutate response_state",
+    "implemented": false,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "createCommentFromEmail forwards contact_id to TicketModel.createComment",
+    "implemented": false,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "createCommentFromEmail forwards both author_id and contact_id when both are present",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F014"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "processInboundEmailInApp new-ticket flow with matched contact/no user sets comment contact_id and omits author_id",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "processInboundEmailInApp new-ticket flow with matched contact+user sets both contact_id and author_id",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F014"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "processInboundEmailInApp unmatched new-ticket sender keeps existing fallback path without contact_id",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F021"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "processInboundEmailInApp reply-token path resolves sender contact and sets contact_id for contact-only sender",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "processInboundEmailInApp reply-token path sets both author_id and contact_id when matched contact has user",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F014"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "processInboundEmailInApp thread-header path resolves sender contact and sets contact_id for contact-only sender",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "processInboundEmailInApp thread-header path without sender contact keeps fallback behavior",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F021"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Workflow runtime email action schema accepts contact_id in create-comment input",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Workflow runtime create_initial_comment_from_email forwards contact_id to underlying comment action",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Workflow runtime create_comment_from_email forwards contact_id to shared email action",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "MSP ticket consolidated data returns comments containing contact_id for contact-authored comments",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "MSP ticket consolidated data includes author resolution data for contact-only commentors",
+    "implemented": false,
+    "featureIds": [
+      "F017",
+      "F019"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Client portal ticket details data path includes contact author resolution for contact-authored comments",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Shared author resolution helper prefers user author, then contact author, then unknown fallback",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F021"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "CommentItem renders contact name (not Unknown User) for contact-authored comment with no user_id",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "CommentItem renders contact email for contact-authored comment when available",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "CommentItem uses ContactAvatar for contact-authored comment with no user_id",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "CommentItem preserves Unknown User fallback when neither user nor contact can be resolved",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "CommentItem edit/delete permissions remain unchanged for contact-authored comments",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "TicketService.getTicketComments returns contact author fields and nullable created_by for contact-only comments",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Ticket comment API schema validates contact-authored payload shape without requiring created_by UUID",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "GET /api/v1/tickets/{id}/comments returns contact-authored comments without response-validation errors",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Ticket email subscriber excludes contact author from recipient fan-out when comment author is contact-only",
+    "implemented": false,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Inbound email integration (Google): matched contact without user stores comment with contact_id and client author type",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Inbound email integration (Microsoft): matched contact without user stores comment with contact_id and client author type",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Inbound email reply integration: reply to existing ticket from matched contact without user stores contact-authored comment",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Regression: matched client-user inbound path remains associated with user and continues to pass existing tests",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F025"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Regression: unmatched sender path remains functional and still uses unknown fallback when no contact exists",
+    "implemented": false,
+    "featureIds": [
+      "F021",
+      "F025"
+    ]
+  }
+]

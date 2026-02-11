@@ -91,3 +91,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Do we want API responses to expose additive flat fields or a nested `author` object for future-proofing?
 - Should client portal display for contact-authored comments differ from MSP display in any way?
 - (2026-02-11) Added cross-layer verification for contact-authored comment support: integration assertions in inbound webhook tests, UI-level author resolution tests, and API schema tests for nullable `created_by` + contact author fields.
+- (2026-02-11) T001 complete: added migration contract test asserting `comments.contact_id` is created as nullable UUID (`server/src/test/unit/migrations/commentsContactAuthorshipMigration.test.ts`).
