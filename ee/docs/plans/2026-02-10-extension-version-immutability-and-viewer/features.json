@@ -131,7 +131,7 @@
   {
     "id": "F017",
     "description": "Add tests for versions viewer backend query covering installed marker and legacy multi-bundle versions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Acceptance Criteria (Definition of Done)"
     ]

@@ -57,3 +57,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F014: Enforce existing permission checks for version listing (extension read scope)
 - (2026-02-10) Completed F015: Add tests for duplicate-version friendly response in both direct duplicate and race-condition paths
 - (2026-02-10) Completed F016: Add tests for strict immutability guaranteeing no new bundle rows are created when version already exists
+- (2026-02-10) Completed F017: Add tests for versions viewer backend query covering installed marker and legacy multi-bundle versions
