@@ -254,7 +254,7 @@
   {
     "id": "T031",
     "description": "CommentItem edit/delete permissions remain unchanged for contact-authored comments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

@@ -121,3 +121,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T028 complete: `CommentItem` contract tests verify contact email rendering path (`mailto:` link) when author email is available.
 - (2026-02-11) T029 complete: `CommentItem` contract tests verify `ContactAvatar` branch is used for contact-authored comments.
 - (2026-02-11) T030 complete: `CommentItem` contract tests preserve Unknown User fallback branch for unresolved user/contact authors.
+- (2026-02-11) T031 complete: `CommentItem` contract tests confirm edit/delete permission gate remains tied to `conversation.user_id` ownership.
