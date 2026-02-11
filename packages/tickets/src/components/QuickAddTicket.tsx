@@ -72,6 +72,44 @@ const formatLocationDisplay = (location: IClientLocation): string => {
   return parts.join(' - ') || 'Unnamed Location';
 };
 
+const getDefaultBoard = (availableBoards: IBoard[]): IBoard | null => {
+  const activeBoards = availableBoards.filter(board => !board.is_inactive);
+
+  return (
+    activeBoards.find(board => board.is_default) ||
+    activeBoards[0] ||
+    availableBoards.find(board => board.is_default) ||
+    availableBoards[0] ||
+    null
+  );
+};
+
+const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | null => {
+  const statusesWithDefault = availableStatuses as Array<ITicketStatus & { is_default?: boolean }>;
+  const openStatuses = statusesWithDefault.filter(status => !status.is_closed);
+
+  return (
+    openStatuses.find(status => status.is_default) ||
+    openStatuses[0] ||
+    statusesWithDefault.find(status => status.is_default) ||
+    statusesWithDefault[0] ||
+    null
+  );
+};
+
+const getDefaultPriorityId = (availablePriorities: IPriority[], priorityType?: 'custom' | 'itil'): string => {
+  if (!availablePriorities.length) return '';
+
+  if (priorityType === 'itil') {
+    const itilPriorities = availablePriorities.filter(priority => priority.is_from_itil_standard);
+    const mediumItilPriority = itilPriorities.find(priority => priority.itil_priority_level === 3);
+    return mediumItilPriority?.priority_id || itilPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
+  }
+
+  const customPriorities = availablePriorities.filter(priority => !priority.is_from_itil_standard);
+  return customPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
+};
+
 interface QuickAddTicketProps {
   id?: string;
   open: boolean;
@@ -220,6 +258,38 @@ export function QuickAddTicket({
 
         if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
           setStatuses(formData.statuses);
+        }
+
+        const availableBoards = formData.boards || [];
+        const availableStatuses = Array.isArray(formData.statuses) ? formData.statuses : [];
+        const availablePriorities = formData.priorities || [];
+
+        const defaultBoard = getDefaultBoard(availableBoards);
+        const defaultStatus = getDefaultStatus(availableStatuses);
+        const defaultPriorityType = defaultBoard?.priority_type || 'custom';
+        const defaultPriorityId = getDefaultPriorityId(availablePriorities, defaultPriorityType);
+
+        if (defaultBoard?.board_id) {
+          setBoardId(defaultBoard.board_id);
+
+          // If no prefilled assignee was provided, prefer board-level default assignee.
+          if (!prefilledAssignedTo && defaultBoard.default_assigned_to) {
+            setAssignedTo(defaultBoard.default_assigned_to);
+          }
+        }
+
+        if (defaultStatus?.status_id) {
+          setStatusId(defaultStatus.status_id);
+        }
+
+        if (defaultPriorityId) {
+          setPriorityId(defaultPriorityId);
+        }
+
+        if (defaultPriorityType === 'itil') {
+          // Default ITIL tickets to medium impact/urgency for quick entry.
+          setItilImpact(3);
+          setItilUrgency(3);
         }
 
         if (formData.selectedClient) {
@@ -387,14 +457,31 @@ export function QuickAddTicket({
     setBoardId(newBoardId);
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
+    setPriorityId('');
+    setItilImpact(undefined);
+    setItilUrgency(undefined);
     clearErrorIfSubmitted();
+
+    const selectedBoard = boards.find(b => b.board_id === newBoardId);
 
     // Pre-fill assigned agent from board's default if current assignedTo is empty
     if (!assignedTo && newBoardId) {
-      const selectedBoard = boards.find(b => b.board_id === newBoardId);
       if (selectedBoard?.default_assigned_to) {
         setAssignedTo(selectedBoard.default_assigned_to);
       }
+    }
+
+    const priorityType = selectedBoard?.priority_type || 'custom';
+    const defaultPriorityId = getDefaultPriorityId(priorities, priorityType);
+
+    if (defaultPriorityId) {
+      setPriorityId(defaultPriorityId);
+    }
+
+    if (priorityType === 'itil') {
+      // Default ITIL tickets to medium impact/urgency for quick entry.
+      setItilImpact(3);
+      setItilUrgency(3);
     }
   };
 
@@ -445,8 +532,6 @@ export function QuickAddTicket({
   const validateForm = () => {
     const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push('Title');
-    if (!description.trim()) validationErrors.push('Description');
-    if (!assignedTo) validationErrors.push('Assigned To');
     if (!boardId) validationErrors.push('Board');
     if (!statusId) validationErrors.push('Status');
 
@@ -674,8 +759,7 @@ export function QuickAddTicket({
                       setDescription(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Description *"
-                    className={hasAttemptedSubmit && !description.trim() ? 'border-red-500' : ''}
+                    placeholder="Description"
                   />
 
                   <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
@@ -730,23 +814,21 @@ export function QuickAddTicket({
                       showPlaceholderInDropdown={false}
                     />
                   )}
-                  <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <UserPicker
-                      value={assignedTo}
-                      onValueChange={(value) => {
-                        setAssignedTo(value);
-                        clearErrorIfSubmitted();
-                      }}
-                      users={users.map(user => ({
-                        ...user,
-                        roles: []
-                      }))}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      buttonWidth="full"
-                      size="sm"
-                      placeholder="Assign To *"
-                    />
-                  </div>
+                  <UserPicker
+                    value={assignedTo}
+                    onValueChange={(value) => {
+                      setAssignedTo(value);
+                      clearErrorIfSubmitted();
+                    }}
+                    users={users.map(user => ({
+                      ...user,
+                      roles: []
+                    }))}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    buttonWidth="full"
+                    size="sm"
+                    placeholder="Assign To"
+                  />
 
                   <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <BoardPicker
@@ -1016,7 +1098,7 @@ export function QuickAddTicket({
                       variant="default"
                       disabled={isSubmitting}
                       onClick={isEmbedded ? () => handleSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent) : undefined}
-                      className={!title.trim() || !description.trim() || !assignedTo || !boardId || !statusId ||
+                      className={!title.trim() || !boardId || !statusId ||
                         (boardConfig.priority_type === 'custom' && !priorityId) ||
                         (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
                         (boardConfig.priority_type === undefined && !priorityId) ||
