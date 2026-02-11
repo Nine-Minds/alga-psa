@@ -19,7 +19,9 @@ export const TagGrid: React.FC<TagGridProps> = ({
   className = ''
 }) => {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
   return (
     <div className={`grid grid-cols-3 gap-2 p-2 max-h-60 overflow-y-auto ${className}`}>
       {tags.map((tag, index): React.JSX.Element => {

@@ -340,14 +340,14 @@ export default function Header({
   const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname]);
 
   return (
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <header className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3 shadow-sm">
       <div className="flex items-center gap-3">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center space-x-2">
             {breadcrumbItems.map((item, index) => (
               <li key={`${item.href}-${index}`} className="flex items-center">
                 {index > 0 && (
-                  <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 mx-2 text-[rgb(var(--color-text-400))]" />
                 )}
                 {index === 0 ? (
                   <Link
@@ -407,16 +407,16 @@ export default function Header({
                   size="sm"
                 />
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[rgb(var(--color-card))]" />
             </Button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="min-w-[220px]">
             <div className="px-3 py-2">
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
                 {userData ? `${userData.first_name ?? ''} ${userData.last_name ?? ''}`.trim() : 'User'}
               </p>
-              <p className="text-xs text-gray-500">Quick access to profile & account.</p>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">Quick access to profile & account.</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem

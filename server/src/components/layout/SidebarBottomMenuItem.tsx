@@ -26,7 +26,7 @@ const SidebarBottomMenuItem: React.FC<SidebarBottomMenuItemProps> = ({
   return (
     <a 
       href={item.href || '#'} 
-      className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
+      className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.15)]' : ''}`}
       {...automationIdProps}
     >
       <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />

@@ -58,6 +58,12 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
                 />
                 <Tooltip
                   cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }}
+                  contentStyle={{
+                    backgroundColor: 'rgb(var(--color-card))',
+                    borderColor: 'rgb(var(--color-border-200))',
+                    borderRadius: '0.5rem',
+                    color: 'rgb(var(--color-text-900))',
+                  }}
                   formatter={(value: number, name: string, payload) => {
                     if (name === 'percentage') {
                       return [percentFormatter.format(value / 100), 'Percent'];

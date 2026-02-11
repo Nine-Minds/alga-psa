@@ -45,7 +45,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       </div>
 
       {/* Template Basics */}
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <FileText className="w-5 h-5 text-purple-600" />
           <h4 className="font-semibold">Template Information</h4>
@@ -72,7 +72,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
 
       {/* Status Columns */}
       {data.status_mappings.length > 0 && (
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Circle className="w-5 h-5 text-blue-600" />
             <h4 className="font-semibold">Status Columns ({data.status_mappings.length})</h4>
@@ -119,32 +119,32 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       )}
 
       {/* Tasks Summary */}
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <CheckSquare className="w-5 h-5 text-orange-600" />
           <h4 className="font-semibold">Tasks Summary</h4>
         </div>
         <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="p-3 bg-orange-50 rounded-lg">
+          <div className="p-3 bg-orange-500/10 rounded-lg">
             <div className="text-2xl font-bold text-orange-600">{totalTasks}</div>
-            <div className="text-xs text-gray-600">Total Tasks</div>
+            <div className="text-xs text-[rgb(var(--color-text-600))]">Total Tasks</div>
           </div>
-          <div className="p-3 bg-blue-50 rounded-lg">
+          <div className="p-3 bg-blue-500/10 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">{totalChecklistItems}</div>
-            <div className="text-xs text-gray-600">Checklist Items</div>
+            <div className="text-xs text-[rgb(var(--color-text-600))]">Checklist Items</div>
           </div>
-          <div className="p-3 bg-green-50 rounded-lg">
+          <div className="p-3 bg-green-500/10 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               {totalEstimatedHours.toFixed(1)}h
             </div>
-            <div className="text-xs text-gray-600">Est. Hours</div>
+            <div className="text-xs text-[rgb(var(--color-text-600))]">Est. Hours</div>
           </div>
         </div>
       </div>
 
       {/* Task Details by Phase and Status */}
       {data.phases.length > 0 && data.tasks.length > 0 && (
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
           <h4 className="font-semibold mb-3">Task Details by Phase</h4>
           <div className="space-y-6">
             {data.phases
@@ -240,7 +240,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                                 </div>
 
                                 {/* Tasks in this status */}
-                                <div className="p-2 space-y-2 bg-gray-50 min-h-[60px]">
+                                <div className="p-2 space-y-2 bg-[rgb(var(--color-border-50))] min-h-[60px]">
                                   {statusTasks
                                     .sort((a, b) => a.order_number - b.order_number)
                                     .map((task) => {
@@ -250,7 +250,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                                       return (
                                         <div
                                           key={task.temp_id}
-                                          className="bg-white p-2 rounded border text-xs"
+                                          className="bg-[rgb(var(--color-card))] p-2 rounded border border-[rgb(var(--color-border-200))] text-xs"
                                         >
                                           <div className="font-medium text-gray-900 mb-1">
                                             {task.task_name}
@@ -281,9 +281,9 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
         </div>
       )}
 
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-medium text-green-900 mb-2">Ready to Create</h4>
-        <p className="text-sm text-green-800">
+      <div className="bg-success/10 border border-success/30 rounded-lg p-4">
+        <h4 className="font-medium text-[rgb(var(--color-text-900))] mb-2">Ready to Create</h4>
+        <p className="text-sm text-[rgb(var(--color-text-700))]">
           Once you create this template, you'll be able to use it to quickly start new projects
           with this structure. Click "Create Template" to finish.
         </p>

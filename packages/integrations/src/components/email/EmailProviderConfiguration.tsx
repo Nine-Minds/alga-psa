@@ -378,15 +378,15 @@ function EmailProviderConfigurationContent({
   return (
     <div className="flex gap-6">
       {/* Vertical tabs area with subtle separator bar and no card */}
-      <div className="w-56 shrink-0 pr-4 mr-4 border-r border-gray-200">
+      <div className="w-56 shrink-0 pr-4 mr-4 border-r border-[rgb(var(--color-border-200))]">
         <nav className="flex flex-col gap-1">
           <Button
             id="nav-providers"
             variant="ghost"
             className={`justify-start w-full px-2 py-2 rounded-md ${
               activeSection === 'providers'
-                ? 'text-purple-700 font-semibold underline decoration-purple-600 decoration-2 underline-offset-4 bg-purple-50'
-                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
+                : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
             }`}
             onClick={() => setActiveSection('providers')}
           >
@@ -397,8 +397,8 @@ function EmailProviderConfigurationContent({
             variant="ghost"
             className={`justify-start w-full px-2 py-2 rounded-md ${
               activeSection === 'defaults'
-                ? 'text-purple-700 font-semibold underline decoration-purple-600 decoration-2 underline-offset-4 bg-purple-50'
-                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
+                : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
             }`}
             onClick={() => setActiveSection('defaults')}
           >

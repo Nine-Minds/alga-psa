@@ -394,7 +394,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '12%',
         render: (value: string | null) => {
           if (!value) {
-            return <div className="text-sm text-gray-500">-</div>;
+            return <div className="text-sm text-[rgb(var(--color-text-500))]">-</div>;
           }
 
           const dueDate = new Date(value);
@@ -406,17 +406,17 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           const displayFormat = isMidnight ? 'MMM d, yyyy' : dateTimeFormat;
 
           // Determine styling based on due date status
-          let textColorClass = 'text-gray-500';
+          let textColorClass = 'text-[rgb(var(--color-text-500))]';
           let bgColorClass = '';
 
           if (hoursUntilDue < 0) {
             // Overdue - red/warning style
-            textColorClass = 'text-red-700';
-            bgColorClass = 'bg-red-50';
+            textColorClass = 'text-red-600';
+            bgColorClass = 'bg-red-500/10';
           } else if (hoursUntilDue <= 24) {
             // Approaching due date (within 24 hours) - orange/caution style
-            textColorClass = 'text-orange-700';
-            bgColorClass = 'bg-orange-50';
+            textColorClass = 'text-orange-600';
+            bgColorClass = 'bg-orange-500/10';
           }
 
           return (

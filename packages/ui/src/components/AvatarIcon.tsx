@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { generateAvatarColor, adaptColorsForDarkMode } from '../lib/colorUtils';
 
@@ -13,7 +13,9 @@ interface AvatarIconProps {
 
 const AvatarIcon = ({ userId, firstName, lastName, size = 'md' }: AvatarIconProps) => {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const getInitial = () => {
     if (firstName) {

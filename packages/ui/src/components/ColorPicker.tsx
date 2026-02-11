@@ -89,7 +89,9 @@ const ColorPicker = ({
   colorMode = 'tag',
 }: ColorPickerProps) => {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   // Select preset colors based on mode, adapted for dark mode display
   const BASE_PRESET_COLORS = colorMode === 'solid' ? SOLID_PRESET_COLORS : TAG_PRESET_COLORS;

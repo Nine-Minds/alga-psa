@@ -76,7 +76,10 @@ export const EntityAvatar = ({
   altText,
 }: EntityAvatarProps) => {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  // Track mount state to avoid hydration mismatch - useTheme returns undefined on server
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const initials = getInitials(entityName || '');
   // Use entityName for color generation for consistency if ID changes or isn't stable

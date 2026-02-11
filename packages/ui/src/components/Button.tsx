@@ -134,9 +134,9 @@ function Button({
       {tooltipText && (
         <span
           className="fixed invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity
-          bg-white px-2 py-1 rounded-md text-gray-900 text-xs whitespace-nowrap
-          shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.14)]
-          border border-[rgba(0,0,0,0.05)]
+          bg-[rgb(var(--color-text-800))] px-2 py-1 rounded-md text-[rgb(var(--color-text-50))] text-xs whitespace-nowrap
+          shadow-md
+          border border-[rgb(var(--color-border-300))]
           z-[9999]"
           style={{
             left: `${tooltipPosition.x}px`,

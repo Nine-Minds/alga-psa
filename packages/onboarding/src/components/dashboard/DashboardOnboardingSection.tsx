@@ -184,8 +184,8 @@ const QuickStartCard = ({
           className={cn(
             'mt-4 rounded-md border px-3 py-2 text-xs font-medium leading-5',
             step.status === 'blocked'
-              ? 'border-red-100 bg-red-50 text-red-700'
-              : 'border-orange-100 bg-orange-50 text-orange-700'
+              ? 'border-red-500/20 bg-red-500/10 text-red-600'
+              : 'border-orange-500/20 bg-orange-500/10 text-orange-600'
           )}
         >
           {step.blocker}
@@ -388,7 +388,7 @@ export default function DashboardOnboardingSection({
               {isOnboardingComplete ? 'Onboarding complete' : 'Complete your setup'}
             </h2>
             {isOnboardingComplete ? (
-              <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+              <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                 Complete
               </Badge>
@@ -449,12 +449,12 @@ function HiddenStepsPanel({
   activeStepId: OnboardingStepId | null;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-slate-800">
+        <p className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
           Hidden setup cards ({steps.length})
         </p>
-        <p className="text-xs text-slate-500">Restore any card if you need it later.</p>
+        <p className="text-xs text-[rgb(var(--color-text-500))]">Restore any card if you need it later.</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {steps.map((step) => (

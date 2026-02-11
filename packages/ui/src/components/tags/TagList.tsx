@@ -40,7 +40,9 @@ export const TagList: React.FC<TagListProps> = ({
   size = 'md'
 }) => {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
   const sizeConfig = tagSizeConfig[size];
   const displayTags = maxDisplay && tags.length > maxDisplay
     ? tags.slice(0, maxDisplay)

@@ -31,7 +31,7 @@ export function OnboardingChecklist({ steps, summary, isLoading, onStepCta }: On
         </p>
         <Progress value={(summary.completed / Math.max(summary.total, 1)) * 100} className="h-2" />
         {summary.allComplete && (
-          <div className="mt-4 rounded-md bg-primary-50 p-3 text-sm text-primary-900 flex items-start gap-2">
+          <div className="mt-4 rounded-md bg-primary-500/10 p-3 text-sm text-[rgb(var(--color-text-800))] flex items-start gap-2">
             <Sparkles className="h-5 w-5" />
             <div>
               <p className="font-medium">Configuration complete</p>

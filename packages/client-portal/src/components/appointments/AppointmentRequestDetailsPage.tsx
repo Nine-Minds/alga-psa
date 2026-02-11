@@ -175,10 +175,10 @@ export function AppointmentRequestDetailsPage() {
 
             {/* Status Banner */}
             <div className={`p-4 rounded-lg ${
-              appointment.status === 'approved' ? 'bg-green-50 border border-green-200' :
-              appointment.status === 'declined' ? 'bg-red-50 border border-red-200' :
-              appointment.status === 'cancelled' ? 'bg-gray-50 border border-gray-200' :
-              'bg-yellow-50 border border-yellow-200'
+              appointment.status === 'approved' ? 'bg-success/10 border border-success/30' :
+              appointment.status === 'declined' ? 'bg-error/10 border border-error/30' :
+              appointment.status === 'cancelled' ? 'bg-[rgb(var(--color-border-100))] border border-[rgb(var(--color-border-200))]' :
+              'bg-warning/10 border border-warning/30'
             }`}>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">

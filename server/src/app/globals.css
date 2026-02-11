@@ -920,7 +920,19 @@ body {
 }
 
 .dark .rbc-today {
-  background-color: rgb(var(--color-border-100));
+  background-color: rgb(var(--color-primary-500) / 0.1);
+}
+
+.dark .rbc-header {
+  background-color: rgb(var(--color-card));
+}
+
+.dark .rbc-time-header {
+  background-color: rgb(var(--color-card));
+}
+
+.dark .rbc-toolbar {
+  background-color: rgb(var(--color-background));
 }
 
 .dark .rbc-timeslot-group,
