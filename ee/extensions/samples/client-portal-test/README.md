@@ -63,7 +63,17 @@ This pattern ensures:
 - Authentication is handled by the host
 - Secrets never reach the browser
 
-See `ui/main.js` for the implementation.
+In the UI, use the SDK helper style:
+
+```ts
+const user = await callHandlerJson(bridge, '/user', { method: 'GET' });
+const result = await callHandlerJson(bridge, '/', {
+  method: 'POST',
+  body: { portalType: 'client' },
+});
+```
+
+See `ui/main.ts` for the implementation.
 
 ## Structure
 
@@ -76,7 +86,8 @@ client-portal-test/
 │   └── handler.ts     # WASM handler implementation
 ├── ui/
 │   ├── index.html     # Extension UI with portal-aware styling
-│   └── main.js        # UI JavaScript (context detection + proxy pattern)
+│   ├── main.ts        # UI TypeScript (context detection + SDK proxy calls)
+│   └── call-handler-json.ts # Temporary compatibility shim until SDK export is widely available
 └── wit/
     └── ext.wit        # WIT interface definition
 ```

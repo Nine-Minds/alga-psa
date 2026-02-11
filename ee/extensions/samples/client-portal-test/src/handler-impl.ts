@@ -35,6 +35,7 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
 async function processRequest(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   const method = request.http.method || 'GET';
   const url = request.http.url || '/';
+  const path = url.split('?')[0] || '/';
   const requestId = request.context.requestId ?? 'n/a';
   const tenantId = request.context.tenantId;
   const extensionId = request.context.extensionId;
@@ -65,6 +66,44 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
     const reason = err instanceof Error ? err.message : String(err);
     userError = reason;
     await safeLog(host, 'error', `[client-portal-test] failed to get user: ${reason}`);
+  }
+
+  if (method === 'GET' && path === '/user') {
+    const response = jsonResponse({
+      ok: true,
+      message: 'User info fetched via GET',
+      context: {
+        tenantId,
+        extensionId,
+        installId,
+        requestId,
+      },
+      request: {
+        method,
+        url,
+        path,
+      },
+      user: user ? {
+        userId: user.userId,
+        userName: user.userName,
+        userEmail: user.userEmail,
+        userType: user.userType,
+        clientName: user.clientName,
+        clientId: user.clientId,
+      } : null,
+      userError,
+      version: VERSION,
+      build: BUILD_STAMP,
+      timestamp: new Date().toISOString(),
+    });
+
+    await safeLog(
+      host,
+      'info',
+      `[client-portal-test] user endpoint complete requestId=${requestId} status=${response.status} build=${BUILD_STAMP}`
+    );
+
+    return response;
   }
 
   // Return information about the request context
