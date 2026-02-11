@@ -125,7 +125,7 @@
   {
     "id": "T014",
     "description": "Version list marks installed=true only for row matching tenant_extension_install.version_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],

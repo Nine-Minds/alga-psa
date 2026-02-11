@@ -72,3 +72,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T011: Version list backend returns all versions for given registry extension sorted newest first
 - (2026-02-10) Completed T012: Version list backend includes version string and publish timestamp fields for each row
 - (2026-02-10) Completed T013: Version list backend includes deterministic latest content hash metadata per version
+- (2026-02-10) Completed T014: Version list marks installed=true only for row matching tenant_extension_install.version_id
