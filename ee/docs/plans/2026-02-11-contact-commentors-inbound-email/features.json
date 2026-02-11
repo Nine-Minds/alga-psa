@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add migration to create nullable comments.contact_id for contact-authored comments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
   {

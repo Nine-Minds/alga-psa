@@ -25,6 +25,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) MSP and client-portal ticket details render comments from `comments` + `userMap` sourced from `users`; comments with no `user_id` render as `Unknown User` (`packages/tickets/src/components/ticket/CommentItem.tsx`, `packages/tickets/src/actions/optimizedTicketActions.ts`, `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`).
 - (2026-02-11) Ticket comment API schema currently expects `created_by` as UUID in responses, which is brittle for contact-only authors if `user_id` is null (`server/src/lib/api/schemas/ticket.ts`).
 - (2026-02-11) `packages/types` had `IComment.user_id?: string` and no contact author linkage field; adding nullable `user_id` + `contact_id` in the base interface is required before loader/UI/API updates.
+- (2026-02-11) Added migration scaffold `server/migrations/20260211190000_add_comments_contact_id.cjs` to reintroduce nullable `comments.contact_id`; FK/index are intentionally separated into the next step for checklist traceability.
 
 ## Commands / Runbooks
 
