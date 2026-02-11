@@ -76,7 +76,7 @@
   {
     "id": "T010",
     "description": "Contact-authored internal comment does not mutate response_state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
