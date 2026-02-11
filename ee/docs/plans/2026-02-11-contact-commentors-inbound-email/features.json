@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Extend TicketModel create-comment validation/input to accept contact_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {
