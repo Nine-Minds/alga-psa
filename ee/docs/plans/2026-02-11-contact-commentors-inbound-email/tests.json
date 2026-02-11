@@ -35,7 +35,7 @@
   {
     "id": "T005",
     "description": "TicketModel.createComment rejects invalid contact_id format",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

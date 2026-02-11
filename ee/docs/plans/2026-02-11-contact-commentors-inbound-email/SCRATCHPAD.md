@@ -95,3 +95,5 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) T002 complete: migration contract test now verifies tenant-scoped FK/index wiring for `comments.contact_id -> contacts.contact_name_id`.
 - (2026-02-11) T003 complete: migration contract test now asserts down-path cleanup removes FK, index, and `contact_id` column.
 - (2026-02-11) T004 complete: added `TicketModel.createComment` unit suite covering contact author input acceptance with `contact_id` and no `author_id`.
+- (2026-02-11) T005 complete: `TicketModel.createComment` test now asserts invalid `contact_id` format is rejected by input validation.
+EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.json ee/docs/plans/2026-02-11-contact-commentors-inbound-email/SCRATCHPAD.md && git commit -m "test(T005): reject malformed contact_id in createComment"
