@@ -34,6 +34,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Shared comment creation now updates `tickets.response_state` to `awaiting_internal` for non-internal `author_type=contact` comments; internal comments remain unchanged.
 - (2026-02-11) `createCommentFromEmail` contract in `shared/workflow/actions/emailWorkflowActions.ts` now accepts optional `contact_id` to support contact-only comment authorship from inbound paths.
 - (2026-02-11) `createCommentFromEmail` now forwards `contact_id` into `TicketModel.createComment`, so inbound email comments can persist contact authorship linkage.
+- (2026-02-11) New-ticket inbound path now passes `contact_id` into `createCommentFromEmail` whenever sender contact is matched, regardless of whether a client user was resolved.
 
 ## Commands / Runbooks
 

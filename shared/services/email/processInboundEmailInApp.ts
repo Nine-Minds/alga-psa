@@ -447,6 +447,7 @@ export async function processInboundEmailInApp(
 
   const targetClientId = matchedContact?.client_id ?? defaults.client_id;
   const targetContactId = matchedContact?.contact_id;
+  const targetAuthorUserId = matchedContact?.user_id ?? null;
 
   // New-ticket idempotency: ticket could have been created in another parallel process.
   const existingTicketAfterDefaults = await findExistingEmailTicket({
@@ -499,6 +500,8 @@ export async function processInboundEmailInApp(
       content: JSON.stringify(blocks),
       source: 'email',
       author_type: targetContactId ? 'contact' : 'system',
+      author_id: targetAuthorUserId ?? undefined,
+      contact_id: targetContactId ?? undefined,
       metadata: {
         email: {
           messageId: emailData.id,
