@@ -1581,6 +1581,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           source: params.source,
           author_type: params.author_type,
           author_id: params.author_id,
+          contact_id: params.contact_id,
           metadata: params.metadata
         }, context.tenant);
 

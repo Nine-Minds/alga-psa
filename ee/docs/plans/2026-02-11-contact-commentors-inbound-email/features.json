@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Update workflow runtime email action implementations to pass contact_id through to comment creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {

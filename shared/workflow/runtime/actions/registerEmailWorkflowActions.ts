@@ -515,6 +515,7 @@ export function registerEmailWorkflowActionsV2(): void {
         source: 'email',
         author_type: input.targetContactId ? 'contact' : 'system',
         author_id: input.targetAuthorUserId ?? undefined,
+        contact_id: input.targetContactId ?? undefined,
         metadata: commentPayload.metadata
       }, tenant);
 
@@ -570,6 +571,7 @@ export function registerEmailWorkflowActionsV2(): void {
         source: input.source,
         author_type: input.author_type,
         author_id: input.author_id,
+        contact_id: input.contact_id,
         // Cast to match createCommentFromEmail's expected type - zod validation ensures fields are present when object exists
         inboundReplyEvent: input.inboundReplyEvent as {
           messageId: string;
@@ -595,6 +597,8 @@ export function registerEmailWorkflowActionsV2(): void {
       emailData: emailDataSchema.describe('Inbound email data'),
       parsedEmail: parsedEmailSchema.describe('Parsed email body result'),
       author_type: z.enum(['contact', 'internal', 'system']).optional().describe('Type of author'),
+      author_id: z.string().optional().describe('Resolved author user ID'),
+      contact_id: z.string().optional().describe('Resolved author contact ID'),
       source: z.string().optional().describe('Source of the comment (e.g., "email")')
     }),
     outputSchema: z.object({
@@ -606,12 +610,23 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
       const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
+      const senderEmail = input.emailData?.from?.email;
+      const matchedContact =
+        !input.contact_id && senderEmail
+          ? await findContactByEmail(senderEmail, tenant)
+          : null;
+      const resolvedContactId = input.contact_id ?? matchedContact?.contact_id;
+      const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;
+      const resolvedAuthorType = input.author_type ?? (resolvedContactId ? 'contact' : 'system');
+
       const commentId = await createCommentFromEmail({
         ticket_id: input.ticketId,
         content: commentPayload.content,
         format: commentPayload.format,
         source: input.source ?? 'email',
-        author_type: input.author_type ?? 'system',
+        author_type: resolvedAuthorType,
+        author_id: resolvedAuthorId,
+        contact_id: resolvedContactId,
         metadata: commentPayload.metadata
       }, tenant);
       return { comment_id: commentId };

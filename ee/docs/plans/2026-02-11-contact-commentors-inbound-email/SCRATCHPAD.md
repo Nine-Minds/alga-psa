@@ -39,6 +39,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Thread-header inbound reply path reuses the same sender-contact resolution and now forwards `contact_id`/`author_id` to comment creation.
 - (2026-02-11) End-to-end inbound paths now support dual linkage (`author_id` + `contact_id`) when a matched contact has an associated client user, preserving user identity while keeping explicit contact authorship.
 - (2026-02-11) Workflow action schemas now expose `contact_id` in `create_comment_from_email` (V2 runtime + legacy action registry), so workflow definitions can pass contact authorship explicitly.
+- (2026-02-11) Workflow runtime implementations now pass `contact_id` through to shared comment creation (`create_comment_from_email`, `create_ticket_with_initial_comment`, and parsed-reply comment path with sender contact resolution fallback).
 
 ## Commands / Runbooks
 
@@ -54,6 +55,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `rg -n "comments|contact_id|contact_name_id|author_type" server/migrations -g"*.cjs"`
 - (2026-02-11) Validate canonical type updates:
   - `npx vitest run packages/types/src/interfaces/comment.interface.typecheck.test.ts`
+- (2026-02-11) Verify inbound email comment wiring after runtime action changes:
+  - `npx vitest run shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts shared/services/email/__tests__/processInboundEmailInApp.test.ts`
 
 ## Links / References
 
