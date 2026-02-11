@@ -93,7 +93,7 @@
   {
     "id": "T012",
     "description": "createCommentFromEmail forwards both author_id and contact_id when both are present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F014"
