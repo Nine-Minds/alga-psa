@@ -115,7 +115,7 @@
   {
     "id": "F015",
     "description": "Add tests for duplicate-version friendly response in both direct duplicate and race-condition paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Acceptance Criteria (Definition of Done)"
     ]

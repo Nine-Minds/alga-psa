@@ -55,3 +55,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F012: Versions table shows columns Version, Published, Content hash, Installed
 - (2026-02-10) Completed F013: Versions section includes explicit empty state when no versions exist
 - (2026-02-10) Completed F014: Enforce existing permission checks for version listing (extension read scope)
+- (2026-02-10) Completed F015: Add tests for duplicate-version friendly response in both direct duplicate and race-condition paths
