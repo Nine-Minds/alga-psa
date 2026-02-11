@@ -18,6 +18,7 @@
  */
 import { isValidSha256Hash } from "../../../../lib/storage/bundles/types";
 import { extFinalizeUpload } from "../../../../lib/actions/extBundleActions";
+import { DUPLICATE_EXTENSION_VERSION_CODE } from "../../../../lib/extensions/registry-v2";
 
 const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
 const BASE_PREFIX = "sha256/";
@@ -210,7 +211,18 @@ export async function POST(req: Request) {
     const code = err?.code ?? (status ? "ERROR" : "INTERNAL_ERROR");
     const message = typeof err?.message === "string" ? err.message : "Unexpected error";
     log("ext_bundles.finalize.error", { message, code, status });
-    return json(typeof status === "number" ? status : 500, {
+    const httpStatus = typeof status === "number" ? status : 500;
+    if (code === DUPLICATE_EXTENSION_VERSION_CODE) {
+      return json(httpStatus, {
+        success: false,
+        error: {
+          message,
+          code,
+          ...(err?.details ? { details: err.details } : {}),
+        },
+      });
+    }
+    return json(httpStatus, {
       error: message,
       code,
       ...(err?.details ? { details: err.details } : {}),

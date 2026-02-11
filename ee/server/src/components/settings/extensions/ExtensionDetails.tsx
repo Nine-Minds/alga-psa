@@ -16,6 +16,7 @@ import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, Alert
 import { toast } from 'react-hot-toast';
 // Fallback to console for logging in EE components
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
+import { fetchExtensionVersions } from '../../../lib/actions/extensionVersionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -31,6 +32,15 @@ export default function ExtensionDetails() {
   const [extension, setExtension] = useState<Extension | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [versionsError, setVersionsError] = useState<string | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState<boolean>(true);
+  const [versions, setVersions] = useState<Array<{
+    versionId: string;
+    version: string;
+    publishedAt: Date;
+    contentHash: string | null;
+    installed: boolean;
+  }>>([]);
   type RunnerStatus = { state?: string } | null;
   const [installInfo, setInstallInfo] = useState<{ domain: string | null; status: RunnerStatus } | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
@@ -49,8 +59,17 @@ export default function ExtensionDetails() {
         const foundExtension = await fetchExtensionById(extensionId);
         setExtension(foundExtension);
         setLoading(false);
+        setVersionsError(null);
+        setVersionsLoading(true);
         if (foundExtension) {
-          const info = await getInstallInfo(extensionId).catch(() => null);
+          const [info, versionRows] = await Promise.all([
+            getInstallInfo(extensionId).catch(() => null),
+            fetchExtensionVersions(extensionId).catch((versionErr) => {
+              console.error('Failed to fetch extension versions', { extensionId, error: versionErr });
+              setVersionsError('Failed to load versions');
+              return [];
+            }),
+          ]);
           if (info) {
             const domain = typeof info.runner_domain === 'string' ? info.runner_domain : null;
             const rawStatus: unknown = info.runner_status;
@@ -61,11 +80,20 @@ export default function ExtensionDetails() {
             }
             setInstallInfo({ domain, status });
           }
+          const normalizedRows = versionRows.map((row) => ({
+            ...row,
+            publishedAt: row.publishedAt instanceof Date ? row.publishedAt : new Date(row.publishedAt),
+          })).sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+          setVersions(normalizedRows);
+        } else {
+          setVersions([]);
         }
+        setVersionsLoading(false);
       } catch (err) {
         console.error('Failed to fetch extension details', { extensionId, error: err });
         setError('Failed to load extension details');
         setLoading(false);
+        setVersionsLoading(false);
       }
     };
     
@@ -335,6 +363,57 @@ export default function ExtensionDetails() {
                     <ExtensionPermissions permissions={extension.manifest.permissions} />
                   ) : (
                     <p className="text-sm text-gray-500">This extension does not require any permissions.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Versions section */}
+              <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">
+                <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                  <div className="flex items-center">
+                    <h2 className="text-lg font-medium text-gray-900">Versions</h2>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {versionsLoading ? (
+                    <p className="text-sm text-gray-500">Loading versions…</p>
+                  ) : versionsError ? (
+                    <p className="text-sm text-red-700">{versionsError}</p>
+                  ) : versions.length === 0 ? (
+                    <p className="text-sm text-gray-500">No published versions available.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200" data-automation-id="extension-versions-table">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Version
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Published
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Content hash
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Installed
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {versions.map((row) => (
+                            <tr key={row.versionId}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.version}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.publishedAt.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-sm text-gray-900">
+                                <span className="font-mono text-xs break-all">{row.contentHash ?? '—'}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.installed ? 'Yes' : 'No'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </div>
