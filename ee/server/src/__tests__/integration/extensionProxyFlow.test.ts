@@ -112,6 +112,60 @@ describe('Extension Proxy Flow Integration', () => {
       );
     });
 
+    it('should forward explicit proxy method from iframe payload', async () => {
+      const iframe = document.createElement('iframe');
+      iframe.src = `http://localhost:3000/ext-ui/${extensionId}/hash/index.html`;
+      document.body.appendChild(iframe);
+
+      const postMessageSpy = vi.fn();
+      // @ts-ignore
+      iframe.contentWindow.postMessage = postMessageSpy;
+
+      const blob = new Blob([new Uint8Array([9, 9, 9])]);
+      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => ({
+        ok: true,
+        blob: async () => blob,
+      } as any));
+
+      // @ts-ignore
+      bootstrapIframe({ iframe, extensionId });
+
+      const requestId = 'req-get-method';
+      const event = new MessageEvent('message', {
+        data: {
+          alga: true,
+          version: '1',
+          type: 'apiproxy',
+          request_id: requestId,
+          payload: { route: '/user', method: 'GET' },
+        },
+        origin: origin,
+        source: iframe.contentWindow,
+      });
+      window.dispatchEvent(event);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/ext-proxy/${extensionId}/user`),
+        expect.objectContaining({
+          method: 'GET',
+        }),
+      );
+
+      const [, fetchOptions] = fetchSpy.mock.calls[0];
+      expect(fetchOptions?.body).toBeUndefined();
+
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          alga: true,
+          type: 'apiproxy_response',
+          request_id: requestId,
+        }),
+        '*'
+      );
+    });
+
     it('should handle Gateway errors and return error message to Client', async () => {
       const iframe = document.createElement('iframe');
       iframe.src = `http://localhost:3000/ext-ui/${extensionId}/hash/index.html`;
