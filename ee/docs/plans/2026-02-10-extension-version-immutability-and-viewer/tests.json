@@ -49,7 +49,7 @@
   {
     "id": "T006",
     "description": "Concurrent finalize requests for same publisher/name/version map losing request to friendly duplicate-version 409",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F015"
