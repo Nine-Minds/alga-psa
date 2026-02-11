@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Extend workflow runtime email action schemas to include contact_id fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
   },
   {

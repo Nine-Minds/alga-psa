@@ -25,6 +25,7 @@ const contactOutputSchema = z.object({
   name: z.string().describe('Full name of the contact'),
   email: z.string().email().describe('Email address of the contact'),
   client_id: z.string().describe('ID of the associated client'),
+  user_id: z.string().optional().describe('Associated client user ID for the contact'),
   client_name: z.string().optional().describe('Name of the associated client'),
   phone: z.string().optional().describe('Phone number'),
   title: z.string().optional().describe('Job title or role')
@@ -355,6 +356,7 @@ export function registerEmailWorkflowActionsV2(): void {
       matchedClient: contactOutputSchema.nullable().optional().describe('Matched contact for sender email'),
       targetClientId: z.string().nullable().describe('Resolved target client ID'),
       targetContactId: z.string().nullable().describe('Resolved target contact ID'),
+      targetAuthorUserId: z.string().nullable().optional().describe('Resolved client user ID for comment authorship'),
       targetLocationId: z.string().nullable().describe('Resolved target location ID')
     }),
     sideEffectful: false,
@@ -379,12 +381,14 @@ export function registerEmailWorkflowActionsV2(): void {
           matchedClient,
           targetClientId: null,
           targetContactId: null,
+          targetAuthorUserId: null,
           targetLocationId: null
         };
       }
 
       const targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
       const targetContactId = matchedClient?.contact_id ?? null;
+      const targetAuthorUserId = matchedClient?.user_id ?? null;
       const targetLocationId = (matchedClient?.client_id && ticketDefaults.client_id && matchedClient.client_id !== ticketDefaults.client_id)
         ? null
         : ticketDefaults.location_id ?? null;
@@ -394,6 +398,7 @@ export function registerEmailWorkflowActionsV2(): void {
         matchedClient,
         targetClientId,
         targetContactId,
+        targetAuthorUserId,
         targetLocationId
       };
     }
@@ -463,6 +468,7 @@ export function registerEmailWorkflowActionsV2(): void {
       ticketDefaults: inboundTicketDefaultsSchema.describe('Resolved ticket defaults'),
       targetClientId: z.string().nullable().describe('Resolved client ID'),
       targetContactId: z.string().nullable().describe('Resolved contact ID'),
+      targetAuthorUserId: z.string().nullable().optional().describe('Resolved client user ID for comment authorship'),
       targetLocationId: z.string().nullable().describe('Resolved location ID')
     }),
     outputSchema: z.object({
@@ -507,7 +513,8 @@ export function registerEmailWorkflowActionsV2(): void {
         content: commentPayload.content,
         format: commentPayload.format,
         source: 'email',
-        author_type: 'internal',
+        author_type: input.targetContactId ? 'contact' : 'system',
+        author_id: input.targetAuthorUserId ?? undefined,
         metadata: commentPayload.metadata
       }, tenant);
 
@@ -529,6 +536,7 @@ export function registerEmailWorkflowActionsV2(): void {
       source: z.string().optional().describe('Source of the comment (e.g., "email")'),
       author_type: z.enum(['contact', 'internal', 'system']).optional().describe('Type of author'),
       author_id: z.string().optional().describe('Author user/contact ID'),
+      contact_id: z.string().optional().describe('Author contact ID'),
       inboundReplyEvent: z.object({
         messageId: z.string().min(1).describe('Inbound email message ID'),
         threadId: z.string().optional().describe('Email thread ID (provider conversation id)'),

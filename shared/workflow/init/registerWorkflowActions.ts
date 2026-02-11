@@ -1568,6 +1568,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'source', type: 'string', required: false },
       { name: 'author_type', type: 'string', required: false },
       { name: 'author_id', type: 'string', required: false },
+      { name: 'contact_id', type: 'string', required: false },
       { name: 'metadata', type: 'object', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
