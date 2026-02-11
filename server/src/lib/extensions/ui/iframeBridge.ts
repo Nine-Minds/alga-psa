@@ -20,6 +20,8 @@ const HASH_REGEX = /^sha256:[0-9a-f]{64}$/i;
 const THEME_STYLE_ID = 'alga-ext-theme-tokens';
 const MIN_IFRAME_HEIGHT = 100;
 const MAX_IFRAME_HEIGHT = 4000;
+type ProxyMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+const ALLOWED_PROXY_METHODS = new Set<ProxyMethod>(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 export interface IframeBootstrapOptions {
   iframe: HTMLIFrameElement;
@@ -198,6 +200,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
         console.log('iframeBridge: received apiproxy request', {
           requestId: data.request_id,
           route: data.payload?.route,
+          method: data.payload?.method,
         });
         handleApiProxy(iframe, extensionId, data, allowedOrigin || srcUrl?.origin);
         break;
@@ -316,6 +319,18 @@ function bytesToBase64(buf: ArrayBuffer): string {
   return btoa(bin);
 }
 
+function resolveProxyMethod(method: unknown): ProxyMethod {
+  if (typeof method !== 'string' || method.trim().length === 0) {
+    // Backward compatibility for older SDK payloads.
+    return 'POST';
+  }
+  const normalized = method.toUpperCase();
+  if (ALLOWED_PROXY_METHODS.has(normalized as ProxyMethod)) {
+    return normalized as ProxyMethod;
+  }
+  throw new Error(`Unsupported proxy method: ${method}`);
+}
+
 async function handleApiProxy(
   iframe: HTMLIFrameElement,
   extensionId: string,
@@ -329,6 +344,7 @@ async function handleApiProxy(
   const route = cleanRoute.startsWith('/') ? cleanRoute : `/${cleanRoute}`;
   const url = `/api/ext-proxy/${extensionId}${route}`;
   const bodyB64 = payload?.body as string | undefined;
+  const method = resolveProxyMethod(payload?.method);
 
   const response = {
     alga: true,
@@ -340,15 +356,17 @@ async function handleApiProxy(
 
   try {
     const bodyBytes = bodyB64 ? base64ToBytes(bodyB64) : undefined;
+    const hasBody = method !== 'GET' && !!bodyBytes;
     console.log('iframeBridge: forwarding apiproxy to ext-proxy', {
       url,
-      hasBody: !!bodyBytes,
+      hasBody,
+      method,
       requestId: request_id,
     });
     const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/octet-stream' },
-      body: bodyBytes ? new Blob([bodyBytes as any]) : undefined,
+      method,
+      headers: hasBody ? { 'content-type': 'application/octet-stream' } : undefined,
+      body: hasBody ? new Blob([bodyBytes as any]) : undefined,
       credentials: 'include',
     });
 

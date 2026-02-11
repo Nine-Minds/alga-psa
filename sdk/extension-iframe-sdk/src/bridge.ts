@@ -4,11 +4,17 @@ import type {
   ClientToHostMessage,
   BootstrapPayload,
   EnvelopeVersion,
+  ProxyHttpMethod,
 } from './types';
 
 type Listener = (evt: HostToClientMessage) => void;
 
 const ENVELOPE_VERSION: EnvelopeVersion = '1';
+const ALLOWED_PROXY_METHODS = new Set<ProxyHttpMethod>(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+
+export interface ProxyRequestOptions {
+  method?: ProxyHttpMethod;
+}
 
 /**
  * IframeBridge implements a versioned, origin-validated postMessage protocol.
@@ -141,13 +147,31 @@ export class IframeBridge {
     this.expectedParentOrigin = origin;
   }
 
+  private resolveProxyMethod(method: string | undefined): ProxyHttpMethod {
+    const normalized = (method ?? 'POST').toUpperCase();
+    if (ALLOWED_PROXY_METHODS.has(normalized as ProxyHttpMethod)) {
+      return normalized as ProxyHttpMethod;
+    }
+    throw new Error(`Unsupported proxy method: ${method}`);
+  }
+
   /**
    * Call a proxy route via postMessage.
    */
-  async callProxy(route: string, payload?: Uint8Array | null): Promise<Uint8Array> {
+  async callProxy(
+    route: string,
+    payload?: Uint8Array | null,
+    options: ProxyRequestOptions = {},
+  ): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
       const requestId = typeof crypto !== 'undefined' ? crypto.randomUUID() : String(Math.random());
       console.log(`[SDK] Starting callProxy for route: ${route}, requestId: ${requestId}`);
+      const method = this.resolveProxyMethod(options.method);
+
+      if (method === 'GET' && payload) {
+        reject(new Error('GET requests cannot include a body'));
+        return;
+      }
 
       // Prepare listener for response
       const cleanup = this.on((msg) => {
@@ -186,7 +210,7 @@ export class IframeBridge {
       }
 
       console.log(`[SDK] Emitting 'apiproxy' message to host. requestId: ${requestId}`);
-      this.emitToHost('apiproxy', { route, body: bodyBase64 }, requestId);
+      this.emitToHost('apiproxy', { route, body: bodyBase64, method }, requestId);
 
       // Timeout
       setTimeout(() => {
