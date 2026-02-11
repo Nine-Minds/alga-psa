@@ -51,7 +51,7 @@
   {
     "id": "F007",
     "description": "Add registry query/action to list all versions for a registry extension in tenant context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Functional Requirements"
     ]

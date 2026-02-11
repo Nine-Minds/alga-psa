@@ -47,3 +47,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F004: Map DB unique-constraint races for (registry_id, version) to the same friendly duplicate-version 409 response
 - (2026-02-10) Completed F005: Ensure ext-bundles/finalize route and server action return consistent duplicate-version error payloads for UI and CLI callers
 - (2026-02-10) Completed F006: Update installer/publish UI flow to surface duplicate-version message directly to users
+- (2026-02-10) Completed F007: Add registry query/action to list all versions for a registry extension in tenant context
