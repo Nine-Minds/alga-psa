@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Update registry-v2 finalize version upsert path to enforce strict immutability (reject existing version regardless of hash)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Functional Requirements"
     ]
