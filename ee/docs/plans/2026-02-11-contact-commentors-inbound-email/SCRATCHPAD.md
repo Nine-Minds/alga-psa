@@ -45,6 +45,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Added `packages/tickets/src/lib/commentAuthorResolution.ts` as the shared author resolver with deterministic precedence: user author, then contact author, then unknown fallback.
 - (2026-02-11) `CommentItem` now resolves authors via shared helper + `contactMap`, rendering contact-authored comments with contact name/email/avatar (without requiring `user_id`).
 - (2026-02-11) Unknown-user fallback is now explicitly constrained to comments where neither `userMap[comment.user_id]` nor `contactMap[comment.contact_id]` resolves, via `resolveCommentAuthor` precedence.
+- (2026-02-11) API comment payloads now support contact-authored rows by making `created_by` nullable and adding contact author fields (`author_contact_id/name/email`) from `TicketService.getTicketComments` + `ticketCommentResponseSchema`.
 
 ## Commands / Runbooks
 

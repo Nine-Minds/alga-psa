@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Update ticket comment API/service response contracts to represent contact-authored comments safely with nullable user id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Requirements > Functional Requirements"]
   },
   {

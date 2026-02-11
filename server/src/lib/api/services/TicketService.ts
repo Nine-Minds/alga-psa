@@ -468,13 +468,20 @@ export class TicketService extends BaseService<ITicket> {
         this.on('tc.user_id', '=', 'u.user_id')
             .andOn('tc.tenant', '=', 'u.tenant');
       })
+      .leftJoin('contacts as c', function() {
+        this.on('tc.contact_id', '=', 'c.contact_name_id')
+            .andOn('tc.tenant', '=', 'c.tenant');
+      })
       .select(
         'tc.*',
         knex.raw(`CASE 
           WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
           THEN CONCAT(u.first_name, ' ', u.last_name) 
           ELSE NULL 
-        END as created_by_name`)
+        END as created_by_name`),
+        'c.contact_name_id as author_contact_id',
+        'c.full_name as author_contact_name',
+        'c.email as author_contact_email'
       )
       .where({
         'tc.ticket_id': ticketId,
@@ -486,7 +493,11 @@ export class TicketService extends BaseService<ITicket> {
     return comments.map(comment => ({
       ...comment,
       comment_text: comment.note,
-      created_by: comment.user_id
+      created_by: comment.user_id ?? null,
+      created_by_name: comment.created_by_name || comment.author_contact_name || null,
+      author_contact_id: comment.author_contact_id || comment.contact_id || null,
+      author_contact_name: comment.author_contact_name || null,
+      author_contact_email: comment.author_contact_email || null
     }));
   }
 
@@ -561,7 +572,10 @@ export class TicketService extends BaseService<ITicket> {
       return {
         ...comment,
         comment_text: comment.note,
-        created_by: comment.user_id
+        created_by: comment.user_id ?? null,
+        author_contact_id: comment.contact_id ?? null,
+        author_contact_name: null,
+        author_contact_email: null
       };
     });
   }
