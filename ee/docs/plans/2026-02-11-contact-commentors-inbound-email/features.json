@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Add unit tests covering inbound email contact-only authorship in new-ticket and reply paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {

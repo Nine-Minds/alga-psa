@@ -47,6 +47,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Unknown-user fallback is now explicitly constrained to comments where neither `userMap[comment.user_id]` nor `contactMap[comment.contact_id]` resolves, via `resolveCommentAuthor` precedence.
 - (2026-02-11) API comment payloads now support contact-authored rows by making `created_by` nullable and adding contact author fields (`author_contact_id/name/email`) from `TicketService.getTicketComments` + `ticketCommentResponseSchema`.
 - (2026-02-11) `ticketEmailSubscriber` now resolves comment author identity from persisted `comments` row (`user_id`/`contact_id` + emails) and excludes author recipients by both user-id and email/contact in comment fan-out paths.
+- (2026-02-11) Added focused unit coverage for `processInboundEmailInApp` covering contact-only authorship in new-ticket, reply-token, and thread-header paths (`shared/services/email/__tests__/processInboundEmailInApp.test.ts`).
 
 ## Commands / Runbooks
 
