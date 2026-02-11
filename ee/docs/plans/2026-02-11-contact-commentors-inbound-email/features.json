@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Update inbound thread-header path to resolve sender contact and pass contact_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
   },
   {

@@ -36,6 +36,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) `createCommentFromEmail` now forwards `contact_id` into `TicketModel.createComment`, so inbound email comments can persist contact authorship linkage.
 - (2026-02-11) New-ticket inbound path now passes `contact_id` into `createCommentFromEmail` whenever sender contact is matched, regardless of whether a client user was resolved.
 - (2026-02-11) Reply-token inbound path now resolves sender contact once per email and forwards both `contact_id` and resolved `author_id` (when present) to comment creation.
+- (2026-02-11) Thread-header inbound reply path reuses the same sender-contact resolution and now forwards `contact_id`/`author_id` to comment creation.
 
 ## Commands / Runbooks
 
