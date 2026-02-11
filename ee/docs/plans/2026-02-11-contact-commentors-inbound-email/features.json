@@ -3,150 +3,217 @@
     "id": "F001",
     "description": "Define canonical ticket comment authorship model supporting user-linked and contact-only authors",
     "implemented": true,
-    "prdRefs": ["Goals", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F002",
     "description": "Add migration to create nullable comments.contact_id for contact-authored comments",
     "implemented": true,
-    "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
   },
   {
     "id": "F003",
     "description": "Add tenant-scoped foreign key and index for comments.contact_id -> contacts.contact_name_id",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F004",
     "description": "Extend shared comment typings to include contact authorship fields",
     "implemented": true,
-    "prdRefs": ["Data / API / Integrations"]
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
   },
   {
     "id": "F005",
     "description": "Extend TicketModel create-comment validation/input to accept contact_id",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F006",
     "description": "Validate contact_id tenant alignment during comment creation",
     "implemented": true,
-    "prdRefs": ["Security / Permissions", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F007",
     "description": "Persist contact_id on comments created through shared TicketModel.createComment",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F008",
     "description": "Preserve response-state behavior so contact-authored public comments set awaiting_internal",
     "implemented": true,
-    "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "Goals",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F009",
     "description": "Extend createCommentFromEmail input contract to accept contact_id",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F010",
     "description": "Forward contact_id from createCommentFromEmail to shared comment creation path",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F011",
     "description": "Update inbound new-ticket path to pass matched contact_id even when no author user exists",
     "implemented": true,
-    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F012",
     "description": "Update inbound reply-token path to resolve sender contact and pass contact_id",
     "implemented": true,
-    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F013",
     "description": "Update inbound thread-header path to resolve sender contact and pass contact_id",
     "implemented": true,
-    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F014",
     "description": "Preserve matched client-user association by continuing to pass author_id and supporting both ids when present",
     "implemented": true,
-    "prdRefs": ["Goals", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F015",
     "description": "Extend workflow runtime email action schemas to include contact_id fields",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
   },
   {
     "id": "F016",
     "description": "Update workflow runtime email action implementations to pass contact_id through to comment creation",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F017",
     "description": "Update MSP ticket details data assembly to load contact author data for conversation comments",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F018",
     "description": "Update client-portal ticket details data assembly to load contact author data for conversation comments",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F019",
     "description": "Add shared author-resolution helper for user/contact/unknown author display",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F020",
     "description": "Update CommentItem rendering to show contact name/email/avatar when comment is contact-authored without user_id",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F021",
     "description": "Limit Unknown User fallback to comments that have neither resolvable user nor contact author",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   },
   {
     "id": "F022",
     "description": "Update ticket comment API/service response contracts to represent contact-authored comments safely with nullable user id",
     "implemented": true,
-    "prdRefs": ["Data / API / Integrations", "Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F023",
     "description": "Ensure ticket email/notification subscriber author exclusion logic handles contact-authored comments",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F024",
     "description": "Add unit tests covering inbound email contact-only authorship in new-ticket and reply paths",
     "implemented": true,
-    "prdRefs": ["Requirements > Functional Requirements"]
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
   },
   {
     "id": "F025",
     "description": "Add integration/UI/API tests covering contact-authored comment persistence and rendering",
-    "implemented": false,
-    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
   }
 ]

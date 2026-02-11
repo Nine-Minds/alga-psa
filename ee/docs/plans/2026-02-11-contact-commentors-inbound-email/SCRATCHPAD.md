@@ -90,3 +90,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - For reply flows with unresolved sender contact but resolved ticket, should we fallback to ticket contact or keep unknown?
 - Do we want API responses to expose additive flat fields or a nested `author` object for future-proofing?
 - Should client portal display for contact-authored comments differ from MSP display in any way?
+- (2026-02-11) Added cross-layer verification for contact-authored comment support: integration assertions in inbound webhook tests, UI-level author resolution tests, and API schema tests for nullable `created_by` + contact author fields.
