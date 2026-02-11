@@ -102,7 +102,7 @@
   {
     "id": "T013",
     "description": "processInboundEmailInApp new-ticket flow with matched contact/no user sets comment contact_id and omits author_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

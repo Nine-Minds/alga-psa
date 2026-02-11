@@ -103,3 +103,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T010 complete: unit tests confirm internal contact-authored comments do not change ticket `response_state`.
 - (2026-02-11) T011 complete: `createCommentFromEmail` unit coverage now verifies `contact_id` is forwarded into `TicketModel.createComment`.
 - (2026-02-11) T012 complete: unit tests now assert dual forwarding of `author_id` and `contact_id` from `createCommentFromEmail`.
+- (2026-02-11) T013 complete: unit tests cover new-ticket inbound flow with matched contact/no user and assert `contact_id` is set while `author_id` is omitted.
