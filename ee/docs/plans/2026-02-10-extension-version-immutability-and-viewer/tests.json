@@ -222,7 +222,7 @@
   {
     "id": "T024",
     "description": "Finalize happy path still succeeds for brand-new version values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F005"

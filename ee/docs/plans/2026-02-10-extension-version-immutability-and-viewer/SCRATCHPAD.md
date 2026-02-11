@@ -82,3 +82,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T021: Unauthorized caller cannot access version-list backend action/route without extension read permission
 - (2026-02-10) Completed T022: Authorized extension-read caller can access version-list backend action/route
 - (2026-02-10) Completed T023: Strict immutability leaves existing historical duplicate-bundle data untouched (no destructive migration)
+- (2026-02-10) Completed T024: Finalize happy path still succeeds for brand-new version values
