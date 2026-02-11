@@ -39,7 +39,7 @@
   {
     "id": "T005",
     "description": "Version-upsert path does not create a new extension_bundle row for duplicate version attempts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F016"
