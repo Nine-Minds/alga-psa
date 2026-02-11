@@ -99,7 +99,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
 
+  const internalLabel = t('tickets.conversation.internal', 'Internal');
+  const resolutionLabel = t('tickets.conversation.resolution', 'Resolution');
+
   const handleAddCommentClick = () => {
+    // Auto-check toggles based on which tab is active
+    if (!hideInternalTab) {
+      setIsInternalToggle(activeTab === internalLabel);
+    }
+    setIsResolutionToggle(activeTab === resolutionLabel);
     setShowEditor(true);
   };
   const handleSubmitComment = async () => {
@@ -146,6 +154,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       await onAddNewComment(isInternalToggle, isResolutionToggle);
     }
   };
+
+  // Sync toggles when active tab changes while editor is open
+  useEffect(() => {
+    if (showEditor) {
+      if (!hideInternalTab) {
+        setIsInternalToggle(activeTab === internalLabel);
+      }
+      setIsResolutionToggle(activeTab === resolutionLabel);
+    }
+  }, [activeTab, showEditor, hideInternalTab, internalLabel, resolutionLabel]);
 
   // Fetch contact avatar URLs for client users
   useEffect(() => {
