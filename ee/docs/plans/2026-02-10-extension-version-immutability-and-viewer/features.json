@@ -27,7 +27,7 @@
   {
     "id": "F004",
     "description": "Map DB unique-constraint races for (registry_id, version) to the same friendly duplicate-version 409 response",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Functional Requirements"
     ]
