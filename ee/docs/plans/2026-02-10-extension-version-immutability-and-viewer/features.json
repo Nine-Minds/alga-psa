@@ -139,7 +139,7 @@
   {
     "id": "F018",
     "description": "Add UI tests for Extension Details versions section rendering, sorting, and empty state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Acceptance Criteria (Definition of Done)"
     ]
