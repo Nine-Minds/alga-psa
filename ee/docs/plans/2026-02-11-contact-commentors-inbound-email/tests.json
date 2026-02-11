@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "TicketModel.createComment accepts author_type=contact with contact_id and no author_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
