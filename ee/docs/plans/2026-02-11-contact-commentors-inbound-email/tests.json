@@ -286,7 +286,7 @@
   {
     "id": "T035",
     "description": "Ticket email subscriber excludes contact author from recipient fan-out when comment author is contact-only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

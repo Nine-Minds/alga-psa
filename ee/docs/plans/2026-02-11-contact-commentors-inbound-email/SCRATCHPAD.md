@@ -125,3 +125,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T032 complete: added TicketService contract tests asserting `getTicketComments` exposes contact author fields and nullable `created_by` mapping.
 - (2026-02-11) T033 complete: API schema unit tests validate contact-authored ticket comment payloads without requiring `created_by` UUID.
 - (2026-02-11) T034 complete: response-shape test now covers schema-validated contact-authored comment payload acceptance for ticket comments API outputs.
+- (2026-02-11) T035 complete: added ticket-email-subscriber contract tests asserting contact-author exclusion gates in recipient fan-out logic.
