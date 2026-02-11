@@ -51,7 +51,7 @@
   {
     "id": "T007",
     "description": "TicketModel.createComment persists contact_id on inserted comment row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
