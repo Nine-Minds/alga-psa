@@ -1,7 +1,7 @@
 import { cn } from '../lib/utils';
 import * as React from 'react';
 
-export type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'outline';
+export type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'outline' | 'info' | 'default-muted' | 'itil';
 export type BadgeSize = 'sm' | 'md' | 'lg';
 
 const badgeSizeClasses: Record<BadgeSize, string> = {
@@ -31,6 +31,9 @@ function Badge({ className, variant = 'default', size = 'md', ref, ...props }: B
           'border-transparent bg-error text-error-foreground': variant === 'error',
           'border-border bg-background text-foreground': variant === 'default',
           'border-current bg-transparent': variant === 'outline',
+          'border-[rgb(var(--badge-info-border))] bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))]': variant === 'info',
+          'border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]': variant === 'default-muted',
+          'border-blue-500/30 bg-blue-500/15 text-blue-600': variant === 'itil',
         },
         className
       )}

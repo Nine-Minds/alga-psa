@@ -960,8 +960,8 @@ export function QuickAddTicket({
 
                             {/* ITIL Priority Matrix - Show when help icon is clicked */}
                             {showPriorityMatrix && (
-                              <div className="mt-3 p-4 bg-gray-50 border rounded-lg">
-                                <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                              <div className="mt-3 p-4 bg-gray-500/10 border rounded-lg">
+                                <h4 className="text-sm font-medium mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full text-xs">
                                     <thead>
@@ -977,43 +977,43 @@ export function QuickAddTicket({
                                     <tbody>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                                        <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-red-500/15 text-red-600 font-semibold">Critical (1)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 font-semibold">Planning (5)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 font-semibold">Planning (5)</td>
                                       </tr>
                                     </tbody>
                                   </table>

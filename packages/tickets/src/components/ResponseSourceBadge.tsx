@@ -42,7 +42,7 @@ export default function ResponseSourceBadge({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border border-slate-300 dark:border-[rgb(var(--color-border-200))] bg-slate-100 dark:bg-[rgb(var(--color-border-100))] text-slate-700 dark:text-[rgb(var(--color-text-400))]',
+        'inline-flex items-center gap-1 rounded-full border border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]',
         size === 'md' ? 'px-2 py-1 text-sm' : 'px-1.5 py-0.5 text-xs',
         className
       )}

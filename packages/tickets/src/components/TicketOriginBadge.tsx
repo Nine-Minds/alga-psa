@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Building2, Code2, Mail, Monitor } from 'lucide-react';
-import { cn } from '@alga-psa/ui';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import {
   TICKET_ORIGIN_OTHER,
@@ -104,24 +104,20 @@ function getLabel(
   return labels.internal ?? DEFAULT_LABELS.internal;
 }
 
-function getOriginColorClasses(origin: ResolvedTicketOrigin): string {
+function getOriginVariant(origin: ResolvedTicketOrigin): BadgeVariant {
   if (origin === TICKET_ORIGINS.CLIENT_PORTAL) {
-    return 'border-blue-300 bg-blue-50 text-blue-700';
+    return 'info';
   }
 
   if (origin === TICKET_ORIGINS.INBOUND_EMAIL) {
-    return 'border-amber-300 bg-amber-50 text-amber-700';
+    return 'warning';
   }
 
   if (origin === TICKET_ORIGINS.API) {
-    return 'border-emerald-300 bg-emerald-50 text-emerald-700';
+    return 'success';
   }
 
-  if (origin === TICKET_ORIGIN_OTHER) {
-    return 'border-zinc-300 bg-zinc-100 text-zinc-700';
-  }
-
-  return 'border-slate-300 bg-slate-100 text-slate-700';
+  return 'default-muted';
 }
 
 export default function TicketOriginBadge({
@@ -133,18 +129,15 @@ export default function TicketOriginBadge({
   const normalizedOrigin = normalizeOrigin(origin);
 
   return (
-    <div
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full border font-medium',
-        getOriginColorClasses(normalizedOrigin),
-        size === 'md' ? 'px-2 py-1 text-sm' : 'px-1.5 py-0.5 text-xs',
-        className
-      )}
+    <Badge
+      variant={getOriginVariant(normalizedOrigin)}
+      size={size}
+      className={className}
       data-testid="ticket-origin-badge"
       data-ticket-origin={normalizedOrigin}
     >
       <TicketOriginIcon origin={normalizedOrigin} />
-      <span>{getLabel(normalizedOrigin, labels)}</span>
-    </div>
+      <span className="ml-1">{getLabel(normalizedOrigin, labels)}</span>
+    </Badge>
   );
 }

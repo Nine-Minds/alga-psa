@@ -18,19 +18,19 @@ const TAX_SOURCE_CONFIG = {
   internal: {
     label: 'Tax: Internal',
     icon: Calculator,
-    className: 'bg-green-100 text-green-800 border-green-200',
+    variant: 'success' as const,
     tooltip: 'Tax calculated by Alga PSA based on configured tax rates',
   },
   external: {
     label: 'Tax: External',
     icon: Cloud,
-    className: 'bg-blue-100 text-blue-800 border-blue-200',
+    variant: 'info' as const,
     tooltip: 'Tax calculated by external accounting system',
   },
   pending_external: {
     label: 'Tax: Pending',
     icon: Clock,
-    className: 'bg-amber-100 text-amber-800 border-amber-200',
+    variant: 'warning' as const,
     tooltip: 'Tax awaiting import from external accounting system',
   },
 };
@@ -68,8 +68,8 @@ export function InvoiceTaxSourceBadge({
   return (
     <Tooltip content={tooltipContent}>
       <Badge
-        variant="outline"
-        className={`inline-flex items-center gap-1 ${config.className} ${className}`}
+        variant={config.variant}
+        className={`inline-flex items-center gap-1 ${className}`}
       >
         <Icon className="h-3 w-3" />
         <span className="text-xs">{config.label}</span>
