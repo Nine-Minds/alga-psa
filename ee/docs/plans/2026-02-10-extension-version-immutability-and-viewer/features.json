@@ -75,7 +75,7 @@
   {
     "id": "F010",
     "description": "Handle legacy version rows with multiple bundles by deterministically selecting latest bundle metadata in viewer payload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Rollout / Migration"
     ]

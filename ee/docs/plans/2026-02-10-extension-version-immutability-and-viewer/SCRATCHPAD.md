@@ -50,3 +50,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F007: Add registry query/action to list all versions for a registry extension in tenant context
 - (2026-02-10) Completed F008: Include in version list payload: version string, created/published timestamp, latest content hash metadata
 - (2026-02-10) Completed F009: Include installed marker in version list payload by joining tenant_extension_install.version_id
+- (2026-02-10) Completed F010: Handle legacy version rows with multiple bundles by deterministically selecting latest bundle metadata in viewer payload
