@@ -10,6 +10,8 @@
 
 const MIN_IFRAME_HEIGHT = 100;
 const MAX_IFRAME_HEIGHT = 4000;
+type ProxyMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+const ALLOWED_PROXY_METHODS = new Set<ProxyMethod>(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 export interface IframeBootstrapOptions {
   iframe: HTMLIFrameElement;
@@ -57,7 +59,11 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): () => void {
 
     // Expect shape: { type: 'apiproxy', payload: { route, body? }, request_id }
     if (data.type === 'apiproxy') {
-      console.log('iframeBridge: handling apiproxy', { requestId: data.request_id, route: data.payload?.route });
+      console.log('iframeBridge: handling apiproxy', {
+        requestId: data.request_id,
+        route: data.payload?.route,
+        method: data.payload?.method,
+      });
       handleApiProxy(iframe, extensionId, data, acceptedOrigin);
     }
   };
@@ -75,6 +81,18 @@ function safeParseUrl(href: string, base: string): URL | null {
   }
 }
 
+function resolveProxyMethod(method: unknown): ProxyMethod {
+  if (typeof method !== 'string' || method.trim().length === 0) {
+    // Backward compatibility for older SDK payloads.
+    return 'POST';
+  }
+  const normalized = method.toUpperCase();
+  if (ALLOWED_PROXY_METHODS.has(normalized as ProxyMethod)) {
+    return normalized as ProxyMethod;
+  }
+  throw new Error(`Unsupported proxy method: ${method}`);
+}
+
 async function handleApiProxy(
   iframe: HTMLIFrameElement,
   extensionId: string | undefined,
@@ -86,6 +104,7 @@ async function handleApiProxy(
 
   const route = payload?.route || '';
   const bodyB64 = payload?.body;
+  const method = resolveProxyMethod(payload?.method);
 
   const responseMsg = {
     alga: true,
@@ -110,14 +129,17 @@ async function handleApiProxy(
       }
     }
 
+    const hasBody = method !== 'GET' && !!bodyBytes;
     const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/octet-stream',
-      },
-      body: bodyBytes ? new Blob([bodyBytes as any]) : undefined,
+      method,
+      headers: hasBody
+        ? {
+            'content-type': 'application/octet-stream',
+          }
+        : undefined,
+      body: hasBody ? new Blob([bodyBytes as any]) : undefined,
     });
-    console.log('iframeBridge: fetch completed', { status: res.status, ok: res.ok, url });
+    console.log('iframeBridge: fetch completed', { status: res.status, ok: res.ok, url, method });
 
     if (!res.ok) {
       // Try to read error text

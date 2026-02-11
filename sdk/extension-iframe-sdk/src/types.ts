@@ -37,7 +37,12 @@ export type HostToClientMessage =
  */
 export interface ResizePayload { height: number }
 export interface NavigatePayload { path: string }
-export interface ApiProxyPayload { route: string; body?: string } // body is base64 encoded bytes
+export type ProxyHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export interface ApiProxyPayload {
+  route: string;
+  body?: string; // body is base64 encoded bytes
+  method?: ProxyHttpMethod;
+}
 
 export type ClientToHostType = 'ready' | 'resize' | 'navigate' | 'apiproxy';
 export type ClientToHostMessage =

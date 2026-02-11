@@ -17,16 +17,17 @@ function decodePayload(payload?: Uint8Array | null): unknown {
 }
 
 describe('callHandlerJson', () => {
-  it('defaults to GET with override payload', async () => {
+  it('defaults to GET and forwards method to bridge transport', async () => {
     const proxy = makeProxy({ ok: true });
 
     const result = await callHandlerJson(proxy, '/api/status');
 
     expect(result).toEqual({ ok: true });
     expect(proxy.callRoute).toHaveBeenCalledTimes(1);
-    const [route, payload] = proxy.callRoute.mock.calls[0];
-    expect(route).toBe('/api/status?__method=GET');
-    expect(decodePayload(payload)).toEqual({ __method: 'GET' });
+    const [route, payload, options] = proxy.callRoute.mock.calls[0];
+    expect(route).toBe('/api/status');
+    expect(payload).toBeUndefined();
+    expect(options).toEqual({ method: 'GET' });
   });
 
   it('sends POST body as JSON', async () => {
@@ -39,23 +40,25 @@ describe('callHandlerJson', () => {
 
     expect(result).toEqual({ created: true });
     expect(proxy.callRoute).toHaveBeenCalledTimes(1);
-    const [route, payload] = proxy.callRoute.mock.calls[0];
+    const [route, payload, options] = proxy.callRoute.mock.calls[0];
     expect(route).toBe('/api/items');
     expect(decodePayload(payload)).toEqual({ name: 'item-1' });
+    expect(options).toEqual({ method: 'POST' });
   });
 
-  it('encodes DELETE override in route and body', async () => {
+  it('sends DELETE through method option without override markers', async () => {
     const proxy = makeProxy({ deleted: true });
 
     await callHandlerJson(proxy, '/api/items/42', { method: 'DELETE' });
 
     expect(proxy.callRoute).toHaveBeenCalledTimes(1);
-    const [route, payload] = proxy.callRoute.mock.calls[0];
-    expect(route).toBe('/api/items/42?__method=DELETE');
-    expect(decodePayload(payload)).toEqual({ __method: 'DELETE' });
+    const [route, payload, options] = proxy.callRoute.mock.calls[0];
+    expect(route).toBe('/api/items/42');
+    expect(payload).toBeUndefined();
+    expect(options).toEqual({ method: 'DELETE' });
   });
 
-  it('encodes PATCH override while preserving object body', async () => {
+  it('sends PATCH body as JSON with method option', async () => {
     const proxy = makeProxy({ updated: true });
 
     await callHandlerJson(proxy, '/api/items/42', {
@@ -64,9 +67,10 @@ describe('callHandlerJson', () => {
     });
 
     expect(proxy.callRoute).toHaveBeenCalledTimes(1);
-    const [route, payload] = proxy.callRoute.mock.calls[0];
-    expect(route).toBe('/api/items/42?__method=PATCH');
-    expect(decodePayload(payload)).toEqual({ __method: 'PATCH', name: 'updated' });
+    const [route, payload, options] = proxy.callRoute.mock.calls[0];
+    expect(route).toBe('/api/items/42');
+    expect(decodePayload(payload)).toEqual({ name: 'updated' });
+    expect(options).toEqual({ method: 'PATCH' });
   });
 
   it('rejects GET with body', async () => {
