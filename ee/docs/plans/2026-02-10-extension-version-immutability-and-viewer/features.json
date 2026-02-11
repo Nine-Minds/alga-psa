@@ -83,7 +83,7 @@
   {
     "id": "F011",
     "description": "Render read-only Versions section in Extension Details page",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#UX / UI Notes"
     ]
