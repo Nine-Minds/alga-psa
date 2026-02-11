@@ -238,7 +238,7 @@
   {
     "id": "T029",
     "description": "CommentItem uses ContactAvatar for contact-authored comment with no user_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
