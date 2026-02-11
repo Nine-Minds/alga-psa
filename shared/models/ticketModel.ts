@@ -1046,6 +1046,19 @@ export class TicketModel {
       throw new Error('Ticket not found or does not belong to tenant');
     }
 
+    if (validatedData.contact_id) {
+      const contact = await trx('contacts')
+        .where({
+          tenant,
+          contact_name_id: validatedData.contact_id,
+        })
+        .first();
+
+      if (!contact) {
+        throw new Error('Contact not found or does not belong to tenant');
+      }
+    }
+
     const commentId = uuidv4();
     const now = new Date();
 

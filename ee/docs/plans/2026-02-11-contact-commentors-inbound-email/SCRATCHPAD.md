@@ -29,6 +29,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Added migration scaffold `server/migrations/20260211190000_add_comments_contact_id.cjs` to reintroduce nullable `comments.contact_id`; FK/index are intentionally separated into the next step for checklist traceability.
 - (2026-02-11) Migration `20260211190000_add_comments_contact_id.cjs` now includes `comments_tenant_contact_id_fk` (`tenant, contact_id -> contacts.tenant, contact_name_id`) and `comments_tenant_contact_id_idx` for bounded comment-author lookups.
 - (2026-02-11) `shared/models/ticketModel.ts` comment creation schema and input types now accept optional `contact_id` with UUID validation.
+- (2026-02-11) `TicketModel.createComment` now performs tenant-scoped contact validation (`contacts.contact_name_id` + `tenant`) and fails fast when `contact_id` is missing/out-of-tenant.
 
 ## Commands / Runbooks
 
