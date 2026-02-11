@@ -110,7 +110,7 @@
   {
     "id": "T014",
     "description": "processInboundEmailInApp new-ticket flow with matched contact+user sets both contact_id and author_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F014"
