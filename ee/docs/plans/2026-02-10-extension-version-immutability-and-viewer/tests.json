@@ -96,7 +96,7 @@
   {
     "id": "T011",
     "description": "Version list backend returns all versions for given registry extension sorted newest first",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F011"
