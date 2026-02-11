@@ -246,7 +246,7 @@
   {
     "id": "T030",
     "description": "CommentItem preserves Unknown User fallback when neither user nor contact can be resolved",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
