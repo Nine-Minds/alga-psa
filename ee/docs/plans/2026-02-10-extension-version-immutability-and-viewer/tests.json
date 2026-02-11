@@ -134,7 +134,7 @@
   {
     "id": "T015",
     "description": "Version list handles extension with no install row by returning all rows installed=false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
