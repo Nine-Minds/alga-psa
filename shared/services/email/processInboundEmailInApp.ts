@@ -230,6 +230,11 @@ export async function processInboundEmailInApp(
     });
   }
 
+  const senderEmail = normalizeEmailAddress(emailData.from?.email);
+  const matchedSenderContact = senderEmail
+    ? await findContactByEmail(senderEmail, tenantId)
+    : null;
+
   const token = extractConversationToken(parsedEmail);
   if (token) {
     try {
@@ -259,6 +264,8 @@ export async function processInboundEmailInApp(
             content: JSON.stringify(blocks),
             source: 'email',
             author_type: 'contact',
+            author_id: matchedSenderContact?.user_id,
+            contact_id: matchedSenderContact?.contact_id,
             metadata: {
               email: {
                 messageId: emailData.id,
@@ -373,6 +380,8 @@ export async function processInboundEmailInApp(
         content: JSON.stringify(blocks),
         source: 'email',
         author_type: 'contact',
+        author_id: matchedSenderContact?.user_id,
+        contact_id: matchedSenderContact?.contact_id,
         metadata: {
           email: {
             messageId: emailData.id,
@@ -440,14 +449,9 @@ export async function processInboundEmailInApp(
     return { outcome: 'skipped', reason: 'missing_defaults' };
   }
 
-  const senderEmail = normalizeEmailAddress(emailData.from?.email);
-  const matchedContact = senderEmail
-    ? await findContactByEmail(senderEmail, tenantId)
-    : null;
-
-  const targetClientId = matchedContact?.client_id ?? defaults.client_id;
-  const targetContactId = matchedContact?.contact_id;
-  const targetAuthorUserId = matchedContact?.user_id ?? null;
+  const targetClientId = matchedSenderContact?.client_id ?? defaults.client_id;
+  const targetContactId = matchedSenderContact?.contact_id;
+  const targetAuthorUserId = matchedSenderContact?.user_id ?? null;
 
   // New-ticket idempotency: ticket could have been created in another parallel process.
   const existingTicketAfterDefaults = await findExistingEmailTicket({

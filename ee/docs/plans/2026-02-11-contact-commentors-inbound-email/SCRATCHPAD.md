@@ -35,6 +35,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) `createCommentFromEmail` contract in `shared/workflow/actions/emailWorkflowActions.ts` now accepts optional `contact_id` to support contact-only comment authorship from inbound paths.
 - (2026-02-11) `createCommentFromEmail` now forwards `contact_id` into `TicketModel.createComment`, so inbound email comments can persist contact authorship linkage.
 - (2026-02-11) New-ticket inbound path now passes `contact_id` into `createCommentFromEmail` whenever sender contact is matched, regardless of whether a client user was resolved.
+- (2026-02-11) Reply-token inbound path now resolves sender contact once per email and forwards both `contact_id` and resolved `author_id` (when present) to comment creation.
 
 ## Commands / Runbooks
 

@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Update inbound reply-token path to resolve sender contact and pass contact_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
   },
   {
