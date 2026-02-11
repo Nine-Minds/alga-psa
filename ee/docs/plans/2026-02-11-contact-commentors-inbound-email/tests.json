@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Migration adds tenant-scoped FK for comments.contact_id to contacts.contact_name_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
