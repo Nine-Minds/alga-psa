@@ -128,7 +128,7 @@
   {
     "id": "T016",
     "description": "processInboundEmailInApp reply-token path resolves sender contact and sets contact_id for contact-only sender",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
