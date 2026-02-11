@@ -59,7 +59,7 @@
   {
     "id": "T008",
     "description": "TicketModel.createComment persists both user_id and contact_id when both are provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F014"
