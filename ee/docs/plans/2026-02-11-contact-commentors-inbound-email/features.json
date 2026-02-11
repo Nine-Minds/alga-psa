@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Update CommentItem rendering to show contact name/email/avatar when comment is contact-authored without user_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
   },
   {

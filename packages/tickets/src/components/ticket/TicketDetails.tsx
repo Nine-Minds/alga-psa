@@ -92,6 +92,7 @@ interface TicketDetailsProps {
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
+    initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
@@ -168,6 +169,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
     initialUserMap = {},
+    initialContactMap = {},
     statusOptions = [],
     agentOptions = [],
     boardOptions = [],
@@ -254,6 +256,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
+    const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
@@ -1791,6 +1794,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     documents={documents}
                                     userMap={userMap}
+                                    contactMap={contactMap}
                                     currentUser={currentUser ? {
                                         id: currentUser.user_id,
                                         name: `${currentUser.first_name} ${currentUser.last_name}`,

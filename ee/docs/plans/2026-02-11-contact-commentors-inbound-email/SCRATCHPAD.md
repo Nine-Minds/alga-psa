@@ -43,6 +43,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) MSP consolidated ticket loader now builds a `contactMap` keyed by `contact_name_id` for all `comments.contact_id` values, giving conversation rendering a first-class contact author source alongside `userMap`.
 - (2026-02-11) Client-portal ticket details loader now also returns `contactMap` from `comments.contact_id`, keeping author resolution parity between MSP and portal views.
 - (2026-02-11) Added `packages/tickets/src/lib/commentAuthorResolution.ts` as the shared author resolver with deterministic precedence: user author, then contact author, then unknown fallback.
+- (2026-02-11) `CommentItem` now resolves authors via shared helper + `contactMap`, rendering contact-authored comments with contact name/email/avatar (without requiring `user_id`).
 
 ## Commands / Runbooks
 
