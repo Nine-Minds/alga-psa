@@ -136,7 +136,7 @@
   {
     "id": "T017",
     "description": "processInboundEmailInApp reply-token path sets both author_id and contact_id when matched contact has user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F014"

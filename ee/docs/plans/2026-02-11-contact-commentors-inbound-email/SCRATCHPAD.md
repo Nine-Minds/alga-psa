@@ -107,3 +107,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T014 complete: unit tests assert new-ticket inbound flow with matched contact+user forwards both `contact_id` and `author_id`.
 - (2026-02-11) T015 complete: added dedicated unit coverage for unmatched new-ticket sender fallback (no `contact_id`, system author path preserved).
 - (2026-02-11) T016 complete: unit tests cover reply-token threading with contact-only sender and assert `contact_id` propagation.
+- (2026-02-11) T017 complete: additional unit coverage verifies reply-token path forwards both `author_id` and `contact_id` for contact+user matches.
