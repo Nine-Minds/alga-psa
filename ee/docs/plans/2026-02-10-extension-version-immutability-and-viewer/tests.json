@@ -164,7 +164,7 @@
   {
     "id": "T018",
     "description": "Versions table renders expected columns Version, Published, Content hash, Installed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],
