@@ -43,7 +43,7 @@
   {
     "id": "F006",
     "description": "Update installer/publish UI flow to surface duplicate-version message directly to users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Users and Primary Flows"
     ]
