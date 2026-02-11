@@ -21,7 +21,7 @@
   {
     "id": "T003",
     "description": "Finalize rejects duplicate version when incoming content hash is identical to existing bundle hash",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ],
