@@ -230,7 +230,7 @@
   {
     "id": "T028",
     "description": "CommentItem renders contact email for contact-authored comment when available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

@@ -118,3 +118,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T025 complete: added client-portal ticket details contract test ensuring contact author resolution data is assembled in `client-tickets`.
 - (2026-02-11) T026 complete: `resolveCommentAuthor` unit tests verify precedence order user → contact → unknown.
 - (2026-02-11) T027 complete: added `CommentItem` contract tests confirming contact-authored comments resolve/render contact display name instead of unknown fallback.
+- (2026-02-11) T028 complete: `CommentItem` contract tests verify contact email rendering path (`mailto:` link) when author email is available.
