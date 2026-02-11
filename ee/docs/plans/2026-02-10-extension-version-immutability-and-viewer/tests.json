@@ -87,7 +87,7 @@
   {
     "id": "T010",
     "description": "CLI publish surfaces duplicate-version response message from finalize path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
