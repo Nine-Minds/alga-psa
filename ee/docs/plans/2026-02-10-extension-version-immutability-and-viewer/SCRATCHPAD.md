@@ -75,3 +75,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T014: Version list marks installed=true only for row matching tenant_extension_install.version_id
 - (2026-02-10) Completed T015: Version list handles extension with no install row by returning all rows installed=false
 - (2026-02-10) Completed T016: Legacy data case: one version with multiple bundle rows still returns one deterministic viewer row
+- (2026-02-10) Completed T017: Extension Details page renders Versions section heading and table when version data exists

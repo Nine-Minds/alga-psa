@@ -153,7 +153,7 @@
   {
     "id": "T017",
     "description": "Extension Details page renders Versions section heading and table when version data exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
