@@ -40,6 +40,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) End-to-end inbound paths now support dual linkage (`author_id` + `contact_id`) when a matched contact has an associated client user, preserving user identity while keeping explicit contact authorship.
 - (2026-02-11) Workflow action schemas now expose `contact_id` in `create_comment_from_email` (V2 runtime + legacy action registry), so workflow definitions can pass contact authorship explicitly.
 - (2026-02-11) Workflow runtime implementations now pass `contact_id` through to shared comment creation (`create_comment_from_email`, `create_ticket_with_initial_comment`, and parsed-reply comment path with sender contact resolution fallback).
+- (2026-02-11) MSP consolidated ticket loader now builds a `contactMap` keyed by `contact_name_id` for all `comments.contact_id` values, giving conversation rendering a first-class contact author source alongside `userMap`.
 
 ## Commands / Runbooks
 

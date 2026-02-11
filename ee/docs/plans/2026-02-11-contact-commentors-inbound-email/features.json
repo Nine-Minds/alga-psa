@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Update MSP ticket details data assembly to load contact author data for conversation comments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {
