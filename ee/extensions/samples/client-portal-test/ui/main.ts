@@ -2,6 +2,7 @@
 // Uses @alga/extension-iframe-sdk for postMessage communication
 
 import { IframeBridge } from '@alga-psa/extension-iframe-sdk';
+import { callHandlerJson } from './call-handler-json';
 
 // Initialize the SDK bridge
 const bridge = new IframeBridge({
@@ -106,25 +107,6 @@ function updateContextDisplay(): void {
   }
 }
 
-/**
- * Helper to call proxy and parse JSON response
- */
-async function callProxyJson<T>(route: string, payload?: unknown): Promise<T | undefined> {
-  // Encode payload to Uint8Array if provided
-  let payloadBytes: Uint8Array | undefined;
-  if (payload !== undefined) {
-    const jsonStr = JSON.stringify(payload);
-    payloadBytes = new TextEncoder().encode(jsonStr);
-  }
-
-  // Use the SDK's uiProxy to make the call
-  const responseBytes = await bridge.uiProxy.callRoute(route, payloadBytes);
-
-  // Decode response
-  const text = new TextDecoder().decode(responseBytes);
-  return text.length ? JSON.parse(text) : undefined;
-}
-
 interface HandlerResponse {
   ok?: boolean;
   message?: string;
@@ -155,7 +137,11 @@ async function callHandler(): Promise<void> {
 
   try {
     console.log('[dual-portal-demo] Calling handler via SDK proxy');
-    const data = await callProxyJson<HandlerResponse>('/', { portalType });
+    const userData = await callHandlerJson<HandlerResponse>(bridge, '/user', { method: 'GET' });
+    const data = await callHandlerJson<HandlerResponse>(bridge, '/', {
+      method: 'POST',
+      body: { portalType },
+    });
 
     if (!data) {
       if (handlerEl) {
@@ -165,13 +151,15 @@ async function callHandler(): Promise<void> {
     }
 
     // Format user info for display
-    const userDisplay = data.user
-      ? `${data.user.userName} (${data.user.userEmail})`
-      : data.userError
-        ? `Error: ${data.userError}`
+    const resolvedUser = userData?.user || data.user;
+    const resolvedUserError = userData?.userError || data.userError;
+    const userDisplay = resolvedUser
+      ? `${resolvedUser.userName} (${resolvedUser.userEmail})`
+      : resolvedUserError
+        ? `Error: ${resolvedUserError}`
         : 'N/A';
-    const userTypeDisplay = data.user?.userType || 'N/A';
-    const clientIdDisplay = data.user?.clientId || 'N/A';
+    const userTypeDisplay = resolvedUser?.userType || 'N/A';
+    const clientIdDisplay = resolvedUser?.clientId || 'N/A';
 
     if (handlerEl) {
       handlerEl.innerHTML = `
