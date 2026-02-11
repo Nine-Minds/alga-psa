@@ -212,7 +212,7 @@
   {
     "id": "T023",
     "description": "Strict immutability leaves existing historical duplicate-bundle data untouched (no destructive migration)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F010"
