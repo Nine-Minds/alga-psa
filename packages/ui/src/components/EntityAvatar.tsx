@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { generateEntityColor } from '../lib/colorUtils';
+import { useTheme } from 'next-themes';
+import { generateEntityColor, adaptColorsForDarkMode } from '../lib/colorUtils';
 import { cn } from '../lib/utils';
 import Spinner from './Spinner';
 
@@ -74,9 +75,15 @@ export const EntityAvatar = ({
   getInitials = getDefaultInitials,
   altText,
 }: EntityAvatarProps) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const initials = getInitials(entityName || '');
   // Use entityName for color generation for consistency if ID changes or isn't stable
-  const fallbackColors = generateEntityColor(entityName || String(entityId));
+  const fallbackColors = React.useMemo(() => {
+    const raw = generateEntityColor(entityName || String(entityId));
+    return isDark ? adaptColorsForDarkMode(raw) : raw;
+  }, [entityName, entityId, isDark]);
   const { className: sizeClassName, style: sizeStyle } = getSizeStyle(size);
 
   // Enhanced image loading state management

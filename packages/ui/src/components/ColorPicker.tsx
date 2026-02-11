@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import {
   Popover,
   PopoverContent,
@@ -9,6 +10,7 @@ import {
 import { Button } from './Button';
 import { Input } from './Input';
 import { Label } from './Label';
+import { adaptColorsForDarkMode } from '../lib/colorUtils';
 
 interface ColorPickerProps {
   currentBackgroundColor?: string | null;
@@ -86,8 +88,15 @@ const ColorPicker = ({
   previewType = 'tag',
   colorMode = 'tag',
 }: ColorPickerProps) => {
-  // Select preset colors based on mode
-  const PRESET_COLORS = colorMode === 'solid' ? SOLID_PRESET_COLORS : TAG_PRESET_COLORS;
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
+  // Select preset colors based on mode, adapted for dark mode display
+  const BASE_PRESET_COLORS = colorMode === 'solid' ? SOLID_PRESET_COLORS : TAG_PRESET_COLORS;
+  const PRESET_COLORS = useMemo(() => {
+    if (!isDark) return BASE_PRESET_COLORS;
+    return BASE_PRESET_COLORS.map(preset => adaptColorsForDarkMode(preset));
+  }, [isDark, colorMode]);
   const [isOpen, setIsOpen] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState(currentBackgroundColor || '');
   const [textColor, setTextColor] = useState(currentTextColor || '');
@@ -155,7 +164,7 @@ const ColorPicker = ({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
-        className="w-80 p-4 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+        className="w-80 p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-lg shadow-lg z-50"
         sideOffset={5}
         onInteractOutside={(e) => {
           // Prevent closing when clicking inside the popover
@@ -166,38 +175,39 @@ const ColorPicker = ({
         }}
       >
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
             {showTextColor ? 'Customize Tag Colors' : 'Choose Color'}
           </h3>
           
           {/* Preset colors */}
           <div>
-            <Label className="text-xs text-gray-700 mb-2 block">Quick Select</Label>
+            <Label className="text-xs text-[rgb(var(--color-text-700))] mb-2 block">Quick Select</Label>
             <div className="grid grid-cols-6 gap-2">
-              {PRESET_COLORS.map((preset, index) => {
-                const isSelected = showTextColor 
-                  ? backgroundColor === preset.background && textColor === preset.text
-                  : backgroundColor === preset.background;
+              {BASE_PRESET_COLORS.map((basePreset, index) => {
+                const displayPreset = PRESET_COLORS[index];
+                const isSelected = showTextColor
+                  ? backgroundColor === basePreset.background && textColor === basePreset.text
+                  : backgroundColor === basePreset.background;
                 return (
                   <button
                     key={index}
                     type="button"
-                    className={`w-full h-8 ${showTextColor ? 'rounded' : 'rounded-full'} border-2 hover:border-gray-400 transition-colors ${
-                      isSelected ? 'border-gray-600 ring-2 ring-gray-300' : 'border-gray-300'
+                    className={`w-full h-8 ${showTextColor ? 'rounded' : 'rounded-full'} border-2 hover:border-[rgb(var(--color-border-300))] transition-colors ${
+                      isSelected ? 'border-[rgb(var(--color-border-400))] ring-2 ring-[rgb(var(--color-border-200))]' : 'border-[rgb(var(--color-border-200))]'
                     }`}
-                    style={{ backgroundColor: preset.background }}
+                    style={{ backgroundColor: displayPreset.background }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handlePresetClick(preset);
+                      handlePresetClick(basePreset);
                     }}
                     aria-label={`Select preset color ${index + 1}`}
-                    title={showTextColor ? `Background: ${preset.background}, Text: ${preset.text}` : preset.background}
+                    title={showTextColor ? `Background: ${basePreset.background}, Text: ${basePreset.text}` : basePreset.background}
                   >
                     {showTextColor && (
                       <span
                         className="text-xs font-medium"
-                        style={{ color: preset.text }}
+                        style={{ color: displayPreset.text }}
                       >
                         Aa
                       </span>
@@ -211,7 +221,7 @@ const ColorPicker = ({
           {/* Custom color inputs */}
           <div className="space-y-3">
             <div>
-              <Label htmlFor="background-color" className="text-xs text-gray-700">
+              <Label htmlFor="background-color" className="text-xs text-[rgb(var(--color-text-700))]">
                 Background Color
               </Label>
               <div className="flex gap-2 mt-1">
@@ -226,7 +236,7 @@ const ColorPicker = ({
                   type="color"
                   value={backgroundColor || '#FF0000'}
                   onChange={(e) => handleBackgroundChange(e.target.value)}
-                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                  className="w-10 h-10 rounded border border-[rgb(var(--color-border-200))] cursor-pointer"
                   title="Pick background color"
                 />
               </div>
@@ -237,7 +247,7 @@ const ColorPicker = ({
 
             {showTextColor && (
               <div>
-                <Label htmlFor="text-color" className="text-xs text-gray-700">
+                <Label htmlFor="text-color" className="text-xs text-[rgb(var(--color-text-700))]">
                   Text Color
                 </Label>
                 <div className="flex gap-2 mt-1">
@@ -252,7 +262,7 @@ const ColorPicker = ({
                     type="color"
                     value={textColor || '#000000'}
                     onChange={(e) => handleTextChange(e.target.value)}
-                    className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                    className="w-10 h-10 rounded border border-[rgb(var(--color-border-200))] cursor-pointer"
                     title="Pick text color"
                   />
                 </div>
@@ -263,32 +273,37 @@ const ColorPicker = ({
             )}
           </div>
 
-          {/* Preview */}
-          {(backgroundColor || (!showTextColor || textColor)) && 
-           validateColor(backgroundColor) && 
-           (!showTextColor || validateColor(textColor)) && (
+          {/* Preview - show adapted colors in dark mode */}
+          {(backgroundColor || (!showTextColor || textColor)) &&
+           validateColor(backgroundColor) &&
+           (!showTextColor || validateColor(textColor)) && (() => {
+            const previewColors = isDark && backgroundColor
+              ? adaptColorsForDarkMode({ background: backgroundColor, text: textColor || '#374151' })
+              : { background: backgroundColor, text: textColor };
+            return (
             <div>
-              <Label className="text-xs text-gray-700 mb-2 block">Preview</Label>
+              <Label className="text-xs text-[rgb(var(--color-text-700))] mb-2 block">Preview</Label>
               {previewType === 'circle' ? (
                 <div className="flex justify-center">
                   <div
-                    className="w-12 h-12 rounded-full border-2 border-gray-300"
-                    style={{ backgroundColor: backgroundColor || '#E5E7EB' }}
+                    className="w-12 h-12 rounded-full border-2 border-[rgb(var(--color-border-200))]"
+                    style={{ backgroundColor: previewColors.background || '#E5E7EB' }}
                   />
                 </div>
               ) : (
                 <div
                   className="px-3 py-1 rounded-full inline-block"
                   style={{
-                    backgroundColor: backgroundColor || '#E5E7EB',
-                    color: textColor || '#374151',
+                    backgroundColor: previewColors.background || '#E5E7EB',
+                    color: previewColors.text || '#374151',
                   }}
                 >
                   <span className="text-sm">Sample Tag</span>
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
 
           {/* Action buttons */}
           <div className="flex justify-between pt-2">

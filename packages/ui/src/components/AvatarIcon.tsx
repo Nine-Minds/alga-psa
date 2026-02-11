@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { generateAvatarColor } from '../lib/colorUtils';
+import { useTheme } from 'next-themes';
+import { generateAvatarColor, adaptColorsForDarkMode } from '../lib/colorUtils';
 
 interface AvatarIconProps {
   userId: string;
@@ -11,6 +12,9 @@ interface AvatarIconProps {
 }
 
 const AvatarIcon = ({ userId, firstName, lastName, size = 'md' }: AvatarIconProps) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const getInitial = () => {
     if (firstName) {
       return firstName.charAt(0).toUpperCase();
@@ -18,11 +22,11 @@ const AvatarIcon = ({ userId, firstName, lastName, size = 'md' }: AvatarIconProp
     return '?';
   };
 
-  // Generate consistent colors based on userId
+  // Generate consistent colors based on userId, adapted for dark mode
   const avatarColors = useMemo(() => {
-    // Provide a default/fallback color if userId is missing, though it shouldn't happen in practice
-    return generateAvatarColor(userId || 'default');
-  }, [userId]);
+    const raw = generateAvatarColor(userId || 'default');
+    return isDark ? adaptColorsForDarkMode(raw) : raw;
+  }, [userId, isDark]);
 
   const sizeClasses = {
     xs: 'w-4 h-4 text-xs',
