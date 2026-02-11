@@ -62,3 +62,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T001: Finalize returns HTTP 409 with stable duplicate-version error code when manifest version already exists for extension
 - (2026-02-10) Completed T002: Duplicate-version 409 payload includes user-friendly message with conflicting version value
 - (2026-02-10) Completed T003: Finalize rejects duplicate version when incoming content hash is identical to existing bundle hash
+- (2026-02-10) Completed T004: Finalize rejects duplicate version when incoming content hash differs from existing bundle hash
