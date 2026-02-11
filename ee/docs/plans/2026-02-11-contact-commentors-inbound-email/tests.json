@@ -194,7 +194,7 @@
   {
     "id": "T024",
     "description": "MSP ticket consolidated data includes author resolution data for contact-only commentors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F019"
