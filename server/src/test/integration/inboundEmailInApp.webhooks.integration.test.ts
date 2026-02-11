@@ -667,6 +667,78 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('Contact match: sender email is normalized from display-name format', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-contact-normalize-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    const canonicalEmail = `contact-${uuidv4().slice(0, 6)}@example.com`;
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `Normalized Contact Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: contactClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Normalized Inbound Contact',
+      email: canonicalEmail,
+      client_id: contactClientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+    });
+
+    const displayFormattedSender = `  "Normalized Inbound Contact" <${canonicalEmail.toUpperCase()}>  `;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: displayFormattedSender, name: 'Normalized Inbound Contact' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Contact normalized sender subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Contact normalized sender subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(contactClientId);
+    expect(ticket.contact_name_id).toBe(contactId);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
   it('Missing defaults: inbound processing returns without creating ticket/comment', async () => {
     const providerId = uuidv4();
     const mailbox = `support-missing-defaults-${uuidv4().slice(0, 6)}@example.com`;

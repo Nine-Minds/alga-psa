@@ -1,5 +1,6 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
+import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -439,7 +440,7 @@ export async function processInboundEmailInApp(
     return { outcome: 'skipped', reason: 'missing_defaults' };
   }
 
-  const senderEmail = emailData.from?.email?.toLowerCase();
+  const senderEmail = normalizeEmailAddress(emailData.from?.email);
   const matchedContact = senderEmail
     ? await findContactByEmail(senderEmail, tenantId)
     : null;
