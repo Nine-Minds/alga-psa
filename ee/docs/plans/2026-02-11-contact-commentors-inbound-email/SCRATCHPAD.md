@@ -109,3 +109,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T016 complete: unit tests cover reply-token threading with contact-only sender and assert `contact_id` propagation.
 - (2026-02-11) T017 complete: additional unit coverage verifies reply-token path forwards both `author_id` and `contact_id` for contact+user matches.
 - (2026-02-11) T018 complete: unit tests validate thread-header reply path sets `contact_id` for contact-only senders.
+- (2026-02-11) T019 complete: added unit assertion that thread-header reply path without matched sender contact preserves fallback (`contact_id` omitted).

@@ -153,7 +153,7 @@
   {
     "id": "T019",
     "description": "processInboundEmailInApp thread-header path without sender contact keeps fallback behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F021"
