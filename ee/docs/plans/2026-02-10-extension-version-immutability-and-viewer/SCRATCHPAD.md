@@ -78,3 +78,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T017: Extension Details page renders Versions section heading and table when version data exists
 - (2026-02-10) Completed T018: Versions table renders expected columns Version, Published, Content hash, Installed
 - (2026-02-10) Completed T019: Versions table rows are sorted newest-first by publish timestamp
+- (2026-02-10) Completed T020: Versions section renders empty-state copy when backend returns no rows

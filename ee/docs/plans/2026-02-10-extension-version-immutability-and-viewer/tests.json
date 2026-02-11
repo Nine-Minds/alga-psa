@@ -184,7 +184,7 @@
   {
     "id": "T020",
     "description": "Versions section renders empty-state copy when backend returns no rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F018"
