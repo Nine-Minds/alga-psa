@@ -52,3 +52,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F009: Include installed marker in version list payload by joining tenant_extension_install.version_id
 - (2026-02-10) Completed F010: Handle legacy version rows with multiple bundles by deterministically selecting latest bundle metadata in viewer payload
 - (2026-02-10) Completed F011: Render read-only Versions section in Extension Details page
+- (2026-02-10) Completed F012: Versions table shows columns Version, Published, Content hash, Installed

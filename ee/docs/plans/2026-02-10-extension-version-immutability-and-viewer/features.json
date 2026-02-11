@@ -91,7 +91,7 @@
   {
     "id": "F012",
     "description": "Versions table shows columns Version, Published, Content hash, Installed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#UX / UI Notes"
     ]
