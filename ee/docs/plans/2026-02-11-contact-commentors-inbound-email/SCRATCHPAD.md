@@ -93,3 +93,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Added cross-layer verification for contact-authored comment support: integration assertions in inbound webhook tests, UI-level author resolution tests, and API schema tests for nullable `created_by` + contact author fields.
 - (2026-02-11) T001 complete: added migration contract test asserting `comments.contact_id` is created as nullable UUID (`server/src/test/unit/migrations/commentsContactAuthorshipMigration.test.ts`).
 - (2026-02-11) T002 complete: migration contract test now verifies tenant-scoped FK/index wiring for `comments.contact_id -> contacts.contact_name_id`.
+- (2026-02-11) T003 complete: migration contract test now asserts down-path cleanup removes FK, index, and `contact_id` column.
