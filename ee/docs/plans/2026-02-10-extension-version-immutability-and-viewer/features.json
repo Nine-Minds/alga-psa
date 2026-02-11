@@ -67,7 +67,7 @@
   {
     "id": "F009",
     "description": "Include installed marker in version list payload by joining tenant_extension_install.version_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Functional Requirements"
     ]
