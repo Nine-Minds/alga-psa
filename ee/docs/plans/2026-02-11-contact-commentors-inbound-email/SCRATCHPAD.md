@@ -1,0 +1,67 @@
+# Scratchpad — Ticket Contact Commentors + Inbound Email Contact Authorship
+
+- Plan slug: `contact-commentors-inbound-email`
+- Created: `2026-02-11`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also *update earlier notes* when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-02-11) Draft approach: represent contact-only comment authorship by adding `comments.contact_id` (tenant-scoped FK to `contacts.contact_name_id`) rather than creating a new author enum state.
+- (2026-02-11) Preserve current semantic meaning of customer-authored comments as `author_type=client` for response-state transitions; `contact_id` carries identity when `user_id` is absent.
+- (2026-02-11) Keep scope focused on core behavior (data model + comment creation + rendering + inbound email wiring + tests), no operational/observability extras unless requested.
+- (2026-02-11) No mandatory historical backfill in phase 1; additive behavior for new/updated comments first.
+- (2026-02-11) Canonical authorship contract is now explicit in shared types via `CommentAuthorship` (`author_type` + nullable `user_id` + nullable `contact_id`), and `IComment` mirrors this nullable dual-link model.
+
+## Discoveries / Constraints
+
+- (2026-02-11) `comments` previously had contact columns, but they were removed in `server/migrations/20250217202553_drop_contact_columns.cjs`.
+- (2026-02-11) `TicketModel.createComment` currently maps `author_type=contact` to DB `author_type=client` and only persists `user_id`; no contact identity is stored today (`shared/models/ticketModel.ts`).
+- (2026-02-11) Inbound new-ticket flow already resolves contact and optional client user (`findContactByEmail`) and sets `author_id` only when user exists; reply paths do not currently resolve contact (`shared/services/email/processInboundEmailInApp.ts`).
+- (2026-02-11) MSP and client-portal ticket details render comments from `comments` + `userMap` sourced from `users`; comments with no `user_id` render as `Unknown User` (`packages/tickets/src/components/ticket/CommentItem.tsx`, `packages/tickets/src/actions/optimizedTicketActions.ts`, `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`).
+- (2026-02-11) Ticket comment API schema currently expects `created_by` as UUID in responses, which is brittle for contact-only authors if `user_id` is null (`server/src/lib/api/schemas/ticket.ts`).
+- (2026-02-11) `packages/types` had `IComment.user_id?: string` and no contact author linkage field; adding nullable `user_id` + `contact_id` in the base interface is required before loader/UI/API updates.
+
+## Commands / Runbooks
+
+- (2026-02-11) Locate existing comments/inbound-email/authorship behavior:
+  - `rg -n "author_type|author_id|Unknown User|processInboundEmailInApp|createCommentFromEmail" shared server packages -g"*.ts" -g"*.tsx"`
+- (2026-02-11) Review current ticket conversation rendering path:
+  - `sed -n '1,360p' packages/tickets/src/components/ticket/CommentItem.tsx`
+  - `sed -n '180,320p' packages/tickets/src/actions/optimizedTicketActions.ts`
+- (2026-02-11) Review inbound email creation/reply logic:
+  - `sed -n '1,760p' shared/services/email/processInboundEmailInApp.ts`
+  - `sed -n '680,820p' shared/workflow/actions/emailWorkflowActions.ts`
+- (2026-02-11) Review legacy migration history for comments/contact linkage:
+  - `rg -n "comments|contact_id|contact_name_id|author_type" server/migrations -g"*.cjs"`
+- (2026-02-11) Validate canonical type updates:
+  - `npx vitest run packages/types/src/interfaces/comment.interface.typecheck.test.ts`
+
+## Links / References
+
+- Plan folder: `ee/docs/plans/2026-02-11-contact-commentors-inbound-email`
+- Existing related plan: `ee/docs/plans/2026-01-24-inbound-email-in-app-processing`
+- Existing related plan: `ee/docs/plans/2026-02-05-ticket-response-source`
+- Core files:
+  - `shared/services/email/processInboundEmailInApp.ts`
+  - `shared/workflow/actions/emailWorkflowActions.ts`
+  - `shared/models/ticketModel.ts`
+  - `packages/tickets/src/actions/optimizedTicketActions.ts`
+  - `packages/tickets/src/components/ticket/TicketConversation.tsx`
+  - `packages/tickets/src/components/ticket/CommentItem.tsx`
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
+  - `server/src/lib/api/services/TicketService.ts`
+  - `server/src/lib/api/schemas/ticket.ts`
+  - `server/migrations/20250217202553_drop_contact_columns.cjs`
+
+## Open Questions
+
+- Should contact-authored comments display `Name (Contact)` or only `Name` with contact avatar semantics?
+- Should we always persist `contact_id` alongside `user_id` for client users when available, or only for contact-only authors?
+- For reply flows with unresolved sender contact but resolved ticket, should we fallback to ticket contact or keep unknown?
+- Do we want API responses to expose additive flat fields or a nested `author` object for future-proofing?
+- Should client portal display for contact-authored comments differ from MSP display in any way?
