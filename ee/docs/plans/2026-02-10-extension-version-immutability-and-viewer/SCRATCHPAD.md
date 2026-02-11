@@ -80,3 +80,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T019: Versions table rows are sorted newest-first by publish timestamp
 - (2026-02-10) Completed T020: Versions section renders empty-state copy when backend returns no rows
 - (2026-02-10) Completed T021: Unauthorized caller cannot access version-list backend action/route without extension read permission
+- (2026-02-10) Completed T022: Authorized extension-read caller can access version-list backend action/route

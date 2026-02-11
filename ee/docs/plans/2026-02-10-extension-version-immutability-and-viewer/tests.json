@@ -203,7 +203,7 @@
   {
     "id": "T022",
     "description": "Authorized extension-read caller can access version-list backend action/route",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
