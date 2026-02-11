@@ -14,6 +14,7 @@ import {
   type InboundEmailProviderType,
 } from '@alga-psa/types';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
+import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 
 // =============================================================================
 // INTERFACES
@@ -117,6 +118,11 @@ export async function findContactByEmail(
   tenant: string
 ): Promise<FindContactByEmailOutput | null> {
   const { withAdminTransaction } = await import('@alga-psa/db');
+  const normalizedEmail = normalizeEmailAddress(email);
+
+  if (!normalizedEmail) {
+    return null;
+  }
 
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
@@ -134,7 +140,7 @@ export async function findContactByEmail(
             .andOn('clients.tenant', 'contacts.tenant');
         })
         .where({
-          'contacts.email': email.toLowerCase(),
+          'contacts.email': normalizedEmail,
           'contacts.tenant': tenant
         })
         .first();
@@ -151,12 +157,17 @@ export async function createOrFindContact(
   tenant: string
 ): Promise<CreateOrFindContactOutput> {
   const { withAdminTransaction } = await import('@alga-psa/db');
+  const normalizedEmail = normalizeEmailAddress(input.email);
+
+  if (!normalizedEmail) {
+    throw new Error('Invalid email address');
+  }
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
       const existingContact = await trx('contacts')
         .where({
-          email: input.email.toLowerCase(),
+          email: normalizedEmail,
           client_id: input.client_id,
           tenant
         })
@@ -182,8 +193,8 @@ export async function createOrFindContact(
       await trx('contacts').insert({
         contact_name_id: contactId,
         tenant,
-        full_name: input.name || input.email,
-        email: input.email.toLowerCase(),
+        full_name: input.name || normalizedEmail,
+        email: normalizedEmail,
         client_id: input.client_id,
         phone_number: input.phone,
         role: input.title,
@@ -193,8 +204,8 @@ export async function createOrFindContact(
 
       return {
         id: contactId,
-        name: input.name || input.email,
-        email: input.email,
+        name: input.name || normalizedEmail,
+        email: normalizedEmail,
         client_id: input.client_id,
         phone: input.phone,
         title: input.title,
@@ -403,6 +414,11 @@ export async function saveEmailClientAssociation(
   tenant: string
 ): Promise<SaveEmailClientAssociationOutput> {
   const { withAdminTransaction } = await import('@alga-psa/db');
+  const normalizedEmail = normalizeEmailAddress(input.email);
+
+  if (!normalizedEmail) {
+    throw new Error('Invalid email address');
+  }
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const associationId = uuidv4();
@@ -411,7 +427,7 @@ export async function saveEmailClientAssociation(
       // Check if association already exists
       const existing = await trx('email_client_associations')
         .where('tenant', tenant)
-        .whereRaw('LOWER(email) = LOWER(?)', [input.email])
+        .whereRaw('LOWER(email) = LOWER(?)', [normalizedEmail])
         .where('client_id', input.client_id)
         .first();
 
@@ -430,7 +446,7 @@ export async function saveEmailClientAssociation(
         return {
           success: true,
           associationId: existing.id,
-          email: input.email,
+          email: normalizedEmail,
           client_id: input.client_id
         };
       } else {
@@ -438,7 +454,7 @@ export async function saveEmailClientAssociation(
         await trx('email_client_associations').insert({
           id: associationId,
           tenant,
-          email: input.email.toLowerCase(),
+          email: normalizedEmail,
           client_id: input.client_id,
           contact_id: input.contact_id,
           confidence_score: input.confidence_score || 1.0,
@@ -450,7 +466,7 @@ export async function saveEmailClientAssociation(
         return {
           success: true,
           associationId,
-          email: input.email,
+          email: normalizedEmail,
           client_id: input.client_id
         };
       }

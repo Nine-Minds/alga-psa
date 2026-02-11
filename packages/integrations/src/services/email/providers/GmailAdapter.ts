@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { parseEmailAddress, parseEmailAddressList } from '@alga-psa/shared/lib/email/addressUtils';
 
 /**
  * Gmail API adapter for email processing
@@ -581,6 +582,9 @@ This indicates a problem with the OAuth token saving process.`;
       const fromEmail = getHeader('From') || '';
       const toEmails = getHeader('To') || '';
       const ccEmails = getHeader('Cc') || '';
+      const parsedFrom = parseEmailAddress(fromEmail);
+      const parsedTo = parseEmailAddressList(toEmails);
+      const parsedCc = parseEmailAddressList(ccEmails);
       
       return {
         id: message.data.id!,
@@ -589,17 +593,11 @@ This indicates a problem with the OAuth token saving process.`;
         tenant: this.config.tenant,
         receivedAt: getHeader('Date') || new Date().toISOString(),
         from: {
-          email: fromEmail.includes('<') ? fromEmail.split('<')[1].split('>')[0] : fromEmail,
-          name: fromEmail.includes('<') ? fromEmail.split('<')[0].trim() : undefined
+          email: parsedFrom?.email || fromEmail.trim(),
+          name: parsedFrom?.name
         },
-        to: toEmails ? toEmails.split(',').map((email: string) => ({
-          email: email.includes('<') ? email.split('<')[1].split('>')[0].trim() : email.trim(),
-          name: email.includes('<') ? email.split('<')[0].trim() : undefined
-        })) : [],
-        cc: ccEmails ? ccEmails.split(',').map((email: string) => ({
-          email: email.includes('<') ? email.split('<')[1].split('>')[0].trim() : email.trim(),
-          name: email.includes('<') ? email.split('<')[0].trim() : undefined
-        })) : undefined,
+        to: parsedTo,
+        cc: parsedCc.length > 0 ? parsedCc : undefined,
         subject: getHeader('Subject') || '',
         body: {
           text: bodyContent,
