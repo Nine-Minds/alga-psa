@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Persist contact_id on comments created through shared TicketModel.createComment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {
