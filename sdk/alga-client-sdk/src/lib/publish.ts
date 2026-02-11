@@ -43,6 +43,28 @@ function resolveBaseUrl(baseUrl?: string): string {
   return value.replace(/\/?$/, '');
 }
 
+async function readErrorPayload(res: Response): Promise<{ message?: string; code?: string; raw?: string }> {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text) as any;
+    return {
+      message:
+        (typeof parsed?.error?.message === 'string' && parsed.error.message) ||
+        (typeof parsed?.message === 'string' && parsed.message) ||
+        (typeof parsed?.error === 'string' && parsed.error) ||
+        undefined,
+      code:
+        (typeof parsed?.error?.code === 'string' && parsed.error.code) ||
+        (typeof parsed?.code === 'string' && parsed.code) ||
+        undefined,
+      raw: text,
+    };
+  } catch {
+    return { raw: text };
+  }
+}
+
 /**
  * Publishes an extension to Alga PSA server
  *
@@ -158,8 +180,10 @@ export async function publishExtension(options: PublishExtensionOptions): Promis
     });
 
     if (!finalizeRes.ok) {
-      const errText = await finalizeRes.text();
-      throw new Error(`Finalize failed (${finalizeRes.status}): ${errText}`);
+      const payload = await readErrorPayload(finalizeRes);
+      const baseError = payload.message || payload.raw || 'Unknown finalize error';
+      const withCode = payload.code ? `${baseError} [${payload.code}]` : baseError;
+      throw new Error(`Finalize failed (${finalizeRes.status}): ${withCode}`);
     }
 
     const finalizeResult = await finalizeRes.json() as any;
@@ -231,4 +255,3 @@ export async function publish(opts: PublishOptions): Promise<{ success: boolean;
   console.warn('publish() is deprecated. Use publishExtension() instead.');
   return { success: false, message: 'Deprecated function' };
 }
-

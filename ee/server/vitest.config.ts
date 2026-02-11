@@ -35,6 +35,7 @@ export default defineConfig({
       { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
 
       // Match tsconfig-style subpath overrides before the generic `@/` mapping.
+      { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
       { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },
@@ -53,6 +54,13 @@ export default defineConfig({
       // Root shared + server imports.
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+      { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src')}/$1` },
+      { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
+      { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/lib')}/$1` },
+      { find: /^@alga-psa\/core$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/index.ts')}` },
+      { find: /^@alga-psa\/db\/admin$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/lib/admin.ts')}` },
+      { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/lib')}/$1` },
+      { find: /^@alga-psa\/db$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/index.ts')}` },
 
       // Convenience aliases used by tests/code.
       { find: '@main-server', replacement: path.resolve(__dirname, '../../server/src') },

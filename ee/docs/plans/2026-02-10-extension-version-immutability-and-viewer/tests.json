@@ -1,0 +1,170 @@
+[
+  {
+    "id": "T001",
+    "description": "Finalize returns HTTP 409 with stable duplicate-version error code when manifest version already exists for extension",
+    "implemented": false,
+    "featureIds": ["F001", "F002"],
+    "type": "integration"
+  },
+  {
+    "id": "T002",
+    "description": "Duplicate-version 409 payload includes user-friendly message with conflicting version value",
+    "implemented": false,
+    "featureIds": ["F001"],
+    "type": "integration"
+  },
+  {
+    "id": "T003",
+    "description": "Finalize rejects duplicate version when incoming content hash is identical to existing bundle hash",
+    "implemented": false,
+    "featureIds": ["F002"],
+    "type": "integration"
+  },
+  {
+    "id": "T004",
+    "description": "Finalize rejects duplicate version when incoming content hash differs from existing bundle hash",
+    "implemented": false,
+    "featureIds": ["F002"],
+    "type": "integration"
+  },
+  {
+    "id": "T005",
+    "description": "Version-upsert path does not create a new extension_bundle row for duplicate version attempts",
+    "implemented": false,
+    "featureIds": ["F003", "F016"],
+    "type": "integration"
+  },
+  {
+    "id": "T006",
+    "description": "Concurrent finalize requests for same publisher/name/version map losing request to friendly duplicate-version 409",
+    "implemented": false,
+    "featureIds": ["F004", "F015"],
+    "type": "integration"
+  },
+  {
+    "id": "T007",
+    "description": "DB unique violation for (registry_id, version) is normalized to duplicate-version code and message",
+    "implemented": false,
+    "featureIds": ["F004", "F005"],
+    "type": "unit"
+  },
+  {
+    "id": "T008",
+    "description": "Finalize HTTP route returns same duplicate-version payload shape as server action result",
+    "implemented": false,
+    "featureIds": ["F005"],
+    "type": "integration"
+  },
+  {
+    "id": "T009",
+    "description": "Installer UI shows duplicate-version friendly message from finalize response without generic fallback text",
+    "implemented": false,
+    "featureIds": ["F006"],
+    "type": "integration"
+  },
+  {
+    "id": "T010",
+    "description": "CLI publish surfaces duplicate-version response message from finalize path",
+    "implemented": false,
+    "featureIds": ["F005"],
+    "type": "integration"
+  },
+  {
+    "id": "T011",
+    "description": "Version list backend returns all versions for given registry extension sorted newest first",
+    "implemented": false,
+    "featureIds": ["F007", "F011"],
+    "type": "integration"
+  },
+  {
+    "id": "T012",
+    "description": "Version list backend includes version string and publish timestamp fields for each row",
+    "implemented": false,
+    "featureIds": ["F008"],
+    "type": "unit"
+  },
+  {
+    "id": "T013",
+    "description": "Version list backend includes deterministic latest content hash metadata per version",
+    "implemented": false,
+    "featureIds": ["F008", "F010"],
+    "type": "integration"
+  },
+  {
+    "id": "T014",
+    "description": "Version list marks installed=true only for row matching tenant_extension_install.version_id",
+    "implemented": false,
+    "featureIds": ["F009"],
+    "type": "integration"
+  },
+  {
+    "id": "T015",
+    "description": "Version list handles extension with no install row by returning all rows installed=false",
+    "implemented": false,
+    "featureIds": ["F009"],
+    "type": "integration"
+  },
+  {
+    "id": "T016",
+    "description": "Legacy data case: one version with multiple bundle rows still returns one deterministic viewer row",
+    "implemented": false,
+    "featureIds": ["F010", "F017"],
+    "type": "integration"
+  },
+  {
+    "id": "T017",
+    "description": "Extension Details page renders Versions section heading and table when version data exists",
+    "implemented": false,
+    "featureIds": ["F011", "F012", "F018"],
+    "type": "integration"
+  },
+  {
+    "id": "T018",
+    "description": "Versions table renders expected columns Version, Published, Content hash, Installed",
+    "implemented": false,
+    "featureIds": ["F012"],
+    "type": "integration"
+  },
+  {
+    "id": "T019",
+    "description": "Versions table rows are sorted newest-first by publish timestamp",
+    "implemented": false,
+    "featureIds": ["F011", "F012", "F018"],
+    "type": "integration"
+  },
+  {
+    "id": "T020",
+    "description": "Versions section renders empty-state copy when backend returns no rows",
+    "implemented": false,
+    "featureIds": ["F013", "F018"],
+    "type": "integration"
+  },
+  {
+    "id": "T021",
+    "description": "Unauthorized caller cannot access version-list backend action/route without extension read permission",
+    "implemented": false,
+    "featureIds": ["F014"],
+    "type": "integration"
+  },
+  {
+    "id": "T022",
+    "description": "Authorized extension-read caller can access version-list backend action/route",
+    "implemented": false,
+    "featureIds": ["F014"],
+    "type": "integration"
+  },
+  {
+    "id": "T023",
+    "description": "Strict immutability leaves existing historical duplicate-bundle data untouched (no destructive migration)",
+    "implemented": false,
+    "featureIds": ["F002", "F010"],
+    "type": "integration"
+  },
+  {
+    "id": "T024",
+    "description": "Finalize happy path still succeeds for brand-new version values",
+    "implemented": false,
+    "featureIds": ["F002", "F005"],
+    "type": "integration"
+  }
+]
