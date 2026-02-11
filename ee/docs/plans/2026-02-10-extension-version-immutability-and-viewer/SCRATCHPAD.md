@@ -59,3 +59,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F016: Add tests for strict immutability guaranteeing no new bundle rows are created when version already exists
 - (2026-02-10) Completed F017: Add tests for versions viewer backend query covering installed marker and legacy multi-bundle versions
 - (2026-02-10) Completed F018: Add UI tests for Extension Details versions section rendering, sorting, and empty state
+- (2026-02-10) Completed T001: Finalize returns HTTP 409 with stable duplicate-version error code when manifest version already exists for extension
