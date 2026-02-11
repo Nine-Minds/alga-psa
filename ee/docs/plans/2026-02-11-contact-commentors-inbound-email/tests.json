@@ -170,7 +170,7 @@
   {
     "id": "T021",
     "description": "Workflow runtime create_initial_comment_from_email forwards contact_id to underlying comment action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
