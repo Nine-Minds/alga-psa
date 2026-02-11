@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Preserve response-state behavior so contact-authored public comments set awaiting_internal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]
   },
   {

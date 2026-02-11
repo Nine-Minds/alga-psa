@@ -1093,6 +1093,17 @@ export class TicketModel {
 
     await trx('comments').insert(baseCommentData);
 
+    if (!validatedData.is_internal && validatedData.author_type === 'contact') {
+      await trx('tickets')
+        .where({
+          ticket_id: validatedData.ticket_id,
+          tenant,
+        })
+        .update({
+          response_state: 'awaiting_internal',
+        });
+    }
+
     // Publish comment event if publisher provided
     if (eventPublisher) {
       try {
