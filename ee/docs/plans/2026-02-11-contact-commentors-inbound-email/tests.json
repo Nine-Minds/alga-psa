@@ -84,7 +84,7 @@
   {
     "id": "T011",
     "description": "createCommentFromEmail forwards contact_id to TicketModel.createComment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010"

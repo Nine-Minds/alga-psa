@@ -1,7 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const updateTicketStateMock = vi.fn();
+const trxMock = vi.fn((table: string) => {
+  if (table !== 'tickets') {
+    throw new Error(`Unexpected table access in test: ${table}`);
+  }
+
+  return {
+    where: vi.fn().mockReturnValue({
+      update: updateTicketStateMock,
+    }),
+  };
+});
+
 const withAdminTransactionMock = vi.fn(async (callback: (trx: any) => Promise<any>) =>
-  callback({ trx: true })
+  callback(trxMock)
 );
 const createCommentMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
@@ -35,6 +48,7 @@ describe('createCommentFromEmail response source metadata', () => {
     createCommentMock.mockResolvedValue({
       comment_id: 'comment-1',
     });
+    updateTicketStateMock.mockResolvedValue(1);
   });
 
   it('T002: persists metadata.responseSource=inbound_email', async () => {
@@ -123,6 +137,42 @@ describe('createCommentFromEmail response source metadata', () => {
     }
   );
 
+  it('T011: forwards contact_id to TicketModel.createComment when provided', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      {
+        ticket_id: 'ticket-1',
+        content: 'hello',
+        author_type: 'contact',
+        contact_id: '00000000-0000-0000-0000-000000000456',
+      },
+      'tenant-1'
+    );
+
+    const createCommentInput = createCommentMock.mock.calls[0][0];
+    expect(createCommentInput.contact_id).toBe('00000000-0000-0000-0000-000000000456');
+  });
+
+  it('T012: forwards both author_id and contact_id when both are present', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      {
+        ticket_id: 'ticket-1',
+        content: 'hello',
+        author_type: 'contact',
+        author_id: '00000000-0000-0000-0000-000000000123',
+        contact_id: '00000000-0000-0000-0000-000000000456',
+      },
+      'tenant-1'
+    );
+
+    const createCommentInput = createCommentMock.mock.calls[0][0];
+    expect(createCommentInput.author_id).toBe('00000000-0000-0000-0000-000000000123');
+    expect(createCommentInput.contact_id).toBe('00000000-0000-0000-0000-000000000456');
+  });
+
   it('T020: keeps comment response-state semantics unchanged (still non-internal)', async () => {
     const { createCommentFromEmail } = await import('../emailWorkflowActions');
 
@@ -137,5 +187,22 @@ describe('createCommentFromEmail response source metadata', () => {
     const createCommentInput = createCommentMock.mock.calls[0][0];
     expect(createCommentInput.is_internal).toBe(false);
     expect(createCommentInput.is_resolution).toBe(false);
+  });
+
+  it('T021: forwards author_id when provided for matched client user association', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      {
+        ticket_id: 'ticket-1',
+        content: 'hello',
+        author_type: 'contact',
+        author_id: '00000000-0000-0000-0000-000000000123',
+      },
+      'tenant-1'
+    );
+
+    const createCommentInput = createCommentMock.mock.calls[0][0];
+    expect(createCommentInput.author_id).toBe('00000000-0000-0000-0000-000000000123');
   });
 });

@@ -101,3 +101,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.json ee/docs/plans/2026-02-11-contact-commentors-inbound-email/SCRATCHPAD.md && git commit -m "test(T007): verify contact_id persistence on comment insert"- (2026-02-11) T008 complete: `TicketModel.createComment` tests now verify dual-link persistence when both `author_id` and `contact_id` are supplied.
 - (2026-02-11) T009 complete: unit tests assert public contact-authored comments set ticket `response_state` to `awaiting_internal`.
 - (2026-02-11) T010 complete: unit tests confirm internal contact-authored comments do not change ticket `response_state`.
+- (2026-02-11) T011 complete: `createCommentFromEmail` unit coverage now verifies `contact_id` is forwarded into `TicketModel.createComment`.
