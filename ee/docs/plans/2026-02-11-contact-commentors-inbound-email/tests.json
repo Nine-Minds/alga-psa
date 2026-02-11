@@ -119,7 +119,7 @@
   {
     "id": "T015",
     "description": "processInboundEmailInApp unmatched new-ticket sender keeps existing fallback path without contact_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F021"
