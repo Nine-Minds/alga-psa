@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, MutableRefObject } from 'react';
+import { useEffect, useState, useRef, MutableRefObject } from 'react';
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -61,7 +61,7 @@ const schema = BlockNoteSchema.create({
   },
 });
 
-export default function TextEditor({ 
+export default function TextEditor({
   id = 'text-editor',
   roomName,
   initialContent: propInitialContent,
@@ -71,6 +71,25 @@ export default function TextEditor({
   documentId,
   searchMentions,
 }: TextEditorProps) {
+  // Track mounted state to prevent operations on unmounted component
+  const isMountedRef = useRef(true);
+  // Delay rendering BlockNoteView to avoid initialization race conditions
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    // Small delay to ensure React has fully mounted the component
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsReady(true);
+      }
+    }, 0);
+    return () => {
+      isMountedRef.current = false;
+      clearTimeout(timer);
+    };
+  }, []);
+
   // Parse initial content and remove empty trailing blocks
   const initialContent = (() => {
     let blocks: PartialBlock[] = [];
@@ -243,25 +262,28 @@ export default function TextEditor({
     }
   };
 
-  // Update editorRef when editor is created
+  // Update editorRef when editor is created and ready
   useEffect(() => {
-    if (editorRef) {
+    if (editorRef && isMountedRef.current && isReady) {
       editorRef.current = editor;
     }
-    
-    // Cleanup editorRef when component unmounts
+
+    // Cleanup editor when component unmounts
     return () => {
       if (editorRef) {
         editorRef.current = null;
       }
     };
-  }, [editor, editorRef]);
+  }, [editor, editorRef, isReady]);
 
-  // Handle content changes
+  // Handle content changes - only when editor is ready
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !isReady) return;
 
     const handleChange = () => {
+      // Don't process changes if component is unmounting
+      if (!isMountedRef.current) return;
+
       if (DEBUG) {
         console.log('TextEditor: Editor content changed:', editor.topLevelBlocks);
       }
@@ -272,7 +294,19 @@ export default function TextEditor({
 
     const cleanup = editor.onEditorContentChange(handleChange);
     return cleanup;
-  }, [editor, onContentChange]);
+  }, [editor, onContentChange, isReady]);
+
+  // Don't render BlockNoteView until ready to avoid initialization race conditions
+  if (!isReady) {
+    return (
+      <div className="w-full h-full min-w-0">
+        {children}
+        <div className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0">
+          {/* Placeholder while editor initializes */}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full min-w-0">

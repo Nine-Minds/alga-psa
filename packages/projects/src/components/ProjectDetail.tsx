@@ -7,6 +7,7 @@ import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
+import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -2584,42 +2585,33 @@ export default function ProjectDetail({
       </div>
 
       {(showQuickAdd && (currentPhase || selectedPhase)) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
-            <button
-              onClick={handleCloseQuickAdd}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-              aria-label="Close"
-            >
-              ×
-            </button>
-            {selectedTask ? (
-              <TaskEdit
-                task={selectedTask}
-                phase={currentPhase || selectedPhase!}
-                phases={projectPhases}
-                onClose={handleCloseQuickAdd}
-                onTaskUpdated={handleTaskUpdated}
-                projectStatuses={projectStatuses}
-                users={users}
-                projectTreeData={projectTreeData}
-              />
-            ) : (
-              <TaskQuickAdd
-                phase={currentPhase || selectedPhase!}
-                onClose={handleCloseQuickAdd}
-                onTaskAdded={handleAddTask}
-                onTaskUpdated={handleEmptyTaskUpdate}
-                projectStatuses={projectStatuses}
-                defaultStatus={defaultStatus || undefined}
-                onCancel={() => setIsAddingTask(false)}
-                users={users}
-                task={selectedTask || undefined}
-                projectTreeData={projectTreeData}
-              />
-            )}
-          </div>
-        </div>
+        <UnsavedChangesProvider>
+          {selectedTask ? (
+            <TaskEdit
+              task={selectedTask}
+              phase={currentPhase || selectedPhase!}
+              phases={projectPhases}
+              onClose={handleCloseQuickAdd}
+              onTaskUpdated={handleTaskUpdated}
+              projectStatuses={projectStatuses}
+              users={users}
+              projectTreeData={projectTreeData}
+            />
+          ) : (
+            <TaskQuickAdd
+              phase={currentPhase || selectedPhase!}
+              onClose={handleCloseQuickAdd}
+              onTaskAdded={handleAddTask}
+              onTaskUpdated={handleEmptyTaskUpdate}
+              projectStatuses={projectStatuses}
+              defaultStatus={defaultStatus || undefined}
+              onCancel={() => setIsAddingTask(false)}
+              users={users}
+              task={selectedTask || undefined}
+              projectTreeData={projectTreeData}
+            />
+          )}
+        </UnsavedChangesProvider>
       )}
 
       {showPhaseQuickAdd && (

@@ -1,8 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { InsideDialogContext } from '../components/ModalityContext';
 
 interface UnsavedChangesContextType {
   /**
@@ -181,29 +183,42 @@ export function UnsavedChangesProvider({
   return (
     <UnsavedChangesContext value={contextValue}>
       {children}
-      <ConfirmationDialog
-        id="unsaved-changes-dialog"
-        isOpen={showDialog}
-        onClose={handleClose}
-        onConfirm={handleConfirm}
-        title={dialogTitle}
-        message={dialogMessage}
-        confirmLabel="Leave Without Saving"
-        cancelLabel="Stay"
-      />
+      {/* Portal the dialog to document.body and wrap in InsideDialogContext to ensure z-70 rendering above all modals */}
+      {typeof document !== 'undefined' && createPortal(
+        <InsideDialogContext.Provider value={true}>
+          <ConfirmationDialog
+            id="unsaved-changes-dialog"
+            isOpen={showDialog}
+            onClose={handleClose}
+            onConfirm={handleConfirm}
+            title={dialogTitle}
+            message={dialogMessage}
+            confirmLabel="Leave Without Saving"
+            cancelLabel="Stay"
+          />
+        </InsideDialogContext.Provider>,
+        document.body
+      )}
     </UnsavedChangesContext>
   );
 }
 
+// No-op implementation for when provider is missing (allows graceful degradation)
+const noOpContext: UnsavedChangesContextType = {
+  setHasUnsavedChanges: () => {},
+  hasAnyUnsavedChanges: () => false,
+  confirmNavigation: (action) => { action(); return true; },
+  unregister: () => {},
+};
+
 /**
  * Hook to access the unsaved changes context
+ * Returns no-op implementation if provider is missing (graceful degradation for tests/isolated renders)
  */
 export function useUnsavedChanges() {
   const context = useContext(UnsavedChangesContext);
-  if (!context) {
-    throw new Error('useUnsavedChanges must be used within an UnsavedChangesProvider');
-  }
-  return context;
+  // Return no-op context if provider is missing (allows graceful degradation)
+  return context ?? noOpContext;
 }
 
 /**
