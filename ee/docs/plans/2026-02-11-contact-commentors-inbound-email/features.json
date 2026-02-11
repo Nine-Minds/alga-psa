@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Add shared author-resolution helper for user/contact/unknown author display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {

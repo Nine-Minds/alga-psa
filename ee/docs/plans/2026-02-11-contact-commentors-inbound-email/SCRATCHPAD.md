@@ -42,6 +42,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Workflow runtime implementations now pass `contact_id` through to shared comment creation (`create_comment_from_email`, `create_ticket_with_initial_comment`, and parsed-reply comment path with sender contact resolution fallback).
 - (2026-02-11) MSP consolidated ticket loader now builds a `contactMap` keyed by `contact_name_id` for all `comments.contact_id` values, giving conversation rendering a first-class contact author source alongside `userMap`.
 - (2026-02-11) Client-portal ticket details loader now also returns `contactMap` from `comments.contact_id`, keeping author resolution parity between MSP and portal views.
+- (2026-02-11) Added `packages/tickets/src/lib/commentAuthorResolution.ts` as the shared author resolver with deterministic precedence: user author, then contact author, then unknown fallback.
 
 ## Commands / Runbooks
 
