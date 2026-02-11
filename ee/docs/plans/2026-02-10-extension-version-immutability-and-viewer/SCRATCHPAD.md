@@ -54,3 +54,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F011: Render read-only Versions section in Extension Details page
 - (2026-02-10) Completed F012: Versions table shows columns Version, Published, Content hash, Installed
 - (2026-02-10) Completed F013: Versions section includes explicit empty state when no versions exist
+- (2026-02-10) Completed F014: Enforce existing permission checks for version listing (extension read scope)

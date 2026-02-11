@@ -107,7 +107,7 @@
   {
     "id": "F014",
     "description": "Enforce existing permission checks for version listing (extension read scope)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Security / Permissions"
     ]
