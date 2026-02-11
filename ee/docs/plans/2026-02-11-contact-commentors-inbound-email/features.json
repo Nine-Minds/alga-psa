@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Forward contact_id from createCommentFromEmail to shared comment creation path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {

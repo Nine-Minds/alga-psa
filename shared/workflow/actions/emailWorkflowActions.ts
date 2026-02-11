@@ -769,6 +769,7 @@ export async function createCommentFromEmail(
         is_resolution: false,
         author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
+        contact_id: commentData.contact_id,
         metadata: buildInboundEmailCommentMetadata(
           commentData.metadata,
           commentData.inboundReplyEvent
