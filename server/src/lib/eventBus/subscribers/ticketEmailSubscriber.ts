@@ -1601,7 +1601,6 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       }
       return String(value).trim();
     };
-
     const formatDateTime = (value?: Date | string | null) => {
       if (!value) {
         return 'Not available';
@@ -1930,6 +1929,51 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
       return String(value).trim();
     };
+    const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+    let commentAuthorUserId: string | null = payload.userId || null;
+    let commentAuthorContactId: string | null = null;
+    let commentAuthorEmail = '';
+
+    if (payload.comment?.id) {
+      const commentAuthor = await db('comments as cm')
+        .select(
+          'cm.user_id as comment_user_id',
+          'cm.contact_id as comment_contact_id',
+          'cu.email as comment_user_email',
+          'cc.email as comment_contact_email'
+        )
+        .leftJoin('users as cu', function() {
+          this.on('cm.user_id', '=', 'cu.user_id')
+            .andOn('cm.tenant', '=', 'cu.tenant');
+        })
+        .leftJoin('contacts as cc', function() {
+          this.on('cm.contact_id', '=', 'cc.contact_name_id')
+            .andOn('cm.tenant', '=', 'cc.tenant');
+        })
+        .where({
+          'cm.tenant': tenantId,
+          'cm.comment_id': payload.comment.id
+        })
+        .first<{
+          comment_user_id?: string | null;
+          comment_contact_id?: string | null;
+          comment_user_email?: string | null;
+          comment_contact_email?: string | null;
+        }>();
+
+      if (commentAuthor) {
+        commentAuthorUserId = commentAuthor.comment_user_id ?? null;
+        commentAuthorContactId = commentAuthor.comment_contact_id ?? null;
+        commentAuthorEmail =
+          safeString(commentAuthor.comment_user_email) ||
+          safeString(commentAuthor.comment_contact_email);
+      }
+    }
+
+    if (!commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {
+      commentAuthorEmail = payload.comment.author.trim();
+    }
 
     const formatDateTime = (value?: Date | string | null) => {
       if (!value) {
@@ -2097,7 +2141,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       : undefined;
 
     const sentEmails = new Set<string>();
-    const normalizeEmail = (email: string) => email.trim().toLowerCase();
     const sendIfUnique = async (
       params: SendEmailParams,
       subtypeName: string,
@@ -2108,6 +2151,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         return;
       }
       const key = normalizeEmail(email);
+      if (commentAuthorEmail && key === normalizeEmail(commentAuthorEmail)) {
+        return;
+      }
       if (sentEmails.has(key)) {
         return;
       }
@@ -2120,16 +2166,22 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const isPublicComment = !payload.comment?.isInternal;
 
     let isFromAgent = false;
-    if (payload.userId) {
+    if (commentAuthorUserId) {
       const author = await db('users')
         .select('user_type')
-        .where({ tenant: tenantId, user_id: payload.userId })
+        .where({ tenant: tenantId, user_id: commentAuthorUserId })
         .first();
       isFromAgent = author?.user_type === 'internal';
     }
 
+    const isPrimaryContactAuthor = Boolean(
+      commentAuthorContactId &&
+      ticket.contact_name_id &&
+      String(ticket.contact_name_id).trim() === commentAuthorContactId
+    );
+
     // Send to primary email if available - external user, no userId
-    if (primaryEmail && isPublicComment && isFromAgent) {
+    if (primaryEmail && isPublicComment && isFromAgent && !isPrimaryContactAuthor) {
       // Extract threading info from ticket metadata
       const messageId = emailMetadata.messageId; // Original message ID from inbound email
       
@@ -2173,6 +2225,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .select(
           't.ticket_id',
           't.ticket_number',
+          't.contact_name_id',
           't.client_id',
           't.email_metadata',
           'dcl.email as client_email',
@@ -2199,6 +2252,14 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
       if (bundleChildren.length > 0) {
         for (const child of bundleChildren) {
+          const isChildContactAuthor = Boolean(
+            commentAuthorContactId &&
+            child.contact_name_id &&
+            String(child.contact_name_id).trim() === commentAuthorContactId
+          );
+          if (isChildContactAuthor) {
+            continue;
+          }
           const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
           if (!childPrimaryEmail) continue;
 
@@ -2247,7 +2308,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Send to assigned user if different from primary email AND not the comment author
     // The person who made the comment should not receive a notification about their own comment
-    const isAssignedUserTheCommentAuthor = ticket.assigned_to === payload.userId;
+    const isAssignedUserTheCommentAuthor = Boolean(
+      commentAuthorUserId &&
+      ticket.assigned_to === commentAuthorUserId
+    );
     if (assignedEmail && assignedEmail !== primaryEmail && !isAssignedUserTheCommentAuthor) {
       await sendIfUnique({
         tenantId,
@@ -2268,7 +2332,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Send to all additional resources, excluding the comment author
     for (const resource of additionalResources) {
       // Skip if this resource is the comment author - they shouldn't be notified about their own comment
-      const isResourceTheCommentAuthor = resource.user_id === payload.userId;
+      const isResourceTheCommentAuthor = Boolean(
+        commentAuthorUserId &&
+        resource.user_id === commentAuthorUserId
+      );
       if (!isResourceTheCommentAuthor) {
         await sendIfUnique({
           tenantId,

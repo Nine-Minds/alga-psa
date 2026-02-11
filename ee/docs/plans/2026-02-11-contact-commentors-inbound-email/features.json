@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Ensure ticket email/notification subscriber author exclusion logic handles contact-authored comments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
   },
   {
