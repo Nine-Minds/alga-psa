@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "DB unique violation for (registry_id, version) is normalized to duplicate-version code and message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005"

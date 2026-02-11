@@ -65,3 +65,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T004: Finalize rejects duplicate version when incoming content hash differs from existing bundle hash
 - (2026-02-10) Completed T005: Version-upsert path does not create a new extension_bundle row for duplicate version attempts
 - (2026-02-10) Completed T006: Concurrent finalize requests for same publisher/name/version map losing request to friendly duplicate-version 409
+- (2026-02-10) Completed T007: DB unique violation for (registry_id, version) is normalized to duplicate-version code and message
