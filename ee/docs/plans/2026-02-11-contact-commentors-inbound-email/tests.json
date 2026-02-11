@@ -68,7 +68,7 @@
   {
     "id": "T009",
     "description": "Contact-authored public comment sets ticket response_state to awaiting_internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
