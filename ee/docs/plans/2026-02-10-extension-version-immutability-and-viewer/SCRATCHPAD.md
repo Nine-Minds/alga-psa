@@ -67,3 +67,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T006: Concurrent finalize requests for same publisher/name/version map losing request to friendly duplicate-version 409
 - (2026-02-10) Completed T007: DB unique violation for (registry_id, version) is normalized to duplicate-version code and message
 - (2026-02-10) Completed T008: Finalize HTTP route returns same duplicate-version payload shape as server action result
+- (2026-02-10) Completed T009: Installer UI shows duplicate-version friendly message from finalize response without generic fallback text

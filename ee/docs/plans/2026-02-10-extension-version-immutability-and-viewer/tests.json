@@ -78,7 +78,7 @@
   {
     "id": "T009",
     "description": "Installer UI shows duplicate-version friendly message from finalize response without generic fallback text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
