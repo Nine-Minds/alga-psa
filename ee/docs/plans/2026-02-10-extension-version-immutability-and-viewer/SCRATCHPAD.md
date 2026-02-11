@@ -70,3 +70,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed T009: Installer UI shows duplicate-version friendly message from finalize response without generic fallback text
 - (2026-02-10) Completed T010: CLI publish surfaces duplicate-version response message from finalize path
 - (2026-02-10) Completed T011: Version list backend returns all versions for given registry extension sorted newest first
+- (2026-02-10) Completed T012: Version list backend includes version string and publish timestamp fields for each row

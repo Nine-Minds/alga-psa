@@ -106,7 +106,7 @@
   {
     "id": "T012",
     "description": "Version list backend includes version string and publish timestamp fields for each row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
