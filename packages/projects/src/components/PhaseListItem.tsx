@@ -215,7 +215,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
-        ${isSelected ? 'bg-purple-50' : 'hover:bg-gray-50'}
+        ${isSelected ? 'bg-purple-50 dark:bg-purple-950' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
         ${isDragging ? styles.dragging + ' opacity-50 scale-95' : ''}
         ${isAnimating ? styles.entering : ''}
         ${taskDraggingOverPhaseId === phase.phase_id ? styles.taskDragOver : ''}
@@ -235,7 +235,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
           <div className="flex-1 min-w-0">
             {/* Phase Name Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phase Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
               <TextArea
                 value={editingName}
                 onChange={(e) => onNameChange(e.target.value)}
@@ -246,7 +246,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
             {/* Description Input - Added */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phase Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
               <TextArea
                 value={editingDescription ?? ''}
                 onChange={(e) => onDescriptionChange(e.target.value || null)}
@@ -258,7 +258,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
             {/* Start Date Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
               <DatePicker
                 value={editingStartDate}
                 onChange={(date: Date | undefined) => onStartDateChange?.(date)}
@@ -269,7 +269,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
             {/* End Date Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-0.5">End Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">End Date</label>
               <DatePicker
                 value={editingEndDate}
                 onChange={(date: Date | undefined) => onEndDateChange?.(date)}
@@ -311,20 +311,20 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
         <>
           {/* Drag Handle */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab pr-2">
-            <GripVertical className="w-4 h-4 text-gray-400" />
+            <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           {/* Display View */}
           <div className="flex flex-col flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <span className="text-lg font-bold text-gray-900">{phase.phase_name}</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
                 {taskCount ?? 0} {(taskCount ?? 0) === 1 ? 'task' : 'tasks'}
               </span>
             </div>
             {phase.description && (
-              <span className="text-sm text-gray-600 mt-1">{phase.description}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">{phase.description}</span>
             )}
-            <div className="mt-1 text-xs text-gray-500 space-y-1">
+            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-1">
               <div>
                 Start: {phase.start_date
                   ? new Date(phase.start_date).toLocaleDateString()
@@ -344,7 +344,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 e.stopPropagation();
                 onEdit(phase);
               }}
-              className="p-1 rounded hover:bg-gray-200"
+              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
               title="Edit phase"
             >
               <Pencil className="w-3 h-3" />

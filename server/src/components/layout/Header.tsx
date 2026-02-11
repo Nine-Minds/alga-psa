@@ -32,6 +32,7 @@ import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
+import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -123,7 +124,7 @@ const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
 
   return (
     <span
-      className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200"
+      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-400))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
       aria-label={`Active tenant ${tenant}`}
     >
       {tenant}
@@ -379,6 +380,7 @@ export default function Header({
       <div className="flex items-center gap-3">
         <TenantBadge tenant={userData?.tenant} />
         <QuickCreateMenu />
+        <ThemeToggle />
         <NotificationBell />
         <JobActivityIndicator />
         <DropdownMenu>

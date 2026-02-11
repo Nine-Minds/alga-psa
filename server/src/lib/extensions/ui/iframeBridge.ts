@@ -102,7 +102,8 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   }
 
   // Inject theme tokens into parent document as :root CSS variables
-  injectThemeIntoParent(themeTokens);
+  const resolvedThemeTokens = resolveThemeTokens(themeTokens);
+  injectThemeIntoParent(resolvedThemeTokens);
 
   // Also send tokens via postMessage so child can fall back
   const targetOrigin = deriveTargetOrigin({ srcUrl, allowedOrigin, devWildcard });
@@ -115,7 +116,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
     request_id: requestId,
     payload: {
       session: { token: session.token, expires_at: session.expiresAt },
-      theme_tokens: themeTokens,
+      theme_tokens: resolvedThemeTokens,
       navigation: { path: initialPath || '/' },
     },
   } as const;
@@ -124,6 +125,25 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   const onLoad = () => {
     try {
       postToIframe(iframe, bootstrapEnvelope, targetOrigin);
+    } catch {
+      // ignore
+    }
+  };
+
+  const sendThemeTokens = () => {
+    try {
+      const updatedTokens = resolveThemeTokens(themeTokens);
+      injectThemeIntoParent(updatedTokens);
+      postToIframe(
+        iframe,
+        {
+          alga: true,
+          version: ENVELOPE_VERSION,
+          type: 'theme_tokens',
+          payload: { theme_tokens: updatedTokens },
+        },
+        targetOrigin
+      );
     } catch {
       // ignore
     }
@@ -190,6 +210,14 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
 
   window.addEventListener('message', messageHandler);
 
+  const observer = new MutationObserver(() => {
+    sendThemeTokens();
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme'],
+  });
+
   // Cleanup helper if needed by caller (not exported; documented usage can remove listener manually if creating multiple bootstraps)
   // Authors embedding multiple iframes should manage lifecycle and remove event listeners explicitly if detaching.
 }
@@ -224,6 +252,29 @@ function injectThemeIntoParent(tokens: Record<string, string>): void {
     .map(([k, v]) => `${k}: ${String(v)};`)
     .join(' ');
   styleEl.textContent = `:root { ${cssVars} }`;
+}
+
+function resolveThemeTokens(tokens: Record<string, string>): Record<string, string> {
+  const root = document.documentElement;
+  const existingStyle = document.getElementById(THEME_STYLE_ID);
+
+  if (existingStyle?.parentNode) {
+    existingStyle.parentNode.removeChild(existingStyle);
+  }
+
+  Object.keys(tokens || {}).forEach((key) => {
+    root.style.removeProperty(key);
+  });
+
+  const computed = getComputedStyle(root);
+  const resolved: Record<string, string> = {};
+
+  Object.entries(tokens || {}).forEach(([key, fallback]) => {
+    const value = computed.getPropertyValue(key).trim();
+    resolved[key] = value || fallback;
+  });
+
+  return resolved;
 }
 
 function deriveTargetOrigin(params: {

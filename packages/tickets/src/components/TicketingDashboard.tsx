@@ -1265,8 +1265,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
         </div>
       </div>
-      <div className="bg-white shadow rounded-lg">
-        <div className={`sticky top-0 z-40 bg-white rounded-t-lg border-b border-gray-100 ${densityClasses.filterPadding}`}>
+      <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
+        <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
             <BoardPicker
@@ -1487,7 +1487,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onItemsPerPageChange={onPageSizeChange}
               rowClassName={(record: ITicketListItem) =>
                 `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
-                  ? '!bg-blue-50'
+                  ? '!bg-blue-50 dark:!bg-blue-950'
                   : ''}`
               }
               onRowClick={(record: ITicketListItem) => {

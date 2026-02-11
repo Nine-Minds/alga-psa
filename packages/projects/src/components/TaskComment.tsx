@@ -154,7 +154,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   return (
     <div
       {...withDataAutomationId({ id: commentId })}
-      className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 hover:border-gray-300 bg-white"
+      className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]"
     >
       <div className="flex items-start mb-1">
         <div className="mr-2">
@@ -172,7 +172,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
               <div className="flex items-center gap-2">
                 <p
                   {...withDataAutomationId({ id: `${commentId}-author-name` })}
-                  className="font-semibold text-gray-800"
+                  className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))]"
                 >
                   {authorName}
                 </p>
@@ -181,7 +181,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 {comment.email && (
                   <p
                     {...withDataAutomationId({ id: `${commentId}-author-email` })}
-                    className="text-sm text-gray-600"
+                    className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]"
                   >
                     <a href={`mailto:${comment.email}`} className="hover:text-indigo-600">
                       {comment.email}
@@ -190,7 +190,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 )}
                 <p
                   {...withDataAutomationId({ id: `${commentId}-timestamp` })}
-                  className="text-xs text-gray-500"
+                  className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-300))]"
                 >
                   {comment.createdAt && (
                     <span>

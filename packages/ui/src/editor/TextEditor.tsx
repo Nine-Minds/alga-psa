@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, MutableRefObject } from 'react';
+import { useTheme } from 'next-themes';
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -71,6 +72,8 @@ export default function TextEditor({
   documentId,
   searchMentions,
 }: TextEditorProps) {
+  const { resolvedTheme } = useTheme();
+  const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
   // Parse initial content and remove empty trailing blocks
   const initialContent = (() => {
     let blocks: PartialBlock[] = [];
@@ -278,7 +281,7 @@ export default function TextEditor({
     <div className="w-full h-full min-w-0">
       {children}
       <div
-        className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0"
+        className="min-h-[100px] h-full w-full bg-white dark:bg-[rgb(var(--color-border-50))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
         onDragStart={(e) => {
           // Only prevent drag from elements with draggable="true" attribute (the drag handle)
           const target = e.target as HTMLElement;
@@ -290,7 +293,7 @@ export default function TextEditor({
       >
         <BlockNoteView
           editor={editor}
-          theme="light"
+          theme={blockNoteTheme}
           className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden"
           editable={true}
           style={{

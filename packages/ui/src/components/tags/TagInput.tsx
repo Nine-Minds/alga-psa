@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
-import { generateEntityColor } from '../../lib/colorUtils';
+import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
+import { useTheme } from 'next-themes';
 // import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 // import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 // import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -31,6 +32,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   placeholder = 'New tag',
   size = 'md'
 }) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const sizeConfig = tagInputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -237,7 +240,8 @@ export const TagInput: React.FC<TagInputProps> = ({
             }}
           >
             {suggestions.map((suggestion, index): React.JSX.Element => {
-              const colors = generateEntityColor(suggestion.tag_text);
+              const rawColors = generateEntityColor(suggestion);
+              const colors = isDark ? adaptColorsForDarkMode(rawColors) : rawColors;
               return (
                 <button
                   key={index}
@@ -259,8 +263,8 @@ export const TagInput: React.FC<TagInputProps> = ({
                   <span
                     className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
                     style={{
-                      backgroundColor: suggestion.background_color || colors.background,
-                      color: suggestion.text_color || colors.text
+                      backgroundColor: colors.background,
+                      color: colors.text
                     }}
                   >
                     {suggestion.tag_text}

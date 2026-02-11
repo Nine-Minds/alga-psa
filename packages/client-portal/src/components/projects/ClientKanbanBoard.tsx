@@ -11,6 +11,8 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import { useTheme } from 'next-themes';
+import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 
 interface Phase {
   phase_id: string;
@@ -118,11 +120,11 @@ function TaskCard({
   );
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] p-3 shadow-sm hover:shadow-md transition-shadow">
       {/* Task Name with Priority */}
       {visibleFields.includes('task_name') && task.task_name && (
         <div className="flex items-start gap-2 mb-2">
-          <h4 className="font-semibold text-gray-900 text-lg flex-1">{task.task_name}</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg flex-1">{task.task_name}</h4>
           {visibleFields.includes('priority') && task.priority_name && (
             <Tooltip content={`${t('projects.tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
               <div
@@ -160,7 +162,7 @@ function TaskCard({
       )}
 
       {/* Task Details */}
-      <div className="space-y-1.5 text-sm text-gray-600">
+      <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
         {/* Due Date row with badges inline */}
         {(visibleFields.includes('due_date') || visibleFields.includes('checklist_progress') || showDependencies) && (
           <div className="flex items-center justify-between gap-2">
@@ -321,7 +323,7 @@ function TaskCard({
 
       {/* Document Upload Section */}
       {allowUploads && (
-        <div className="mt-3 pt-2 border-t border-gray-100">
+        <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
           <TaskDocumentUpload taskId={task.task_id} compact />
         </div>
       )}
@@ -399,6 +401,8 @@ export default function ClientKanbanBoard({
   taskDependencies
 }: ClientKanbanBoardProps) {
   const { t, i18n } = useTranslation('clientPortal');
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const dateLocale = getDateFnsLocale(i18n.language);
   const showPhases = config.show_phases ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
@@ -469,8 +473,8 @@ export default function ClientKanbanBoard({
               key={status.project_status_mapping_id}
               className="flex-shrink-0 w-80 rounded-lg border-2"
               style={{
-                backgroundColor: lightenColor(statusColor, 0.90),
-                borderColor: lightenColor(statusColor, 0.70)
+                backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.90),
+                borderColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70)
               }}
             >
               {/* Column Header */}
@@ -479,21 +483,21 @@ export default function ClientKanbanBoard({
                   <div
                     className="flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2"
                     style={{
-                      backgroundColor: lightenColor(statusColor, 0.75),
-                      borderColor: lightenColor(statusColor, 0.50)
+                      backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.75),
+                      borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.50)
                     }}
                   >
                     <div
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: statusColor }}
                     />
-                    <h3 className="font-medium text-gray-900 text-sm">{status.name}</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 text-sm">{status.name}</h3>
                   </div>
                   <span
                     className="text-xs font-medium px-2 py-0.5 rounded-full"
                     style={{
-                      backgroundColor: lightenColor(statusColor, 0.70),
-                      color: statusColor
+                      backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                      color: isDark ? lightenColor(statusColor, 0.40) : statusColor
                     }}
                   >
                     {statusTasks.length}
