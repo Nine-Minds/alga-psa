@@ -69,7 +69,7 @@
   {
     "id": "T008",
     "description": "Finalize HTTP route returns same duplicate-version payload shape as server action result",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
