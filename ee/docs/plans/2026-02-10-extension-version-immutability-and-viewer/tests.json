@@ -115,7 +115,7 @@
   {
     "id": "T013",
     "description": "Version list backend includes deterministic latest content hash metadata per version",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F010"
