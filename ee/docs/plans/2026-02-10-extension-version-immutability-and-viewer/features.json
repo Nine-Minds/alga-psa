@@ -99,7 +99,7 @@
   {
     "id": "F013",
     "description": "Versions section includes explicit empty state when no versions exist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#UX / UI Notes"
     ]
