@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Preserve matched client-user association by continuing to pass author_id and supporting both ids when present",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements"]
   },
   {
