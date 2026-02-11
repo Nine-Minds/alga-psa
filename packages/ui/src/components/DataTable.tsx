@@ -617,8 +617,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
-                    ${rowIndex % 2 === 0 ? 'bg-[rgb(var(--color-border-50))]' : 'bg-background'}
-                    ${onRowClick ? 'hover:bg-primary-50 cursor-pointer' : 'cursor-default'}
+                    ${rowIndex % 2 === 0 ? 'bg-table-row-alt' : 'bg-background'}
+                    ${onRowClick ? 'hover:bg-table-hover cursor-pointer' : 'cursor-default'}
                     transition-colors
                     ${extraRowClass}
                   `}

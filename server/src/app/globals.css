@@ -377,6 +377,13 @@ body {
     --color-destructive: 220 38 38; /* red-600 */
     --color-destructive-foreground: 254 226 226; /* red-100 */
 
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
+    --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
+    --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
+    --color-table-status-approved: 10 30 20;     /* muted dark green */
+    --color-table-status-warning: 35 25 10;      /* muted dark amber */
+
     /* Sidebar Colors  */
     --color-sidebar-bg: #0f172a;
     --color-sidebar-text: #f5f5f5;
@@ -454,6 +461,13 @@ body {
 
     /* Switch */
     --color-switch-thumb: 255 255 255;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 248 250 252;           /* slate-50, matches current */
+    --color-table-hover: 246 240 254;             /* light purple, matches current primary-50 */
+    --color-table-selected: 237 226 253;          /* primary-100 — slightly stronger purple than hover */
+    --color-table-status-approved: 240 253 244;   /* green-50 */
+    --color-table-status-warning: 255 237 213;    /* orange-100 */
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
