@@ -48,3 +48,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 - (2026-02-10) Completed F005: Ensure ext-bundles/finalize route and server action return consistent duplicate-version error payloads for UI and CLI callers
 - (2026-02-10) Completed F006: Update installer/publish UI flow to surface duplicate-version message directly to users
 - (2026-02-10) Completed F007: Add registry query/action to list all versions for a registry extension in tenant context
+- (2026-02-10) Completed F008: Include in version list payload: version string, created/published timestamp, latest content hash metadata

@@ -59,7 +59,7 @@
   {
     "id": "F008",
     "description": "Include in version list payload: version string, created/published timestamp, latest content hash metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#UX / UI Notes"
     ]
