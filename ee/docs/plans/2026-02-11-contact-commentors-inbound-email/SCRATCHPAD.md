@@ -113,3 +113,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T020 complete: runtime action registration tests now validate `create_comment_from_email` input schema accepts `contact_id`.
 - (2026-02-11) T021 complete: runtime registration tests assert the initial ticket+comment action forwards `targetContactId` into `createCommentFromEmail`.
 - (2026-02-11) T022 complete: runtime registration tests assert `create_comment_from_email` handler forwards `contact_id` into the shared email action call.
+- (2026-02-11) T023 complete: added MSP consolidated data contract tests confirming comment-loading path carries `contact_id` support in returned conversation payloads.

@@ -186,7 +186,7 @@
   {
     "id": "T023",
     "description": "MSP ticket consolidated data returns comments containing contact_id for contact-authored comments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
