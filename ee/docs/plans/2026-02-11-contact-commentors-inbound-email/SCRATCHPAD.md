@@ -116,3 +116,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T023 complete: added MSP consolidated data contract tests confirming comment-loading path carries `contact_id` support in returned conversation payloads.
 - (2026-02-11) T024 complete: MSP contract tests now assert contact author resolution map (`contactMap`) is built from comment contacts.
 - (2026-02-11) T025 complete: added client-portal ticket details contract test ensuring contact author resolution data is assembled in `client-tickets`.
+- (2026-02-11) T026 complete: `resolveCommentAuthor` unit tests verify precedence order user → contact → unknown.

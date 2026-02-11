@@ -212,7 +212,7 @@
   {
     "id": "T026",
     "description": "Shared author resolution helper prefers user author, then contact author, then unknown fallback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F021"
