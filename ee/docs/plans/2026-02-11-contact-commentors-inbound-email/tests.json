@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "TicketModel.createComment rejects contact_id that does not belong to tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
