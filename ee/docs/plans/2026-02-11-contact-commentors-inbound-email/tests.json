@@ -278,7 +278,7 @@
   {
     "id": "T034",
     "description": "GET /api/v1/tickets/{id}/comments returns contact-authored comments without response-validation errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
