@@ -110,3 +110,4 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T017 complete: additional unit coverage verifies reply-token path forwards both `author_id` and `contact_id` for contact+user matches.
 - (2026-02-11) T018 complete: unit tests validate thread-header reply path sets `contact_id` for contact-only senders.
 - (2026-02-11) T019 complete: added unit assertion that thread-header reply path without matched sender contact preserves fallback (`contact_id` omitted).
+- (2026-02-11) T020 complete: runtime action registration tests now validate `create_comment_from_email` input schema accepts `contact_id`.

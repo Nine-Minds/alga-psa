@@ -162,7 +162,7 @@
   {
     "id": "T020",
     "description": "Workflow runtime email action schema accepts contact_id in create-comment input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
