@@ -203,7 +203,7 @@
   {
     "id": "T025",
     "description": "Client portal ticket details data path includes contact author resolution for contact-authored comments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019"
