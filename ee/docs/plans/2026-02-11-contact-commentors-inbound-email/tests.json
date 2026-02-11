@@ -270,7 +270,7 @@
   {
     "id": "T033",
     "description": "Ticket comment API schema validates contact-authored payload shape without requiring created_by UUID",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
