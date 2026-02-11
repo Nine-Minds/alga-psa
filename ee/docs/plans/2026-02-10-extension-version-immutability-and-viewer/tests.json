@@ -173,7 +173,7 @@
   {
     "id": "T019",
     "description": "Versions table rows are sorted newest-first by publish timestamp",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
