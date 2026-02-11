@@ -12,7 +12,7 @@
   {
     "id": "T002",
     "description": "Duplicate-version 409 payload includes user-friendly message with conflicting version value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ],
