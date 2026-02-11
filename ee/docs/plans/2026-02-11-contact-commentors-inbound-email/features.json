@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Extend shared comment typings to include contact authorship fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

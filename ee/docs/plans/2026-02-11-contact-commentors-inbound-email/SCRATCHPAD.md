@@ -16,6 +16,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) Keep scope focused on core behavior (data model + comment creation + rendering + inbound email wiring + tests), no operational/observability extras unless requested.
 - (2026-02-11) No mandatory historical backfill in phase 1; additive behavior for new/updated comments first.
 - (2026-02-11) Canonical authorship contract is now explicit in shared types via `CommentAuthorship` (`author_type` + nullable `user_id` + nullable `contact_id`), and `IComment` mirrors this nullable dual-link model.
+- (2026-02-11) Shared comment typing extension is implemented in `packages/types/src/interfaces/comment.interface.ts`; downstream loaders/components can now consume `comment.contact_id` without ad-hoc casting.
 
 ## Discoveries / Constraints
 
