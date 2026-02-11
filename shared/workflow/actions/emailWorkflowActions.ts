@@ -25,6 +25,7 @@ export interface FindContactByEmailOutput {
   name: string;
   email: string;
   client_id: string;
+  user_id?: string;
   client_name: string;
   phone?: string;
   title?: string;
@@ -131,6 +132,14 @@ export async function findContactByEmail(
           'contacts.full_name as name',
           'contacts.email',
           'contacts.client_id',
+          trx('users')
+            .select('users.user_id')
+            .whereRaw('users.contact_id = contacts.contact_name_id')
+            .andWhere('users.tenant', tenant)
+            .andWhere('users.user_type', 'client')
+            .orderBy('users.created_at', 'asc')
+            .limit(1)
+            .as('user_id'),
           'clients.client_name',
           'contacts.phone_number as phone',
           'contacts.role as title'
@@ -706,6 +715,7 @@ export async function createCommentFromEmail(
     source?: string;
     author_type?: string;
     author_id?: string;
+    contact_id?: string;
     metadata?: any;
     inboundReplyEvent?: {
       messageId: string;

@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Extend createCommentFromEmail input contract to accept contact_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {

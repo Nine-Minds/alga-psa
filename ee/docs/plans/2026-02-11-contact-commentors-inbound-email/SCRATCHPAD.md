@@ -32,6 +32,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-11) `TicketModel.createComment` now performs tenant-scoped contact validation (`contacts.contact_name_id` + `tenant`) and fails fast when `contact_id` is missing/out-of-tenant.
 - (2026-02-11) `TicketModel.createComment` insert payload now writes `comments.contact_id` directly, enabling contact-only comments and dual-link comments (`user_id` + `contact_id`).
 - (2026-02-11) Shared comment creation now updates `tickets.response_state` to `awaiting_internal` for non-internal `author_type=contact` comments; internal comments remain unchanged.
+- (2026-02-11) `createCommentFromEmail` contract in `shared/workflow/actions/emailWorkflowActions.ts` now accepts optional `contact_id` to support contact-only comment authorship from inbound paths.
 
 ## Commands / Runbooks
 
