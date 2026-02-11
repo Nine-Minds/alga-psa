@@ -43,3 +43,4 @@ Working notes for implementing extension publish duplicate handling, strict vers
 ## Implementation Progress
 - (2026-02-10) Completed F001: Define duplicate-version API contract for finalize: HTTP 409 + stable error code + friendly message
 - (2026-02-10) Completed F002: Update registry-v2 finalize version upsert path to enforce strict immutability (reject existing version regardless of hash)
+- (2026-02-10) Completed F003: Remove/disable duplicate-version branch that currently appends a new bundle hash to an existing version

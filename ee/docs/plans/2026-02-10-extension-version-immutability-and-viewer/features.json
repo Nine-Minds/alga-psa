@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Remove/disable duplicate-version branch that currently appends a new bundle hash to an existing version",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Functional Requirements",
       "PRD#Rollout / Migration"
