@@ -178,7 +178,7 @@
   {
     "id": "T022",
     "description": "Workflow runtime create_comment_from_email forwards contact_id to shared email action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
