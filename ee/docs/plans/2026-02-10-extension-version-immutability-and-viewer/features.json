@@ -35,7 +35,7 @@
   {
     "id": "F005",
     "description": "Ensure ext-bundles/finalize route and server action return consistent duplicate-version error payloads for UI and CLI callers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD#Data / API / Integrations"
     ]
