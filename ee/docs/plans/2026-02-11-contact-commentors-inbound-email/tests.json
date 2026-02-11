@@ -145,7 +145,7 @@
   {
     "id": "T018",
     "description": "processInboundEmailInApp thread-header path resolves sender contact and sets contact_id for contact-only sender",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
