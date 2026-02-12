@@ -272,7 +272,7 @@
   {
     "id": "T046",
     "description": "DeleteEntityDialog renders Delete button when canDelete=true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036"]
   },
   {
