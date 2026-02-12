@@ -170,7 +170,7 @@
   {
     "id": "T018",
     "description": "Server render helper returns complete HTML document wrapper for headless PDF",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],

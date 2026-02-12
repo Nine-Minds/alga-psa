@@ -22286,3 +22286,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
+
+### 2026-02-12 — T018 implemented
+
+- Marked server HTML wrapper coverage for headless PDF rendering as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/server-render.test.ts::returns a full HTML document wrapper
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
