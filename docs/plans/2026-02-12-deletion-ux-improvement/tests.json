@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "validateDeletion uses custom countQuery when provided (document_associations polymorphic table)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
