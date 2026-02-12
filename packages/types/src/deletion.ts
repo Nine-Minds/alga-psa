@@ -1,3 +1,11 @@
+export type DeletionBlockCode =
+  | 'PERMISSION_DENIED'
+  | 'UNKNOWN_ENTITY'
+  | 'NOT_FOUND'
+  | 'IS_DEFAULT'
+  | 'DEPENDENCIES_EXIST'
+  | 'VALIDATION_FAILED';
+
 export type DeletionDependency = {
   type: string;
   count: number;
@@ -15,7 +23,7 @@ export type DeletionAlternative = {
 
 export type DeletionValidationResult = {
   canDelete: boolean;
-  code?: string;
+  code?: DeletionBlockCode;
   message?: string;
   dependencies: DeletionDependency[];
   alternatives: DeletionAlternative[];

@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Create DeletionBlockCode union type with all block reason codes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
