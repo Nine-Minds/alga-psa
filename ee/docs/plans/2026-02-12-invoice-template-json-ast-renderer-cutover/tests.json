@@ -343,7 +343,7 @@
   {
     "id": "T036",
     "description": "PDF generation invoice path no longer calls `executeWasmTemplate`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F025",
