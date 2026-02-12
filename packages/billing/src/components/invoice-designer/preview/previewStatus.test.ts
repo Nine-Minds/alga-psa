@@ -81,14 +81,14 @@ describe('previewStatus', () => {
   it('downgrades success phase display to idle when success cannot be legitimately shown', () => {
     const display = derivePreviewPipelineDisplayStatuses({
       statuses: {
-        compileStatus: 'success',
+        shapeStatus: 'success',
         renderStatus: 'success',
         verifyStatus: 'success',
       },
       canDisplaySuccessStates: false,
     });
 
-    expect(display.compileStatus).toBe('idle');
+    expect(display.shapeStatus).toBe('idle');
     expect(display.renderStatus).toBe('idle');
     expect(display.verifyStatus).toBe('idle');
   });
@@ -96,14 +96,14 @@ describe('previewStatus', () => {
   it('preserves running and error statuses while only normalizing success states', () => {
     const display = derivePreviewPipelineDisplayStatuses({
       statuses: {
-        compileStatus: 'running',
+        shapeStatus: 'running',
         renderStatus: 'error',
         verifyStatus: 'success',
       },
       canDisplaySuccessStates: false,
     });
 
-    expect(display.compileStatus).toBe('running');
+    expect(display.shapeStatus).toBe('running');
     expect(display.renderStatus).toBe('error');
     expect(display.verifyStatus).toBe('idle');
   });

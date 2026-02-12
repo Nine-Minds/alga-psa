@@ -170,7 +170,7 @@
   {
     "id": "F020",
     "description": "Rename/re-map preview phase states from compile/render/verify to shape/render/verify semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]

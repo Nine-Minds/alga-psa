@@ -119,15 +119,15 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   }, [authoritativePreview?.render.contentHeightPx]);
   const displayStatuses = derivePreviewPipelineDisplayStatuses({
     statuses: {
-      compileStatus: previewState.compileStatus,
+      shapeStatus: previewState.shapeStatus,
       renderStatus: previewState.renderStatus,
       verifyStatus: previewState.verifyStatus,
     },
     canDisplaySuccessStates,
   });
-  const compileDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
+  const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
   const isPreviewRunning =
-    previewState.compileStatus === 'running' ||
+    previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
     previewState.verifyStatus === 'running';
 
@@ -229,7 +229,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     lastManualRunNonceRef.current = manualRunNonce;
 
     dispatch({ type: 'pipeline-reset' });
-    dispatch({ type: 'pipeline-phase-start', phase: 'compile' });
+    dispatch({ type: 'pipeline-phase-start', phase: 'shape' });
     dispatch({ type: 'pipeline-phase-start', phase: 'render' });
     dispatch({ type: 'pipeline-phase-start', phase: 'verify' });
 
@@ -254,9 +254,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         setAuthoritativePreview(result);
 
         if (result.compile.status === 'error') {
-          dispatch({ type: 'pipeline-phase-error', phase: 'compile', error: result.compile.error ?? 'Compile failed.' });
+          dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: result.compile.error ?? 'Shape failed.' });
         } else if (result.compile.status === 'success') {
-          dispatch({ type: 'pipeline-phase-success', phase: 'compile' });
+          dispatch({ type: 'pipeline-phase-success', phase: 'shape' });
         }
 
         if (result.render.status === 'error') {
@@ -281,7 +281,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         }
         const message = error instanceof Error ? error.message : 'Preview pipeline failed.';
         setAuthoritativePreview(null);
-        dispatch({ type: 'pipeline-phase-error', phase: 'compile', error: message });
+        dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
   }, [
     canvasScale,
@@ -512,12 +512,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-              <span className="font-semibold">Compile</span>
+              <span className="font-semibold">Shape</span>
               <span
                 className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
-                data-automation-id="invoice-designer-preview-compile-status"
+                data-automation-id="invoice-designer-preview-shape-status"
               >
-                {displayStatuses.compileStatus}
+                {displayStatuses.shapeStatus}
               </span>
               <span className="font-semibold">Render</span>
               <span
@@ -536,7 +536,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               {authoritativePreview?.compile.status === 'success' && canDisplaySuccessStates && (
                 <span
                   className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5"
-                  data-automation-id="invoice-designer-preview-compile-cache-hit"
+                  data-automation-id="invoice-designer-preview-shape-cache-hit"
                 >
                   Cache: {authoritativePreview.compile.cacheHit ? 'Hit' : 'Miss'}
                 </span>
@@ -557,25 +557,25 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
           {authoritativePreview?.compile.status === 'error' && (
             <div
               className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 space-y-1"
-              data-automation-id="invoice-designer-preview-compile-error"
+              data-automation-id="invoice-designer-preview-shape-error"
             >
-              <p>{authoritativePreview.compile.error ?? 'Compilation failed.'}</p>
+              <p>{authoritativePreview.compile.error ?? 'Shaping failed.'}</p>
               {authoritativePreview.compile.details && (
                 <p className="text-[11px] text-red-600">{authoritativePreview.compile.details}</p>
               )}
             </div>
           )}
 
-          {compileDiagnostics.length > 0 && (
+          {shapeDiagnostics.length > 0 && (
             <ul
               className="space-y-1 text-xs"
-              data-automation-id="invoice-designer-preview-compile-diagnostics-list"
+              data-automation-id="invoice-designer-preview-shape-diagnostics-list"
             >
-              {compileDiagnostics.map((diagnostic, index) => (
+              {shapeDiagnostics.map((diagnostic, index) => (
                 <li
                   key={`${diagnostic.raw}-${index}`}
                   className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900"
-                  data-automation-id="invoice-designer-preview-compile-diagnostic-item"
+                  data-automation-id="invoice-designer-preview-shape-diagnostic-item"
                 >
                   <span className="font-semibold uppercase">{diagnostic.severity}</span>{' '}
                   <span>{diagnostic.message}</span>
@@ -598,7 +598,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
           {previewData && isPreviewRunning && (
             <div className="p-4 text-sm text-slate-500" data-automation-id="invoice-designer-preview-loading-state">
-              Compiling and rendering preview...
+              Shaping and rendering preview...
             </div>
           )}
 

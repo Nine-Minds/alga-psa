@@ -2,7 +2,7 @@ import type { InvoiceViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
 import { DEFAULT_PREVIEW_SAMPLE_ID } from './sampleScenarios';
 
 export type PreviewSourceKind = 'sample' | 'existing';
-export type PreviewPipelinePhase = 'compile' | 'render' | 'verify';
+export type PreviewPipelinePhase = 'shape' | 'render' | 'verify';
 export type PreviewPipelinePhaseStatus = 'idle' | 'running' | 'success' | 'error';
 
 export type PreviewSessionState = {
@@ -20,8 +20,8 @@ export type PreviewSessionState = {
   isInvoiceDetailLoading: boolean;
   invoiceDetailError: string | null;
   selectedInvoiceData: WasmInvoiceViewModel | null;
-  compileStatus: PreviewPipelinePhaseStatus;
-  compileError: string | null;
+  shapeStatus: PreviewPipelinePhaseStatus;
+  shapeError: string | null;
   renderStatus: PreviewPipelinePhaseStatus;
   renderError: string | null;
   verifyStatus: PreviewPipelinePhaseStatus;
@@ -60,11 +60,11 @@ const setPhaseStatus = (
   status: PreviewPipelinePhaseStatus,
   error: string | null
 ): PreviewSessionState => {
-  if (phase === 'compile') {
+  if (phase === 'shape') {
     return {
       ...state,
-      compileStatus: status,
-      compileError: error,
+      shapeStatus: status,
+      shapeError: error,
     };
   }
   if (phase === 'render') {
@@ -96,8 +96,8 @@ export const createInitialPreviewSessionState = (): PreviewSessionState => ({
   isInvoiceDetailLoading: false,
   invoiceDetailError: null,
   selectedInvoiceData: null,
-  compileStatus: 'idle',
-  compileError: null,
+  shapeStatus: 'idle',
+  shapeError: null,
   renderStatus: 'idle',
   renderError: null,
   verifyStatus: 'idle',
@@ -197,8 +197,8 @@ export const previewSessionReducer = (
     case 'pipeline-reset':
       return {
         ...state,
-        compileStatus: 'idle',
-        compileError: null,
+        shapeStatus: 'idle',
+        shapeError: null,
         renderStatus: 'idle',
         renderError: null,
         verifyStatus: 'idle',

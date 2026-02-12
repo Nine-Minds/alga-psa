@@ -428,7 +428,7 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
 
     await waitFor(() => {
-      const compileError = document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-error\"]');
+      const compileError = document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-error\"]');
       expect(compileError?.textContent).toContain('Preview AssemblyScript compilation failed.');
       expect(compileError?.textContent).toContain('ERROR TS1005');
     });
@@ -581,7 +581,7 @@ describe('DesignerVisualWorkspace', () => {
     expect(latestCall.bypassCompileCache).toBe(true);
   });
 
-  it('shows loading indicator while compile/render pipeline is in flight', async () => {
+  it('shows loading indicator while shape/render pipeline is in flight', async () => {
     runAuthoritativeInvoiceTemplatePreviewMock.mockImplementationOnce(
       () => new Promise(() => undefined)
     );
@@ -592,7 +592,7 @@ describe('DesignerVisualWorkspace', () => {
     await waitFor(() => {
       expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-loading-state\"]')).toBeTruthy();
       expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-status\"]')?.textContent
+        document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-status\"]')?.textContent
       ).toContain('running');
       expect(
         document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')?.textContent
@@ -600,11 +600,11 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
-  it('exposes stable automation ids for compile/render/verify status indicators', async () => {
+  it('exposes stable automation ids for shape/render/verify status indicators', async () => {
     renderWorkspace('preview');
 
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-status\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-status\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-verify-status\"]')).toBeTruthy();
   });

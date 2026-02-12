@@ -2,7 +2,7 @@ import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { PreviewPipelinePhaseStatus, PreviewSourceKind } from './previewSessionState';
 
 export type PreviewPipelineStatusSnapshot = {
-  compileStatus: PreviewPipelinePhaseStatus;
+  shapeStatus: PreviewPipelinePhaseStatus;
   renderStatus: PreviewPipelinePhaseStatus;
   verifyStatus: PreviewPipelinePhaseStatus;
 };
@@ -34,7 +34,7 @@ export const derivePreviewPipelineDisplayStatuses = (params: {
     status === 'success' && !params.canDisplaySuccessStates ? 'idle' : status;
 
   return {
-    compileStatus: normalize(params.statuses.compileStatus),
+    shapeStatus: normalize(params.statuses.shapeStatus),
     renderStatus: normalize(params.statuses.renderStatus),
     verifyStatus: normalize(params.statuses.verifyStatus),
   };

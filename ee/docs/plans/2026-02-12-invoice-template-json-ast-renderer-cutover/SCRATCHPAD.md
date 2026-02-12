@@ -478,3 +478,31 @@ Commands run:
 - `pnpm vitest packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts` (pass).
 - `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (test passes; command exits non-zero in this environment due existing coverage temp dir issue: `server/coverage/.tmp` ENOENT).
 - Attempted targeted `DesignerVisualWorkspace` component source-switch tests; blocked by pre-existing `React.act is not a function` compatibility issue in current React/testing-library stack.
+
+### 2026-02-12 — F020 implemented
+
+- Remapped preview pipeline phase semantics from `compile/render/verify` to `shape/render/verify` in designer preview state and UI surface.
+- Updated preview state model and reducer:
+  - `packages/billing/src/components/invoice-designer/preview/previewSessionState.ts`
+  - renamed `compileStatus/compileError` -> `shapeStatus/shapeError`
+  - phase enum now uses `'shape' | 'render' | 'verify'`.
+- Updated phase display derivation:
+  - `packages/billing/src/components/invoice-designer/preview/previewStatus.ts`
+  - status snapshot now tracks `shapeStatus`.
+- Updated `DesignerVisualWorkspace` status wiring and UX copy:
+  - dispatches/reads `shape` phase state,
+  - status label now reads `Shape`,
+  - loading text updated to `Shaping and rendering preview...`,
+  - automation IDs moved from `...preview-compile-*` to `...preview-shape-*` for status/error/diagnostics/cache markers.
+- Updated related tests:
+  - `previewSessionState.test.ts`
+  - `previewStatus.test.ts`
+  - string/automation-id expectations in `DesignerVisualWorkspace.test.tsx` aligned to `shape` terminology.
+
+Rationale:
+
+- Preview UX now reflects the AST pipeline's shaping step instead of a compiler phase.
+
+Commands run:
+
+- `pnpm vitest packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts` (pass).
