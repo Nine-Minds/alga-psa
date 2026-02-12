@@ -354,7 +354,7 @@
   {
     "id": "T037",
     "description": "Preview and PDF produce equivalent semantic output for same AST + invoice fixture",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F033"
