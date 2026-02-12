@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "deleteEntityWithValidation returns validation result with canDelete:false if deps found during atomic re-check",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
