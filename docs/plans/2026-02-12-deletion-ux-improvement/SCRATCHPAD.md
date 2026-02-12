@@ -57,3 +57,5 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Should DeleteEntityDialog support dark mode styling from the start? (active dark mode work on `dark_times` branch)
 - For cascade entities (tickets, projects), should the dialog explain what gets cascade-deleted?
 - Should bulk delete in TicketingDashboard use validateBulkDeletion immediately or defer to P3?
+
+- (2026-02-12) Added deletion type definitions in packages/types/src/deletion.ts (DeletionValidationResult, DeletionDependency, DeletionAlternative) for shared deletion UX types.
