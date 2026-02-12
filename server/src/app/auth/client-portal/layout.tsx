@@ -4,7 +4,7 @@ import { ThemeBridge } from '@/components/providers/ThemeBridge';
 
 export default function ClientPortalAuthLayout({ children }: { children: ReactNode }) {
   return (
-    <AppThemeProvider>
+    <AppThemeProvider forcedTheme="light">
       <ThemeBridge>
         {children}
       </ThemeBridge>
