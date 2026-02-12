@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Export all deletion types from packages/types/src/index.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
