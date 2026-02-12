@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "With flag OFF: standard MspLayoutClient renders children without I18nWrapper (zero behavior change)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
