@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Remove or empty clientPortal.json after all components are migrated — no duplication",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {
