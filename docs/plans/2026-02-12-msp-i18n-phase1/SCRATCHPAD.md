@@ -140,3 +140,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T027: All client portal components using auth/account keys migrated to useTranslation('client-portal/auth') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T028: All client portal components using profile/clientSettings/notifications keys migrated to useTranslation('client-portal/profile') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T029: Client portal continues working after full migration (no regressions — same translations, new namespace paths) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T030: clientPortal.json removed or emptied after all components migrated — no duplication of keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).

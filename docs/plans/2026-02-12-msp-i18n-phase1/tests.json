@@ -248,7 +248,7 @@
   {
     "id": "T030",
     "description": "clientPortal.json removed or emptied after all components migrated \u2014 no duplication of keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
