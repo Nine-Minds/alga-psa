@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "Migrate @alga-psa/projects project deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "Add bulk task tag cleanup (deleteEntitiesTags) to project deletion performDelete callback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "Remove manual deleteEntityTags from projectTask.ts (automatic via config)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]

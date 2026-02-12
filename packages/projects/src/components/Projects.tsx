@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { parse } from 'date-fns';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { IProject, IClient } from '@alga-psa/types';
+import { IProject, IClient, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -17,7 +17,7 @@ import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -28,6 +28,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { preCheckDeletion } from '@alga-psa/core';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -57,8 +58,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const { openDrawer, closeDrawer } = useDrawer();
   
   // Tag-related state
@@ -251,24 +254,63 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     );
   };
 
+  const resetDeleteState = () => {
+    setProjectToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
+
+  const runDeleteValidation = useCallback(async (projectId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('project', projectId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate project deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
   const handleDelete = async (project: IProject) => {
     setProjectToDelete(project);
-    setShowDeleteConfirm(true);
+    void runDeleteValidation(project.project_id);
   };
 
   const confirmDelete = async () => {
     if (!projectToDelete) return;
 
     try {
-      await deleteProject(projectToDelete.project_id);
+      setIsDeleteProcessing(true);
+      const result = await deleteProject(projectToDelete.project_id);
+
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
+
       setProjects(projects.filter(p => p.project_id !== projectToDelete.project_id));
       toast.success('Project deleted successfully');
+      resetDeleteState();
     } catch (error) {
       console.error('Error deleting project:', error);
-      toast.error('Failed to delete project');
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete project.',
+        dependencies: [],
+        alternatives: []
+      });
     } finally {
-      setShowDeleteConfirm(false);
-      setProjectToDelete(null);
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -663,18 +705,15 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
         />
       )}
 
-      <ConfirmationDialog
+      <DeleteEntityDialog
         id="delete-project-confirmation"
-        isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false);
-          setProjectToDelete(null);
-        }}
-        onConfirm={confirmDelete}
-        title="Delete Project"
-        message={projectToDelete ? `Are you sure you want to delete project "${projectToDelete.project_name}"? This action cannot be undone.` : ""}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        isOpen={!!projectToDelete}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDelete}
+        entityName={projectToDelete?.project_name || 'this project'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
 
       {/* Client Quick View Drawer */}
