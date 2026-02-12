@@ -42,14 +42,14 @@ describe('deletion migrations', () => {
   });
 
   it('T074: Contact deletion uses deleteEntityWithValidation + DeleteEntityDialog', () => {
-    const action = read('packages/clients/src/actions/contactActions.ts');
+    const action = read('packages/clients/src/actions/contact-actions/contactActions.tsx');
     const ui = read('packages/clients/src/components/contacts/ContactDetails.tsx');
     expect(action).toContain("deleteEntityWithValidation('contact'");
     expect(ui).toContain('<DeleteEntityDialog');
   });
 
   it('T075: Contact deletion no longer manually calls deleteEntityTags', () => {
-    const action = read('packages/clients/src/actions/contactActions.ts');
+    const action = read('packages/clients/src/actions/contact-actions/contactActions.tsx');
     expect(action).not.toContain('deleteEntityTags');
   });
 
@@ -168,28 +168,28 @@ describe('deletion migrations', () => {
   });
 
   it('T093: Schedule entry deletion uses deleteEntityWithValidation + DeleteEntityDialog', () => {
-    const action = read('packages/scheduling/src/actions/scheduleEntryActions.ts');
+    const action = read('packages/scheduling/src/actions/scheduleActions.ts');
     const ui = read('packages/scheduling/src/components/schedule/ScheduleCalendar.tsx');
     expect(action).toContain("deleteEntityWithValidation('schedule_entry'");
     expect(ui).toContain('<DeleteEntityDialog');
   });
 
   it('T094: Survey template deletion uses deleteEntityWithValidation + DeleteEntityDialog', () => {
-    const action = read('packages/surveys/src/actions/surveyTemplateActions.ts');
+    const action = read('packages/surveys/src/actions/surveyActions.ts');
     const ui = read('packages/surveys/src/components/templates/TemplateList.tsx');
     expect(action).toContain("deleteEntityWithValidation('survey_template'");
     expect(ui).toContain('<DeleteEntityDialog');
   });
 
   it('T095: Workflow deletion uses deleteEntityWithValidation + DeleteEntityDialog', () => {
-    const action = read('packages/workflows/src/actions/workflowDefinitionActions.ts');
+    const action = read('packages/workflows/src/actions/workflow-runtime-v2-actions.ts');
     const ui = read('packages/workflows/src/components/automation-hub/WorkflowList.tsx');
     expect(action).toContain("deleteEntityWithValidation('workflow'");
     expect(ui).toContain('<DeleteEntityDialog');
   });
 
   it('T096: Role deletion uses deleteEntityWithValidation + DeleteEntityDialog', () => {
-    const action = read('packages/users/src/actions/role-actions/roleActions.ts');
+    const action = read('packages/auth/src/actions/policyActions.ts');
     const ui = read('packages/auth/src/components/settings/policy/RoleManagement.tsx');
     expect(action).toContain("deleteEntityWithValidation('role'");
     expect(ui).toContain('<DeleteEntityDialog');

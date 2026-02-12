@@ -170,6 +170,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T097 complete for interaction type deletion migration coverage.
 - (2026-02-12) Marked T098 complete for ConfirmationDialog capability coverage.
 - (2026-02-12) Marked T099 complete for ConfirmationDialog non-deletion usage coverage.
+- (2026-02-12) Fixed migration test paths (contact/actions, scheduleActions, surveyActions, workflow-runtime-v2-actions, policyActions) and adjusted DeleteEntityDialog title test to handle duplicate title nodes.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.

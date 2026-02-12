@@ -46,7 +46,7 @@ describe('DeleteEntityDialog', () => {
   });
 
   it('T047: renders Cannot Delete title when canDelete=false', () => {
-    const { getByText } = render(
+    const { getAllByText } = render(
       <DeleteEntityDialog
         {...baseProps}
         isValidating={false}
@@ -60,7 +60,7 @@ describe('DeleteEntityDialog', () => {
       />
     );
 
-    expect(getByText('Cannot Delete')).toBeTruthy();
+    expect(getAllByText('Cannot Delete').length).toBeGreaterThan(0);
   });
 
   it('T048: renders itemized dependency list with counts', () => {
