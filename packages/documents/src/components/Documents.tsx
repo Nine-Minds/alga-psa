@@ -96,8 +96,12 @@ const Documents = ({
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
-  const tDoc = (key: string, options?: Record<string, any>) =>
-    t(`${documentKeyPrefix}${key}`, options);
+  const tDoc = (key: string, options?: Record<string, any> | string) => {
+    if (typeof options === 'string') {
+      return t(`${documentKeyPrefix}${key}`, { defaultValue: options });
+    }
+    return t(`${documentKeyPrefix}${key}`, options);
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);

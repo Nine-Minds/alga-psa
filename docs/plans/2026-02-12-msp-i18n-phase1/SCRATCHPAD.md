@@ -170,3 +170,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T056 reset to incomplete: `npm run build` failed with Next.js OOM after `next build --webpack`; rerun with more memory or adjusted build settings.
 - Build fix: ClientNotificationsList `loadActivities` now depends on `tProfile` instead of undefined `t` (TS error during Next build).
 - Build fix: ClientPortalSettingsPage `slugToLabelMap` now depends on `tProfile` instead of undefined `t` (TS error during Next build).
+- Build fix: Documents `tDoc` now accepts string defaults and maps them to `defaultValue` to satisfy TS typing during Next build.
