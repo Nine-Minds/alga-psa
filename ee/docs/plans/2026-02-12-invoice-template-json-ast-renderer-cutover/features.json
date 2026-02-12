@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Implement allowlisted strategy registry for `strategyId` resolution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Security / Permissions"]
   },
   {

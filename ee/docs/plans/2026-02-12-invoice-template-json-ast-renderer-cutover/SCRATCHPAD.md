@@ -192,3 +192,27 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
+
+### 2026-02-12 — F006 implemented
+
+- Added allowlisted strategy registry in `packages/billing/src/lib/invoice-template-ast/strategies.ts`.
+- Implemented explicit APIs:
+  - `listAllowlistedInvoiceTemplateStrategyIds()`
+  - `isAllowlistedInvoiceTemplateStrategy(strategyId)`
+  - `resolveInvoiceTemplateStrategy(strategyId)`
+  - `executeInvoiceTemplateStrategy(strategyId, input)`
+- Added strict unknown-strategy rejection with typed error:
+  - `InvoiceTemplateStrategyResolutionError`
+  - error code: `STRATEGY_NOT_ALLOWLISTED`.
+- Seeded initial allowlisted strategies for upcoming evaluator usage:
+  - `custom-group-key`
+  - `custom-aggregate`
+- Added unit tests in `packages/billing/src/lib/invoice-template-ast/strategies.test.ts` for known/unknown strategy behavior.
+
+Rationale:
+
+- Strategy execution must be explicit and allowlisted to preserve non-arbitrary-code security posture while enabling controlled extensibility.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).
