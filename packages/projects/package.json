@@ -35,6 +35,7 @@
     "@alga-psa/billing": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/media": "*",
     "@alga-psa/types": "*",
     "@alga-psa/users": "*",
     "@alga-psa/validation": "*",

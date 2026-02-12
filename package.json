@@ -42,7 +42,7 @@
     "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
     "create-tenant": "cd server && npm run create-tenant",
     "rollback-tenant": "cd server && npm run rollback-tenant",
-    "lint": "eslint \"{server,ee/server,shared,services}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
+    "lint": "eslint \"{server,ee/server,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",
     "guard:temporal-dist-smoke": "node scripts/temporal-worker-dist-import-smoke.mjs",
     "test:temporal-readiness:fast": "TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1 npx vitest --root ee/temporal-workflows src/workflows/__tests__/generic-job-workflow.temporal.test.ts src/config/__tests__/startupValidation.test.ts",
