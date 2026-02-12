@@ -176,4 +176,34 @@ describe('evaluateInvoiceTemplateAst', () => {
     expect(() => evaluateInvoiceTemplateAst(ast, invoiceFixture)).toThrow(InvoiceTemplateEvaluationError);
     expect(() => evaluateInvoiceTemplateAst(ast, invoiceFixture)).toThrow(/unknown strategy/i);
   });
+
+  it('returns byte-for-byte stable output for equivalent AST and input data', () => {
+    const ast = buildAst([
+      {
+        id: 'filter-positive',
+        type: 'filter',
+        predicate: {
+          type: 'comparison',
+          path: 'total',
+          op: 'gte',
+          value: 0,
+        },
+      },
+      {
+        id: 'sort-items',
+        type: 'sort',
+        keys: [{ path: 'description', direction: 'asc' }],
+      },
+      {
+        id: 'aggregate-total',
+        type: 'aggregate',
+        aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+      },
+    ]);
+
+    const first = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const second = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
 });

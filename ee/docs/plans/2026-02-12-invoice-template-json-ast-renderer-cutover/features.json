@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Guarantee deterministic evaluator output for equivalent AST+data inputs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Non-functional Requirements"]
   },
   {

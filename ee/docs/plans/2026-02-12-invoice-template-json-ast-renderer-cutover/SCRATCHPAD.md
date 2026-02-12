@@ -240,3 +240,19 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).
+
+### 2026-02-12 — F008 implemented
+
+- Added deterministic output normalization in evaluator (`packages/billing/src/lib/invoice-template-ast/evaluator.ts`):
+  - recursive plain-object key sorting before returning `output`, `groups`, `aggregates`, `totals`, and `bindings`.
+  - stable sort implementation already used index tie-break to preserve deterministic ordering.
+- Added explicit determinism test in `packages/billing/src/lib/invoice-template-ast/evaluator.test.ts`:
+  - repeated evaluation of identical AST+input yields byte-for-byte identical JSON payload.
+
+Rationale:
+
+- Deterministic evaluation output is required for reproducible preview/PDF parity checks and reliable caching/verification logic.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (pass).

@@ -355,6 +355,28 @@ const evaluateComputationExpression = (
 const flattenGroups = (groups: InvoiceTemplateEvaluatedGroup[]): UnknownRecord[] =>
   groups.flatMap((group) => group.items);
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.getPrototypeOf(value) === Object.prototype;
+
+const deepSortObjectKeys = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => deepSortObjectKeys(entry));
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const sortedEntries = Object.entries(value)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, entryValue]) => [key, deepSortObjectKeys(entryValue)] as const);
+
+  return Object.fromEntries(sortedEntries);
+};
+
 export const evaluateInvoiceTemplateAst = (
   ast: InvoiceTemplateAst,
   invoiceDataInput: UnknownRecord
@@ -493,13 +515,23 @@ export const evaluateInvoiceTemplateAst = (
   bindings[`${ast.transforms.outputBindingId}.aggregates`] = aggregates;
   bindings[`${ast.transforms.outputBindingId}.totals`] = totals;
 
+  const deterministicOutput = deepSortObjectKeys(output) as
+    | UnknownRecord[]
+    | InvoiceTemplateEvaluatedGroup[];
+  const deterministicBindings = deepSortObjectKeys(bindings) as Record<string, unknown>;
+  const deterministicAggregates = deepSortObjectKeys(aggregates) as Record<string, number>;
+  const deterministicTotals = deepSortObjectKeys(totals) as Record<string, number>;
+  const deterministicGroups = groups
+    ? (deepSortObjectKeys(groups) as InvoiceTemplateEvaluatedGroup[])
+    : null;
+
   return {
     sourceCollection,
-    output,
-    groups,
-    aggregates,
-    totals,
-    bindings,
+    output: deterministicOutput,
+    groups: deterministicGroups,
+    aggregates: deterministicAggregates,
+    totals: deterministicTotals,
+    bindings: deterministicBindings,
   };
 };
 
