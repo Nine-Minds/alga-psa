@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Create server actions for reading/writing MSP org locale settings (getTenantMspLocaleSettings, updateTenantMspLocaleSettings)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR10"]
   },
   {

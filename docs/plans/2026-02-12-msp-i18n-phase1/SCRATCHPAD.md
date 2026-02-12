@@ -106,3 +106,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Added `MspLanguageSettings` component for MSP org language defaults and enabled locales.
 - Inserted MSP language settings tab in Settings (after Teams) and gated visibility behind `msp-i18n-enabled`.
 - MSP org language settings now persist to `tenant_settings.settings.mspPortal` via new actions.
+- Added `getTenantMspLocaleSettingsAction` and `updateTenantMspLocaleSettingsAction` in tenancy actions.
