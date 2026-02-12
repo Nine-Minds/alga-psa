@@ -112,7 +112,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
 
     try {
       const evaluation = evaluateInvoiceTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
-      const rendered = renderEvaluatedInvoiceTemplateAst(validation.ast, evaluation);
+      const rendered = await renderEvaluatedInvoiceTemplateAst(validation.ast, evaluation);
       return {
         success: true,
         sourceHash,

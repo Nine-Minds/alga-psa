@@ -272,7 +272,7 @@ export class PDFGenerationService {
         invoiceViewModel as unknown as Record<string, unknown>
       );
 
-      return renderInvoiceTemplateAstHtmlDocument(templateAst, evaluation, {
+      return await renderInvoiceTemplateAstHtmlDocument(templateAst, evaluation, {
         title: 'Invoice',
       });
     });

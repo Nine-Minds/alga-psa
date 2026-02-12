@@ -1,5 +1,4 @@
 import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import type {
   InvoiceTemplateAst,
   InvoiceTemplateNode,
@@ -284,10 +283,15 @@ export interface InvoiceTemplateRenderOutput {
   css: string;
 }
 
-export const renderEvaluatedInvoiceTemplateAst = (
+export const renderEvaluatedInvoiceTemplateAst = async (
   ast: InvoiceTemplateAst,
   evaluation: InvoiceTemplateEvaluationResult
-): InvoiceTemplateRenderOutput => ({
-  html: renderToStaticMarkup(<InvoiceTemplateAstRenderer ast={ast} evaluation={evaluation} />),
-  css: buildAstCss(ast),
-});
+): Promise<InvoiceTemplateRenderOutput> => {
+  // Next.js app router disallows static imports from react-dom/server in shared modules.
+  // Use a dynamic import so this renderer remains server-only at call sites.
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  return {
+    html: renderToStaticMarkup(<InvoiceTemplateAstRenderer ast={ast} evaluation={evaluation} />),
+    css: buildAstCss(ast),
+  };
+};

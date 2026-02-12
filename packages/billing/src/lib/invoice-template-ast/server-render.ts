@@ -16,12 +16,12 @@ export interface InvoiceTemplateHtmlDocumentOptions {
   bodyClassName?: string;
 }
 
-export const renderInvoiceTemplateAstHtmlDocument = (
+export const renderInvoiceTemplateAstHtmlDocument = async (
   ast: InvoiceTemplateAst,
   evaluation: InvoiceTemplateEvaluationResult,
   options: InvoiceTemplateHtmlDocumentOptions = {}
-): string => {
-  const { html, css } = renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+): Promise<string> => {
+  const { html, css } = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
   const title = escapeHtml(options.title ?? 'Invoice');
   const additionalCss = options.additionalCss ?? '';
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';

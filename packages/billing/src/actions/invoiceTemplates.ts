@@ -405,7 +405,7 @@ export const renderTemplateOnServer = withAuth(async (
           templateAst,
           invoiceData as unknown as Record<string, unknown>
         );
-        const { html, css } = renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
+        const { html, css } = await renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
 
         console.log(`[Server Action] Successfully rendered template: ${templateId}`);
         return { html, css };

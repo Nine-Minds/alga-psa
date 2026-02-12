@@ -16,7 +16,7 @@ const invoiceFixture = {
 };
 
 describe('renderEvaluatedInvoiceTemplateAst', () => {
-  it('renders HTML for text/field/table/totals node combinations', () => {
+  it('renders HTML for text/field/table/totals node combinations', async () => {
     const ast: InvoiceTemplateAst = {
       kind: 'invoice-template-ast',
       version: INVOICE_TEMPLATE_AST_VERSION,
@@ -101,7 +101,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     };
 
     const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('Invoice INV-1001');
     expect(rendered.html).toContain('Invoice #');
@@ -111,7 +111,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('300');
   });
 
-  it('applies class tokens and style declarations consistently', () => {
+  it('applies class tokens and style declarations consistently', async () => {
     const ast: InvoiceTemplateAst = {
       kind: 'invoice-template-ast',
       version: INVOICE_TEMPLATE_AST_VERSION,
@@ -146,7 +146,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     };
 
     const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
 
     expect(rendered.css).toContain('.ast-heading');
     expect(rendered.css).toContain('--brand-color');
@@ -154,7 +154,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('font-size:20px');
   });
 
-  it('escapes unsafe text content in rendered HTML', () => {
+  it('escapes unsafe text content in rendered HTML', async () => {
     const ast: InvoiceTemplateAst = {
       kind: 'invoice-template-ast',
       version: INVOICE_TEMPLATE_AST_VERSION,
@@ -172,7 +172,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     };
 
     const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
     expect(rendered.html).not.toContain('<script>alert("xss")</script>');
