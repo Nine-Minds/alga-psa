@@ -125,7 +125,7 @@
   {
     "id": "T016",
     "description": "Feature namespace files contain flattened keys (no wrapping top-level key like 'tickets')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008",
