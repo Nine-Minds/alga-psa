@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "preCheckDeletion maps 'client' entity to 'company' permission entity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
