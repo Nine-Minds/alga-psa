@@ -500,7 +500,7 @@
   {
     "id": "T084",
     "description": "Project deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F062"]
   },
   {
