@@ -525,7 +525,7 @@
   {
     "id": "T055",
     "description": "End-to-end author flow passes: design edit -> AST preview -> save -> PDF render",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F018",

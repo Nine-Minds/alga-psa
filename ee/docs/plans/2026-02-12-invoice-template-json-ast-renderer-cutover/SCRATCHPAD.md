@@ -29979,3 +29979,12 @@ Verification:
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateDocsArchitecture.test.ts` (pass).
+
+### 2026-02-12 — T055 implemented
+
+- Added end-to-end-style author flow integration test covering: design workspace preview -> AST save -> server/PDF render.
+- Evidence: `packages/billing/src/actions/invoiceTemplateAuthorFlow.e2e.test.ts`.
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAuthorFlow.e2e.test.ts` (pass).
