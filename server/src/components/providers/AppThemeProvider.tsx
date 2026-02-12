@@ -12,7 +12,7 @@ type AppThemeProviderProps = {
   forcedTheme?: string;
 };
 
-export function AppThemeProvider({ children, defaultTheme = 'system', forcedTheme }: AppThemeProviderProps) {
+export function AppThemeProvider({ children, defaultTheme = 'light', forcedTheme }: AppThemeProviderProps) {
   const actions = useMemo(() => ({
     getPreference: getThemePreferenceAction,
     savePreference: async (theme: 'light' | 'dark' | 'system') => {

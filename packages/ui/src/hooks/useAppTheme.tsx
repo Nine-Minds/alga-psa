@@ -59,6 +59,9 @@ export function useAppTheme() {
         const preference = await actions.getPreference();
         if (isThemePreference(preference) && preference !== theme) {
           setTheme(preference);
+        } else if (preference === null && theme !== 'system') {
+          // No saved preference — default to system detection when themes are enabled
+          setTheme('system');
         }
       } catch (error) {
         console.error('Failed to load theme preference:', error);
