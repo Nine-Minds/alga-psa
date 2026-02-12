@@ -77,7 +77,7 @@
   {
     "id": "T010",
     "description": "MSP onboarding flow still works when flag is ON (I18nWrapper does not break redirect logic)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
