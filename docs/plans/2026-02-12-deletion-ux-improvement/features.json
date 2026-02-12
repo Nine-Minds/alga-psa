@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Create preCheckDeletion server action for read-only dependency preview",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "preCheckDeletion checks getCurrentUser and returns PERMISSION_DENIED if not authenticated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "preCheckDeletion checks hasPermission with correct entity mapping (client->company)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "preCheckDeletion uses withTransaction for the read-only validation query",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "Create deleteEntityWithValidation that validates + deletes in a single withTransaction call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "deleteEntityWithValidation automatically calls deleteEntityTags when tagEntityType is set",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "deleteEntityWithValidation returns { ...validation, deleted: true } on success",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "deleteEntityWithValidation returns validation result (canDelete: false) if deps found during atomic check",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "Export preCheckDeletion, deleteEntityWithValidation, validateDeletion, getDeletionConfig from @alga-psa/core",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "F043",
     "description": "Create useDeletionValidation hook with validate, reset, validationResult, isValidating, error, canDelete",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-6"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Create validateBulkDeletion action that validates multiple entities in a single transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-7"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "validateBulkDeletion returns canDeleteAll, canDelete[], cannotDelete[] with reasons",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-7"
     ]

@@ -64,3 +64,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Exported deletion types from packages/types/src/index.ts barrel.
 - (2026-02-12) Implemented validateDeletion with dependency counting, custom countQuery support, pluralized labels, block message, alternatives, and viewUrl template expansion.
 - (2026-02-12) Added schema-verified deletion configs for core entities plus getDeletionConfig lookup in packages/core/src/config/deletion/index.ts.
+- (2026-02-12) Added deletion actions (preCheckDeletion, deleteEntityWithValidation, validateBulkDeletion), permission checks, and exports; added useDeletionValidation hook.

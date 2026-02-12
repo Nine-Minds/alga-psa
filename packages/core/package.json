@@ -55,7 +55,8 @@
     "redis": "^4.6.10",
     "uuid": "^9.0.1",
     "winston": "^3.13.1",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "react": "^19.2.4"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
