@@ -29799,3 +29799,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T035 implemented
+
+- Marked invoice PDF path shared AST evaluator/renderer helper wiring as implemented.
+- Evidence: packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts::uses shared AST evaluator and renderer helpers
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).

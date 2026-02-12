@@ -333,7 +333,7 @@
   {
     "id": "T035",
     "description": "PDF generation invoice path renders via shared AST renderer helper",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F011"
