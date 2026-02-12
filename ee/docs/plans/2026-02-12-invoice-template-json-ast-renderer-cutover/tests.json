@@ -82,7 +82,7 @@
   {
     "id": "T009",
     "description": "Evaluator applies grouping transforms with expected bucket keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F004"
