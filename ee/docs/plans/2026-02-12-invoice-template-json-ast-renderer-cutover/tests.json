@@ -254,7 +254,7 @@
   {
     "id": "T027",
     "description": "Preview action executes AST validation + evaluator + renderer pipeline",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F002",
