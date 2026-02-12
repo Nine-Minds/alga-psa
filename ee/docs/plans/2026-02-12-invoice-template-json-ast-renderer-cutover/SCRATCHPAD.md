@@ -691,3 +691,21 @@ Rationale:
 Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
+
+### 2026-02-12 — F029 implemented
+
+- Reinforced no-arbitrary-code security posture at runtime by exercising strategy allowlist enforcement through preview action integration.
+- Added preview integration coverage for non-allowlisted strategy rejection:
+  - `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`
+  - mocks AST export with an invalid `strategyId` and asserts structured `UNKNOWN_STRATEGY` evaluator diagnostics are returned.
+- Existing strategy registry/evaluator guardrails remain in place:
+  - allowlist checks in `packages/billing/src/lib/invoice-template-ast/strategies.ts`
+  - evaluator rejection path in `packages/billing/src/lib/invoice-template-ast/evaluator.ts`.
+
+Rationale:
+
+- Strategy execution remains constrained to explicit allowlisted functions and rejects arbitrary IDs in runtime paths.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).

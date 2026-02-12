@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import * as workspaceAstModule from '../components/invoice-designer/ast/workspaceAst';
 import * as evaluatorModule from '../lib/invoice-template-ast/evaluator';
 import * as schemaModule from '../lib/invoice-template-ast/schema';
 import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';
@@ -212,6 +214,65 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
           code: 'MISSING_BINDING',
           path: 'transforms.operations.0.predicate.path',
           operationId: 'op-filter-1',
+        }),
+      ])
+    );
+  });
+
+  it('rejects non-allowlisted strategy ids at runtime', async () => {
+    const astExportSpy = vi
+      .spyOn(workspaceAstModule, 'exportWorkspaceToInvoiceTemplateAst')
+      .mockReturnValueOnce({
+        kind: 'invoice-template-ast',
+        version: INVOICE_TEMPLATE_AST_VERSION,
+        bindings: {
+          values: {},
+          collections: {
+            items: {
+              id: 'items',
+              kind: 'collection',
+              path: 'items',
+            },
+          },
+        },
+        transforms: {
+          sourceBindingId: 'items',
+          outputBindingId: 'lineItems.shaped',
+          operations: [
+            {
+              id: 'group-runtime-security',
+              type: 'group',
+              key: 'description',
+              strategyId: 'non-allowlisted-strategy',
+            },
+          ],
+        },
+        layout: {
+          id: 'doc',
+          type: 'document',
+          children: [],
+        },
+      } as any);
+
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      {
+        workspace,
+        invoiceData,
+      }
+    );
+
+    astExportSpy.mockRestore();
+
+    expect(actionResult.success).toBe(false);
+    expect(actionResult.compile.status).toBe('error');
+    expect(actionResult.compile.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'evaluation',
+          code: 'UNKNOWN_STRATEGY',
+          operationId: 'group-runtime-security',
         }),
       ])
     );

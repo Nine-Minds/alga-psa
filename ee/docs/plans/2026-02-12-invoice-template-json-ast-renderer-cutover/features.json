@@ -249,7 +249,7 @@
   {
     "id": "F029",
     "description": "Maintain no-arbitrary-code security posture by constraining strategy execution to allowlisted functions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Non-goals"
