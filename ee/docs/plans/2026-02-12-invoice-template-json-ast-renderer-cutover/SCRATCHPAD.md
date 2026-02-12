@@ -29718,3 +29718,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts' (pass).
+
+### 2026-02-12 — T026 implemented
+
+- Marked standard template AST loadability as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts + invoiceTemplateAstPersistenceWiring.test.ts
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts' (pass).

@@ -245,7 +245,7 @@
   {
     "id": "T026",
     "description": "Standard templates are loadable via AST definitions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ],
