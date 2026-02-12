@@ -329,7 +329,7 @@ export default function WorkflowExecutionsTable({
         columns={finalColumns}
         onRowClick={handleRowClick}
         id="workflow-executions-table"
-        rowClassName={() => "hover:bg-[rgb(var(--color-primary-50))] cursor-pointer"}
+        rowClassName={() => "cursor-pointer"}
         pagination={true}
         currentPage={currentPage}
         onPageChange={setCurrentPage}

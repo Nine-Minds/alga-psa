@@ -692,7 +692,7 @@ function DocumentStorageCardComponent({
                                     handleDisassociate();
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.detach', 'Detach')}
@@ -708,7 +708,7 @@ function DocumentStorageCardComponent({
                                     onMove(document);
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-50 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 inline-flex items-center"
                             >
                                 <FolderInput className="w-4 h-4 mr-2" />
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.move', 'Move')}
@@ -724,7 +724,7 @@ function DocumentStorageCardComponent({
                                     handleDelete();
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.deletePermanently', 'Delete Permanently')}

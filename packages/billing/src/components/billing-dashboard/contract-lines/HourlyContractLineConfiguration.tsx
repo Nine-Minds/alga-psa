@@ -584,7 +584,7 @@ export function HourlyPlanConfiguration({
                                                 <Info className="h-4 w-4 text-muted-foreground" />
                                             </Button>
                                         </Tooltip.Trigger>
-                                         <Tooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
+                                         <Tooltip.Content side="top" className="max-w-xs bg-[rgb(var(--color-text-800))] text-[rgb(var(--color-text-50))] p-2 rounded shadow-lg text-sm z-50">
                                             <p>Apply a different rate when total hours worked within the contract line's billing period exceed a specified threshold.</p>
                                         </Tooltip.Content>
                                     </Tooltip.Root>
@@ -655,7 +655,7 @@ export function HourlyPlanConfiguration({
                                                 <Info className="h-4 w-4 text-muted-foreground" />
                                             </Button>
                                         </Tooltip.Trigger>
-                                        <Tooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
+                                        <Tooltip.Content side="top" className="max-w-xs bg-[rgb(var(--color-text-800))] text-[rgb(var(--color-text-50))] p-2 rounded shadow-lg text-sm z-50">
                                             <p>Apply a multiplier to the standard hourly rate for work performed outside of defined business hours (requires Business Hours configuration).</p>
                                         </Tooltip.Content>
                                     </Tooltip.Root>

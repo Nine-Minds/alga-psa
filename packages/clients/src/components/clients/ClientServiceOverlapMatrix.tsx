@@ -172,8 +172,8 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Service Overlap Matrix</h3>
         </div>
-        <div className="flex items-center justify-center p-6 bg-gray-50 border border-gray-100 rounded-md">
-          <p className="text-gray-700">No contract lines assigned to this client</p>
+        <div className="flex items-center justify-center p-6 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-100))] rounded-md">
+          <p className="text-[rgb(var(--color-text-700))]">No contract lines assigned to this client</p>
         </div>
       </Card>
     );
@@ -194,9 +194,9 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
       </div>
       
       {Object.keys(serviceOverlaps).length === 0 ? (
-        <div className="flex items-center justify-center p-6 bg-green-50 border border-green-100 rounded-md">
+        <div className="flex items-center justify-center p-6 bg-green-500/10 border border-green-500/20 rounded-md">
           <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-          <p className="text-green-700">No service overlaps detected for this client</p>
+          <p className="text-green-600">No service overlaps detected for this client</p>
         </div>
       ) : (
         <>
@@ -243,7 +243,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                   return (
                     <TableRow
                       key={service.service_id}
-                      className={isOverlapping ? "bg-amber-50" : ""}
+                      className={isOverlapping ? "bg-amber-500/10" : ""}
                     >
                       <TableCell>
                         <div className="flex items-center">
@@ -254,7 +254,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                             </Tooltip>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-[rgb(var(--color-text-500))]">
                           {service.service_type_name || 'Unknown Type'} • {service.unit_of_measure}
                         </div>
                       </TableCell>
@@ -270,7 +270,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                                 <CheckCircle className={`h-5 w-5 ${isOverlapping ? 'text-amber-500' : 'text-green-500'}`} />
                               </div>
                             ) : (
-                              <div className="text-gray-300">-</div>
+                              <div className="text-[rgb(var(--color-text-300))]">-</div>
                             )}
                           </TableCell>
                         );
@@ -278,7 +278,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
 
                       <TableCell className="text-center">
                         <Badge className={`${
-                          contractLineCount > 1 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
+                          contractLineCount > 1 ? 'bg-amber-500/15 text-amber-600' : 'bg-green-500/15 text-green-600'
                         }`}>
                           {contractLineCount}
                         </Badge>
@@ -290,10 +290,10 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
             </Table>
           </div>
           
-          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+          <div className="mt-4 p-3 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
             <div className="flex items-start">
               <Info className="h-4 w-4 mt-0.5 mr-2 text-blue-500" />
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-[rgb(var(--color-text-700))]">
                 <p className="font-medium mb-1">Matrix Legend</p>
                 <ul className="space-y-1 text-xs">
                   <li className="flex items-center">

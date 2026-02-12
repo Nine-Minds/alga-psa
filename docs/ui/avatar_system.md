@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Avatar System is a comprehensive solution for managing and displaying user, contact, and company profile images throughout the application. It provides a consistent way to upload, store, retrieve, and display images with appropriate fallbacks when images are not available.
+The Avatar System is a comprehensive solution for managing and displaying user, contact, and client profile images throughout the application. It provides a consistent way to upload, store, retrieve, and display images with appropriate fallbacks when images are not available.
 
-The system follows a component-based architecture with a central base component (`EntityAvatar`) that is extended by entity-specific components (`UserAvatar`, `ContactAvatar`, `CompanyAvatar`). This approach ensures consistent styling and behavior while allowing for entity-specific customizations.
+The system follows a component-based architecture with a central base component (`EntityAvatar`) that is extended by entity-specific components (`UserAvatar`, `ContactAvatar`, `ClientAvatar`). This approach ensures consistent styling and behavior while allowing for entity-specific customizations.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ graph TD
     subgraph "UI Components"
         A1[EntityAvatar] --> A2[UserAvatar]
         A1 --> A3[ContactAvatar]
-        A1 --> A4[CompanyAvatar]
+        A1 --> A4[ClientAvatar]
         A5[EntityImageUpload]
     end
     
@@ -42,7 +42,7 @@ graph TD
 2. **Entity-Specific Components**:
    - `UserAvatar`: Specialized for user avatars
    - `ContactAvatar`: Specialized for contact avatars
-   - `CompanyAvatar`: Specialized for company logos
+   - `ClientAvatar`: Specialized for client logos
 
 3. **Service Layer**:
    - `EntityImageService`: Provides methods for uploading and deleting entity images
@@ -91,7 +91,7 @@ The base component that renders an avatar with fallback to initials when no imag
 #### Usage Example
 
 ```tsx
-import EntityAvatar from 'server/src/components/ui/EntityAvatar';
+import { EntityAvatar } from '@alga-psa/ui';
 
 <EntityAvatar
   entityId="123"
@@ -118,7 +118,7 @@ Specialized component for displaying user avatars.
 #### Usage Example
 
 ```tsx
-import UserAvatar from 'server/src/components/ui/UserAvatar';
+import { UserAvatar } from '@alga-psa/ui';
 
 <UserAvatar
   userId="user-123"
@@ -145,7 +145,7 @@ Specialized component for displaying contact avatars.
 #### Usage Example
 
 ```tsx
-import ContactAvatar from 'server/src/components/ui/ContactAvatar';
+import { ContactAvatar } from '@alga-psa/ui';
 
 <ContactAvatar
   contactId="contact-123"
@@ -155,29 +155,31 @@ import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 />
 ```
 
-### CompanyAvatar
+### ClientAvatar
 
-Specialized component for displaying company logos.
+Specialized component for displaying client logos.
+
+**Location**: `packages/ui/src/components/ClientAvatar.tsx`
 
 #### Props
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `companyId` | `string \| number` | Company's unique identifier |
-| `companyName` | `string` | Company's name |
-| `logoUrl` | `string \| null` | URL to the company's logo |
-| `size` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| number` | Size of the avatar |
+| `clientId` | `string \| number` | Client's unique identifier |
+| `clientName` | `string` | Client's name |
+| `logoUrl` | `string \| null` | URL to the client's logo |
+| `size` | `EntityAvatarProps['size']` | Size of the avatar |
 | `className` | `string` | Optional additional CSS classes |
 
 #### Usage Example
 
 ```tsx
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { ClientAvatar } from '@alga-psa/ui';
 
-<CompanyAvatar
-  companyId="company-123"
-  companyName="Acme Inc."
-  logoUrl={companyLogoUrl}
+<ClientAvatar
+  clientId="client-123"
+  clientName="Acme Inc."
+  logoUrl={clientLogoUrl}
   size="md"
 />
 ```
@@ -190,24 +192,26 @@ Component for uploading, previewing, and deleting entity images.
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `entityType` | `'user' \| 'contact' \| 'company'` | Type of entity |
+| `entityType` | `'user' \| 'contact' \| 'client' \| 'tenant'` | Type of entity |
 | `entityId` | `string` | Entity's unique identifier |
 | `entityName` | `string` | Entity's name |
 | `imageUrl` | `string \| null` | Current image URL |
 | `onImageChange` | `(newImageUrl: string \| null) => void` | Callback when image changes |
 | `uploadAction` | `(entityId: string, formData: FormData) => Promise<{...}>` | Function to handle upload |
 | `deleteAction` | `(entityId: string) => Promise<{...}>` | Function to handle deletion |
-| `userType` | `string` | Optional user type for permission checks |
-| `userEntityId` | `string` | Optional user entity ID for permission checks |
-| `canModify` | `boolean` | Whether the current user can modify the image |
+| `linkDocumentAsAvatar` | `(args: { entityType: EntityType; entityId: string; documentId: string }) => Promise<LinkDocumentAsAvatarResult>` | Links an existing document as the entity's avatar |
+| `renderDocumentSelector` | `(args: { isOpen: boolean; onClose: () => void; onSelectDocumentId: (documentId: string) => void; entityType: EntityType; entityId: string }) => React.ReactNode` | Custom render function for document selector modal |
+| `userType` | `string` | Optional user type context |
+| `userEntityId` | `string` | Optional user entity ID context |
+| `canModify` | `boolean` | Whether the current user can modify the avatar |
 | `className` | `string` | Optional additional CSS classes |
 | `size` | `'sm' \| 'md' \| 'lg' \| 'xl'` | Size of the avatar preview |
 
 #### Usage Example
 
 ```tsx
-import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
-import { uploadUserAvatar, deleteUserAvatar } from 'server/src/lib/actions/user-actions/userActions';
+import { EntityImageUpload } from '@alga-psa/ui';
+import { uploadUserAvatar, deleteUserAvatar } from '@alga-psa/users/actions';
 
 <EntityImageUpload
   entityType="user"
@@ -245,7 +249,7 @@ async function uploadEntityImage(
 ```
 
 **Parameters:**
-- `entityType`: Type of entity ('user', 'contact', or 'company')
+- `entityType`: Type of entity ('user', 'contact', 'client', or 'tenant')
 - `entityId`: Entity's unique identifier
 - `file`: File object to upload
 - `userId`: ID of the user performing the upload
@@ -272,7 +276,7 @@ async function deleteEntityImage(
 ```
 
 **Parameters:**
-- `entityType`: Type of entity ('user', 'contact', or 'company')
+- `entityType`: Type of entity ('user', 'contact', 'client', or 'tenant')
 - `entityId`: Entity's unique identifier
 - `userId`: ID of the user performing the deletion
 - `tenant`: Tenant context
@@ -303,7 +307,7 @@ async function getEntityImageUrl(
 ```
 
 **Parameters:**
-- `entityType`: Type of entity ('user', 'contact', or 'company')
+- `entityType`: Type of entity ('user', 'contact', 'client', or 'tenant')
 - `entityId`: Entity's unique identifier
 - `tenant`: Tenant context
 
@@ -319,8 +323,26 @@ async function getUserAvatarUrl(userId: string, tenant: string): Promise<string 
 // Get a contact's avatar URL
 async function getContactAvatarUrl(contactId: string, tenant: string): Promise<string | null>
 
-// Get a company's logo URL
-async function getCompanyLogoUrl(companyId: string, tenant: string): Promise<string | null>
+// Get a client's logo URL
+async function getClientLogoUrl(clientId: string, tenant: string): Promise<string | null>
+```
+
+##### Batch Functions
+
+For efficient retrieval of multiple avatar URLs in a single query:
+
+```typescript
+// Get logo URLs for multiple clients
+async function getClientLogoUrlsBatch(clientIds: string[], tenant: string): Promise<Map<string, string | null>>
+
+// Get avatar URLs for multiple users
+async function getUserAvatarUrlsBatch(userIds: string[], tenant: string): Promise<Map<string, string | null>>
+
+// Get avatar URLs for multiple contacts
+async function getContactAvatarUrlsBatch(contactIds: string[], tenant: string): Promise<Map<string, string | null>>
+
+// Generic batch function for any entity type
+async function getEntityImageUrlsBatch(entityType: EntityType, entityIds: string[], tenant: string): Promise<Map<string, string | null>>
 ```
 
 ## Integration Examples
@@ -329,9 +351,8 @@ async function getCompanyLogoUrl(companyId: string, tenant: string): Promise<str
 
 ```tsx
 import { useState, useEffect } from 'react';
-import UserAvatar from 'server/src/components/ui/UserAvatar';
-import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
-import { uploadUserAvatar, deleteUserAvatar } from 'server/src/lib/actions/user-actions/userActions';
+import { UserAvatar, EntityImageUpload } from '@alga-psa/ui';
+import { uploadUserAvatar, deleteUserAvatar } from '@alga-psa/users/actions';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 const UserProfilePage = ({ userId, userName, tenant }) => {
@@ -369,45 +390,44 @@ const UserProfilePage = ({ userId, userName, tenant }) => {
 };
 ```
 
-### Company Details Page
+### Client Details Page
 
 ```tsx
 import { useState, useEffect } from 'react';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
-import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
-import { uploadCompanyLogo, deleteCompanyLogo } from 'server/src/lib/actions/company-actions/companyActions';
-import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
+import { ClientAvatar, EntityImageUpload } from '@alga-psa/ui';
+import { uploadClientLogo, deleteClientLogo } from '@alga-psa/clients/actions';
+import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 
-const CompanyDetailsPage = ({ companyId, companyName, tenant }) => {
+const ClientDetailsPage = ({ clientId, clientName, tenant }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  
+
   useEffect(() => {
     const fetchLogoUrl = async () => {
-      const url = await getCompanyLogoUrl(companyId, tenant);
+      const url = await getClientLogoUrl(clientId, tenant);
       setLogoUrl(url);
     };
-    
+
     fetchLogoUrl();
-  }, [companyId, tenant]);
-  
+  }, [clientId, tenant]);
+
   return (
-    <div className="company-details">
-      <div className="company-header">
+    <div className="client-details">
+      <div className="client-header">
         <EntityImageUpload
-          entityType="company"
-          entityId={companyId}
-          entityName={companyName}
+          entityType="client"
+          entityId={clientId}
+          entityName={clientName}
           imageUrl={logoUrl}
           onImageChange={(newUrl) => setLogoUrl(newUrl)}
-          uploadAction={uploadCompanyLogo}
-          deleteAction={deleteCompanyLogo}
+          uploadAction={uploadClientLogo}
+          deleteAction={deleteClientLogo}
           size="xl"
         />
-        
-        <h1>{companyName}</h1>
+
+        <h1>{clientName}</h1>
       </div>
-      
-      {/* Rest of company details */}
+
+      {/* Rest of client details */}
     </div>
   );
 };
@@ -416,8 +436,7 @@ const CompanyDetailsPage = ({ companyId, companyName, tenant }) => {
 ### Ticket Conversation with User Avatars
 
 ```tsx
-import UserAvatar from 'server/src/components/ui/UserAvatar';
-import ContactAvatar from 'server/src/components/ui/ContactAvatar';
+import { UserAvatar, ContactAvatar } from '@alga-psa/ui';
 
 const TicketComment = ({ comment, author, isContact }) => {
   return (
@@ -462,7 +481,7 @@ const TicketComment = ({ comment, author, isContact }) => {
 - **EntityAvatar**: Use directly only when creating a new entity-specific avatar component. For most cases, use one of the specialized components.
 - **UserAvatar**: Use for displaying user avatars throughout the application.
 - **ContactAvatar**: Use for displaying contact avatars throughout the application.
-- **CompanyAvatar**: Use for displaying company logos throughout the application.
+- **ClientAvatar**: Use for displaying client logos throughout the application.
 - **EntityImageUpload**: Use on profile/details pages where users should be able to upload or change images.
 
 ### Performance Considerations
@@ -528,7 +547,7 @@ The Avatar System integrates with several other system components:
 1. **Storage System**: For storing and retrieving image files.
 2. **Document System**: For managing document metadata and associations.
 3. **User Management**: For user avatars and permissions.
-4. **Company Management**: For company logos.
+4. **Client Management**: For client logos.
 5. **Contact Management**: For contact avatars.
 
 ## Future Enhancements

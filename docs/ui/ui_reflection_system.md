@@ -24,13 +24,60 @@ The UI reflection system uses React Context to maintain parent-child relationshi
 All components can participate in parent-child relationships:
 
 ```typescript
-interface BaseComponent {
-  id: string;          // Unique identifier (can be auto-generated)
-  type: string;        // Component type (e.g., 'container', 'button')
-  label?: string;      // Human-readable label
-  disabled?: boolean;  // Component state
-  actions?: string[];  // Available actions
+type ActionType = 'click' | 'type' | 'select' | 'focus' | 'open' | 'close' | 'toggle' | 'clear' | 'search' | 'navigate';
+
+interface ActionParameter {
+  name: string;
+  type: string;
+  required?: boolean;
+  options?: string[];
+  description?: string;
+  defaultValue?: any;
 }
+
+interface ComponentAction {
+  type: ActionType;
+  available: boolean;
+  description: string;
+  parameters?: ActionParameter[];
+  prerequisites?: string[];
+}
+
+interface BaseComponent {
+  id: string;                    // Unique identifier (can be auto-generated)
+  type: string;                  // Component type (e.g., 'container', 'button')
+  label?: string;                // Human-readable label
+  disabled?: boolean;            // Component state
+  helperText?: string;           // Helper text for the component
+  actions?: ComponentAction[];   // Available actions
+  parentId?: string;             // Parent component ID
+  children?: UIComponent[];      // Child components
+  ordinal?: number;              // Ordering index
+}
+```
+
+### UIComponent Union Type
+
+The `UIComponent` type is a union of all supported component types:
+
+```typescript
+type UIComponent =
+  | ButtonComponent
+  | DialogComponent
+  | FormComponent
+  | FormFieldComponent
+  | NavigationComponent
+  | DataTableComponent
+  | ContainerComponent
+  | CardComponent
+  | DrawerComponent
+  | DatePickerComponent
+  | TimePickerComponent
+  | DateTimePickerComponent
+  | DropdownMenuComponent
+  | MenuItemComponent
+  | InputComponent
+  | TextComponent;
 ```
 
 ### 2. Parent-Child Registration
@@ -86,11 +133,11 @@ The UIStateContext maintains the complete component hierarchy:
 Wrap your application or specific pages with the UIStateProvider:
 
 ```tsx
-import { UIStateProvider } from '../types/ui-reflection/UIStateContext';
+import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 
 function App() {
   return (
-    <UIStateProvider
+    <ClientUIStateProvider
       initialPageState={{
         id: 'main-app',
         title: 'My Application',
@@ -98,10 +145,12 @@ function App() {
       }}
     >
       <YourAppContent />
-    </UIStateProvider>
+    </ClientUIStateProvider>
   );
 }
 ```
+
+> **Note**: `ClientUIStateProvider` is a wrapper around `UIStateProvider` (from `packages/ui/src/ui-reflection/UIStateContext`) that handles client-side initialization. Use `ClientUIStateProvider` in application setup.
 
 ### 2. Component Registration
 
@@ -110,18 +159,26 @@ Use the `useAutomationIdAndRegister` hook to register components and get DOM pro
 ```tsx
 function ActionButton({ id, label, disabled, onClick }: Props) {
   // Single hook call for registration and DOM props
-  const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
-    id,                    // Optional - will auto-generate if not provided
-    type: 'button',
-    label,
-    disabled,
-    actions: ['click']
-  });
+  // Actions are passed as a separate parameter (not part of the component object)
+  const { automationIdProps, updateMetadata, updateActions } = useAutomationIdAndRegister<ButtonComponent>(
+    {
+      id,                    // Optional - will auto-generate if not provided
+      type: 'button',
+      label,
+      disabled,
+    },
+    [{ type: 'click', available: !disabled }]  // Actions as second parameter
+  );
 
   // Update metadata when props change
   useEffect(() => {
     updateMetadata({ label, disabled });
   }, [label, disabled, updateMetadata]);
+
+  // Update actions when availability changes
+  useEffect(() => {
+    updateActions([{ type: 'click', available: !disabled }]);
+  }, [disabled, updateActions]);
 
   return (
     <button {...automationIdProps} onClick={onClick} disabled={disabled}>
@@ -130,6 +187,27 @@ function ActionButton({ id, label, disabled, onClick }: Props) {
   );
 }
 ```
+
+#### Hook Signature
+
+```typescript
+type ActionConfig = ComponentAction[] | (() => ComponentAction[]);
+
+function useAutomationIdAndRegister<T extends UIComponent>(
+  component: Omit<T, 'id' | 'actions'> & { id?: string },
+  actionsOrShouldRegister: ActionConfig | boolean = [],
+  overrideId?: string
+): {
+  automationIdProps: { id: string; 'data-automation-id': string };
+  updateMetadata: (partial: Partial<T>) => void;
+  updateActions: (newActions: ActionConfig) => void;
+}
+```
+
+Key points:
+- **Actions are a separate parameter**: They are not included in the component object passed as the first argument.
+- **`actionsOrShouldRegister`**: Can be an array of `ComponentAction` objects, a function returning them, or a boolean to control registration.
+- **`updateActions`**: Returned function to dynamically update available actions.
 
 ### 3. Form Components
 
@@ -200,11 +278,14 @@ The UI reflection system integrates with testing through data-automation-id attr
 
 ```tsx
 // Component registration and DOM props in one call
-const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-  id: 'submit-button',
-  type: 'button',
-  label: 'Submit'
-});
+const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>(
+  {
+    id: 'submit-button',
+    type: 'button',
+    label: 'Submit'
+  },
+  [{ type: 'click', available: true }]
+);
 
 // DOM element
 <button {...automationIdProps}>
@@ -222,7 +303,7 @@ This ensures:
 
 To extend the system:
 
-1. Add new component types to `types.ts`
+1. Add new component types to `packages/ui/src/ui-reflection/types.ts`
 2. Update documentation
 3. Add test coverage
 4. Submit PR with examples

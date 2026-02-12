@@ -89,6 +89,10 @@ export default function ResponseTrendChart({ trend }: ResponseTrendChartProps) {
                 <Tooltip
                   contentStyle={{
                     fontSize: '0.75rem',
+                    backgroundColor: 'rgb(var(--color-card))',
+                    borderColor: 'rgb(var(--color-border-200))',
+                    borderRadius: '0.5rem',
+                    color: 'rgb(var(--color-text-900))',
                   }}
                   formatter={(value: number, name: string) => {
                     if (name === 'averageRating') {

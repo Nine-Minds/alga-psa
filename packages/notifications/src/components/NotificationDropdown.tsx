@@ -104,9 +104,9 @@ export function NotificationDropdown({
   return (
     <div className="flex flex-col max-h-[600px]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[rgb(var(--color-border-200))]">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+          <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">Notifications</h3>
           {!isConnected && (
             <span className="flex items-center gap-1 text-xs text-yellow-600" title="Reconnecting to server...">
               <WifiOff className="w-3 h-3" />
@@ -117,7 +117,7 @@ export function NotificationDropdown({
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            className="p-1 text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))] disabled:opacity-50"
             title="Refresh"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -142,14 +142,14 @@ export function NotificationDropdown({
 
       {/* Status bar */}
       {(error || unreadCount > 0) && (
-        <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="px-4 py-2 bg-[rgb(var(--color-border-50))] border-b border-[rgb(var(--color-border-200))]">
           {error ? (
             <div className="flex items-center gap-2 text-sm text-red-600">
               <AlertCircle className="w-4 h-4" />
               <span>{error}</span>
             </div>
           ) : (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-[rgb(var(--color-text-600))]">
               {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
             </div>
           )}
@@ -160,16 +160,16 @@ export function NotificationDropdown({
       <div className="flex-1 overflow-y-auto">
         {isLoading && notifications.length === 0 ? (
           <div className="flex items-center justify-center py-8">
-            <Spinner size="md" className="text-gray-400" />
+            <Spinner size="md" className="text-[rgb(var(--color-text-400))]" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <BellIcon className="w-12 h-12 text-gray-300 mb-3" />
-            <p className="text-sm text-gray-500 font-medium">No notifications</p>
-            <p className="text-xs text-gray-400 mt-1">You're all caught up!</p>
+            <BellIcon className="w-12 h-12 text-[rgb(var(--color-text-300))] mb-3" />
+            <p className="text-sm text-[rgb(var(--color-text-500))] font-medium">No notifications</p>
+            <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">You're all caught up!</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-[rgb(var(--color-border-100))]">
             {notifications.map((notification) => (
               <NotificationItem
                 key={notification.internal_notification_id}
@@ -183,11 +183,11 @@ export function NotificationDropdown({
 
       {/* Footer */}
       {userType && (
-        <div className="border-t border-gray-200">
+        <div className="border-t border-[rgb(var(--color-border-200))]">
           <Link
             href={userType === 'client' ? '/client-portal/profile?tab=activity' : '/msp/user-activities'}
             onClick={onClose}
-            className="flex items-center justify-center px-4 py-3 text-sm font-medium text-main-600 hover:text-main-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center px-4 py-3 text-sm font-medium text-main-600 hover:text-main-700 hover:bg-[rgb(var(--color-border-50))] transition-colors"
           >
             {t('notifications.viewAll', 'View all notifications')}
           </Link>

@@ -89,7 +89,7 @@ const created = await callHandlerJson(bridge, '/api/items', {
 await callHandlerJson(bridge, '/api/items/123', { method: 'DELETE' });
 ```
 
-For non-`POST` methods (`GET`, `PUT`, `PATCH`, `DELETE`), the helper applies method override transport (`__method`) so calls work consistently over the proxy channel.
+`callHandlerJson` forwards the requested HTTP method through the iframe bridge transport, so handlers can receive the intended method without embedding transport-specific override fields in route/body data.
 
 ## Protocol
 - Parent → Child: `bootstrap` with `{ session, theme_tokens, navigation }`

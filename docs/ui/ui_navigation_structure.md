@@ -6,12 +6,39 @@ This document provides a comprehensive map of the Alga PSA application's UI stru
 
 ```
 DefaultLayout (server/src/components/layout/DefaultLayout.tsx)
-├── Sidebar (server/src/components/layout/Sidebar.tsx) [id: main-sidebar]
-├── Header (server/src/components/layout/Header.tsx)
-├── Body (server/src/components/layout/Body.tsx)
-│   └── Page Content (varies by route)
-└── RightSidebar (server/src/components/layout/RightSidebar.tsx)
+├── MspSchedulingProvider (outermost wrapper)
+│   └── DrawerProvider
+│       └── ActivityDrawerProvider
+│           ├── SidebarWithFeatureFlags
+│           │   └── Sidebar (server/src/components/layout/Sidebar.tsx) [id: main-sidebar]
+│           ├── Header (server/src/components/layout/Header.tsx)
+│           ├── Body (server/src/components/layout/Body.tsx)
+│           │   └── Page Content (varies by route)
+│           ├── QuickAskOverlay (AI assistant, feature-flagged)
+│           └── Drawer (global drawer)
 ```
+
+### Header Components
+
+- **TenantBadge**: Shows current tenant name
+- **QuickCreateMenu**: Global quick-create dropdown (tickets, clients, contacts, projects, assets, services, products)
+- **ThemeToggle**: Light/dark/system theme switcher (feature-flagged behind `themes-enabled`)
+- **NotificationBell**: Notification center
+- **JobActivityIndicator**: Background job metrics
+- **User Dropdown**: Profile, account, sign out
+
+### Sidebar Modes
+
+The sidebar operates in 4 modes (controlled by `NavMode` type):
+
+| Mode | Description | Sidebar ID |
+|------|-------------|------------|
+| `main` | Default navigation (all menu items) | `main-sidebar` |
+| `settings` | Settings-specific navigation (6 sections, 17 items) | `settings-sidebar` |
+| `billing` | Billing-specific navigation (4 sections, 11 items) | `billing-sidebar` |
+| `extensions` | Extensions navigation | `extensions-sidebar` |
+
+Each mode renders a different sidebar layout with its own set of navigation items.
 
 ## Navigation Menu Structure
 
@@ -19,10 +46,11 @@ Based on `server/src/config/menuConfig.ts`:
 
 ### Main Menu Items
 
-#### 1. Dashboard
+#### 1. Home
+- **Icon**: Home
 - **Route**: `/msp/dashboard`
 - **File**: `server/src/app/msp/dashboard/page.tsx`
-- **Menu ID**: `menu-dashboard`
+- **Menu ID**: `menu-home`
 
 #### 2. User Activities ⭐ (DOCUMENTED)
 - **Route**: `/msp/user-activities`
@@ -94,7 +122,7 @@ UserActivitiesDashboard
 TicketingDashboard (Main Container)
 ├── Header Controls
 │   ├── Search Input [debounced search with loading state]
-│   ├── CompanyPicker [id: ticketing-dashboard-company-picker]
+│   ├── ClientPicker [id: ticketing-dashboard-company-picker]
 │   │   └── Filter by company (All Companies or specific client)
 │   ├── Filter Controls
 │   │   ├── Status Select [id: ticketing-dashboard-status-select]
@@ -188,7 +216,7 @@ TicketDetail
 - Ticket details: `server/src/app/msp/tickets/[id]/page.tsx`
 - Quick add form: `server/src/components/tickets/QuickAddTicket.tsx`
 - Data table: Uses DataTable component with ticket-specific configurations
-- Company picker: Shared `server/src/components/companies/CompanyPicker.tsx`
+- Client picker: Shared `packages/ui/src/components/ClientPicker.tsx`
 
 **Key Automation IDs**:
 - `add-ticket-button` - Create new ticket button
@@ -223,14 +251,22 @@ TicketDetail
 9. Use row actions menu for individual ticket operations
 10. Export data or view time intervals using header action buttons
 
-#### 4. Projects
+#### 4. Surveys
+- **Icon**: Star
+- **Route**: `/msp/surveys/dashboard`
+- **Menu ID**: `menu-surveys`
+
+#### 5. Projects (Submenu)
 - **Route**: `/msp/projects`
 - **File**: `server/src/app/msp/projects/page.tsx`
 - **Menu ID**: `menu-projects`
+- **Submenus**:
+  - **All Projects**: `/msp/projects`
+  - **Templates**: `/msp/projects/templates`
 
-#### 5. Clients ⭐ (DOCUMENTED)
-- **Route**: `/msp/companies`
-- **File**: `server/src/app/msp/companies/page.tsx`
+#### 6. Clients ⭐ (DOCUMENTED)
+- **Route**: `/msp/clients`
+- **File**: `server/src/app/msp/clients/page.tsx`
 - **Menu ID**: `menu-clients`
 - **Component**: `Companies` (`server/src/components/companies/Companies.tsx`)
 
@@ -239,7 +275,7 @@ TicketDetail
 Companies (Main Container)
 ├── Header Controls
 │   ├── Search Input [placeholder: "Search clients"]
-│   ├── CompanyPicker [id: company-picker]
+│   ├── ClientPicker [id: company-picker]
 │   │   ├── Filter controls (Active/Inactive/All)
 │   │   └── Client Type filter (Company/Individual/All)
 │   ├── Action Buttons
@@ -273,15 +309,15 @@ Companies (Main Container)
 ```
 
 **Individual Company Details**:
-- **Route**: `/msp/companies/[id]`
-- **File**: `server/src/app/msp/companies/[id]/page.tsx`
+- **Route**: `/msp/clients/[id]`
+- **File**: `server/src/app/msp/clients/[id]/page.tsx`
 - **Component**: `CompanyDetails` (`server/src/components/companies/CompanyDetails.tsx`)
 
 **Company Details Structure**:
 ```
 CompanyDetails
 ├── Header
-│   ├── BackNav [href: /msp/companies]
+│   ├── BackNav [href: /msp/clients]
 │   ├── EntityImageUpload (Logo management)
 │   └── Company Name heading
 └── CustomTabs (Tab-based navigation)
@@ -339,13 +375,13 @@ CompanyDetails
 ```
 
 **Key Components and Files**:
-- Main page: `server/src/app/msp/companies/page.tsx`
+- Main page: `server/src/app/msp/clients/page.tsx`
 - Main container: `server/src/components/companies/Companies.tsx`
 - Grid view: `server/src/components/companies/CompaniesGrid.tsx`
 - Table view: `server/src/components/companies/CompaniesList.tsx`
 - Company details: `server/src/components/companies/CompanyDetails.tsx`
 - Quick add form: `server/src/components/companies/QuickAddCompany.tsx`
-- Company picker: `server/src/components/companies/CompanyPicker.tsx`
+- Client picker: `packages/ui/src/components/ClientPicker.tsx`
 - Import dialog: `server/src/components/companies/CompaniesImportDialog.tsx`
 
 **Key Automation IDs**:
@@ -371,68 +407,89 @@ CompanyDetails
 7. Bulk operations with selection checkboxes
 8. Import/Export via Actions menu
 
-#### 6. Contacts
+#### 7. Contacts
 - **Route**: `/msp/contacts`
 - **File**: `server/src/app/msp/contacts/page.tsx`
 - **Menu ID**: `menu-contacts`
 
-#### 7. Documents
+#### 8. Documents
 - **Route**: `/msp/documents`
 - **File**: `server/src/app/msp/documents/page.tsx`
 - **Menu ID**: `menu-documents`
 
-#### 8. Time Management (Submenu)
+#### 9. Assets
+- **Icon**: Monitor
+- **Route**: `/msp/assets`
+- **Menu ID**: `menu-assets`
+
+#### 10. Time Management (Submenu)
 - **Menu ID**: `menu-time-management`
 - **Submenus**:
   - **Time Entry**: `/msp/time-entry` (`server/src/app/msp/time-entry/page.tsx`)
-  - **Time Sheet Approvals**: `/msp/time-sheet-approvals` (`server/src/app/msp/time-sheet-approvals/page.tsx`)
+  - **Approvals**: `/msp/time-sheet-approvals` (`server/src/app/msp/time-sheet-approvals/page.tsx`)
 
-#### 9. Billing (Submenu)
+#### 11. Billing
 - **Menu ID**: `menu-billing`
-- **Main Route**: `/msp/billing` (`server/src/app/msp/billing/page.tsx`)
-- **Tab-based Navigation** (query parameter: `?tab=<tab-name>`):
-  - **Overview**: `?tab=overview`
-  - **Generate Invoices**: `?tab=generate-invoices`
-  - **Invoices**: `?tab=invoices`
-  - **Invoice Templates**: `?tab=invoice-templates`
-  - **Tax Rates**: `?tab=tax-rates`
-  - **Contract Lines**: `?tab=contract-lines`
-  - **Contracts**: `?tab=contracts`
-  - **Service Catalog**: `?tab=service-catalog`
-  - **Billing Cycles**: `?tab=billing-cycles`
-  - **Time Periods**: `?tab=time-periods`
-  - **Usage Tracking**: `?tab=usage-tracking`
-  - **Credits**: `?tab=credits`
-  - **Reconciliation**: `?tab=reconciliation`
+- **Main Route**: `/msp/billing?tab=client-contracts` (`server/src/app/msp/billing/page.tsx`)
+- **Sidebar Mode**: Clicking Billing switches the sidebar to `billing` mode (`billing-sidebar`)
 
-#### 10. Schedule
+Billing uses its own sidebar navigation with 4 sections:
+
+**Contracts**:
+  - Contract Templates
+  - Client Contracts
+  - Contract Line Presets
+
+**Invoicing**:
+  - Invoicing
+  - Invoice Templates
+  - Billing Cycles
+
+**Pricing**:
+  - Service Catalog
+  - Products
+  - Tax Rates
+
+**Tracking & Reports**:
+  - Usage Tracking
+  - Reports
+  - Accounting Exports
+
+#### 12. Schedule
 - **Route**: `/msp/schedule`
 - **File**: `server/src/app/msp/schedule/page.tsx`
 - **Menu ID**: `menu-schedule`
 
-#### 11. Technician Dispatch
+#### 13. Technician Dispatch
 - **Route**: `/msp/technician-dispatch`
 - **File**: `server/src/app/msp/technician-dispatch/page.tsx`
 - **Menu ID**: `menu-technician-dispatch`
 
-#### 12. Automation Hub (Submenu)
+#### 14. Automation Hub
 - **Menu ID**: `menu-automation-hub`
-- **Main Route**: `/msp/automation-hub` (`server/src/app/msp/automation-hub/page.tsx`)
-- **Tab-based Navigation**:
-  - **Template Library**: `?tab=template-library`
+- **Main Route**: `/msp/workflows`
+- **Tab-based Navigation** (query parameter: `?tab=<tab-name>`):
   - **Workflows**: `?tab=workflows`
-  - **Events Catalog**: `?tab=events-catalog`
-  - **Logs & History**: `?tab=logs-history`
+  - **Runs**: `?tab=runs`
+  - **Events**: `?tab=events`
+  - **Dead Letter**: `?tab=dead-letter`
 
-#### 13. System (Submenu)
+#### 15. System Monitor (Submenu)
 - **Menu ID**: `menu-system`
 - **Submenus**:
-  - **Job Monitoring**: `/msp/jobs` (`server/src/app/msp/jobs/page.tsx`)
+  - **Jobs**: `/msp/jobs` (`server/src/app/msp/jobs/page.tsx`)
+  - **Email Logs**: `/msp/email-logs` (feature-flagged)
+
+#### 16. Extensions
+- **Icon**: Puzzle
+- **Route**: `/msp/extensions`
+- **Menu ID**: `menu-extensions`
 
 ### Bottom Menu Items
 
 #### Settings (Submenu)
 - **Menu ID**: `bottom-menu-settings`
+- **Sidebar Mode**: Clicking Settings switches the sidebar to `settings` mode (`settings-sidebar`)
 - **Submenus**:
   - **General**: `/msp/settings` (`server/src/app/msp/settings/page.tsx`)
   - **Profile**: `/msp/profile` (`server/src/app/msp/profile/page.tsx`)
@@ -440,6 +497,7 @@ CompanyDetails
 
 #### Support
 - **Menu ID**: `bottom-menu-support`
+- **External URL**: `https://www.nineminds.com/support`
 
 ## Common UI Patterns
 
@@ -493,5 +551,5 @@ When documenting new screens, include:
 ---
 
 **Last Updated**: Based on codebase analysis as of current date
-**Documented Screens**: User Activities, Clients/Companies, Tickets (3/13+ screens)
-**Next to Document**: Dashboard, Projects, Contacts, Documents, etc.
+**Documented Screens**: User Activities, Clients, Tickets (3/16+ screens)
+**Next to Document**: Home, Projects, Contacts, Documents, Assets, Surveys, etc.

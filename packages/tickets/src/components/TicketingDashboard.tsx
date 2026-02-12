@@ -1487,7 +1487,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onItemsPerPageChange={onPageSizeChange}
               rowClassName={(record: ITicketListItem) =>
                 `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
-                  ? '!bg-blue-50 dark:!bg-blue-950'
+                  ? '!bg-table-selected'
                   : ''}`
               }
               onRowClick={(record: ITicketListItem) => {

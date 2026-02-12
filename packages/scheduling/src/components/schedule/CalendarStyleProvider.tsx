@@ -23,7 +23,7 @@ export const CalendarStyleProvider: React.FC = () => {
         background-color: rgb(var(--color-border-100));
       }
       .rbc-today {
-        background-color: rgb(var(--color-primary-100)) !important;
+        background-color: rgb(var(--color-primary-500) / 0.08) !important;
       }
       .rbc-button-link {
         padding: 10px;

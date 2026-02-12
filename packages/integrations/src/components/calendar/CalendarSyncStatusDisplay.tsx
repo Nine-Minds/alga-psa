@@ -227,7 +227,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
                 <Alert
                   id={`${componentId}-detail-provider-${index}-conflict-alert`}
                   variant="info"
-                  className="mt-2 border-orange-200 bg-orange-50"
+                  className="mt-2 border-orange-500/30 bg-orange-500/10"
                 >
                   <AlertDescription className="text-xs">
                     Conflict detected: Both calendars have been modified. Please resolve in Calendar Settings.

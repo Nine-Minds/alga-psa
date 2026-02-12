@@ -79,13 +79,13 @@ const getStatusIcon = (status: ValidationStatus, size: 'sm' | 'md') => {
 const getStatusStyle = (status: ValidationStatus): string => {
   switch (status) {
     case 'valid':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-green-500/15 text-green-600 border-green-500/30';
     case 'warning':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30';
     case 'error':
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-500/15 text-red-600 border-red-500/30';
     case 'incomplete':
-      return 'bg-gray-100 text-gray-600 border-gray-200';
+      return 'bg-gray-500/15 text-gray-600 border-gray-500/30';
   }
 };
 

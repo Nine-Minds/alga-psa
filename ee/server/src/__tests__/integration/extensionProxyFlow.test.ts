@@ -112,6 +112,60 @@ describe('Extension Proxy Flow Integration', () => {
       );
     });
 
+    it('should forward explicit proxy method from iframe payload', async () => {
+      const iframe = document.createElement('iframe');
+      iframe.src = `http://localhost:3000/ext-ui/${extensionId}/hash/index.html`;
+      document.body.appendChild(iframe);
+
+      const postMessageSpy = vi.fn();
+      // @ts-ignore
+      iframe.contentWindow.postMessage = postMessageSpy;
+
+      const blob = new Blob([new Uint8Array([9, 9, 9])]);
+      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => ({
+        ok: true,
+        blob: async () => blob,
+      } as any));
+
+      // @ts-ignore
+      bootstrapIframe({ iframe, extensionId });
+
+      const requestId = 'req-get-method';
+      const event = new MessageEvent('message', {
+        data: {
+          alga: true,
+          version: '1',
+          type: 'apiproxy',
+          request_id: requestId,
+          payload: { route: '/user', method: 'GET' },
+        },
+        origin: origin,
+        source: iframe.contentWindow,
+      });
+      window.dispatchEvent(event);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/ext-proxy/${extensionId}/user`),
+        expect.objectContaining({
+          method: 'GET',
+        }),
+      );
+
+      const [, fetchOptions] = fetchSpy.mock.calls[0];
+      expect(fetchOptions?.body).toBeUndefined();
+
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          alga: true,
+          type: 'apiproxy_response',
+          request_id: requestId,
+        }),
+        '*'
+      );
+    });
+
     it('should handle Gateway errors and return error message to Client', async () => {
       const iframe = document.createElement('iframe');
       iframe.src = `http://localhost:3000/ext-ui/${extensionId}/hash/index.html`;
@@ -274,6 +328,68 @@ describe('Extension Proxy Flow Integration', () => {
       expect(response.status).toBe(502); // Should reflect the error status or gateway error
       const json = await response.json();
       expect(json).toEqual(expect.objectContaining({ error: 'Runner error' }));
+    });
+
+    it('should honor proxy method overrides and strip transport-only __method markers', async () => {
+      const { POST } = await import('../../../../../packages/product-ext-proxy/ee/handler');
+      const { getCurrentUser } = await import('@alga-psa/users/actions');
+      const { hasPermission } = await import('server/src/lib/auth/rbac');
+      const { getTenantFromAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
+      const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
+
+      const tenantId = 'tenant-1';
+      const installId = 'install-1';
+      vi.mocked(getTenantFromAuth).mockResolvedValue(tenantId);
+      vi.mocked(getCurrentUser).mockResolvedValue({ id: 'user-1', tenant: tenantId } as any);
+      vi.mocked(hasPermission).mockResolvedValue(true);
+      vi.mocked(loadInstallConfigCached).mockResolvedValue({
+        installId,
+        versionId: 'v1',
+        contentHash: 'hash',
+        config: {},
+        providers: [],
+      });
+
+      const mockExecute = vi.fn().mockResolvedValue({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: Buffer.from('{}'),
+      });
+      vi.mocked(getRunnerBackend).mockReturnValue({
+        execute: mockExecute,
+      } as any);
+
+      const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets?__method=DELETE&limit=10`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          __method: 'DELETE',
+          reason: 'cleanup',
+        }),
+      });
+
+      const params = { extensionId, path: ['tickets'] };
+      const response = await POST(req as any, { params: Promise.resolve(params) });
+      expect(response.status).toBe(200);
+
+      expect(mockExecute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          http: expect.objectContaining({
+            method: 'DELETE',
+            path: '/tickets',
+            query: { limit: '10' },
+          }),
+        }),
+        expect.any(Object)
+      );
+
+      const executePayload = mockExecute.mock.calls[0]?.[0] as { http?: { body_b64?: string } };
+      const forwardedBodyRaw = executePayload.http?.body_b64
+        ? Buffer.from(executePayload.http.body_b64, 'base64').toString('utf8')
+        : '';
+      expect(forwardedBodyRaw).toContain('"reason":"cleanup"');
+      expect(forwardedBodyRaw).not.toContain('__method');
     });
   });
 });

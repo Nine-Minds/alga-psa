@@ -126,9 +126,9 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
         rowClassName={(row: ITimePeriodWithStatusView) => {
           const classes: string[] = [];
           if (row.timeSheetStatus === 'APPROVED') {
-            classes.push('bg-green-50');
+            classes.push('bg-table-status-approved');
           } else if (row.timeSheetStatus === 'CHANGES_REQUESTED') {
-            classes.push('bg-orange-100');
+            classes.push('bg-table-status-warning');
           }
 
           if (isCurrentPeriod(row.start_date, row.end_date)) {

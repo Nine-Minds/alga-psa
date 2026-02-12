@@ -446,7 +446,7 @@ export default function ExtensionDebugPage({
             type="button"
             onClick={stopStream}
             disabled={!connected && !connecting}
-            className="px-3 py-1.5 rounded text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors"
+            className="px-3 py-1.5 rounded text-xs font-medium text-slate-600 bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/30 transition-colors"
           >
             Stop
           </button>

@@ -62,6 +62,22 @@ export interface CreateClientPortalUserParams {
   requirePasswordChange?: boolean;
 }
 
+function normalizeCreateClientPortalUserError(error: unknown): string {
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23505') {
+    return 'A portal user already exists for this contact or email address';
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message) {
+      return message;
+    }
+  }
+
+  return 'Failed to create client portal user';
+}
+
 export const createClientPortalUser = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
@@ -260,7 +276,7 @@ export const createClientPortalUser = withAuth(async (
     return { success: true, userId: result.user_id, message: 'Client portal user created' };
   } catch (error) {
     console.error('Error creating client portal user:', error);
-    return { success: false, error: 'Failed to create client portal user' };
+    return { success: false, error: normalizeCreateClientPortalUserError(error) };
   }
 });
 

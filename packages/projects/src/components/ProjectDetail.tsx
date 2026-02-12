@@ -1981,7 +1981,7 @@ export default function ProjectDetail({
               </Tooltip>
               <ViewSwitcher
                 currentView={viewMode}
-                onChange={setViewMode}
+                onChange={(v) => setViewMode(v as ProjectViewMode)}
                 options={[
                   { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
                   { value: 'list', label: 'List', icon: List }
@@ -2205,7 +2205,7 @@ export default function ProjectDetail({
             </Tooltip>
             <ViewSwitcher
               currentView={viewMode}
-              onChange={setViewMode}
+              onChange={(v) => setViewMode(v as ProjectViewMode)}
               options={[
                 { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
                 { value: 'list', label: 'List', icon: List }

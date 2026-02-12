@@ -8,9 +8,11 @@ import { getThemePreferenceAction, updateThemePreferenceAction } from '@alga-psa
 
 type AppThemeProviderProps = {
   children: ReactNode;
+  defaultTheme?: string;
+  forcedTheme?: string;
 };
 
-export function AppThemeProvider({ children }: AppThemeProviderProps) {
+export function AppThemeProvider({ children, defaultTheme = 'system', forcedTheme }: AppThemeProviderProps) {
   const actions = useMemo(() => ({
     getPreference: getThemePreferenceAction,
     savePreference: async (theme: 'light' | 'dark' | 'system') => {
@@ -21,8 +23,9 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      defaultTheme={defaultTheme}
+      forcedTheme={forcedTheme}
+      enableSystem={!forcedTheme}
       disableTransitionOnChange
     >
       <ThemeActionsProvider actions={actions}>

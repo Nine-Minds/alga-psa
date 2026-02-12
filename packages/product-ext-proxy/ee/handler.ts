@@ -8,6 +8,9 @@ import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runne
 import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from './gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
+type ProxyMethod = Exclude<Method, 'OPTIONS'>;
+
+const METHOD_OVERRIDE_FIELD = '__method';
 
 const debugLogPath = path.resolve(process.env.EXT_PROXY_DEBUG_LOG || '/tmp/ext-proxy.log');
 
@@ -123,17 +126,92 @@ function getRequestId(req: NextRequest): string {
   return req.headers.get('x-request-id') || crypto.randomUUID();
 }
 
+function normalizeProxyMethod(value: unknown): ProxyMethod | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.toUpperCase();
+  if (
+    normalized === 'GET' ||
+    normalized === 'POST' ||
+    normalized === 'PUT' ||
+    normalized === 'PATCH' ||
+    normalized === 'DELETE'
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+function tryParseJsonObjectBody(bodyBuf: Buffer | undefined): Record<string, unknown> | null {
+  if (!bodyBuf || bodyBuf.length === 0) return null;
+  try {
+    const parsed = JSON.parse(bodyBuf.toString('utf8'));
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Non-JSON payload; leave unchanged.
+  }
+  return null;
+}
+
+function resolveMethodAndBody(
+  rawMethod: ProxyMethod,
+  url: URL,
+  rawBodyBuf: Buffer | undefined,
+): {
+  method: ProxyMethod;
+  query: Record<string, string>;
+  bodyBuf: Buffer | undefined;
+  methodOverrideSource: 'query' | 'body' | null;
+} {
+  if (rawMethod !== 'POST') {
+    return {
+      method: rawMethod,
+      query: Object.fromEntries(url.searchParams.entries()),
+      bodyBuf: rawBodyBuf,
+      methodOverrideSource: null,
+    };
+  }
+
+  const queryOverride = normalizeProxyMethod(url.searchParams.get(METHOD_OVERRIDE_FIELD));
+  const parsedBody = tryParseJsonObjectBody(rawBodyBuf);
+  const bodyOverride = normalizeProxyMethod(parsedBody?.[METHOD_OVERRIDE_FIELD]);
+  const method = queryOverride ?? bodyOverride ?? rawMethod;
+  const methodOverrideSource: 'query' | 'body' | null =
+    queryOverride ? 'query' : bodyOverride ? 'body' : null;
+
+  const sanitizedSearchParams = new URLSearchParams(url.searchParams);
+  if (queryOverride) {
+    sanitizedSearchParams.delete(METHOD_OVERRIDE_FIELD);
+  }
+  const query = Object.fromEntries(sanitizedSearchParams.entries());
+
+  if (method === 'GET') {
+    return { method, query, bodyBuf: undefined, methodOverrideSource };
+  }
+
+  if (parsedBody && bodyOverride) {
+    const sanitizedBody = { ...parsedBody };
+    delete sanitizedBody[METHOD_OVERRIDE_FIELD];
+    const hasUserFields = Object.keys(sanitizedBody).length > 0;
+    const bodyBuf = hasUserFields ? Buffer.from(JSON.stringify(sanitizedBody), 'utf8') : undefined;
+    return { method, query, bodyBuf, methodOverrideSource };
+  }
+
+  return { method, query, bodyBuf: rawBodyBuf, methodOverrideSource };
+}
+
 type RouteParams = { extensionId: string; path?: string[] };
 
 async function handle(
   req: NextRequest,
   ctx: { params: RouteParams | Promise<RouteParams> },
 ) {
-  const method = req.method as Method;
+  const rawMethod = req.method as Method;
   const requestId = getRequestId(req);
   const corsOrigin = pickCorsOrigin(req);
 
-  if (method === 'OPTIONS') {
+  if (rawMethod === 'OPTIONS') {
     return corsPreflight(corsOrigin);
   }
 
@@ -143,10 +221,24 @@ async function handle(
     const pathParts = Array.isArray(routeParams.path) ? routeParams.path : [];
     const pathname = pathnameFromParts(pathParts);
     const url = new URL(req.url);
+    const initialBodyBuf = rawMethod === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
+    const {
+      method,
+      query,
+      bodyBuf,
+      methodOverrideSource,
+    } = resolveMethodAndBody(rawMethod as ProxyMethod, url, initialBodyBuf);
 
     const tenantId = await getTenantFromAuth(req);
     const userInfo = await getUserInfoFromAuth(req);
-    logDebug('ext-proxy:start', { tenantId, extensionId, method, hasUserInfo: !!userInfo });
+    logDebug('ext-proxy:start', {
+      tenantId,
+      extensionId,
+      rawMethod,
+      method,
+      methodOverrideSource,
+      hasUserInfo: !!userInfo,
+    });
     if (!tenantId) return applyCorsHeaders(json(401, { error: 'Unauthorized' }), corsOrigin);
 
     await wrapAssertAccess(tenantId, extensionId, method, pathname);
@@ -170,13 +262,15 @@ async function handle(
     }
 
     const timeoutMs = getTimeoutMs();
-    const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
 
     console.log('[ext-proxy] Preparing execution request', {
       requestId,
       tenantId,
       extensionId,
       path: pathname,
+      rawMethod,
+      effectiveMethod: method,
+      methodOverrideSource,
       installId: installConfig.installId,
       versionId: installConfig.versionId,
       contentHash: installConfig.contentHash,
@@ -198,7 +292,7 @@ async function handle(
         method,
         url: pathname,
         path: pathname,
-        query: Object.fromEntries(url.searchParams.entries()),
+        query,
         headers: filterRequestHeaders(req.headers, tenantId, extensionId, requestId, method),
         body_b64: bodyBuf ? bodyBuf.toString('base64') : undefined,
       },

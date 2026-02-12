@@ -21,21 +21,30 @@ Prefer radix components over other libraries
 
 **IMPORTANT: All interactive elements (buttons, inputs, selects, etc.) MUST have unique `id` attributes for the reflection UI system. See Component ID Guidelines section for naming conventions.**
 
-- Use component from `server/src/components/ui` folder
-    - [Button](../server/src/components/ui/Button.tsx)
-    - [Card](../server/src/components/ui/Card.tsx)
-    - [Checkbox](../server/src/components/ui/Checkbox.tsx)
-    - [CustomSelect](../server/src/components/ui/CustomSelect.tsx)
-    - [CustomTabs](../server/src/components/ui/CustomTabs.tsx)
-    - [Dialog](../server/src/components/ui/Dialog.tsx)
-    - [Drawer](../server/src/components/ui/Drawer.tsx)
-    - [Input](../server/src/components/ui/Input.tsx)
-    - [Label](../server/src/components/ui/Label.tsx)
-    - [Select](../server/src/components/ui/Select.tsx)
-    - [Switch](../server/src/components/ui/Switch.tsx)
-    - [SwitchWithLabel](../server/src/components/ui/SwitchWithLabel.tsx)
-    - [Table](../server/src/components/ui/Table.tsx)
-    - [TextArea](../server/src/components/ui/TextArea.tsx)
+- Use component from `packages/ui/src/components` folder
+    - [Button](../packages/ui/src/components/Button.tsx)
+    - [Card](../packages/ui/src/components/Card.tsx)
+    - [Checkbox](../packages/ui/src/components/Checkbox.tsx)
+    - [CustomSelect](../packages/ui/src/components/CustomSelect.tsx)
+    - [CustomTabs](../packages/ui/src/components/CustomTabs.tsx)
+    - [Dialog](../packages/ui/src/components/Dialog.tsx)
+    - [Drawer](../packages/ui/src/components/Drawer.tsx)
+    - [Input](../packages/ui/src/components/Input.tsx)
+    - [Label](../packages/ui/src/components/Label.tsx)
+    - [Switch](../packages/ui/src/components/Switch.tsx)
+    - [SwitchWithLabel](../packages/ui/src/components/SwitchWithLabel.tsx)
+    - [Table](../packages/ui/src/components/Table.tsx)
+    - [TextArea](../packages/ui/src/components/TextArea.tsx)
+
+### Theme & Dark Mode
+
+For theming guidelines, CSS variable usage, and dark mode coding standards, see [Theming Documentation](ui/theming.md).
+
+Key rules:
+- Use Tailwind semantic tokens (`bg-primary-50`, `text-foreground`) — never hardcode hex/rgb values
+- Use `useAppTheme` from `@alga-psa/ui/hooks` — not `useTheme` from next-themes directly
+- Adapt dynamic entity colors with `adaptColorsForDarkMode()` from `@alga-psa/ui/lib/colorUtils`
+- Test all UI changes in both light and dark themes
 
 ## Loading States for Remote Content
 
@@ -75,11 +84,11 @@ Prefer radix components over other libraries
 When implementing dialogs in the application, follow these guidelines:
 
 1. **Use Custom Dialog Component**
-   - Always use the custom Dialog component from 'server/src/components/ui/Dialog'
+   - Always use the custom Dialog component from '@alga-psa/ui/components/Dialog'
    - Never import Dialog directly from '@radix-ui/react-dialog'
    ```tsx
    // Good
-   import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+   import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
    
    // Bad
    import * as Dialog from '@radix-ui/react-dialog';
@@ -158,18 +167,18 @@ When implementing dialogs in the application, follow these guidelines:
 When implementing action menus in DataTable components, follow these guidelines:
 
 1. **Component Structure**
-   - Use Radix UI's DropdownMenu components from 'server/src/components/ui/DropdownMenu':
+   - Use Radix UI's DropdownMenu components from '@alga-psa/ui/components/DropdownMenu':
      ```tsx
      import {
        DropdownMenu,
        DropdownMenuTrigger,
        DropdownMenuContent,
        DropdownMenuItem,
-     } from 'server/src/components/ui/DropdownMenu';
+     } from '@alga-psa/ui/components/DropdownMenu';
      ```
 
 2. **Trigger Button Implementation**
-   - Use the Button component from 'server/src/components/ui/Button'
+   - Use the Button component from '@alga-psa/ui/components/Button'
    - Import MoreVertical icon from 'lucide-react'
    ```tsx
    <DropdownMenuTrigger asChild>
