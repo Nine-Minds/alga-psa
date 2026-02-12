@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "Create DeleteEntityDialog component in packages/ui/src/components/DeleteEntityDialog.tsx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "DeleteEntityDialog shows spinner with 'Checking for dependencies...' when isValidating=true",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "DeleteEntityDialog shows delete confirmation when canDelete=true",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "DeleteEntityDialog shows 'Cannot Delete' title, dependency list, and block message when canDelete=false",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "DeleteEntityDialog renders View links for dependencies with viewUrl",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "DeleteEntityDialog shows alternative action buttons when alternatives are available",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "DeleteEntityDialog shows loading spinner on Delete/alternative buttons when isDeleting=true",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "DeleteEntityDialog calls onAlternativeAction with action type string (deactivate/archive)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "Export DeleteEntityDialog from packages/ui/src/index.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]

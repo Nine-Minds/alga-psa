@@ -65,3 +65,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Implemented validateDeletion with dependency counting, custom countQuery support, pluralized labels, block message, alternatives, and viewUrl template expansion.
 - (2026-02-12) Added schema-verified deletion configs for core entities plus getDeletionConfig lookup in packages/core/src/config/deletion/index.ts.
 - (2026-02-12) Added deletion actions (preCheckDeletion, deleteEntityWithValidation, validateBulkDeletion), permission checks, and exports; added useDeletionValidation hook.
+- (2026-02-12) Added DeleteEntityDialog component with validation states, dependency list, alternatives, and loading states; exported from @alga-psa/ui.
