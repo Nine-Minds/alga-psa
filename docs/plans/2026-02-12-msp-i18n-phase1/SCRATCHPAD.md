@@ -85,3 +85,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Extracted `tickets` translations into `server/public/locales/*/features/tickets.json`.
 - Extracted `projects` translations into `server/public/locales/*/features/projects.json`.
 - Extracted `billing` translations into `server/public/locales/*/features/billing.json`.
+- Extracted `documents` translations into `server/public/locales/*/features/documents.json`.

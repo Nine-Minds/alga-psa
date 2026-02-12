@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Create features/documents.json for all 7 languages by extracting documents.* from clientPortal.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
