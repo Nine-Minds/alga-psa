@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Standard MSP server layout checks flag and fetches locale via getHierarchicalLocaleAction only when enabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

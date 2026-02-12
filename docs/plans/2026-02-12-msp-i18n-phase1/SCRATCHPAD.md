@@ -77,3 +77,4 @@ Batch into ~4 meaningful commits (not one-liners):
 
 ## Updates
 - Added `msp-i18n-enabled` default flag in `server/src/lib/feature-flags/featureFlags.ts`.
+- Standard MSP layout now gates locale fetch via `msp-i18n-enabled` and only calls `getHierarchicalLocaleAction` when enabled.

@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { getTenantSettings } from "@alga-psa/tenancy/actions";
+import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
+import { featureFlags } from "@/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
 
 export default async function MspLayout({
@@ -27,6 +29,12 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
+  const isMspI18nEnabled = await featureFlags.isEnabled('msp-i18n-enabled', {
+    userId: session.user.id,
+    tenantId: session.user.tenant,
+    userRole: session.user.user_type,
+  });
+
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
@@ -39,11 +47,16 @@ export default async function MspLayout({
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
   }
+
+  const locale = isMspI18nEnabled ? await getHierarchicalLocaleAction() : null;
+
   return (
     <MspLayoutClient
       session={session}
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
+      initialLocale={locale}
+      i18nEnabled={isMspI18nEnabled}
     >
       {children}
     </MspLayoutClient>
