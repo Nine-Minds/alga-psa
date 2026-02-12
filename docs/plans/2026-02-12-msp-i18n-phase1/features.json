@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Extend getHierarchicalLocaleAction to include MSP org default in resolution chain (user > msp org default > system default) for internal users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR11"]
   },
   {
