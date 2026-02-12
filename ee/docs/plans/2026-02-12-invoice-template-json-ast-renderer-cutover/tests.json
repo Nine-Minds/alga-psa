@@ -142,7 +142,7 @@
   {
     "id": "T015",
     "description": "Renderer produces HTML for static text/field/table/totals node combinations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
