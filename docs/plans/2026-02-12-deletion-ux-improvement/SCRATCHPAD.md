@@ -79,3 +79,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Wired reference-data category deletion to deleteEntityWithValidation and added DeleteEntityDialog + preCheckDeletion preview in TicketingConfigStep.
 - (2026-02-12) Added dynamic status deletion dependencies in core config; migrated status deletion actions/UI to DeleteEntityDialog with preCheckDeletion and deleteEntityWithValidation (ProjectStatusSettings + onboarding statuses).
 - (2026-02-12) Migrated priority deletion to deleteEntityWithValidation and DeleteEntityDialog (PrioritySettings + onboarding priorities) with ITIL-standard guard via validatePriorityDeletion.
+- (2026-02-12) Migrated board deletion in onboarding to DeleteEntityDialog + preCheckDeletion and routed reference-data board deletion through deleteEntityWithValidation.

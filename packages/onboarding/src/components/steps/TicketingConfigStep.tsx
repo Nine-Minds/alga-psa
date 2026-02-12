@@ -170,6 +170,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [categoryDeleteValidation, setCategoryDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isCategoryDeleteValidating, setIsCategoryDeleteValidating] = useState(false);
   const [isCategoryDeleteProcessing, setIsCategoryDeleteProcessing] = useState(false);
+  const [boardToDelete, setBoardToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [boardDeleteValidation, setBoardDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isBoardDeleteValidating, setIsBoardDeleteValidating] = useState(false);
+  const [isBoardDeleteProcessing, setIsBoardDeleteProcessing] = useState(false);
   const [statusToDelete, setStatusToDelete] = useState<{ id: string; name: string } | null>(null);
   const [statusDeleteValidation, setStatusDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isStatusDeleteValidating, setIsStatusDeleteValidating] = useState(false);
@@ -727,27 +731,70 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   };
 
   // Remove functions for each type
-  const removeBoard = async (boardId: string) => {
+  const resetBoardDeleteState = () => {
+    setBoardToDelete(null);
+    setBoardDeleteValidation(null);
+    setIsBoardDeleteValidating(false);
+    setIsBoardDeleteProcessing(false);
+  };
+
+  const runBoardDeleteValidation = useCallback(async (boardId: string) => {
+    setIsBoardDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('boards', boardId);
-      if (result.success) {
-        // Remove from imported boards
-        setImportedBoards(prev => prev.filter(ch => ch.board_id !== boardId));
-        
-        // If this was the selected board, clear it
-        if (data.boardId === boardId) {
-          updateData({ boardId: undefined, boardName: '' });
-        }
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Board deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete board');
+      const result = await preCheckDeletion('board', boardId);
+      setBoardDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating board deletion:', error);
+      setBoardDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsBoardDeleteValidating(false);
+    }
+  }, []);
+
+  const openBoardDeleteDialog = (boardId: string) => {
+    const board = importedBoards.find(ch => ch.board_id === boardId);
+    setBoardToDelete({
+      id: boardId,
+      name: board?.board_name || 'this board'
+    });
+    void runBoardDeleteValidation(boardId);
+  };
+
+  const confirmDeleteBoard = async () => {
+    if (!boardToDelete) return;
+    try {
+      setIsBoardDeleteProcessing(true);
+      const result = await deleteReferenceDataItem('boards', boardToDelete.id);
+      if (!result.success) {
+        setBoardDeleteValidation(result);
+        return;
       }
+
+      setImportedBoards(prev => prev.filter(ch => ch.board_id !== boardToDelete.id));
+      if (data.boardId === boardToDelete.id) {
+        updateData({ boardId: undefined, boardName: '' });
+      }
+
+      loadExistingData();
+      toast.success('Board deleted successfully');
+      resetBoardDeleteState();
     } catch (error) {
       console.error('Error deleting board:', error);
-      toast.error('Failed to delete board');
+      setBoardDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete board.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsBoardDeleteProcessing(false);
     }
   };
 
@@ -1506,7 +1553,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeBoard(board.board_id)}
+                              onClick={() => openBoardDeleteDialog(board.board_id)}
                               className="p-1 h-6 w-6"
                               title="Remove board"
                               disabled={board.is_default}
@@ -2834,6 +2881,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           </Button>
         </DialogFooter>
       </Dialog>
+      <DeleteEntityDialog
+        id="delete-board-dialog"
+        isOpen={Boolean(boardToDelete)}
+        onClose={resetBoardDeleteState}
+        onConfirmDelete={confirmDeleteBoard}
+        entityName={boardToDelete?.name || 'this board'}
+        validationResult={boardDeleteValidation}
+        isValidating={isBoardDeleteValidating}
+        isDeleting={isBoardDeleteProcessing}
+      />
       <DeleteEntityDialog
         id="delete-category-dialog"
         isOpen={Boolean(categoryToDelete)}

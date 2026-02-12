@@ -625,8 +625,13 @@ export const deleteReferenceDataItem = withAuth(async (
       throw new Error(`Unknown ID field for data type: ${dataType}`);
     }
 
-    if (dataType === 'categories' || dataType === 'statuses') {
-      const deletionEntityType = dataType === 'categories' ? 'category' : 'status';
+    if (dataType === 'categories' || dataType === 'statuses' || dataType === 'boards') {
+      const deletionEntityType =
+        dataType === 'categories'
+          ? 'category'
+          : dataType === 'statuses'
+            ? 'status'
+            : 'board';
       const result = await deleteEntityWithValidation(deletionEntityType, itemId, async (trx, tenantId) => {
         const deletedCount = await trx(config.targetTable)
           .where({
