@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Create features/billing.json for all 7 languages by extracting billing.* from clientPortal.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
