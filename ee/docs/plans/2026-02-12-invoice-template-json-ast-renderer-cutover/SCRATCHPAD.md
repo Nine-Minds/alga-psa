@@ -575,3 +575,32 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
+
+### 2026-02-12 — F024 implemented
+
+- Removed preview compile-cache/Wasm artifact cache logic from preview pipeline.
+- Deleted cache module and its unit tests:
+  - `packages/billing/src/actions/invoiceTemplatePreviewCache.ts` (deleted)
+  - `packages/billing/src/actions/invoiceTemplatePreview.cache.test.ts` (deleted)
+- Updated preview action contract and implementation:
+  - `packages/billing/src/actions/invoiceTemplatePreview.ts`
+  - removed cache imports and cache key resolution,
+  - removed cached artifact lookup/set operations,
+  - removed `cacheHit` fields from preview compile status payload,
+  - removed preview input cache-bypass flag from authoritative preview path.
+- Updated preview UI status behavior:
+  - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
+  - removed cache-hit badge and cache-bypass request plumbing while preserving manual rerun behavior.
+- Updated related tests and added explicit cache-removal wiring coverage:
+  - `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`
+  - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`
+  - `packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts` (new).
+
+Rationale:
+
+- Preview execution no longer compiles or executes Wasm, so compile-artifact cache lifecycle is obsolete and removed.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).

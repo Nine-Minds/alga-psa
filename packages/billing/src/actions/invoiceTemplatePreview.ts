@@ -18,24 +18,18 @@ import { exportWorkspaceToInvoiceTemplateAst } from '../components/invoice-desig
 import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateInvoiceTemplateAst } from '../lib/invoice-template-ast/schema';
-import {
-  getCachedPreviewCompileArtifact,
-  setCachedPreviewCompileArtifact,
-} from './invoiceTemplatePreviewCache';
 
 const execPromise = promisify(exec);
 
 type PreviewCompileInput = {
   source: string;
   sourceHash: string;
-  bypassCache?: boolean;
 };
 
 type PreviewCompileSuccess = {
   success: true;
   wasmBinary: Buffer;
   compileCommand: string;
-  cacheHit: boolean;
 };
 
 type PreviewCompileFailure = {
@@ -49,13 +43,6 @@ type PreviewCompileResult = PreviewCompileSuccess | PreviewCompileFailure;
 
 const sanitizeForPath = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-const resolveCacheKey = (input: PreviewCompileInput): string => {
-  const normalizedHash = sanitizeForPath(input.sourceHash || '').slice(0, 96);
-  if (normalizedHash.length > 0) {
-    return normalizedHash;
-  }
-  return `inline_${sanitizeForPath(input.source).slice(0, 96)}`;
-};
 const buildPreviewCompileCommand = (params: {
   tempCompileDir: string;
   sourceFilePath: string;
@@ -78,8 +65,6 @@ const compilePreviewAssemblyScriptForTenant = async (
         error: 'Preview compile requires non-empty source.',
       };
     }
-
-    const cacheKey = resolveCacheKey(input);
 
     const asmScriptProjectDir = resolveAssemblyScriptProjectDir();
     const assemblyDir = path.resolve(asmScriptProjectDir, 'assembly');
@@ -109,16 +94,6 @@ const compilePreviewAssemblyScriptForTenant = async (
       wasmOutputPath,
     });
 
-    const cached = getCachedPreviewCompileArtifact(cacheKey);
-    if (cached && !input.bypassCache) {
-      return {
-        success: true,
-        wasmBinary: cached.wasmBinary,
-        compileCommand: cached.compileCommand,
-        cacheHit: true,
-      };
-    }
-
     try {
       await fs.access(assemblyDir);
       await fs.mkdir(previewDir, { recursive: true });
@@ -138,13 +113,11 @@ const compilePreviewAssemblyScriptForTenant = async (
       if (!wasmBinary || wasmBinary.length === 0) {
         throw new Error('Compiled WASM binary is empty.');
       }
-      setCachedPreviewCompileArtifact(cacheKey, { wasmBinary, compileCommand });
 
       return {
         success: true,
         wasmBinary,
         compileCommand,
-        cacheHit: false,
       };
     } catch (error: any) {
       return {
@@ -169,7 +142,6 @@ export const compilePreviewAssemblyScript = withAuth(
 type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
   invoiceData: WasmInvoiceViewModel | null;
-  bypassCompileCache?: boolean;
   tolerancePx?: number;
 };
 
@@ -190,7 +162,6 @@ type AuthoritativePreviewResult = {
   generatedSource: string | null;
   compile: {
     status: 'idle' | 'success' | 'error';
-    cacheHit: boolean;
     diagnostics: AuthoritativePreviewDiagnostic[];
     error?: string;
     details?: string;
@@ -218,7 +189,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         generatedSource: null,
         compile: {
           status: 'error',
-          cacheHit: false,
           diagnostics: [],
           error: 'Preview workspace is empty.',
         },
@@ -234,7 +204,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         generatedSource: null,
         compile: {
           status: 'idle',
-          cacheHit: false,
           diagnostics: [],
         },
         render: { status: 'idle', html: null, css: null, contentHeightPx: null },
@@ -254,7 +223,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         generatedSource,
         compile: {
           status: 'error',
-          cacheHit: false,
           diagnostics: validation.errors.map((error) => ({
             kind: 'schema',
             severity: 'error',
@@ -280,7 +248,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         generatedSource,
         compile: {
           status: 'success',
-          cacheHit: false,
           diagnostics: [],
         },
         render: {
@@ -302,7 +269,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         generatedSource,
         compile: {
           status: 'error',
-          cacheHit: false,
           diagnostics: isEvaluationError
             ? error.issues.map((issue) => ({
                 kind: 'evaluation',

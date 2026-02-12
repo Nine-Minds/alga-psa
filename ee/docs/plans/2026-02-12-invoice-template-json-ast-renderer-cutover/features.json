@@ -205,7 +205,7 @@
   {
     "id": "F024",
     "description": "Remove preview compile cache and related Wasm artifact cache logic",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Deleted / Eliminated Layers"

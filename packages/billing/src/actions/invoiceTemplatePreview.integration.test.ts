@@ -123,7 +123,6 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
       {
         workspace,
         invoiceData,
-        bypassCompileCache: true,
       }
     );
 
@@ -131,7 +130,6 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
     expect(actionResult.sourceHash).toBeTruthy();
     expect(actionResult.generatedSource).toContain('"kind": "invoice-template-ast"');
     expect(actionResult.compile.status).toBe('success');
-    expect(actionResult.compile.cacheHit).toBe(false);
     expect(actionResult.render.status).toBe('success');
     expect(actionResult.render.html).toContain('INV-9001');
     expect(actionResult.render.html).toContain('Consulting');
@@ -156,7 +154,6 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
       {
         workspace,
         invoiceData,
-        bypassCompileCache: true,
       }
     );
 
@@ -201,7 +198,6 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
       {
         workspace,
         invoiceData,
-        bypassCompileCache: true,
       }
     );
 

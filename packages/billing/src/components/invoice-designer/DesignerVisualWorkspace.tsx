@@ -93,7 +93,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const debouncedNodes = useDebouncedValue(nodes, 140);
   const detailRequestSequence = useRef(0);
   const previewRunSequence = useRef(0);
-  const lastManualRunNonceRef = useRef(0);
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
@@ -225,8 +224,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     }
 
     const requestId = ++previewRunSequence.current;
-    const bypassCompileCache = manualRunNonce !== lastManualRunNonceRef.current;
-    lastManualRunNonceRef.current = manualRunNonce;
 
     dispatch({ type: 'pipeline-reset' });
     dispatch({ type: 'pipeline-phase-start', phase: 'shape' });
@@ -244,7 +241,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         canvasScale,
       },
       invoiceData: previewData,
-      bypassCompileCache,
     })
       .then((result) => {
         if (requestId !== previewRunSequence.current) {
@@ -533,14 +529,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               >
                 {displayStatuses.verifyStatus}
               </span>
-              {authoritativePreview?.compile.status === 'success' && canDisplaySuccessStates && (
-                <span
-                  className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5"
-                  data-automation-id="invoice-designer-preview-shape-cache-hit"
-                >
-                  Cache: {authoritativePreview.compile.cacheHit ? 'Hit' : 'Miss'}
-                </span>
-              )}
             </div>
             <Button
               id="invoice-designer-preview-rerun-button"

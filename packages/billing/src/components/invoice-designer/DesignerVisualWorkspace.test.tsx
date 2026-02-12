@@ -149,7 +149,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -210,7 +209,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -239,7 +237,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -409,7 +406,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// broken generated source',
       compile: {
         status: 'error',
-        cacheHit: false,
         diagnostics: [],
         error: 'Preview AssemblyScript compilation failed.',
         details: 'ERROR TS1005: ; expected',
@@ -441,7 +437,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -489,7 +484,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -564,7 +558,7 @@ describe('DesignerVisualWorkspace', () => {
     expect(updatedField?.metadata?.bindingKey).toBe('customer.name');
   });
 
-  it('manual rerun retriggers pipeline without workspace delta and bypasses compile cache', async () => {
+  it('manual rerun retriggers pipeline without workspace delta', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
 
@@ -578,7 +572,7 @@ describe('DesignerVisualWorkspace', () => {
     );
 
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
-    expect(latestCall.bypassCompileCache).toBe(true);
+    expect(latestCall.workspace).toBeTruthy();
   });
 
   it('shows loading indicator while shape/render pipeline is in flight', async () => {
