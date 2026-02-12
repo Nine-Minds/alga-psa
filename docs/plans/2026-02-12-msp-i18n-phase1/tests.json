@@ -288,7 +288,7 @@
   {
     "id": "T035",
     "description": "With flag OFF: no language preference section visible in UserProfile (/msp/profile)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

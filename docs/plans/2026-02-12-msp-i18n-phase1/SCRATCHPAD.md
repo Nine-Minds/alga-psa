@@ -145,3 +145,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T032: msp/core.json nav items match navigation entries in menuConfig.ts (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T033: msp/core.json exists for all 6 non-English languages with translated content (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T034: useTranslation('msp/core') returns correct English translations when flag is ON (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T035: With flag OFF: no language preference section visible in UserProfile (/msp/profile) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
