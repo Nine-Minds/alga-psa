@@ -590,7 +590,7 @@
   {
     "id": "T099",
     "description": "Non-deletion uses of ConfirmationDialog still work (unsaved changes, recurring events, etc.)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F049"]
   }
 ]
