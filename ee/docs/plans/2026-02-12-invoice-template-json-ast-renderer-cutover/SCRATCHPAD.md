@@ -783,3 +783,22 @@ Rationale:
 Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` (pass).
+
+### 2026-02-12 — F034 implemented
+
+- Replaced outdated invoice template architecture documentation with AST cutover documentation:
+  - `docs/billing/invoice_templates.md`
+- Documentation now describes:
+  - canonical `InvoiceTemplateAst` model and runtime modules,
+  - shared preview/PDF evaluator+renderer pipeline,
+  - allowlisted `strategyId` extension mechanism,
+  - compatibility behavior for legacy columns,
+  - explicit deletion/removal notes for compiler/Wasm stack.
+
+Rationale:
+
+- Prior docs still described AssemblyScript/Wasm execution path and removed modules. Updated docs now align with runtime reality and PRD cutover architecture.
+
+Verification:
+
+- Manual doc review of `docs/billing/invoice_templates.md` for AST pipeline and removal notes coverage.
