@@ -254,7 +254,7 @@
   {
     "id": "T043",
     "description": "deleteEntityWithValidation rolls back entire transaction if performDelete throws",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
