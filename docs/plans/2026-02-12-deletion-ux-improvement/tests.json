@@ -554,7 +554,7 @@
   {
     "id": "T093",
     "description": "Schedule entry deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F071"]
   },
   {
