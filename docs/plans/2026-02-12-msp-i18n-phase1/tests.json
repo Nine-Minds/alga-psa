@@ -35,7 +35,7 @@
   {
     "id": "T005",
     "description": "With flag ON: standard MspLayoutClient wraps children in I18nWrapper with portal='msp'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

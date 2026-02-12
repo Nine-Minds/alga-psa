@@ -115,3 +115,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T002: With flag OFF: standard MSP layout does NOT call getHierarchicalLocaleAction (no locale fetch overhead) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T003: With flag ON: standard MSP layout calls getHierarchicalLocaleAction and passes locale to MspLayoutClient (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T004: With flag OFF: standard MspLayoutClient renders children without I18nWrapper (zero behavior change) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T005: With flag ON: standard MspLayoutClient wraps children in I18nWrapper with portal='msp' (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
