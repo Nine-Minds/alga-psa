@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Migrate all client portal components using projects.* keys to useTranslation('features/projects')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
