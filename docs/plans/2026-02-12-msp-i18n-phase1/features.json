@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Create client-portal/core.json for all 7 languages (nav, dashboard, common, pagination, time keys from clientPortal.json)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {

@@ -87,3 +87,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Extracted `billing` translations into `server/public/locales/*/features/billing.json`.
 - Extracted `documents` translations into `server/public/locales/*/features/documents.json`.
 - Extracted `appointments` translations into `server/public/locales/*/features/appointments.json`.
+- Added `client-portal/core.json` with nav/dashboard/common/pagination/time keys for all locales.
