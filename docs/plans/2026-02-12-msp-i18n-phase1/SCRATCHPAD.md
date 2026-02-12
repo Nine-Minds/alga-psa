@@ -125,3 +125,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T012: features/projects.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T013: features/billing.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T014: features/documents.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T015: features/appointments.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
