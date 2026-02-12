@@ -165,3 +165,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T052: Locale resolution for internal users: falls back to system default when no user or org preference (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T053: All new JSON namespace files pass JSON syntax validation (no parse errors) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T054: No duplicate keys exist in any new JSON namespace file (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T055: Feature namespace key counts match across all 7 languages (same structure per namespace) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
