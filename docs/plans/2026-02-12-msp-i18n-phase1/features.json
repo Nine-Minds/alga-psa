@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Migrate client portal components using profile/clientSettings/notifications keys to useTranslation('client-portal/profile')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {

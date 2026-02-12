@@ -97,3 +97,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Migrated client portal appointments components to `features/appointments` with common strings routed via `client-portal/core`.
 - Updated client portal UI to use `client-portal/core` for nav/dashboard/common/pagination/time keys.
 - Migrated client portal auth/account strings to `client-portal/auth` namespace.
+- Migrated client portal profile/clientSettings/notifications strings to `client-portal/profile` namespace.
