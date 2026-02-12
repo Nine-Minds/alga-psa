@@ -404,7 +404,7 @@
   {
     "id": "T068",
     "description": "Client deleteClient returns IS_DEFAULT error for default company before validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F047"]
   },
   {
