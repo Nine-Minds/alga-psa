@@ -81,3 +81,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Migrated priority deletion to deleteEntityWithValidation and DeleteEntityDialog (PrioritySettings + onboarding priorities) with ITIL-standard guard via validatePriorityDeletion.
 - (2026-02-12) Migrated board deletion in onboarding to DeleteEntityDialog + preCheckDeletion and routed reference-data board deletion through deleteEntityWithValidation.
 - (2026-02-12) Migrated document deletion to deleteEntityWithValidation and DeleteEntityDialog in DocumentStorageCard; updated deleteDocument to return validation result and adjusted bulk delete handling.
+- (2026-02-12) Migrated asset deletion to deleteEntityWithValidation and DeleteEntityDialog (DeleteAssetButton), with dependency preview via preCheckDeletion.
