@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "Define `InvoiceTemplateAst` TypeScript types with explicit versioning and schema shape for nodes, styles, bindings, and transforms",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Add runtime AST validation (schema parser) that returns structured validation errors",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F003",
+    "description": "Represent repeatable line-item/table regions declaratively in AST",
+    "implemented": false,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Represent declarative transform operations in AST for filter/sort/group/aggregate/computed-field workflows",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F005",
+    "description": "Add `strategyId` references in AST for advanced grouping/calculation extension points",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Implement allowlisted strategy registry for `strategyId` resolution",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Implement shared AST evaluator that applies declarative transforms to invoice data",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Goals"]
+  },
+  {
+    "id": "F008",
+    "description": "Guarantee deterministic evaluator output for equivalent AST+data inputs",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Implement evaluator error model for schema violations, missing bindings, missing strategies, and invalid transform operands",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Implement shared React invoice renderer that consumes evaluated AST context and emits HTML/CSS",
+    "implemented": false,
+    "prdRefs": ["Summary", "Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Introduce server-side render-to-html helper that uses the same React renderer component for backend PDF pipeline",
+    "implemented": false,
+    "prdRefs": ["Summary", "Data / API / Integrations"]
+  },
+  {
+    "id": "F012",
+    "description": "Update `DesignerVisualWorkspace` export path to persist AST directly instead of compiler IR",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Goals"]
+  },
+  {
+    "id": "F013",
+    "description": "Update designer hydration/import path to load from persisted AST",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows", "Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Remove save-path dependency on `extractInvoiceDesignerIr` and `generateAssemblyScriptFromIr` in `InvoiceTemplateEditor`",
+    "implemented": false,
+    "prdRefs": ["Deleted / Eliminated Layers", "Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Update invoice template interfaces/contracts to include canonical AST payload",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F016",
+    "description": "Update template persistence model/repository paths to read/write AST as primary template representation",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F017",
+    "description": "Update standard template source representation to AST-based definitions",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
+  },
+  {
+    "id": "F018",
+    "description": "Rewrite `runAuthoritativeInvoiceTemplatePreview` to execute evaluator+renderer path (no compilation)",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Summary"]
+  },
+  {
+    "id": "F019",
+    "description": "Preserve preview sample/existing data source UX while swapping backend execution path",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
+  },
+  {
+    "id": "F020",
+    "description": "Rename/re-map preview phase states from compile/render/verify to shape/render/verify semantics",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "Retain structured preview diagnostics surfaced with AST/evaluator context",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Update PDF generation service to use shared renderer output instead of Wasm executor",
+    "implemented": false,
+    "prdRefs": ["Summary", "Users and Primary Flows"]
+  },
+  {
+    "id": "F023",
+    "description": "Ensure preview and PDF paths use identical renderer/evaluator modules",
+    "implemented": false,
+    "prdRefs": ["Goals", "Non-functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Remove preview compile cache and related Wasm artifact cache logic",
+    "implemented": false,
+    "prdRefs": ["Goals", "Deleted / Eliminated Layers"]
+  },
+  {
+    "id": "F025",
+    "description": "Delete compiler and runtime executor modules listed in PRD",
+    "implemented": false,
+    "prdRefs": ["Deleted / Eliminated Layers", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F026",
+    "description": "Remove save-time AssemblyScript compile and Wasm binary persistence behavior from invoice template actions",
+    "implemented": false,
+    "prdRefs": ["Deleted / Eliminated Layers", "Data / API / Integrations"]
+  },
+  {
+    "id": "F027",
+    "description": "Remove runtime dependency on `getCompiledWasm` for invoice rendering paths",
+    "implemented": false,
+    "prdRefs": ["Deleted / Eliminated Layers", "Users and Primary Flows"]
+  },
+  {
+    "id": "F028",
+    "description": "Keep legacy template columns as temporary compatibility fields only if needed while runtime is fully cut over",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration"]
+  },
+  {
+    "id": "F029",
+    "description": "Maintain no-arbitrary-code security posture by constraining strategy execution to allowlisted functions",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions", "Non-goals"]
+  },
+  {
+    "id": "F030",
+    "description": "Implement unit coverage for AST validation and evaluator transform semantics",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F031",
+    "description": "Implement integration coverage for preview path using AST evaluator+renderer",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F032",
+    "description": "Implement integration coverage for PDF generation path using shared renderer",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F033",
+    "description": "Add parity tests that assert preview and PDF HTML output semantics for the same AST + invoice fixture",
+    "implemented": false,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F034",
+    "description": "Update billing/invoice template documentation to describe AST renderer architecture and extension strategy",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  }
+]
