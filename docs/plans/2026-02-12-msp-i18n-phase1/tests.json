@@ -145,7 +145,7 @@
   {
     "id": "T018",
     "description": "client-portal/core.json exists for all 7 languages with nav, dashboard, common, pagination, time keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
