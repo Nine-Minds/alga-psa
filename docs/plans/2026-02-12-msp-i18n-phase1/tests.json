@@ -313,7 +313,7 @@
   {
     "id": "T038",
     "description": "Selecting a language in Profile updates user_preferences table (setting_name='locale')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
