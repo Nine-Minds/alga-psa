@@ -68,7 +68,7 @@
   {
     "id": "T009",
     "description": "With flag ON: useTranslation() works inside MSP page components (no 'must be used within I18nProvider' error)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F006"
