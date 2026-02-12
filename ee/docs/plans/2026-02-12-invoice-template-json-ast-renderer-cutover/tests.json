@@ -506,7 +506,7 @@
   {
     "id": "T053",
     "description": "Docs describe AST model, evaluator pipeline, and allowed strategy extension mechanism",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ],
