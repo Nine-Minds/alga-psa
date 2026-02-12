@@ -96,3 +96,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Migrated client portal document-related UI to `features/documents` and updated Documents components to support new key paths.
 - Migrated client portal appointments components to `features/appointments` with common strings routed via `client-portal/core`.
 - Updated client portal UI to use `client-portal/core` for nav/dashboard/common/pagination/time keys.
+- Migrated client portal auth/account strings to `client-portal/auth` namespace.
