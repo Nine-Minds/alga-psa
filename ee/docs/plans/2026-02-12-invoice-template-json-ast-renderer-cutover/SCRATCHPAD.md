@@ -29907,3 +29907,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T047 implemented
+
+- Marked unit coverage for empty/edge invoice-item arrays in grouping/totals paths as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/evaluator.test.ts::handles empty invoice-item collections for grouping and totals composition
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).

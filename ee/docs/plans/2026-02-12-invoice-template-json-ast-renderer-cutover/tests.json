@@ -450,7 +450,7 @@
   {
     "id": "T047",
     "description": "Unit suite covers empty/edge invoice-item arrays for grouping and totals",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F007"
