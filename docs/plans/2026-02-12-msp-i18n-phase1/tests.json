@@ -161,7 +161,7 @@
   {
     "id": "T020",
     "description": "client-portal/profile.json exists for all 7 languages with profile, clientSettings, notifications keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

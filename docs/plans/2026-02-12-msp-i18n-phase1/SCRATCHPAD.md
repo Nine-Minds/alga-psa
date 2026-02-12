@@ -130,3 +130,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T017: useTranslation('features/tickets') loads features/tickets.json via http-backend loadPath (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T018: client-portal/core.json exists for all 7 languages with nav, dashboard, common, pagination, time keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T019: client-portal/auth.json exists for all 7 languages with auth and account keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T020: client-portal/profile.json exists for all 7 languages with profile, clientSettings, notifications keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
