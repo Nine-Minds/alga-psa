@@ -321,7 +321,7 @@
   {
     "id": "T039",
     "description": "Regression: matched client-user inbound path remains associated with user and continues to pass existing tests",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F025"

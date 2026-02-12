@@ -886,6 +886,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
     expect(comments).toHaveLength(1);
     expect(comments[0].author_type).toBe('client');
+    expect(comments[0].contact_id).toBe(contactId);
     expect(comments[0].user_id).toBe(clientUserId);
 
     cleanup.push(async () => {
