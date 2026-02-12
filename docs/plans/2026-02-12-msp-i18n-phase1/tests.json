@@ -321,7 +321,7 @@
   {
     "id": "T039",
     "description": "Selecting a language in Profile updates the locale cookie",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
