@@ -29898,3 +29898,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T046 implemented
+
+- Marked unit coverage for explicit transform composition order semantics as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/evaluator.test.ts::applies transform composition in declared order
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).

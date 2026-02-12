@@ -440,7 +440,7 @@
   {
     "id": "T046",
     "description": "Unit suite covers transform composition order (filter -> sort -> group -> aggregate)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F007"
