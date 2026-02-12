@@ -302,7 +302,7 @@
   {
     "id": "T051",
     "description": "DeleteEntityDialog renders primary alternative action button when alternatives exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
