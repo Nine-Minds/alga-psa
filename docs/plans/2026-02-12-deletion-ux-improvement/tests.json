@@ -290,7 +290,7 @@
   {
     "id": "T049",
     "description": "DeleteEntityDialog renders View links for dependencies that have viewUrl",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
