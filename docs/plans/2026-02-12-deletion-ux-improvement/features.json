@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "Refactor deleteClient to use deleteEntityWithValidation for atomic transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "deleteClient checks is_default before standard validation (entity-specific precondition)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "Remove manual deleteEntityTags call from deleteClient (automatic via tagEntityType config)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "Replace ConfirmationDialog with DeleteEntityDialog in ClientDetails.tsx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "ClientDetails.tsx calls validateClientDeletion on dialog open for dependency preview",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "ClientDetails.tsx wires onAlternativeAction to markClientInactiveWithContacts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "Remove inline dependency rendering JSX from ClientDetails.tsx (handled by DeleteEntityDialog)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]

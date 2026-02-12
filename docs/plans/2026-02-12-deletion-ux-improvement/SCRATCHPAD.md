@@ -66,3 +66,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Added schema-verified deletion configs for core entities plus getDeletionConfig lookup in packages/core/src/config/deletion/index.ts.
 - (2026-02-12) Added deletion actions (preCheckDeletion, deleteEntityWithValidation, validateBulkDeletion), permission checks, and exports; added useDeletionValidation hook.
 - (2026-02-12) Added DeleteEntityDialog component with validation states, dependency list, alternatives, and loading states; exported from @alga-psa/ui.
+- (2026-02-12) Refactored client deletion to use deleteEntityWithValidation, added validateClientDeletion precheck, removed manual tag cleanup, and swapped ClientDetails delete dialog to DeleteEntityDialog with preview + alternative action wiring.
