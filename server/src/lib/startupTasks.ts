@@ -47,7 +47,7 @@ export async function syncStandardTemplates(): Promise<void> {
                     const fileMtimeMs = fileStat.mtimeMs; // Use milliseconds for potentially better precision
 
                     // Query the database for this standard template
-                    const record: { sha?: string; updated_at?: string; wasmBinary?: Uint8Array | null } | undefined = await trx('standard_invoice_templates')
+                    const record: { sha?: string; updated_at?: string } | undefined = await trx('standard_invoice_templates')
                         .where({ standard_invoice_template_code })
                         .first();
 
@@ -66,11 +66,10 @@ export async function syncStandardTemplates(): Promise<void> {
 
                     // Check if file SHA is different AND file modification time is strictly greater than DB update time
                     // Add a small buffer (e.g., 1000ms) to fileMtimeMs comparison to avoid issues with near-simultaneous updates or timestamp precision differences.
-                    // Also check if WASM binary is missing - if so, we need to recompile regardless of SHA match
-                    const needsUpdate = (fileSha !== dbSha && fileMtimeMs > (dbUpdatedAt + 1000)) || !record.wasmBinary;
+                    const needsUpdate = fileSha !== dbSha && fileMtimeMs > (dbUpdatedAt + 1000);
 
                     if (needsUpdate) {
-                        const reason = !record.wasmBinary ? 'WASM binary missing' : 'File is newer and SHA differs';
+                        const reason = 'File is newer and SHA differs';
                         console.log(`[Startup Task] Update required for ${standard_invoice_template_code}. Reason: ${reason}. Compiling...`);
 
                         // Call the compilation function (passing the transaction instance)

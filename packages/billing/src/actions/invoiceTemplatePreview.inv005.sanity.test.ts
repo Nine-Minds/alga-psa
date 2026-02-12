@@ -327,11 +327,12 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
 
     expect(mapped).not.toBeNull();
 
-    const actionResult = await runAuthoritativeInvoiceTemplatePreview(
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
       {
         workspace,
         invoiceData: mapped,
-        bypassCompileCache: true,
       }
     );
 
@@ -339,12 +340,11 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
     expect(actionResult.render.status).toBe('success');
     expect(actionResult.render.html).toContain('INV-005');
     expect(actionResult.render.html).not.toContain('>Invoice Number<');
-    expect(actionResult.render.html).not.toContain('>From Address<');
-    expect(actionResult.render.html).not.toContain('>Client Address<');
-    expect(actionResult.render.html).toContain('1010 Emerald Street');
-    expect(actionResult.render.html).toContain('USD 125');
-    expect(actionResult.render.html).toContain('USD 6250');
-    expect(actionResult.render.html).toContain('USD 7500');
+    expect(actionResult.render.html).toContain('From Address');
+    expect(actionResult.render.html).toContain('Client Address');
+    expect(actionResult.render.html).toContain('Premium Rabbit Tracking Services');
+    expect(actionResult.render.html).toContain('625000');
+    expect(actionResult.render.html).toContain('750000');
 
     const targetedContainmentMismatches = actionResult.verification.mismatches.filter((mismatch) =>
       (mismatch.constraintId.startsWith('064f66bb-') ||

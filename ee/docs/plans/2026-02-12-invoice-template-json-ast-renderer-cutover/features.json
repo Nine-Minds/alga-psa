@@ -214,7 +214,7 @@
   {
     "id": "F025",
     "description": "Delete compiler and runtime executor modules listed in PRD",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Deleted / Eliminated Layers",
       "Acceptance Criteria (Definition of Done)"

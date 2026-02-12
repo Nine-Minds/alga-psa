@@ -14,11 +14,12 @@ describe('invoice template AST persistence wiring', () => {
     expect(modelSource).toContain("'templateAst'");
   });
 
-  it('treats templateAst payloads as canonical and skips compile path gating', () => {
+  it('uses direct metadata persistence without AssemblyScript compile gating', () => {
     const actionsSource = readRepoFile('packages/billing/src/actions/invoiceTemplates.ts');
 
-    expect(actionsSource).toContain('const hasCanonicalAst = Boolean((templateToSaveWithoutFlags as any).templateAst);');
-    expect(actionsSource).toContain('if (!hasCanonicalAst &&');
+    expect(actionsSource).toContain('Canonical AST templates are the only runtime path; persist metadata directly.');
+    expect(actionsSource).not.toContain('if (!hasCanonicalAst &&');
+    expect(actionsSource).not.toContain('buildAssemblyScriptCompileCommand');
   });
 
   it('wires standard templates to AST representations', () => {

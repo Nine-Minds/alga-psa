@@ -604,3 +604,29 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
+
+### 2026-02-12 — F025 implemented
+
+- Deleted PRD-listed legacy compiler/executor modules from billing package:
+  - `packages/billing/src/components/invoice-designer/compiler/guiIr.ts`
+  - `packages/billing/src/components/invoice-designer/compiler/assemblyScriptGenerator.ts`
+  - `packages/billing/src/components/invoice-designer/compiler/diagnostics.ts`
+  - `packages/billing/src/lib/invoice-template-compiler/assemblyScriptCompile.ts`
+  - `packages/billing/src/lib/invoice-renderer/wasm-executor.ts`
+  - `packages/billing/src/lib/invoice-renderer/quickjs-executor.ts`
+  - `packages/billing/src/lib/invoice-renderer/host-functions.ts`
+- Removed associated dead test/snapshot scaffolding tied to deleted modules.
+- Reworked affected action paths to remove imports of deleted modules:
+  - `packages/billing/src/actions/invoiceTemplatePreview.ts` now only contains AST preview runtime path,
+  - `packages/billing/src/actions/invoiceTemplates.ts` no longer imports compiler helper module.
+- Added explicit removal wiring test:
+  - `packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts`.
+
+Rationale:
+
+- This removes the custom compiler/executor layer from billing runtime code and enforces absence via tests.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts` (pass).
