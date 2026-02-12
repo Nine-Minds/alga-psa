@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
@@ -22,6 +22,7 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
 import { deleteTicket, deleteTickets } from '../actions/ticketActions';
@@ -38,6 +39,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { preCheckDeletion } from '@alga-psa/core';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
@@ -117,7 +119,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(user || null);
   const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
@@ -470,10 +474,37 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     filtersHaveInitialValues
   ]);
 
+  const resetDeleteState = () => {
+    setTicketToDelete(null);
+    setTicketToDeleteName(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
+
+  const runDeleteValidation = useCallback(async (ticketId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('ticket', ticketId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate ticket deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
   const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
     setTicketToDelete(ticketId);
     setTicketToDeleteName(ticketNameOrNumber);
-    setDeleteError(null);
+    void runDeleteValidation(ticketId);
   };
   
   const onQuickViewClient = useCallback(async (clientId: string) => {
@@ -540,7 +571,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (!ticketToDelete) return;
 
     try {
-      await deleteTicket(ticketToDelete);
+      setIsDeleteProcessing(true);
+      const result = await deleteTicket(ticketToDelete);
+
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
+
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
       setSelectedTicketIds(prev => {
         if (!ticketToDelete || !prev.has(ticketToDelete)) {
@@ -550,16 +588,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         next.delete(ticketToDelete);
         return next;
       });
-      setTicketToDelete(null);
-      setTicketToDeleteName(null);
-      setDeleteError(null);
+      resetDeleteState();
     } catch (error: any) {
       console.error('Failed to delete ticket:', error);
-      if (error.message && error.message.startsWith('VALIDATION_ERROR:')) {
-        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
-      } else {
-        setDeleteError('An unexpected error occurred while deleting the ticket.');
-      }
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error?.message || 'An unexpected error occurred while deleting the ticket.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -1512,23 +1552,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onOpenChange={setIsQuickAddOpen}
         onTicketAdded={handleTicketAdded}
       />
-      <ConfirmationDialog
+      <DeleteEntityDialog
         id={`${id}-delete-ticket-dialog`}
         isOpen={!!ticketToDelete}
-        onClose={() => {
-          setTicketToDelete(null);
-          setTicketToDeleteName(null);
-          setDeleteError(null);
-        }}
-        onConfirm={confirmDeleteTicket}
-        title="Delete Ticket"
-        message={
-          deleteError
-            ? deleteError
-            : `Are you sure you want to delete ticket "${ticketToDeleteName || ticketToDelete}"? This action cannot be undone.`
-        }
-        confirmLabel={deleteError ? undefined : "Delete"}
-        cancelLabel={deleteError ? "Close" : "Cancel"}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDeleteTicket}
+        entityName={ticketToDeleteName || ticketToDelete || 'this ticket'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
       <ConfirmationDialog
         id={`${id}-bundle-multi-client-confirm`}

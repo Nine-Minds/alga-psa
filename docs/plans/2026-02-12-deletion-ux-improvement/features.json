@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "Migrate @alga-psa/tickets ticket deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "Remove manual deleteEntityTags call from ticketActions.ts (automatic via config)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
