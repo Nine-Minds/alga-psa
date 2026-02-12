@@ -29826,3 +29826,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T038 implemented
+
+- Marked preview compile cache removal and unreferenced wiring as implemented.
+- Evidence: packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).

@@ -364,7 +364,7 @@
   {
     "id": "T038",
     "description": "Preview cache module for compile artifacts is removed and unreferenced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025"
