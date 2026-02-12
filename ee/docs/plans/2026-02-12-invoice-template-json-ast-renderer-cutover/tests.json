@@ -218,7 +218,7 @@
   {
     "id": "T023",
     "description": "Template interfaces include AST field and compile without legacy compile-required assumptions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ],

@@ -29691,3 +29691,12 @@ Verification:
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.compilerCutover.test.ts` (pass).
+
+### 2026-02-12 — T023 implemented
+
+- Marked type-contract coverage for canonical templateAst payloads without legacy compile assumptions as implemented.
+- Evidence: packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts' (pass).
