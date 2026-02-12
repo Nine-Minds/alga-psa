@@ -459,7 +459,7 @@
   {
     "id": "T056",
     "description": "npm run build succeeds with no TypeScript errors after all changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
