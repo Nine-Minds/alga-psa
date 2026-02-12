@@ -131,7 +131,7 @@ export function ClientNotificationsList() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [tProfile]);
 
   // Fetch unread count
   const loadUnreadCount = useCallback(async () => {

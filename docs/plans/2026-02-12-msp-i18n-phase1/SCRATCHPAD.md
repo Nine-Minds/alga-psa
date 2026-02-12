@@ -168,3 +168,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T055: Feature namespace key counts match across all 7 languages (same structure per namespace) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T056: npm run build succeeds with no TypeScript errors after all changes (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T056 reset to incomplete: `npm run build` failed with Next.js OOM after `next build --webpack`; rerun with more memory or adjusted build settings.
+- Build fix: ClientNotificationsList `loadActivities` now depends on `tProfile` instead of undefined `t` (TS error during Next build).
