@@ -506,7 +506,7 @@
   {
     "id": "T085",
     "description": "Project deletion calls deleteEntitiesTags for child task tags in performDelete",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F063"]
   },
   {
