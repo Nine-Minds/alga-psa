@@ -440,7 +440,7 @@
   {
     "id": "T074",
     "description": "Contact deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F053"]
   },
   {
