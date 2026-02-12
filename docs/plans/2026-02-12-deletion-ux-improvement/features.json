@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "Migrate @alga-psa/reference-data status deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]

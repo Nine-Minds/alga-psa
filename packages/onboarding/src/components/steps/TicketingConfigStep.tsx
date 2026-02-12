@@ -169,6 +169,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [categoryDeleteValidation, setCategoryDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isCategoryDeleteValidating, setIsCategoryDeleteValidating] = useState(false);
   const [isCategoryDeleteProcessing, setIsCategoryDeleteProcessing] = useState(false);
+  const [statusToDelete, setStatusToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [statusDeleteValidation, setStatusDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isStatusDeleteValidating, setIsStatusDeleteValidating] = useState(false);
+  const [isStatusDeleteProcessing, setIsStatusDeleteProcessing] = useState(false);
 
   // ITIL configuration
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
@@ -846,27 +850,70 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
-  const removeStatus = async (statusId: string) => {
+  const resetStatusDeleteState = () => {
+    setStatusToDelete(null);
+    setStatusDeleteValidation(null);
+    setIsStatusDeleteValidating(false);
+    setIsStatusDeleteProcessing(false);
+  };
+
+  const runStatusDeleteValidation = useCallback(async (statusId: string) => {
+    setIsStatusDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('statuses', statusId);
-      if (result.success) {
-        // Remove from imported statuses
-        setImportedStatuses(prev => prev.filter(s => s.status_id !== statusId));
-        
-        // Remove from data.statuses
-        updateData({ 
-          statuses: (data.statuses || []).filter(s => s.status_id !== statusId) 
-        });
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Status deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete status');
+      const result = await preCheckDeletion('status', statusId);
+      setStatusDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating status deletion:', error);
+      setStatusDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsStatusDeleteValidating(false);
+    }
+  }, []);
+
+  const openStatusDeleteDialog = (statusId: string) => {
+    const status = (data.statuses || []).find(s => s.status_id === statusId);
+    setStatusToDelete({
+      id: statusId,
+      name: status?.name || 'this status'
+    });
+    void runStatusDeleteValidation(statusId);
+  };
+
+  const confirmDeleteStatus = async () => {
+    if (!statusToDelete) return;
+    try {
+      setIsStatusDeleteProcessing(true);
+      const result = await deleteReferenceDataItem('statuses', statusToDelete.id);
+      if (!result.success) {
+        setStatusDeleteValidation(result);
+        return;
       }
+
+      setImportedStatuses(prev => prev.filter(s => s.status_id !== statusToDelete.id));
+      updateData({
+        statuses: (data.statuses || []).filter(s => s.status_id !== statusToDelete.id)
+      });
+
+      loadExistingData();
+      toast.success('Status deleted successfully');
+      resetStatusDeleteState();
     } catch (error) {
       console.error('Error deleting status:', error);
-      toast.error('Failed to delete status');
+      setStatusDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete status.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsStatusDeleteProcessing(false);
     }
   };
 
@@ -2226,7 +2273,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeStatus(status.status_id)}
+                              onClick={() => openStatusDeleteDialog(status.status_id)}
                               className="p-1 h-6 w-6"
                               title="Remove status"
                               disabled={status.is_default}
@@ -2748,6 +2795,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         validationResult={categoryDeleteValidation}
         isValidating={isCategoryDeleteValidating}
         isDeleting={isCategoryDeleteProcessing}
+      />
+      <DeleteEntityDialog
+        id="delete-status-dialog"
+        isOpen={Boolean(statusToDelete)}
+        onClose={resetStatusDeleteState}
+        onConfirmDelete={confirmDeleteStatus}
+        entityName={statusToDelete?.name || 'this status'}
+        validationResult={statusDeleteValidation}
+        isValidating={isStatusDeleteValidating}
+        isDeleting={isStatusDeleteProcessing}
       />
     </div>
   );

@@ -48,6 +48,44 @@ const countTimeEntryBilling = async (
   return Number(result?.count ?? 0);
 };
 
+const getStatusType = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<string | null> => {
+  const status = await trx('statuses')
+    .select('status_type')
+    .where({
+      tenant: options.tenant,
+      status_id: options.entityId
+    })
+    .first();
+
+  return status?.status_type ?? null;
+};
+
+const countStatusUsage = (
+  statusType: string,
+  table: string,
+  foreignKey: string
+) => {
+  return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
+    const currentType = await getStatusType(trx, options);
+    if (!currentType || currentType !== statusType) {
+      return 0;
+    }
+
+    const result = await trx(table)
+      .where({
+        tenant: options.tenant,
+        [foreignKey]: options.entityId
+      })
+      .count<{ count: string }>('1 as count')
+      .first();
+
+    return Number(result?.count ?? 0);
+  };
+};
+
 export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
   client: {
     entityType: 'client',
@@ -127,7 +165,38 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     entityType: 'status',
     supportsInactive: false,
     supportsArchive: false,
-    dependencies: []
+    dependencies: [
+      {
+        type: 'ticket',
+        table: 'tickets',
+        label: 'ticket',
+        countQuery: countStatusUsage('ticket', 'tickets', 'status_id')
+      },
+      {
+        type: 'project',
+        table: 'projects',
+        label: 'project',
+        countQuery: countStatusUsage('project', 'projects', 'status')
+      },
+      {
+        type: 'project_task',
+        table: 'project_tasks',
+        label: 'project task',
+        countQuery: countStatusUsage('project_task', 'project_tasks', 'status_id')
+      },
+      {
+        type: 'project_status_mapping',
+        table: 'project_status_mappings',
+        label: 'project status mapping',
+        countQuery: countStatusUsage('project_task', 'project_status_mappings', 'status_id')
+      },
+      {
+        type: 'interaction',
+        table: 'interactions',
+        label: 'interaction',
+        countQuery: countStatusUsage('interaction', 'interactions', 'status_id')
+      }
+    ]
   },
   team: {
     entityType: 'team',
