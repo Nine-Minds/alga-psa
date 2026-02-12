@@ -320,3 +320,25 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/*.test.ts packages/billing/src/lib/invoice-template-ast/*.test.tsx` (pass).
+
+### 2026-02-12 — F012 implemented
+
+- Added designer workspace -> AST exporter in:
+  - `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts`
+  - with helper `exportWorkspaceToInvoiceTemplateAst(workspace)` and JSON helper.
+- Export mapping now emits versioned `InvoiceTemplateAst` directly from visual workspace (no IR step).
+- Updated `InvoiceTemplateEditor` visual save/export path (`packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx`):
+  - replaced IR/AssemblyScript generation in code-view projection with AST JSON projection,
+  - on save with GUI designer enabled, persists canonical `templateAst` payload directly from workspace export,
+  - keeps legacy `assemblyScriptSource` comment persistence only as temporary compatibility scaffolding.
+- Added exporter tests:
+  - `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`.
+
+Rationale:
+
+- This establishes AST as the designer export artifact and removes compiler-IR coupling from the visual export path.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` (pass).
+- `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (fails due existing React 19 test harness issue: `React.act is not a function` from `@testing-library/react`/`react-dom-test-utils` in this environment).

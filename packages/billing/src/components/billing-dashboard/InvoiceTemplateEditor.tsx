@@ -20,8 +20,10 @@ import {
   getInvoiceDesignerLocalStorageKey,
   upsertInvoiceDesignerStateInSource,
 } from '../invoice-designer/utils/persistence';
-import { extractInvoiceDesignerIr } from '../invoice-designer/compiler/guiIr';
-import { generateAssemblyScriptFromIr } from '../invoice-designer/compiler/assemblyScriptGenerator';
+import {
+  exportWorkspaceToInvoiceTemplateAst,
+  exportWorkspaceToInvoiceTemplateAstJson,
+} from '../invoice-designer/ast/workspaceAst';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
@@ -82,9 +84,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         showRulers: designerShowRulers,
         canvasScale: designerCanvasScale,
       };
-      const ir = extractInvoiceDesignerIr(workspace);
-      const generated = generateAssemblyScriptFromIr(ir);
-      return upsertInvoiceDesignerStateInSource(generated.source, workspace);
+      return exportWorkspaceToInvoiceTemplateAstJson(workspace);
     } catch {
       return null;
     }
@@ -240,12 +240,15 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         }
 
         try {
-          const ir = extractInvoiceDesignerIr(workspace);
-          const generated = generateAssemblyScriptFromIr(ir);
-          dataToSave.assemblyScriptSource = upsertInvoiceDesignerStateInSource(generated.source, workspace);
+          const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+          (dataToSave as Record<string, unknown>).templateAst = ast;
+          dataToSave.assemblyScriptSource = upsertInvoiceDesignerStateInSource(
+            dataToSave.assemblyScriptSource ?? '',
+            workspace
+          );
         } catch (compilerError) {
-          const message = compilerError instanceof Error ? compilerError.message : 'Unknown compiler error';
-          setError(`Failed to generate template source from visual workspace: ${message}`);
+          const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';
+          setError(`Failed to export template AST from visual workspace: ${message}`);
           setIsLoading(false);
           return;
         }
@@ -363,8 +366,8 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                <TabsContent value="visual" className="pt-4 space-y-3">
                  <Alert variant="info">
                    <AlertDescription>
-                     Visual designer is feature-flagged and stores its workspace state alongside the template source.
-                     Invoice output remains driven by the AssemblyScript template.
+                     Visual designer is feature-flagged and exports a versioned JSON AST as the canonical template model.
+                     Legacy source is retained temporarily for compatibility while cutover completes.
                    </AlertDescription>
                  </Alert>
                  {forceLocalDesignerOverride && !guiDesignerEnabled && (
@@ -389,7 +392,9 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                      </AlertDescription>
                    </Alert>
                  )}
-                 <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">AssemblyScript Source</label>
+                 <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">
+                   {canUseDesigner ? 'Template AST (JSON)' : 'AssemblyScript Source'}
+                 </label>
                  <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
                    <Editor
                      height={editorHeight}

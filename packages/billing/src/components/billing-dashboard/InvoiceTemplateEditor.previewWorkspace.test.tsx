@@ -214,8 +214,11 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       name: 'Template A',
       template_id: 'tpl-1',
     });
+    expect(payload.templateAst).toMatchObject({
+      kind: 'invoice-template-ast',
+      version: 1,
+    });
     expect(typeof payload.assemblyScriptSource).toBe('string');
-    expect(payload.assemblyScriptSource).toContain('export function generateLayout');
     expect(payload.assemblyScriptSource).toContain('ALGA_INVOICE_DESIGNER_STATE_V1');
   });
 
@@ -249,7 +252,10 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
     await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalled());
     const payload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
-    expect(payload.assemblyScriptSource).toContain('export function generateLayout');
+    expect(payload.templateAst).toMatchObject({
+      kind: 'invoice-template-ast',
+      version: 1,
+    });
     expect(payload.assemblyScriptSource).not.toContain('// manually edited source should be ignored');
   });
 

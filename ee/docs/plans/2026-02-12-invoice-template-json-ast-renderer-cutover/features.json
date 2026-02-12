@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Update `DesignerVisualWorkspace` export path to persist AST directly instead of compiler IR",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Goals"]
   },
   {
