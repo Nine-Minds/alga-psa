@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Create features/appointments.json for all 7 languages by extracting appointments.* from clientPortal.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
