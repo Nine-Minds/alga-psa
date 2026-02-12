@@ -548,7 +548,7 @@
   {
     "id": "T092",
     "description": "Asset deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F070"]
   },
   {
