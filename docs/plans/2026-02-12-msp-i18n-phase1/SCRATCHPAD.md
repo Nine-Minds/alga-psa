@@ -83,3 +83,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - EE MSP layout now gates locale fetch behind `msp-i18n-enabled`.
 - EE `MspLayoutClient` wraps content in `I18nWrapper` only when MSP i18n is enabled.
 - Extracted `tickets` translations into `server/public/locales/*/features/tickets.json`.
+- Extracted `projects` translations into `server/public/locales/*/features/projects.json`.

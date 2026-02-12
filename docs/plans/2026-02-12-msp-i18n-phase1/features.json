@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Create features/projects.json for all 7 languages by extracting projects.* from clientPortal.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
