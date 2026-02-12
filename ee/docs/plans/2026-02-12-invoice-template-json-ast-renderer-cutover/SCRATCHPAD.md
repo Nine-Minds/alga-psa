@@ -29871,3 +29871,12 @@ Verification:
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateSaveRuntimeWasmRemoval.test.ts` (pass).
+
+### 2026-02-12 — T043 implemented
+
+- Marked runtime render path guard against  dependency as implemented.
+- Evidence: packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts::keeps preview and PDF paths on evaluator/renderer modules
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).

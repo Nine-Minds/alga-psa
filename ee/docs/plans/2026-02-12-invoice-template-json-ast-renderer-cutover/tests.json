@@ -411,7 +411,7 @@
   {
     "id": "T043",
     "description": "Invoice rendering path does not call `getCompiledWasm` for AST templates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F022"
