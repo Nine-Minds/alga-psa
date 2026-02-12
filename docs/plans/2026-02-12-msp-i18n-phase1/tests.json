@@ -137,7 +137,7 @@
   {
     "id": "T017",
     "description": "useTranslation('features/tickets') loads features/tickets.json via http-backend loadPath",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
