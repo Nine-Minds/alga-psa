@@ -256,7 +256,7 @@
   {
     "id": "T031",
     "description": "msp/core.json exists for English with nav, sidebar, header, and settings keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
