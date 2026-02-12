@@ -6,8 +6,7 @@ import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
-import Drawer from '@alga-psa/ui/components/Drawer';
-import { DrawerProvider } from "@alga-psa/ui";
+import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
@@ -21,8 +20,6 @@ interface DefaultLayoutProps {
 }
 
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
@@ -215,14 +212,11 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     console.log('Setting chat title:', title);
   };
 
-  const closeDrawer = () => {
-    setIsDrawerOpen(false);
-  };
 
   return (
     <MspSchedulingProvider>
-    <MspTicketIntegrationProvider>
     <DrawerProvider>
+    <MspTicketIntegrationProvider>
       <ActivityDrawerProvider>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
@@ -278,14 +272,12 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 hf={null}
               />
             ) : null}
-            <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
-              {drawerContent}
-            </Drawer>
           </div>
         </div>
+        <DrawerOutlet />
       </ActivityDrawerProvider>
-    </DrawerProvider>
     </MspTicketIntegrationProvider>
+    </DrawerProvider>
     </MspSchedulingProvider>
   );
 }

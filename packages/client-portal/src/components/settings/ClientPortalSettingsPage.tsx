@@ -6,7 +6,7 @@ import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
-import { DrawerProvider } from "@alga-psa/ui";
+import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -142,6 +142,7 @@ export default function ClientPortalSettingsPage() {
         data-automation-type="client-portal-settings-tabs"
       />
     </div>
+    <DrawerOutlet />
     </DrawerProvider>
   );
 }

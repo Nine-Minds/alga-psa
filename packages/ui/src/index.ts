@@ -10,7 +10,7 @@ export { useToast } from './hooks/use-toast';
 export { useFeatureFlag } from './hooks/useFeatureFlag';
 // Note: useTagPermissions has been moved to @alga-psa/tags/hooks
 export { useTenant } from './components/providers/TenantProvider';
-export { DrawerProvider, useDrawer } from './context/DrawerContext';
+export { DrawerProvider, DrawerOutlet, useDrawer } from './context/DrawerContext';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
 
