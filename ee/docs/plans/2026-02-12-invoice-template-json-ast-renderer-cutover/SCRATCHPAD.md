@@ -22295,3 +22295,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
+
+### 2026-02-12 — T019 implemented
+
+- Marked designer workspace export-to-AST integration coverage as implemented.
+- Evidence: packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts::exports designer workspace to a versioned AST document
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).

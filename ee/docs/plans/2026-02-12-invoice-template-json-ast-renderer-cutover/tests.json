@@ -179,7 +179,7 @@
   {
     "id": "T019",
     "description": "Designer export returns valid AST payload from current canvas state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F001"
