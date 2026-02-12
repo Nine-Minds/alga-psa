@@ -72,7 +72,7 @@
   {
     "id": "T008",
     "description": "Evaluator applies multi-key sort transforms deterministically",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008"
