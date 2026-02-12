@@ -93,7 +93,7 @@
   {
     "id": "T012",
     "description": "features/projects.json exists for all 7 languages with flattened keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
