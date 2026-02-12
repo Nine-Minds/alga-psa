@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "EntityDeletionConfig includes tagEntityType optional field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
