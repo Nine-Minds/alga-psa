@@ -296,7 +296,7 @@
   {
     "id": "T036",
     "description": "With flag ON: LanguagePreference selector appears in UserProfile component",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"
