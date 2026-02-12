@@ -160,7 +160,7 @@
   {
     "id": "T017",
     "description": "Renderer escapes unsafe text content to prevent HTML injection",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F029"

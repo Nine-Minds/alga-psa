@@ -22277,3 +22277,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
+
+### 2026-02-12 — T017 implemented
+
+- Marked unsafe text escaping behavior in renderer output as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx::escapes unsafe text content in rendered HTML
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
