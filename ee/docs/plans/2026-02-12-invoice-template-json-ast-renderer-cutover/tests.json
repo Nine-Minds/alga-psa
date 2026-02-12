@@ -208,7 +208,7 @@
   {
     "id": "T022",
     "description": "InvoiceTemplateEditor save path no longer calls `generateAssemblyScriptFromIr`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F025"

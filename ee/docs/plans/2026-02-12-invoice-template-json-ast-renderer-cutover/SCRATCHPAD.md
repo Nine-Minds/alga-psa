@@ -29682,3 +29682,12 @@ If you need to partially mock a module, you can use "importOriginal" helper insi
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.compilerCutover.test.ts` (pass).
+
+### 2026-02-12 — T022 implemented
+
+- Closed save-path regression guard for `generateAssemblyScriptFromIr` usage using the same editor compiler-cutover suite.
+- Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.compilerCutover.test.ts`.
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.compilerCutover.test.ts` (pass).
