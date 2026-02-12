@@ -36,6 +36,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
+import { useRouter } from 'next/navigation';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -149,6 +150,7 @@ export function QuickAddTicket({
   assetId,
   renderBeforeFooter
 }: QuickAddTicketProps) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -556,12 +558,10 @@ export function QuickAddTicket({
     return validationErrors;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
     setHasAttemptedSubmit(true);
 
-      const validationErrors = validateForm();
+    const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       setError(validationErrors.join('\n'));
       return;
@@ -666,6 +666,10 @@ export function QuickAddTicket({
       await onTicketAdded({ ...newTicket, tags: createdTags });
       resetForm();
       onOpenChange(false);
+
+      if (openAfterCreate && newTicket.ticket_id) {
+        router.push(`/msp/tickets/${newTicket.ticket_id}`);
+      }
     } catch (error) {
       console.error('Error creating ticket:', error);
       setError(error instanceof Error ? error.message : 'Failed to create ticket. Please try again.');
@@ -674,12 +678,24 @@ export function QuickAddTicket({
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await handleCreateTicket();
+  };
+
   const filteredClients = clients.filter(client => {
     if (clientFilterState === 'all') return true;
     if (clientFilterState === 'active') return !client.is_inactive;
     if (clientFilterState === 'inactive') return client.is_inactive;
     return true;
   });
+
+  const hasRequiredFieldErrors = !title.trim() || !boardId || !statusId ||
+    (boardConfig.priority_type === 'custom' && !priorityId) ||
+    (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
+    (boardConfig.priority_type === undefined && !priorityId) ||
+    !clientId;
 
 
   const memoizedStatusOptions = useMemo(
@@ -1093,16 +1109,24 @@ export function QuickAddTicket({
                       Cancel
                     </Button>
                     <Button
+                      id={`${id}-create-open-btn`}
+                      type="button"
+                      variant="default"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        void handleCreateTicket({ openAfterCreate: true });
+                      }}
+                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save + Open'}
+                    </Button>
+                    <Button
                       id={`${id}-submit-btn`}
                       type={isEmbedded ? "button" : "submit"}
                       variant="default"
                       disabled={isSubmitting}
-                      onClick={isEmbedded ? () => handleSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent) : undefined}
-                      className={!title.trim() || !boardId || !statusId ||
-                        (boardConfig.priority_type === 'custom' && !priorityId) ||
-                        (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
-                        (boardConfig.priority_type === undefined && !priorityId) ||
-                        !clientId ? 'opacity-50' : ''}
+                      onClick={isEmbedded ? () => { void handleCreateTicket(); } : undefined}
+                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>
