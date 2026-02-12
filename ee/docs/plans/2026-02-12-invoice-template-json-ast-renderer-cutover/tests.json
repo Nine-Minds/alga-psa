@@ -374,7 +374,7 @@
   {
     "id": "T039",
     "description": "Deleted compiler/executor files are absent from repo and import graph",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ],
