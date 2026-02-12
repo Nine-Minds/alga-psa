@@ -386,11 +386,6 @@ const BoardsSettings: React.FC = () => {
             }}
             className="data-[state=checked]:bg-primary-500"
           />
-          {value && (
-            <span className="text-xs text-gray-500">
-              Default for client portal
-            </span>
-          )}
         </div>
       ),
     },
