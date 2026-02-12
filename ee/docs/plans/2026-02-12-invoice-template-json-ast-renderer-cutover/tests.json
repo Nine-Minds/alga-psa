@@ -227,7 +227,7 @@
   {
     "id": "T024",
     "description": "Template save persists AST payload for tenant templates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],

@@ -29700,3 +29700,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts' (pass).
+
+### 2026-02-12 — T024 implemented
+
+- Marked tenant template save-path AST persistence wiring as implemented.
+- Evidence: packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts::uses direct metadata persistence without AssemblyScript compile gating
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts' (pass).
