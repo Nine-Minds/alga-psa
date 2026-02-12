@@ -12,7 +12,7 @@
   {
     "id": "T002",
     "description": "AST schema rejects unknown node type with actionable validation error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"

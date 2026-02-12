@@ -7216,3 +7216,12 @@ Ignored nodes: comments, script, style
      Errors  1 error
    Start at  14:52:46
    Duration  25.74s (transform 2.21s, setup 290ms, collect 2.93s, tests 13.48s, environment 235ms, prepare 52ms) (pass).
+
+### 2026-02-12 — T001 implemented
+
+- Marked minimal AST schema acceptance as implemented.
+- Evidence: `packages/billing/src/lib/invoice-template-ast/schema.test.ts` (`validates a minimal AST document`).
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
