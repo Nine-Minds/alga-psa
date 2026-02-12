@@ -94,3 +94,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Migrated client portal projects components to `features/projects` namespace and routed shared common strings via `client-portal/core`.
 - Migrated client portal billing components to `features/billing` namespace with shared core strings handled via `client-portal/core`.
 - Migrated client portal document-related UI to `features/documents` and updated Documents components to support new key paths.
+- Migrated client portal appointments components to `features/appointments` with common strings routed via `client-portal/core`.

@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Migrate all client portal components using appointments.* keys to useTranslation('features/appointments')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
