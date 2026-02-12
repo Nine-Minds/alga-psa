@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "Migrate @alga-psa/documents document deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
