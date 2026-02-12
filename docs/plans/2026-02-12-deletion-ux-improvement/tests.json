@@ -542,7 +542,7 @@
   {
     "id": "T091",
     "description": "Document deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F069"]
   },
   {
