@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "deleteEntityWithValidation does NOT call performDelete when validation fails",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
