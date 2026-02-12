@@ -530,3 +530,25 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts` (pass).
+
+### 2026-02-12 — F022 implemented
+
+- Updated server PDF generation invoice path to use AST evaluator + shared renderer output instead of Wasm execution in:
+  - `server/src/services/pdf-generation.service.ts`
+- Changes made:
+  - removed `getCompiledWasm`, `executeWasmTemplate`, and `renderLayout` usage/imports from invoice PDF rendering flow,
+  - now requires canonical `templateAst` on selected template,
+  - evaluates AST with `evaluateInvoiceTemplateAst`,
+  - produces complete HTML document via `renderInvoiceTemplateAstHtmlDocument` for Puppeteer PDF generation.
+- Added wiring coverage:
+  - `packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts`
+  - asserts PDF service uses AST helper path and no longer references Wasm execution helpers.
+
+Rationale:
+
+- Backend invoice PDF generation now consumes the declarative AST rendering path and removes runtime dependence on Wasm executor in the PDF service.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).

@@ -187,7 +187,7 @@
   {
     "id": "F022",
     "description": "Update PDF generation service to use shared renderer output instead of Wasm executor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Users and Primary Flows"
