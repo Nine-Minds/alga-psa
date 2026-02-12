@@ -361,3 +361,14 @@ Commands run:
 
 - `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` (pass).
 - `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (editor test files fail due existing `React.act is not a function` harness issue).
+
+### 2026-02-12 — F014 implemented
+
+- Confirmed `InvoiceTemplateEditor` no longer imports or calls:
+  - `extractInvoiceDesignerIr`
+  - `generateAssemblyScriptFromIr`
+- Save path now uses AST exporter (`exportWorkspaceToInvoiceTemplateAst`) instead of IR/compiler generation.
+
+Verification:
+
+- `rg -n "extractInvoiceDesignerIr|generateAssemblyScriptFromIr" packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx` (no matches).

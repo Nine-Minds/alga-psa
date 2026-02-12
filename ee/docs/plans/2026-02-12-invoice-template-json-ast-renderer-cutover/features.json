@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Remove save-path dependency on `extractInvoiceDesignerIr` and `generateAssemblyScriptFromIr` in `InvoiceTemplateEditor`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Deleted / Eliminated Layers", "Requirements"]
   },
   {
