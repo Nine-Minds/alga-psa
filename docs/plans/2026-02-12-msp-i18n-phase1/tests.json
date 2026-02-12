@@ -217,7 +217,7 @@
   {
     "id": "T027",
     "description": "All client portal components using auth/account keys migrated to useTranslation('client-portal/auth')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

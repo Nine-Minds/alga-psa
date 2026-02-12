@@ -137,3 +137,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T024: All client portal components using documents.* keys migrated to useTranslation('features/documents') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T025: All client portal components using appointments.* keys migrated to useTranslation('features/appointments') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T026: All client portal components using nav/dashboard/common/pagination/time keys migrated to useTranslation('client-portal/core') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T027: All client portal components using auth/account keys migrated to useTranslation('client-portal/auth') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
