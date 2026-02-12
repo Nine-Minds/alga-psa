@@ -371,7 +371,7 @@
   {
     "id": "T045",
     "description": "MspLanguageSettings shows enabled languages checkboxes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]

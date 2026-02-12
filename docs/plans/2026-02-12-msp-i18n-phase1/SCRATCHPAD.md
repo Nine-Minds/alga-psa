@@ -155,3 +155,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T042: With flag OFF: no Language section visible in Settings > General > Organization & Access (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T043: With flag ON: MspLanguageSettings section appears in Settings > General > Organization & Access after Teams (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T044: MspLanguageSettings shows default language dropdown with all 7 languages (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T045: MspLanguageSettings shows enabled languages checkboxes (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
