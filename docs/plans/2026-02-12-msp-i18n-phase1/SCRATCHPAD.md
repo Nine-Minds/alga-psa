@@ -111,3 +111,4 @@ Batch into ~4 meaningful commits (not one-liners):
 
 ## Updates
 - Added `server/src/test/unit/i18n/mspI18nPhase1.test.ts` to validate new i18n namespace JSON files (parseable, duplicate-free, consistent key structure) and MSP i18n wiring; fixed import path for `settingsNavigationSections`.
+- T001: msp-i18n-enabled flag exists in DEFAULT_BOOLEAN_FLAGS with default value false (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
