@@ -201,7 +201,7 @@
   {
     "id": "T025",
     "description": "All client portal components using appointments.* keys migrated to useTranslation('features/appointments')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

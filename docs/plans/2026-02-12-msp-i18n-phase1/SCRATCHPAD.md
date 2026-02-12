@@ -135,3 +135,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T022: All client portal components using projects.* keys migrated to useTranslation('features/projects') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T023: All client portal components using billing.* keys migrated to useTranslation('features/billing') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T024: All client portal components using documents.* keys migrated to useTranslation('features/documents') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T025: All client portal components using appointments.* keys migrated to useTranslation('features/appointments') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
