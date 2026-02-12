@@ -435,7 +435,7 @@
   {
     "id": "T053",
     "description": "All new JSON namespace files pass JSON syntax validation (no parse errors)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
