@@ -272,7 +272,7 @@
   {
     "id": "T033",
     "description": "msp/core.json exists for all 6 non-English languages with translated content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
