@@ -278,7 +278,7 @@
   {
     "id": "T047",
     "description": "DeleteEntityDialog renders 'Cannot Delete' title when canDelete=false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
