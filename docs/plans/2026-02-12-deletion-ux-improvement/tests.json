@@ -260,7 +260,7 @@
   {
     "id": "T044",
     "description": "DeleteEntityDialog renders spinner when isValidating=true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
