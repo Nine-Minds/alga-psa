@@ -13322,3 +13322,12 @@ Ignored nodes: comments, script, style
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T003 implemented
+
+- Marked dynamic-table repeat metadata enforcement as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/schema.test.ts::requires repeat binding metadata for dynamic-table nodes
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
