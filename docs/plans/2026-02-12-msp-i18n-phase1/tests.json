@@ -329,7 +329,7 @@
   {
     "id": "T040",
     "description": "After selecting a language and reloading, the selected language persists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"
