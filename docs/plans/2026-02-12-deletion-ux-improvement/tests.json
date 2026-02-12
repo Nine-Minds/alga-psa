@@ -314,7 +314,7 @@
   {
     "id": "T053",
     "description": "DeleteEntityDialog does not render alternative buttons when no alternatives",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
