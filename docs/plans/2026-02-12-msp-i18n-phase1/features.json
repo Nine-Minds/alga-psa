@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Migrate client portal components using nav/dashboard/common/pagination/time keys to useTranslation('client-portal/core')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
