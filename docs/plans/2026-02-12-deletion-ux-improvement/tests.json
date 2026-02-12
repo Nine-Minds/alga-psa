@@ -344,7 +344,7 @@
   {
     "id": "T058",
     "description": "DeleteEntityDialog calls onConfirmDelete when Delete button is clicked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
