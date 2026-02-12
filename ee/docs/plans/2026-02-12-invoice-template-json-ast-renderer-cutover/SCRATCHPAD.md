@@ -13394,3 +13394,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T011 implemented
+
+- Marked computed-field expression and derived totals behavior as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/evaluator.test.ts::computes derived fields and totals composition values
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).

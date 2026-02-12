@@ -102,7 +102,7 @@
   {
     "id": "T011",
     "description": "Evaluator computes derived fields using declared expressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F004"
