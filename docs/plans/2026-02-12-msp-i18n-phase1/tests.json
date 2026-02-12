@@ -209,7 +209,7 @@
   {
     "id": "T026",
     "description": "All client portal components using nav/dashboard/common/pagination/time keys migrated to useTranslation('client-portal/core')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
