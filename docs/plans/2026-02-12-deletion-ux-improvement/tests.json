@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Contact config uses custom countQuery for portal users (users.contact_id with user_type='client')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
