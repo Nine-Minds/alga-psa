@@ -193,7 +193,7 @@
   {
     "id": "T024",
     "description": "All client portal components using documents.* keys migrated to useTranslation('features/documents')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
