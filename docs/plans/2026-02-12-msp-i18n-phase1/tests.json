@@ -354,7 +354,7 @@
   {
     "id": "T043",
     "description": "With flag ON: MspLanguageSettings section appears in Settings > General > Organization & Access after Teams",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029"
