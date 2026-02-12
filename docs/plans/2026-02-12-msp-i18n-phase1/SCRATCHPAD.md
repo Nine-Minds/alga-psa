@@ -108,3 +108,6 @@ Batch into ~4 meaningful commits (not one-liners):
 - MSP org language settings now persist to `tenant_settings.settings.mspPortal` via new actions.
 - Added `getTenantMspLocaleSettingsAction` and `updateTenantMspLocaleSettingsAction` in tenancy actions.
 - Locale hierarchy now considers `mspPortal.defaultLocale` for internal users in `getHierarchicalLocaleAction` (and inherited locale for profile).
+
+## Updates
+- Added `server/src/test/unit/i18n/mspI18nPhase1.test.ts` to validate new i18n namespace JSON files (parseable, duplicate-free, consistent key structure) and MSP i18n wiring; fixed import path for `settingsNavigationSections`.
