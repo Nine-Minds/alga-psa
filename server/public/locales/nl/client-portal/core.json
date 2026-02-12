@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Supporttickets",
+    "projects": "Projecten",
+    "appointments": "Afspraken",
+    "billing": "Facturatie",
+    "assets": "Assets",
+    "clientSettings": "Bedrijfsinstellingen",
+    "profile": "Profiel",
+    "account": "Account",
+    "signOut": "Afmelden",
+    "clientPortal": "Klantenportaal",
+    "portal": "Portal",
+    "notifications": "Meldingen"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welkom terug! Hier is een overzicht van je account.",
+    "loading": "Dashboard wordt geladen...",
+    "error": "Er is een fout opgetreden bij het laden van het dashboard. Probeer het later opnieuw.",
+    "metrics": {
+      "openTickets": "Open supporttickets",
+      "activeProjects": "Lopende projecten",
+      "pendingInvoices": "Openstaande facturen",
+      "activeAssets": "Actieve assets"
+    },
+    "quickActions": {
+      "title": "Snelle acties",
+      "createTicket": "Supportticket aanmaken",
+      "viewLatestInvoice": "Laatste factuur bekijken"
+    },
+    "recentActivity": {
+      "title": "Recente activiteit"
+    },
+    "viewAll": "Alle {{item}} bekijken →"
+  },
+  "common": {
+    "actions": "Acties",
+    "active": "Actief",
+    "inactive": "Inactief",
+    "loading": "Bezig met laden...",
+    "error": "Er is een fout opgetreden",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "yes": "Ja",
+    "no": "Nee",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "resetFilters": "Filters resetten",
+    "sort": "Sorteren",
+    "refresh": "Vernieuwen",
+    "export": "Exporteren",
+    "import": "Importeren",
+    "download": "Downloaden",
+    "upload": "Uploaden",
+    "selectAll": "Alles selecteren",
+    "clearSelection": "Selectie wissen",
+    "view": "Bekijken",
+    "back": "Terug",
+    "next": "Volgende",
+    "previous": "Vorige",
+    "submit": "Indienen",
+    "reset": "Resetten",
+    "noData": "Geen gegevens beschikbaar",
+    "required": "Verplicht",
+    "optional": "Optioneel",
+    "notSpecified": "Niet gespecificeerd",
+    "unknown": "Onbekend"
+  },
+  "pagination": {
+    "showing": "Resultaten {{from}} tot {{to}} van {{total}}",
+    "pageInfo": "Pagina {{current}} van {{total}} ({{count}} records in totaal)",
+    "rowsPerPage": "Rijen per pagina",
+    "page": "Pagina",
+    "of": "van",
+    "first": "Eerste",
+    "last": "Laatste",
+    "previous": "Vorige",
+    "next": "Volgende"
+  },
+  "time": {
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "tomorrow": "Morgen",
+    "thisWeek": "Deze week",
+    "lastWeek": "Vorige week",
+    "thisMonth": "Deze maand",
+    "lastMonth": "Vorige maand",
+    "days": "Dagen",
+    "hours": "Uren",
+    "minutes": "Minuten",
+    "seconds": "Seconden",
+    "ago": "{{time}} geleden",
+    "in": "over {{time}}"
+  }
+}

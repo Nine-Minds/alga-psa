@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Create features/tickets.json for all 7 languages by extracting tickets.* from clientPortal.json (flattened, no wrapper key)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Ticket di supporto",
+    "projects": "Progetti",
+    "appointments": "Appuntamenti",
+    "billing": "Fatturazione",
+    "assets": "Asset",
+    "clientSettings": "Impostazioni cliente",
+    "profile": "Profilo",
+    "account": "Account",
+    "signOut": "Disconnetti",
+    "clientPortal": "Portale clienti",
+    "portal": "Portal",
+    "notifications": "Notifiche"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Bentornato! Ecco una panoramica del tuo account.",
+    "loading": "Caricamento dashboard...",
+    "error": "Si è verificato un errore durante il caricamento della dashboard. Riprova più tardi.",
+    "metrics": {
+      "openTickets": "Ticket di supporto aperti",
+      "activeProjects": "Progetti aperti",
+      "pendingInvoices": "Fatture in sospeso",
+      "activeAssets": "Asset attivi"
+    },
+    "quickActions": {
+      "title": "Azioni rapide",
+      "createTicket": "Crea ticket di supporto",
+      "viewLatestInvoice": "Visualizza l'ultima fattura"
+    },
+    "recentActivity": {
+      "title": "Attività recente"
+    },
+    "viewAll": "Mostra tutti i {{item}} →"
+  },
+  "common": {
+    "actions": "Azioni",
+    "active": "Attivo",
+    "inactive": "Inattivo",
+    "loading": "Caricamento...",
+    "error": "Si è verificato un errore",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "yes": "Sì",
+    "no": "No",
+    "search": "Cerca",
+    "filter": "Filtra",
+    "resetFilters": "Ripristina filtri",
+    "sort": "Ordina",
+    "refresh": "Aggiorna",
+    "export": "Esporta",
+    "import": "Importa",
+    "download": "Scarica",
+    "upload": "Carica",
+    "selectAll": "Seleziona tutto",
+    "clearSelection": "Pulisci selezione",
+    "view": "Visualizza",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "submit": "Invia",
+    "reset": "Reimposta",
+    "noData": "Nessun dato disponibile",
+    "required": "Obbligatorio",
+    "optional": "Opzionale",
+    "notSpecified": "Non specificato",
+    "unknown": "Sconosciuto"
+  },
+  "pagination": {
+    "showing": "Visualizzazione da {{from}} a {{to}} di {{total}} risultati",
+    "pageInfo": "Pagina {{current}} di {{total}} ({{count}} record totali)",
+    "rowsPerPage": "Righe per pagina",
+    "page": "Pagina",
+    "of": "di",
+    "first": "Prima",
+    "last": "Ultima",
+    "previous": "Precedente",
+    "next": "Successiva"
+  },
+  "time": {
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "tomorrow": "Domani",
+    "thisWeek": "Questa settimana",
+    "lastWeek": "La settimana scorsa",
+    "thisMonth": "Questo mese",
+    "lastMonth": "Il mese scorso",
+    "days": "Giorni",
+    "hours": "Ore",
+    "minutes": "Minuti",
+    "seconds": "Secondi",
+    "ago": "{{time}} fa",
+    "in": "tra {{time}}"
+  }
+}

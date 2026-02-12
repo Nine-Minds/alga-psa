@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "tickets": "Tickets d'assistance",
+    "projects": "Projets",
+    "appointments": "Rendez-vous",
+    "billing": "Facturation",
+    "assets": "Actifs",
+    "clientSettings": "Paramètres de l'entreprise",
+    "profile": "Profil",
+    "account": "Compte",
+    "signOut": "Déconnexion",
+    "clientPortal": "Portail client",
+    "portal": "Portail",
+    "notifications": "Notifications"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Content de vous revoir ! Voici un aperçu de votre compte.",
+    "loading": "Chargement du tableau de bord...",
+    "error": "Une erreur est survenue lors du chargement du tableau de bord. Veuillez réessayer plus tard.",
+    "metrics": {
+      "openTickets": "Tickets d'assistance ouverts",
+      "activeProjects": "Projets en cours",
+      "pendingInvoices": "Factures en attente",
+      "activeAssets": "Actifs en service"
+    },
+    "quickActions": {
+      "title": "Actions rapides",
+      "createTicket": "Créer un ticket d'assistance",
+      "viewLatestInvoice": "Voir la dernière facture"
+    },
+    "recentActivity": {
+      "title": "Activité récente"
+    },
+    "viewAll": "Voir tous les {{item}} →"
+  },
+  "common": {
+    "actions": "Actions",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "resetFilters": "Réinitialiser les filtres",
+    "sort": "Trier",
+    "refresh": "Actualiser",
+    "export": "Exporter",
+    "import": "Importer",
+    "download": "Télécharger",
+    "upload": "Téléverser",
+    "selectAll": "Tout sélectionner",
+    "clearSelection": "Effacer la sélection",
+    "view": "Voir",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "submit": "Envoyer",
+    "reset": "Réinitialiser",
+    "noData": "Aucune donnée disponible",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "notSpecified": "Non spécifié",
+    "unknown": "Inconnu"
+  },
+  "pagination": {
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",
+    "pageInfo": "Page {{current}} sur {{total}} ({{count}} enregistrements au total)",
+    "rowsPerPage": "Lignes par page",
+    "page": "Page",
+    "of": "sur",
+    "first": "Première",
+    "last": "Dernière",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "thisWeek": "Cette semaine",
+    "lastWeek": "La semaine dernière",
+    "thisMonth": "Ce mois-ci",
+    "lastMonth": "Le mois dernier",
+    "days": "Jours",
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "seconds": "Secondes",
+    "ago": "il y a {{time}}",
+    "in": "dans {{time}}"
+  }
+}

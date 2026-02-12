@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Support-Tickets",
+    "projects": "Projekte",
+    "appointments": "Termine",
+    "billing": "Abrechnung",
+    "assets": "Assets",
+    "clientSettings": "Unternehmenseinstellungen",
+    "profile": "Profil",
+    "account": "Konto",
+    "signOut": "Abmelden",
+    "clientPortal": "Kundenportal",
+    "portal": "Portal",
+    "notifications": "Benachrichtigungen"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Willkommen zurück! Hier ist eine Übersicht über dein Konto.",
+    "loading": "Dashboard wird geladen...",
+    "error": "Beim Laden des Dashboards ist ein Fehler aufgetreten. Bitte versuche es später erneut.",
+    "metrics": {
+      "openTickets": "Offene Support-Tickets",
+      "activeProjects": "Laufende Projekte",
+      "pendingInvoices": "Ausstehende Rechnungen",
+      "activeAssets": "Aktive Assets"
+    },
+    "quickActions": {
+      "title": "Schnellaktionen",
+      "createTicket": "Support-Ticket erstellen",
+      "viewLatestInvoice": "Neueste Rechnung anzeigen"
+    },
+    "recentActivity": {
+      "title": "Neueste Aktivitäten"
+    },
+    "viewAll": "Alle {{item}} anzeigen →"
+  },
+  "common": {
+    "actions": "Aktionen",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "loading": "Wird geladen...",
+    "error": "Ein Fehler ist aufgetreten",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "yes": "Ja",
+    "no": "Nein",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "resetFilters": "Filter zurücksetzen",
+    "sort": "Sortieren",
+    "refresh": "Aktualisieren",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "download": "Herunterladen",
+    "upload": "Hochladen",
+    "selectAll": "Alles auswählen",
+    "clearSelection": "Auswahl löschen",
+    "view": "Anzeigen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Vorherige",
+    "submit": "Absenden",
+    "reset": "Zurücksetzen",
+    "noData": "Keine Daten verfügbar",
+    "required": "Erforderlich",
+    "optional": "Optional",
+    "notSpecified": "Nicht angegeben",
+    "unknown": "Unbekannt"
+  },
+  "pagination": {
+    "showing": "Zeige {{from}} bis {{to}} von {{total}} Ergebnissen",
+    "pageInfo": "Seite {{current}} von {{total}} ({{count}} Einträge insgesamt)",
+    "rowsPerPage": "Zeilen pro Seite",
+    "page": "Seite",
+    "of": "von",
+    "first": "Erste",
+    "last": "Letzte",
+    "previous": "Zurück",
+    "next": "Weiter"
+  },
+  "time": {
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "tomorrow": "Morgen",
+    "thisWeek": "Diese Woche",
+    "lastWeek": "Letzte Woche",
+    "thisMonth": "Dieser Monat",
+    "lastMonth": "Letzter Monat",
+    "days": "Tage",
+    "hours": "Stunden",
+    "minutes": "Minuten",
+    "seconds": "Sekunden",
+    "ago": "vor {{time}}",
+    "in": "in {{time}}"
+  }
+}

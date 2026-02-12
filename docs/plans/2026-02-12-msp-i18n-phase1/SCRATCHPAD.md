@@ -82,3 +82,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Standard MSP layout returns existing layout tree when flag is disabled (no I18nWrapper).
 - EE MSP layout now gates locale fetch behind `msp-i18n-enabled`.
 - EE `MspLayoutClient` wraps content in `I18nWrapper` only when MSP i18n is enabled.
+- Extracted `tickets` translations into `server/public/locales/*/features/tickets.json`.
