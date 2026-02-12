@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Alternatives are empty when neither supportsInactive nor supportsArchive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
