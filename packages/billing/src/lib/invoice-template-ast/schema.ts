@@ -144,7 +144,7 @@ const predicateSchema: z.ZodType<PredicateInput> = z.lazy(() =>
     z.object({
       type: z.literal('logical'),
       op: z.enum(['and', 'or']),
-      conditions: z.array(predicateSchema),
+      conditions: z.array(predicateSchema).min(1),
     }).strict(),
     z.object({
       type: z.literal('not'),
@@ -171,7 +171,7 @@ const transformOperationSchema = z.discriminatedUnion('type', [
       path: z.string().min(1),
       direction: z.enum(['asc', 'desc']).optional(),
       nulls: z.enum(['first', 'last']).optional(),
-    }).strict()),
+    }).strict()).min(1),
   }).strict(),
   z.object({
     ...transformBaseShape,
@@ -186,7 +186,7 @@ const transformOperationSchema = z.discriminatedUnion('type', [
       id: z.string().min(1),
       op: z.enum(['sum', 'count', 'avg', 'min', 'max']),
       path: z.string().min(1).optional(),
-    }).strict()),
+    }).strict()).min(1),
   }).strict(),
   z.object({
     ...transformBaseShape,
@@ -194,7 +194,7 @@ const transformOperationSchema = z.discriminatedUnion('type', [
     fields: z.array(z.object({
       id: z.string().min(1),
       expression: computationExpressionSchema,
-    }).strict()),
+    }).strict()).min(1),
   }).strict(),
   z.object({
     ...transformBaseShape,
@@ -203,7 +203,7 @@ const transformOperationSchema = z.discriminatedUnion('type', [
       id: z.string().min(1),
       label: z.string().min(1),
       value: computationExpressionSchema,
-    }).strict()),
+    }).strict()).min(1),
   }).strict(),
 ]);
 
@@ -415,7 +415,7 @@ export const invoiceTemplateAstSchema = z.object({
   transforms: z.object({
     sourceBindingId: z.string().min(1),
     outputBindingId: z.string().min(1),
-    operations: z.array(transformOperationSchema),
+    operations: z.array(transformOperationSchema).min(1),
   }).strict().optional(),
   layout: nodeSchema,
 }).strict();

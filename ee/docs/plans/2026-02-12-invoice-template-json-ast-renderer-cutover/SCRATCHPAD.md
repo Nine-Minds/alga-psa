@@ -156,3 +156,24 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
+
+### 2026-02-12 — F004 implemented
+
+- Completed declarative transform operation representation in AST:
+  - Existing transform union now enforced as strict runtime schema in `packages/billing/src/lib/invoice-template-ast/schema.ts`.
+  - Supported operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`.
+- Strengthened runtime payload constraints:
+  - `transforms.operations` must be non-empty.
+  - `sort.keys`, `aggregate.aggregations`, `computed-field.fields`, `totals-compose.totals` must be non-empty.
+  - logical predicates require at least one condition.
+- Added transform-shape tests in `packages/billing/src/lib/invoice-template-ast/schema.test.ts`:
+  - invalid empty `sort.keys` rejected with structured path errors,
+  - valid composed filter/sort/group/aggregate/computed payload accepted.
+
+Rationale:
+
+- This locks in declarative transform expressiveness before evaluator implementation and catches malformed transform configs early.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).

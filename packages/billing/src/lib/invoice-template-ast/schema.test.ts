@@ -100,4 +100,102 @@ describe('invoiceTemplateAstSchema', () => {
 
     expect(validResult.success).toBe(true);
   });
+
+  it('enforces transform payload shapes for filter/sort/group/aggregate/computed workflows', () => {
+    const invalidTransformPayload = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      transforms: {
+        sourceBindingId: 'invoice.items',
+        outputBindingId: 'invoice.items.shaped',
+        operations: [
+          {
+            id: 'sort-1',
+            type: 'sort',
+            keys: [],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [],
+      },
+    });
+
+    expect(invalidTransformPayload.success).toBe(false);
+    if (invalidTransformPayload.success) {
+      return;
+    }
+    expect(invalidTransformPayload.errors.some((error) => error.path.includes('transforms.operations.0.keys'))).toBe(true);
+
+    const validTransformPayload = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      transforms: {
+        sourceBindingId: 'invoice.items',
+        outputBindingId: 'invoice.items.shaped',
+        operations: [
+          {
+            id: 'filter-1',
+            type: 'filter',
+            predicate: {
+              type: 'comparison',
+              path: 'quantity',
+              op: 'gt',
+              value: 0,
+            },
+          },
+          {
+            id: 'sort-1',
+            type: 'sort',
+            keys: [
+              {
+                path: 'description',
+                direction: 'asc',
+              },
+            ],
+          },
+          {
+            id: 'group-1',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-1',
+            type: 'aggregate',
+            aggregations: [
+              {
+                id: 'sum-total',
+                op: 'sum',
+                path: 'total',
+              },
+            ],
+          },
+          {
+            id: 'computed-1',
+            type: 'computed-field',
+            fields: [
+              {
+                id: 'lineTotal',
+                expression: {
+                  type: 'binary',
+                  op: 'multiply',
+                  left: { type: 'path', path: 'quantity' },
+                  right: { type: 'path', path: 'unitPrice' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [],
+      },
+    });
+
+    expect(validTransformPayload.success).toBe(true);
+  });
 });

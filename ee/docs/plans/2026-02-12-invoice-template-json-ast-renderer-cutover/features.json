@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Represent declarative transform operations in AST for filter/sort/group/aggregate/computed-field workflows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Users and Primary Flows"]
   },
   {
