@@ -7225,3 +7225,6091 @@ Ignored nodes: comments, script, style
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
+
+### 2026-02-12 — T002 implemented
+
+- Marked unknown node-type schema rejection with structured diagnostics as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/schema.test.ts::returns structured validation errors for invalid AST payloads
+
+Verification:
+
+-   \ WARN  Unsupported engine: wanted: {"node":">=20 <25"} (current: {"node":"v25.5.0","pnpm":"9.15.9"})
+
+ RUN  v3.2.4 /Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer
+      Running tests with seed "1770925992649"
+
+Environment file path: /Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer/.env.localtest
+ ✓ packages/billing/src/components/invoice-designer/state/designerStore.layoutMode.test.ts (2 tests) 8ms 15 MB heap used
+ ✓ server/src/test/unit/DocumentationService.test.ts (4 tests) 1ms 41 MB heap used
+ ✓ packages/billing/src/lib/invoice-renderer/layout-renderer.test.ts (2 tests) 1ms 60 MB heap used
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/billingInvoiceTiming.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ packages/billing/src/lib/invoice-template-ast/strategies.test.ts (2 tests) 1ms 254 MB heap used
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/externalTaxImport.integration.test.ts > External Tax Import
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/externalTaxImport.integration.test.ts > External Tax Import
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/externalTaxImport.integration.test.ts > External Tax Import
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/externalTaxImport.integration.test.ts > External Tax Import
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/externalTaxImport.integration.test.ts > External Tax Import
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/externalTaxImport.integration.test.ts > External Tax Import
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/accounting/externalTaxImport.integration.test.ts (14 tests | 14 skipped) 20ms 260 MB heap used
+   ↓ External Tax Import > importing tax from external accounting system > should update invoice charges with tax amounts from QuickBooks
+   ↓ External Tax Import > importing tax from external accounting system > should change invoice tax_source from pending_external to external
+   ↓ External Tax Import > importing tax from external accounting system > should create audit record in external_tax_imports table
+   ↓ External Tax Import > importing tax from external accounting system > should update invoice total_amount to include imported tax
+   ↓ External Tax Import > tax allocation across charges > should apply per-line tax amounts from external system
+   ↓ External Tax Import > tax allocation across charges > should handle mix of taxable and non-taxable items
+   ↓ External Tax Import > tax allocation across charges > should handle different tax rates across items
+   ↓ External Tax Import > tax allocation across charges > should distribute proportionally when line matching fails
+   ↓ External Tax Import > tax allocation across charges > should match by charge ID even when external lines are returned out of order
+   ↓ External Tax Import > internal tax calculation is skipped for external delegation > should set tax to zero when invoice has pending_external tax source
+   ↓ External Tax Import > automatic tax import after export > should automatically import tax after exporting invoice with tax delegation
+   ↓ External Tax Import > error handling > should fail if invoice is not pending_external
+   ↓ External Tax Import > error handling > should fail if invoice has no external mapping
+   ↓ External Tax Import > error handling > should fail if external system returns error
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/surveyEmailTemplates.integration.test.ts (2 tests | 2 skipped) 1ms 269 MB heap used
+   ↓ Survey email templates > registers system templates for each supported locale
+   ↓ Survey email templates > renders locale-specific content and falls back to English
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/workflowPayloadContractInference.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts (6 tests) 1ms 277 MB heap used
+stdout | packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts > renderTemplateOnServer AST integration > renders template HTML/CSS from canonical AST payload
+[Server Action] Successfully rendered template: tpl-1
+
+ ✓ packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts (2 tests) 5ms 287 MB heap used
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ server/src/test/unit/extensions/uiHooks.test.ts (2 tests) 0ms 312 MB heap used
+ ✓ ee/server/src/__tests__/unit/schedulerHostApi.unit.test.ts (72 tests) 9ms 272 MB heap used
+ ❯ server/src/lib/extensions/ui/iframeBridge.test.ts (5 tests | 5 failed) 1ms 279 MB heap used
+   × bootstrapIframe (host bridge) > applies sandbox="allow-scripts" by default when none provided 0ms
+     → window is not defined
+   × bootstrapIframe (host bridge) > throws when allowedOrigin mismatches iframe src origin and RUNNER_PUBLIC_BASE is absolute 0ms
+     → window is not defined
+   × bootstrapIframe (host bridge) > sends bootstrap message with envelope version after load 0ms
+     → window is not defined
+   × bootstrapIframe (host bridge) > adjusts iframe height on resize messages with clamping 0ms
+     → window is not defined
+   × bootstrapIframe (host bridge) > validates contentHash format 0ms
+     → window is not defined
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts (1 test | 1 skipped) 2ms 285 MB heap used
+   ↓ Tax Rate Changes Mid-Billing Period > should apply correct tax rates based on charge dates
+stdout | server/src/test/unit/accounting/xeroClientService.spec.ts > XeroClientService – REST usage > refreshes OAuth tokens when expired
+Successfully wrote tenant secret: /Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer/secrets/tenants/tenant-123/xero_credentials
+
+stdout | server/src/test/unit/accounting/xeroClientService.spec.ts > XeroClientService – REST usage > retries after 401 by refreshing token once and logs tenant metadata
+Successfully wrote tenant secret: /Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer/secrets/tenants/tenant-123/xero_credentials
+
+ ❯ server/src/test/unit/accounting/xeroClientService.spec.ts (8 tests | 1 failed) 5ms 306 MB heap used
+   ✓ XeroClientService – REST usage > POST /Invoices payload matches spec requirements 0ms
+   ✓ XeroClientService – REST usage > normalizes validation errors returned from POST /Invoices 0ms
+   ✓ XeroClientService – REST usage > handles empty payload array without issuing network request 0ms
+   ✓ XeroClientService – REST usage > sets expected headers for authenticated requests 0ms
+   ✓ XeroClientService – REST usage > refreshes OAuth tokens when expired 1ms
+   ✓ XeroClientService – REST usage > retrieves accounts, items, tax rates, and tracking categories with normalized structures 0ms
+   × XeroClientService – REST usage > retries after 401 by refreshing token once and logs tenant metadata 1ms
+     → expected "spy" to be called 1 times, but got 0 times
+   ✓ XeroClientService – REST usage > allows re-export after validation error once mappings are corrected 0ms
+ ✓ ee/server/src/__tests__/unit/tenant-creation.test.ts (4 tests) 0ms 310 MB heap used
+ ✓ server/src/lib/auth/sessionCookies.test.ts (2 tests) 6ms 313 MB heap used
+ ✓ server/src/test/unit/security/managerScopeRegression.test.ts (1 test) 1ms 314 MB heap used
+ ✓ server/src/test/unit/scheduling/bundledTicketsWorkItemPickerBehavior.test.ts (2 tests) 1ms 316 MB heap used
+stdout | server/src/lib/email/delayedEmailQueue.redisRecovery.test.ts > DelayedEmailQueue Redis recovery > recreates the Redis client after a zRangeByScore timeout
+[DelayedEmailQueue] Processing loop started { intervalMs: 60000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 60000
+}
+
+stdout | server/src/lib/email/delayedEmailQueue.redisRecovery.test.ts > DelayedEmailQueue Redis recovery > recreates the Redis client after a zRangeByScore timeout
+[DelayedEmailQueue] Shutting down...
+[DelayedEmailQueue] Shutdown complete
+
+ ✓ server/src/lib/email/delayedEmailQueue.redisRecovery.test.ts (1 test) 2ms 318 MB heap used
+ ✓ packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts (1 test) 0ms 299 MB heap used
+ ❯ server/src/test/integration/billing/invoiceStatusManagement.integration.test.ts (10 tests | 10 skipped) 1ms 100 MB heap used
+   ↓ Invoice Status Management Integration > Credit Application Status Transitions > should set status to partially_applied when partial credit is applied
+   ↓ Invoice Status Management Integration > Credit Application Status Transitions > should set status to paid when full credit is applied
+   ↓ Invoice Status Management Integration > Credit Application Status Transitions > should accumulate multiple partial credits and update status accordingly
+   ↓ Invoice Status Management Integration > Payment Recording Status Transitions > should set status to partially_applied when partial payment is recorded
+   ↓ Invoice Status Management Integration > Payment Recording Status Transitions > should set status to paid when full payment is recorded
+   ↓ Invoice Status Management Integration > Combined Payment and Credit Scenarios > should correctly calculate status with both payments and credits
+   ↓ Invoice Status Management Integration > Refund Handling and Status Reversals > should transition from paid to partially_applied when partial refund is recorded
+   ↓ Invoice Status Management Integration > Refund Handling and Status Reversals > should transition from paid to sent when full refund is recorded
+   ↓ Invoice Status Management Integration > Status Transition Validation > should not allow payment on cancelled invoice
+   ↓ Invoice Status Management Integration > Status Transition Validation > should not allow credit on draft invoice
+ ❯ server/src/test/unit/scheduling/actionGuardWiring.test.ts (7 tests | 4 failed) 2ms 103 MB heap used
+   ✓ delegation guard wiring (static) > fetchTimePeriods enforces delegation via assertCanActOnBehalf 0ms
+   ✓ delegation guard wiring (static) > fetchOrCreateTimeSheet enforces delegation via assertCanActOnBehalf 0ms
+   × delegation guard wiring (static) > fetchTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf 1ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /export const fetchTimeSheet[\\s\\S]*a…/
+   × delegation guard wiring (static) > fetchTimeEntriesForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf 0ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /export const fetchTimeEntriesForTimeS…/
+   × delegation guard wiring (static) > fetchWorkItemsForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf 0ms
+     → expected '\'use server\'\n\nimport { Knex } fro…' to match /export const fetchWorkItemsForTimeShe…/
+   ✓ delegation guard wiring (static) > reopen/reverse approval is blocked when a timesheet contains invoiced entries 0ms
+   × delegation guard wiring (static) > reopen/reverse approval transitions timesheet and entries to CHANGES_REQUESTED 0ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /reverseTimeSheetApproval[\\s\\S]*appr…/
+ ❯ server/src/test/unit/scheduling/approvalBehavior.test.ts (2 tests | 2 failed) 1ms 108 MB heap used
+   × timesheet approval behavior (static) > approveTimeSheet enforces delegation and marks timesheet APPROVED 0ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /export const approveTimeSheet[\\s\\S]…/
+   × timesheet approval behavior (static) > bulkApproveTimeSheets enforces manager scope via assertCanActOnBehalf 0ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /export const bulkApproveTimeSheets[\\…/
+ ❯ server/src/test/integration/citusTenantFilterEmailProviders.integration.test.ts (2 tests | 2 failed) 2ms 116 MB heap used
+   × Citus safety: tenant-scoped updates on distributed tables > scopes email_providers updates by tenant in Microsoft webhook route 2ms
+     → expected 'export { GET, POST } from \'@alga-psa…' to contain '.where({ id: row.id, tenant: row.tena…'
+   × Citus safety: tenant-scoped updates on distributed tables > scopes email_providers updates by tenant in Google webhook route 1ms
+     → expected 'export { POST } from \'@alga-psa/inte…' to contain '.where({ id: provider.id, tenant: pro…'
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/mappingPermissions.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | eslint-plugin-custom-rules/migration-filename.test.js
+All tests passed!
+
+ ✓ eslint-plugin-custom-rules/migration-filename.test.js (14 tests) 17ms 144 MB heap used
+ ✓ server/src/test/unit/workflowsEntryTypingGuard.unit.test.ts (2 tests) 1ms 146 MB heap used
+ ✓ packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts (2 tests) 0ms 152 MB heap used
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ server/src/test/unit/scheduling/deleteTimeEntryBehavior.test.ts (1 test) 1ms 151 MB heap used
+ ✓ tools/nx-tests/nxAffected.test.ts (2 tests) 3861ms 154 MB heap used
+   ✓ nx affected > identifies affected projects from a file list  3087ms
+   ✓ nx affected > includes @alga-psa/clients when client code changes  774ms
+ ✓ packages/clients/src/lib/durationHelpers.test.ts (7 tests) 0ms 156 MB heap used
+ ✓ sdk/samples/component/scheduler-demo/tests/handler.test.ts (6 tests) 1ms 159 MB heap used
+ ✓ tools/nx-tests/nxWorkspace.test.ts (3 tests) 16106ms 162 MB heap used
+   ✓ nx workspace > can generate an nx graph html file  15400ms
+   ✓ nx workspace > runs the alga-module generator in dry-run mode  413ms
+ ✓ packages/core/src/lib/events/publisher.test.ts (1 test) 5ms 126 MB heap used
+ ✓ server/src/test/unit/email/emailLoggingFailure.test.ts (1 test) 22ms 126 MB heap used
+ ❯ server/src/test/unit/clientFormValidation.test.ts (20 tests | 12 failed) 9ms 130 MB heap used
+   ✓ Client Form Validation > validateClientName > should accept valid client names 1ms
+   × Client Form Validation > validateClientName > should reject invalid client names 0ms
+     → expected null to be 'Client name must contain letters and …' // Object.is equality
+   × Client Form Validation > validateWebsiteUrl > should accept valid URLs 0ms
+     → expected 'Please enter a real business website …' to be null
+   × Client Form Validation > validateWebsiteUrl > should reject invalid URLs 1ms
+     → expected 'Please enter a domain name, not an IP…' to be 'Please enter a valid website URL (e.g…' // Object.is equality
+   × Client Form Validation > validateEmailAddress > should accept valid email addresses 0ms
+     → expected 'Please enter a valid business email a…' to be null
+   × Client Form Validation > validateEmailAddress > should reject invalid email addresses 0ms
+     → expected 'Please enter a valid email address' to be 'Please enter a valid business email a…' // Object.is equality
+   ✓ Client Form Validation > validatePhoneNumber > should accept valid phone numbers 1ms
+   × Client Form Validation > validatePhoneNumber > should reject invalid phone numbers 1ms
+     → expected null to be 'Please enter a valid phone number' // Object.is equality
+   ✓ Client Form Validation > validatePostalCode > should accept valid US ZIP codes 0ms
+   × Client Form Validation > validatePostalCode > should reject invalid US ZIP codes 0ms
+     → expected 'Please enter a valid ZIP code (e.g., …' to be 'Please enter a valid US ZIP code (e.g…' // Object.is equality
+   × Client Form Validation > validatePostalCode > should validate Canadian postal codes 0ms
+     → expected 'Please enter a valid Canadian postal …' to be 'Please enter a valid Canadian postal …' // Object.is equality
+   ✓ Client Form Validation > validateCityName > should accept valid city names 0ms
+   × Client Form Validation > validateCityName > should reject invalid city names 0ms
+     → expected 'City name must contain letters' to be 'City name must be at least 2 characte…' // Object.is equality
+   ✓ Client Form Validation > validateAddress > should accept valid addresses 0ms
+   × Client Form Validation > validateAddress > should reject invalid addresses 0ms
+     → expected 'Address must contain letters' to be 'Address must be at least 5 characters…' // Object.is equality
+   ✓ Client Form Validation > validateContactName > should accept valid contact names 0ms
+   × Client Form Validation > validateContactName > should reject invalid contact names 0ms
+     → expected 'Contact name must contain meaningful …' to be 'Contact name cannot contain emojis' // Object.is equality
+   ✓ Client Form Validation > validateClientForm > should validate a complete form successfully 0ms
+   × Client Form Validation > validateClientForm > should return errors for invalid form data 3ms
+     → the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+   ✓ Client Form Validation > validateClientForm > should allow empty optional fields 0ms
+ ✓ server/src/test/unit/validation/timeEntrySchemaAuditFields.test.ts (2 tests) 1ms 131 MB heap used
+stdout | server/src/test/integration/pricingScheduleIntegration.test.ts > Pricing Schedule Integration Tests
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/pricingScheduleIntegration.test.ts > Pricing Schedule Integration Tests
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/pricingScheduleIntegration.test.ts > Pricing Schedule Integration Tests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/pricingScheduleIntegration.test.ts > Pricing Schedule Integration Tests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/pricingScheduleIntegration.test.ts > Pricing Schedule Integration Tests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/pricingScheduleIntegration.test.ts > Pricing Schedule Integration Tests
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/pricingScheduleIntegration.test.ts (10 tests | 10 skipped) 2ms 132 MB heap used
+   ↓ Pricing Schedule Integration Tests > Create and Persist Pricing Schedules > should create a pricing schedule and persist to database
+   ↓ Pricing Schedule Integration Tests > Create and Persist Pricing Schedules > should retrieve active pricing schedule for a billing period
+   ↓ Pricing Schedule Integration Tests > Create and Persist Pricing Schedules > should handle multiple schedules and return the most recent effective schedule
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule Boundaries > should correctly filter schedules across billing period boundaries
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule Boundaries > should treat schedules with null end_date as ongoing
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule Updates and Deletes > should update an existing pricing schedule
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule Updates and Deletes > should delete a pricing schedule
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule Updates and Deletes > should mark a schedule as expired when setting end_date
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule for No Rates > should allow schedules without custom_rate and treat them as null overrides
+   ↓ Pricing Schedule Integration Tests > Pricing Schedule for No Rates > should return no schedule when contract has none defined
+ ❯ ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts (2 tests | 2 failed) 1ms 134 MB heap used
+   × applyPortalDomainResources > routes virtual service traffic to the app once certificate succeeds 0ms
+     → Missing "./admin.js" specifier in "@alga-psa/db" package
+   × applyPortalDomainResources > creates new manifests and prunes legacy virtual services when the domain changes 1ms
+     → Missing "./admin.js" specifier in "@alga-psa/db" package
+ ✓ packages/billing/tests/draftContractsTable.test.tsx (30 tests) 1407ms 177 MB heap used
+ ✓ packages/projects/src/components/__tests__/TaskQuickAddPrefill.test.tsx (1 test) 1ms 181 MB heap used
+ ✓ packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx (11 tests) 76ms 190 MB heap used
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should forward "apiproxy" message to Gateway and return response to Client
+iframeBridge: received message { type: 'apiproxy', origin: 'http://localhost:3000' }
+iframeBridge: handling apiproxy { requestId: 'req-123', route: '/tickets' }
+iframeBridge: posting apiproxy_response { requestId: 'req-123', targetOrigin: '*' }
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client
+iframeBridge: received message { type: 'apiproxy', origin: 'http://localhost:3000' }
+iframeBridge: handling apiproxy { requestId: 'req-error', route: '/error-route' }
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client
+iframeBridge: fetch completed {
+  status: 500,
+  ok: false,
+  url: '/api/ext-proxy/test-extension-id/error-route'
+}
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client
+iframeBridge: posting apiproxy_response { requestId: 'req-error', targetOrigin: '*' }
+
+ ❯ ee/server/src/__tests__/integration/extensionProxyFlow.test.ts (4 tests | 3 failed) 142ms 198 MB heap used
+   × Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should forward "apiproxy" message to Gateway and return response to Client 60ms
+     → expected "fetch" to be called with arguments: [ StringContaining{…}, …(1) ]
+
+Number of calls: 0
+
+   ✓ Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client 55ms
+   × Extension Proxy Flow Integration > Gateway Handler (Host -> Runner) > should forward request to RunnerBackend and propagate response headers/body 25ms
+     → Failed to resolve import "@alga-psa/db/models/UserSession" from "packages/auth/src/lib/nextAuthOptions.ts". Does the file exist?
+   × Extension Proxy Flow Integration > Gateway Handler (Host -> Runner) > should handle Runner errors gracefully 2ms
+     → Failed to resolve import "@alga-psa/db/models/UserSession" from "packages/auth/src/lib/nextAuthOptions.ts". Does the file exist?
+ ✓ server/src/test/unit/components/AssetNotesPanel.test.tsx (1 test) 3ms 202 MB heap used
+ ✓ packages/billing/tests/contractsActivationFlow.test.tsx (2 tests) 159ms 228 MB heap used
+ ❯ server/src/test/unit/tickets/TicketEmailNotifications.ui.test.tsx (7 tests | 2 failed) 111ms 174 MB heap used
+   ✓ TicketEmailNotifications > renders without errors 1ms
+   ✓ TicketEmailNotifications > is collapsed by default and expands on click 12ms
+   ✓ TicketEmailNotifications > shows loading state while fetching 18ms
+   ✓ TicketEmailNotifications > displays timestamp, recipient, subject, and status for each log entry 12ms
+   ✓ TicketEmailNotifications > shows error message for failed notifications 13ms
+   × TicketEmailNotifications > shows maximum 20 entries initially with Load more when more exist 18ms
+     → Found multiple elements with the role "table"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+[36m>[39m
+  [36m<thead[39m
+    [33mclass[39m=[32m"bg-background"[39m
+  [36m>[39m
+    [36m<tr>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mClient[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-template_contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mContract Template[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mContract Name[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-start_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mStart Date[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-end_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mEnd Date[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-status"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mStatus[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mActions[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+    [36m</tr>[39m
+  [36m</thead>[39m
+  [36m<tbody[39m
+    [33mclass[39m=[32m"divide-y divide-gray-100"[39m
+  [36m>[39m
+    [36m<tr[39m
+      [33mclass[39m=[32m"
+                    bg-[rgb(var(--color-border-50))]
+                    hover:bg-primary-50 cursor-pointer
+                    transition-colors
+                    cursor-pointer
+                  "[39m
+    [36m>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mAcme Co[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-template_contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mDraft Alpha[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-start_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-end_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-status"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border bg-green-100 text-green-800"[39m
+            [36m>[39m
+              [0mActive[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"menu"[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-8 w-8 p-0 group"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"sr-only"[39m
+              [36m>[39m
+                [0mOpen menu[0m
+              [36m</span>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-ellipsis-vertical h-4 w-4"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"12"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"5"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"19"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mdata-automation-id[39m=[32m"ticket-email-notifications-table"[39m
+[36m>[39m
+  [36m<tbody>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser0@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS0[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser1@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS1[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser2@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS2[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser3@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS3[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser4@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS4[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser5@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS5[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser6@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS6[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser7@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS7[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser8@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS8[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser9@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS9[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser10@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS10[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser11@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS11[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser12@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS12[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser13@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS13[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser14@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS14[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser15@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS15[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser16@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS16[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser17@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS17[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser18@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS18[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser19@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS19[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [0mTemplates | Client Contracts | Drafts[0m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search client contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search by client or contract..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex flex-wrap gap-2"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mclass[39m=[32m"justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 group"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [36m<svg[39m
+                    [33mclass[39m=[32m"lucide lucide-wand-sparkles h-4 w-4"[39m
+                    [33mfill[39m=[32m"none"[39m
+                    [33mheight[39m=[32m"24"[39m
+                    [33mstroke[39m=[32m"currentColor"[39m
+                    [33mstroke-linecap[39m=[32m"round"[39m
+                    [33mstroke-linejoin[39m=[32m"round"[39m
+                    [33mstroke-width[39m=[32m"2"[39m
+                    [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [33mwidth[39m=[32m"24"[39m
+                    [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                  [36m>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"m14 7 3 3"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M5 6v4"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M19 14v4"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M10 2v2"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M7 8H3"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M21 16h-4"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M11 3H9"[39m
+                    [36m/>[39m
+                  [36m</svg>[39m
+                  [0mCreate Contract[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"client-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                   ...
+   × TicketEmailNotifications > Load more fetches additional entries 37ms
+     → Found multiple elements with the role "table"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+[36m>[39m
+  [36m<thead[39m
+    [33mclass[39m=[32m"bg-background"[39m
+  [36m>[39m
+    [36m<tr>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mClient[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-template_contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mContract Template[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mContract Name[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-start_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mStart Date[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-end_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mEnd Date[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-status"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mStatus[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"client-contracts-table-header-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mActions[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+    [36m</tr>[39m
+  [36m</thead>[39m
+  [36m<tbody[39m
+    [33mclass[39m=[32m"divide-y divide-gray-100"[39m
+  [36m>[39m
+    [36m<tr[39m
+      [33mclass[39m=[32m"
+                    bg-[rgb(var(--color-border-50))]
+                    hover:bg-primary-50 cursor-pointer
+                    transition-colors
+                    cursor-pointer
+                  "[39m
+    [36m>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mAcme Co[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-template_contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mDraft Alpha[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-start_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-end_date"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-status"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border bg-green-100 text-green-800"[39m
+            [36m>[39m
+              [0mActive[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"client-contracts-table-cell-0-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"menu"[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-8 w-8 p-0 group"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"sr-only"[39m
+              [36m>[39m
+                [0mOpen menu[0m
+              [36m</span>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-ellipsis-vertical h-4 w-4"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"12"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"5"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"19"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mdata-automation-id[39m=[32m"ticket-email-notifications-table"[39m
+[36m>[39m
+  [36m<tbody>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser0@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS0[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser1@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS1[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser2@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS2[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser3@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS3[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser4@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS4[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser5@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS5[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser6@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS6[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser7@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS7[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser8@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS8[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser9@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS9[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser10@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS10[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser11@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS11[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser12@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS12[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser13@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS13[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser14@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS14[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser15@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS15[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser16@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS16[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser17@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS17[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser18@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS18[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser19@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS19[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser20@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS20[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser21@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS21[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser22@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS22[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser23@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS23[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser24@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS24[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [0mTemplates | Client Contracts | Drafts[0m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search client contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search by client or contract..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex flex-wrap gap-2"[39m
+              [36m>[39m
+                [36m<button[39m
+                  [33mclass[39m=[32m"justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 group"[39m
+                  [33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [36m<svg[39m
+                    [33mclass[39m=[32m"lucide lucide-wand-sparkles h-4 w-4"[39m
+                    [33mfill[39m=[32m"none"[39m
+                    [33mheight[39m=[32m"24"[39m
+                    [33mstroke[39m=[32m"currentColor"[39m
+                    [33mstroke-linecap[39m=[32m"round"[39m
+                    [33mstroke-linejoin[39m=[32m"round"[39m
+                    [33mstroke-width[39m=[32m"2"[39m
+                    [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [33mwidth[39m=[32m"24"[39m
+                    [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                  [36m>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"m14 7 3 3"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M5 6v4"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M19 14v4"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M10 2v2"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M7 8H3"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M21 16h-4"[39m
+                    [36m/>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M11 3H9"[39m
+                    [36m/>[39m
+                  [36m</svg>[39m
+                  [0mCreate Contract[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"client-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                   ...
+ ✓ packages/billing/src/components/invoice-designer/DesignerShell.constraints.test.tsx (23 tests) 479ms 232 MB heap used
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ packages/billing/tests/contractWizardResume.test.tsx (14 tests | 14 failed) 47ms 246 MB heap used
+   × ContractWizard resume behavior > starts at Step 1 (Contract Basics) when opened (T033) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 1 shows pre-populated client selection from draft (T034) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 1 shows pre-populated contract name from draft (T035) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 1 shows pre-populated dates from draft (T036) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 2 (Fixed Fee) shows pre-populated services from draft (T037) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 3 (Products) shows pre-populated products from draft (T038) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 4 (Hourly) shows pre-populated hourly services from draft (T039) 16ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 5 (Usage) shows pre-populated usage services from draft (T040) 3ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 6 (Review) shows complete draft data for review (T041) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > clicking Save Draft in resumed wizard updates existing draft (T042) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > save draft does not create a duplicate contract (T043) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > save draft preserves the original contract_id (T044) 3ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > completing resumed wizard sets contract status to 'active' (T045) 3ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > completing resumed wizard sets is_active to true (T046) 3ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+ ✓ server/src/test/unit/email/EmailLogsClient.ui.test.tsx (6 tests) 949ms 248 MB heap used
+   ✓ EmailLogsClient > updates results when date range filter changes  306ms
+   ✓ EmailLogsClient > updates results when recipient search changes  306ms
+   ✓ EmailLogsClient > updates results when ticket filter changes  306ms
+ ✓ packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx (2 tests) 223ms 183 MB heap used
+ ❯ server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx (9 tests | 6 failed) 3060ms 189 MB heap used
+   × ExperimentalFeaturesSettings > shows 'AI Assistant' name and description 1005ms
+     → Found multiple elements with the text: AI Assistant
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × ExperimentalFeaturesSettings > defaults AI Assistant toggle to off 4ms
+     → expected 'true' to be 'false' // Object.is equality
+   × ExperimentalFeaturesSettings > renders experimental features warning banner 1006ms
+     → Found multiple elements with the text: Experimental
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+     ...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+     ...
+   ✓ ExperimentalFeaturesSettings > calls updateExperimentalFeatures() with current toggle states on save 12ms
+   × ExperimentalFeaturesSettings > shows success feedback after saving 1006ms
+     → Found multiple elements with the role "button" and name "Save"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+     ...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+     ...
+   ✓ ExperimentalFeaturesSettings > updates local state when toggled 7ms
+   ✓ ExperimentalFeaturesSettings > loads current settings on mount 3ms
+   × ExperimentalFeaturesSettings > renders list of features with toggles 10ms
+     → expected [ <button …(8)>…(1)</button>, …(11) ] to have a length of 2 but got 12
+   × ExperimentalFeaturesSettings > disables AI Assistant toggle when not allowed 6ms
+     → expected 'true' to be 'false' // Object.is equality
+ ✓ packages/billing/src/components/invoice-designer/canvas/DesignCanvas.constraintHighlights.test.tsx (2 tests) 3ms 196 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx (28 tests) 1636ms 236 MB heap used
+   ✓ DesignerVisualWorkspace > calls paginated invoice search with status=all and query filters  319ms
+   ✓ DesignerVisualWorkspace > renders loading, empty, and error states for existing invoice list  623ms
+ ✓ server/src/test/unit/RightSidebar.streaming.test.tsx (1 test) 430ms 246 MB heap used
+   ✓ RightSidebar (streaming) > renders streaming Chat and posts to the streaming completions endpoint  430ms
+ ✓ packages/billing/src/components/invoice-designer/canvas/DesignCanvas.previewMode.test.tsx (15 tests) 37ms 285 MB heap used
+ ✓ packages/projects/tests/projectInfoDrawer.test.tsx (1 test) 20ms 253 MB heap used
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/unit/Chat.streamingIncrementalState.test.tsx (9 tests | 9 failed) 45ms 272 MB heap used
+   × EE Chat (streaming state) > updates the in-progress assistant message as tokens arrive 4ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > aborts the streaming request when Stop is clicked 4ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > stops updating token display and ends generation state after Stop 4ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > shows a streaming cursor while receiving tokens 6ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > removes the streaming cursor when done is received 5ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > shows the partial response when a network error occurs mid-stream 7ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > shows an interruption indicator when the stream ends without done=true 5ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l6_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l7_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > persists the assistant message after streaming completes 5ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+   × EE Chat (streaming state) > persists assistant content matching the final streamed tokens 4ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_ku_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l6_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<iframe[39m
+    [33msandbox[39m=[32m"allow-scripts, allow-same-origin"[39m
+    [33msrc[39m=[32m"http://localhost:3000/ext-ui/test-extension-id/hash/index.html"[39m
+  [36m/>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 9v4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 17h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+          [36m>[39m
+            [0mExperimental[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-sm [&_p]:leading-relaxed"[39m
+          [36m>[39m
+            [0mExperimental features may change or be removed without notice.[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mAI Assistant[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable AI-powered Quick Ask and Chat sidebar.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"true"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mdata-state[39m=[32m"checked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-aiAssistant"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"checked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-start justify-between gap-6 rounded-md border border-gray-200 p-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"font-medium"[39m
+            [36m>[39m
+              [0mWorkflow Automation[0m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-sm text-gray-600"[39m
+            [36m>[39m
+              [0mEnable experimental workflow automation features in Automation Hub.[0m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-checked[39m=[32m"false"[39m
+              [33mclass[39m=[32m"switch-root undefined"[39m
+              [33mdata-automation-id[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mdata-state[39m=[32m"unchecked"[39m
+              [33mid[39m=[32m"experimental-feature-toggle-workflowAutomation"[39m
+              [33mrole[39m=[32m"switch"[39m
+              [33mtype[39m=[32m"button"[39m
+              [33mvalue[39m=[32m"on"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"switch-thumb"[39m
+                [33mdata-state[39m=[32m"unchecked"[39m
+              [36m/>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-end pt-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  ...
+ ✓ packages/projects/tests/projectMaterialsDrawer.test.tsx (16 tests) 354ms 284 MB heap used
+ ✓ server/src/test/unit/QuickAskOverlay.streaming.test.tsx (1 test) 24ms 304 MB heap used
+
+ Test Files  561 failed | 40 passed (601)
+      Tests  62 failed | 311 passed | 37 skipped (410)
+   Start at  14:53:12
+   Duration  37.95s (transform 1.69s, setup 228ms, collect 1.07s, tests 29.30s, environment 249ms, prepare 53ms) (pass).
