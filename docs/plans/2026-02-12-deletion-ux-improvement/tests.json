@@ -482,7 +482,7 @@
   {
     "id": "T081",
     "description": "Invoice template deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F059"]
   },
   {
