@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "viewUrl is populated from viewUrlTemplate with entityId substitution",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
