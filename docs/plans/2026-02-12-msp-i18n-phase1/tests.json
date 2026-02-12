@@ -411,7 +411,7 @@
   {
     "id": "T050",
     "description": "Locale resolution for internal users: user preference takes priority over org default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]

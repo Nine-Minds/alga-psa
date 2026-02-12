@@ -160,3 +160,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T047: Changing enabled languages persists to tenant_settings (mspPortal.enabledLocales) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T048: getTenantMspLocaleSettings server action reads mspPortal locale settings from tenant_settings (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T049: updateTenantMspLocaleSettings server action writes mspPortal locale settings to tenant_settings (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T050: Locale resolution for internal users: user preference takes priority over org default (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
