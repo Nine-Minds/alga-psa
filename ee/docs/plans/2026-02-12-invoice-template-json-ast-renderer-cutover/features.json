@@ -282,7 +282,7 @@
   {
     "id": "F033",
     "description": "Add parity tests that assert preview and PDF HTML output semantics for the same AST + invoice fixture",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements",
       "Acceptance Criteria (Definition of Done)"

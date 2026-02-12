@@ -763,3 +763,23 @@ Rationale:
 Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts` (pass).
+
+### 2026-02-12 — F033 implemented
+
+- Added preview/PDF parity integration test:
+  - `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts`
+- Test exercises both render entry points with identical AST + invoice fixture:
+  - preview action: `runAuthoritativeInvoiceTemplatePreview`
+  - server render action: `renderTemplateOnServer`
+- Parity assertions include:
+  - exact HTML/CSS equality,
+  - totals value parity (`Grand Total`),
+  - grouped section ordering parity (`Products` before `Services`).
+
+Rationale:
+
+- This provides direct automated guardrails against semantic drift between preview and PDF/server render pipelines.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` (pass).
