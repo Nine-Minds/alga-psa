@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "AST schema accepts optional `strategyId` on transform nodes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F002"
