@@ -102,6 +102,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T029 complete for getDeletionConfig known entity coverage.
 - (2026-02-12) Marked T030 complete for getDeletionConfig unknown entity coverage.
 - (2026-02-12) Added deletion action tests (T031-T066 coverage started); marked T031 complete.
+- (2026-02-12) Marked T032 complete for preCheckDeletion permission denial.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.

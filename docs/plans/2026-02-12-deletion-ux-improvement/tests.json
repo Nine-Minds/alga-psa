@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "preCheckDeletion returns PERMISSION_DENIED when user lacks delete permission",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
