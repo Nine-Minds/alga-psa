@@ -13412,3 +13412,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T013 implemented
+
+- Added explicit evaluator unit coverage for strategy hook throw behavior.
+- Evidence: `packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (`reports explicit strategy execution errors when strategy hooks throw`).
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (pass).

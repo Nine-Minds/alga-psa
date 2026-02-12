@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { InvoiceTemplateAst, InvoiceTemplateTransformOperation } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import * as strategiesModule from './strategies';
 import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from './evaluator';
 
 const invoiceFixture = {
@@ -179,6 +180,35 @@ describe('evaluateInvoiceTemplateAst', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(InvoiceTemplateEvaluationError);
       expect((error as InvoiceTemplateEvaluationError).code).toBe('UNKNOWN_STRATEGY');
+    }
+  });
+
+  it('reports explicit strategy execution errors when strategy hooks throw', () => {
+    const strategySpy = vi
+      .spyOn(strategiesModule, 'executeInvoiceTemplateStrategy')
+      .mockImplementationOnce(() => {
+        throw new Error('strategy boom');
+      });
+
+    const ast = buildAst([
+      {
+        id: 'group-by-strategy',
+        type: 'group',
+        key: 'category',
+        strategyId: 'custom-group-key',
+      },
+    ]);
+
+    try {
+      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      throw new Error('Expected evaluator to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvoiceTemplateEvaluationError);
+      expect((error as InvoiceTemplateEvaluationError).code).toBe('STRATEGY_EXECUTION_FAILED');
+      expect((error as InvoiceTemplateEvaluationError).operationId).toBe('group-by-strategy');
+      expect((error as InvoiceTemplateEvaluationError).message).toContain('strategy boom');
+    } finally {
+      strategySpy.mockRestore();
     }
   });
 
