@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from '../models/service'; // Import both schemas
-import type { IService, IServiceType, IServicePrice } from '@alga-psa/types';
+import type { IService, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -10,6 +10,7 @@ import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 
 
@@ -416,20 +417,33 @@ export const updateService = withAuth(async (
     }
 });
 
-export const deleteService = withAuth(async (user, { tenant }, serviceId: string): Promise<void> => {
-    const { knex: db } = await createTenantKnex();
+export const deleteService = withAuth(async (
+    _user,
+    _ctx,
+    serviceId: string
+  ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
-        await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canDelete = hasPermission(user, 'service', 'delete');
-            if (!canDelete) {
-              throw new Error('Permission denied: Cannot delete services/products');
-            }
-            await Service.delete(trx, serviceId)
-            safeRevalidate('/msp/billing') // Revalidate the billing page
+        const result = await deleteEntityWithValidation('service', serviceId, async (trx) => {
+            await Service.delete(trx, serviceId);
+            safeRevalidate('/msp/billing');
+            safeRevalidate('/msp/settings/billing');
         });
+
+        return {
+            ...result,
+            success: result.deleted === true,
+            deleted: result.deleted
+        };
     } catch (error) {
-        console.error(`Error deleting service with id ${serviceId}:`, error)
-        throw new Error('Failed to delete service')
+        console.error(`Error deleting service with id ${serviceId}:`, error);
+        return {
+            success: false,
+            canDelete: false,
+            code: 'VALIDATION_FAILED',
+            message: 'Failed to delete service',
+            dependencies: [],
+            alternatives: []
+        };
     }
 });
 

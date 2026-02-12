@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "Migrate @alga-psa/billing service deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
