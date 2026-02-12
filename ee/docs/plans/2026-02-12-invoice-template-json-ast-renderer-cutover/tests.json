@@ -266,7 +266,7 @@
   {
     "id": "T028",
     "description": "Preview action does not execute AssemblyScript compiler commands",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F025"
