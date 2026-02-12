@@ -133,7 +133,7 @@
   {
     "id": "T014",
     "description": "Evaluator output is byte-for-byte stable for same AST+input fixture",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],

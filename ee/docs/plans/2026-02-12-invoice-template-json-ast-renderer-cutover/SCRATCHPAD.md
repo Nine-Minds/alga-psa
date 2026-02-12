@@ -22250,3 +22250,12 @@ Ignored nodes: comments, script, style
       Tests  144 failed | 562 passed | 195 skipped (901)
    Start at  14:53:51
    Duration  53.99s (transform 2.69s, setup 344ms, collect 2.87s, tests 40.94s, environment 244ms, prepare 47ms) (pass).
+
+### 2026-02-12 — T014 implemented
+
+- Marked byte-for-byte deterministic evaluator output as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/evaluator.test.ts::returns byte-for-byte stable output for equivalent AST and input data
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
