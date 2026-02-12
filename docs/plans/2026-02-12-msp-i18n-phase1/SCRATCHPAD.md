@@ -101,3 +101,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Emptied legacy `server/public/locales/*/clientPortal.json` files after migration to avoid duplicate keys.
 - Added `server/public/locales/en/msp/core.json` with MSP nav, sidebar, header, and settings tab strings.
 - Added machine-translated `msp/core.json` files for fr/es/de/nl/it/pl.
+- Added MSP Profile language preference section behind `msp-i18n-enabled` flag in `UserProfile`.

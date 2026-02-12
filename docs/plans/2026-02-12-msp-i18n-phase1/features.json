@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Add personal language preference section to UserProfile component (/msp/profile), gated by useFeatureFlag('msp-i18n-enabled')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
