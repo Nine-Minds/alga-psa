@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Standard MspLayoutClient renders without I18nWrapper when flag is disabled (zero behavior change)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {

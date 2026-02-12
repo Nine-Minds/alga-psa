@@ -79,3 +79,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Added `msp-i18n-enabled` default flag in `server/src/lib/feature-flags/featureFlags.ts`.
 - Standard MSP layout now gates locale fetch via `msp-i18n-enabled` and only calls `getHierarchicalLocaleAction` when enabled.
 - Standard `MspLayoutClient` wraps content in `I18nWrapper` when MSP i18n flag is enabled.
+- Standard MSP layout returns existing layout tree when flag is disabled (no I18nWrapper).
