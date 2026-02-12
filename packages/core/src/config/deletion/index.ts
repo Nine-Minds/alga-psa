@@ -300,6 +300,16 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       }
     ]
   },
+  survey_template: {
+    entityType: 'survey_template',
+    supportsInactive: false,
+    supportsArchive: false,
+    dependencies: [
+      { type: 'survey_trigger', table: 'survey_triggers', foreignKey: 'template_id', label: 'survey trigger' },
+      { type: 'survey_invitation', table: 'survey_invitations', foreignKey: 'template_id', label: 'survey invitation' },
+      { type: 'survey_response', table: 'survey_responses', foreignKey: 'template_id', label: 'survey response' }
+    ]
+  },
   workflow: {
     entityType: 'workflow',
     supportsInactive: true,

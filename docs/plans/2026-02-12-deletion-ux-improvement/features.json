@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "Migrate @alga-psa/surveys survey template deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
