@@ -403,7 +403,7 @@
   {
     "id": "T049",
     "description": "updateTenantMspLocaleSettings server action writes mspPortal locale settings to tenant_settings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
