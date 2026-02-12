@@ -29952,3 +29952,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts' (pass).
+
+### 2026-02-12 — T052 implemented
+
+- Marked parity test coverage for grouped line-item ordering equivalence between preview and PDF paths as implemented.
+- Evidence: packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts (Products/Services ordering assertion)
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts' (pass).

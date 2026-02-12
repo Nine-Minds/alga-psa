@@ -496,7 +496,7 @@
   {
     "id": "T052",
     "description": "Parity test verifies grouped line-item section ordering matches between preview and PDF paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F004"
