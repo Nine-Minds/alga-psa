@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DeletionValidationResult type includes canDelete, code, message, dependencies, alternatives fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
