@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "Client config has supportsInactive=true and tagEntityType='client'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {

@@ -91,6 +91,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T018 complete for validateDeletion missing viewUrlTemplate.
 - (2026-02-12) Added deletion config tests (T019-T030 coverage started); marked T019 complete.
 - (2026-02-12) Marked T020 complete for client document_associations countQuery.
+- (2026-02-12) Marked T021 complete for client inactive/tagEntityType config.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.
