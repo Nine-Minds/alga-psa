@@ -51,7 +51,7 @@
   {
     "id": "T007",
     "description": "With flag ON: EE MSP layout calls getHierarchicalLocaleAction and passes locale to MspLayoutClient",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006"
