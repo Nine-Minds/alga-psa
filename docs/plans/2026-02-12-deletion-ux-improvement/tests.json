@@ -284,7 +284,7 @@
   {
     "id": "T048",
     "description": "DeleteEntityDialog renders itemized dependency list with counts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
