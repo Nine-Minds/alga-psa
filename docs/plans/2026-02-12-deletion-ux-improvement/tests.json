@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Contract line config uses foreignKey 'contract_line_id' on usage_tracking (not 'plan_id')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
