@@ -32,7 +32,7 @@
   {
     "id": "T004",
     "description": "AST schema enforces transform operation payload shapes (filter/sort/group/aggregate/computed)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F002"
