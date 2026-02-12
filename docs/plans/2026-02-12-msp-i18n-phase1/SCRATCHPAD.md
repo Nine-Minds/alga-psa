@@ -133,3 +133,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T020: client-portal/profile.json exists for all 7 languages with profile, clientSettings, notifications keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T021: All client portal components using tickets.* keys migrated to useTranslation('features/tickets') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T022: All client portal components using projects.* keys migrated to useTranslation('features/projects') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T023: All client portal components using billing.* keys migrated to useTranslation('features/billing') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).

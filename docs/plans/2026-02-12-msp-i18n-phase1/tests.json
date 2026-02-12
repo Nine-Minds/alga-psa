@@ -185,7 +185,7 @@
   {
     "id": "T023",
     "description": "All client portal components using billing.* keys migrated to useTranslation('features/billing')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
