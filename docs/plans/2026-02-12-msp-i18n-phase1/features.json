@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Create MspLanguageSettings component (mirrors ClientPortalSettings language section) with default language dropdown and enabled languages checkboxes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR10"]
   },
   {

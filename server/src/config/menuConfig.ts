@@ -189,6 +189,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'General', icon: Settings, href: '/msp/settings?tab=general' },
       { name: 'Users', icon: UserCog, href: '/msp/settings?tab=users' },
       { name: 'Teams', icon: Users, href: '/msp/settings?tab=teams' },
+      { name: 'Language', icon: Globe, href: '/msp/settings?tab=language' },
       { name: 'Client Portal', icon: AtSign, href: '/msp/settings?tab=client-portal' },
     ]
   },

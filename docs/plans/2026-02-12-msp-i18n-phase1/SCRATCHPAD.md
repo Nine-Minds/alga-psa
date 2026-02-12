@@ -103,3 +103,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Added machine-translated `msp/core.json` files for fr/es/de/nl/it/pl.
 - Added MSP Profile language preference section behind `msp-i18n-enabled` flag in `UserProfile`.
 - Profile language selector uses `LanguagePreference` with `showNoneOption` for inherited defaults.
+- Added `MspLanguageSettings` component for MSP org language defaults and enabled locales.
