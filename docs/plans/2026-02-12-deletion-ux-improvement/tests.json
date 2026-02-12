@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "validateDeletion counts dependencies using foreignKey from config",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
