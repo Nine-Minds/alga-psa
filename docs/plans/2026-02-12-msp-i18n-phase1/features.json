@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Create client-portal/profile.json for all 7 languages (profile, clientSettings, notifications keys from clientPortal.json)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
