@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Create client-portal/auth.json for all 7 languages (auth, account keys from clientPortal.json)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
