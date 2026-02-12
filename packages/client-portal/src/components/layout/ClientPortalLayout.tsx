@@ -23,7 +23,7 @@ import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
-import { DrawerProvider } from '@alga-psa/ui';
+import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
 interface ClientPortalLayoutProps {
@@ -225,6 +225,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             {children}
           </main>
         </div>
+        <DrawerOutlet />
       </ActivityDrawerProvider>
     </DrawerProvider>
   );

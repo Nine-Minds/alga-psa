@@ -36,6 +36,7 @@ vi.mock('@alga-psa/workflows/components', () => ({
 
 vi.mock('@alga-psa/ui', () => ({
   DrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DrawerOutlet: () => null,
 }));
 
 vi.mock('@alga-psa/ui/components/Drawer', () => ({
