@@ -5048,7 +5048,7 @@ function FeatureFlagsView() {
         />
         <CustomSelect
           options={[
-            { value: '', label: 'All tenants' },
+            { value: '__all__', label: 'All tenants' },
             ...(() => {
               const tenantIds = new Set<string>();
               for (const flag of flags) {
@@ -5062,8 +5062,8 @@ function FeatureFlagsView() {
                 .sort((a, b) => a.label.localeCompare(b.label));
             })(),
           ]}
-          value={tenantFilter}
-          onValueChange={(v) => setTenantFilter(v)}
+          value={tenantFilter || '__all__'}
+          onValueChange={(v) => setTenantFilter(v === '__all__' ? '' : v)}
           placeholder="Filter by tenant..."
           style={{ minWidth: '200px' }}
         />
