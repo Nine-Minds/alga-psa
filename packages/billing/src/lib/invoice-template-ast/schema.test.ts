@@ -41,4 +41,63 @@ describe('invoiceTemplateAstSchema', () => {
       })
     );
   });
+
+  it('requires repeat binding metadata for dynamic-table nodes', () => {
+    const invalidResult = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'invoice.items' },
+            },
+            columns: [
+              {
+                id: 'description',
+                value: { type: 'path', path: 'description' },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(invalidResult.success).toBe(false);
+    if (invalidResult.success) {
+      return;
+    }
+    expect(invalidResult.errors.some((error) => error.path.includes('repeat.itemBinding'))).toBe(true);
+
+    const validResult = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'invoice.items' },
+              itemBinding: 'item',
+            },
+            columns: [
+              {
+                id: 'description',
+                value: { type: 'path', path: 'description' },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(validResult.success).toBe(true);
+  });
 });

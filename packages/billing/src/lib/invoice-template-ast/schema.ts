@@ -270,6 +270,23 @@ type NodeInput =
     }
   | {
       id: string;
+      type: 'dynamic-table';
+      style?: z.infer<typeof nodeStyleRefSchema>;
+      repeat: {
+        sourceBinding: z.infer<typeof bindingRefSchema>;
+        itemBinding: string;
+        keyPath?: string;
+      };
+      columns: Array<{
+        id: string;
+        header?: string;
+        value: ValueExpressionInput;
+        style?: z.infer<typeof nodeStyleRefSchema>;
+      }>;
+      emptyStateText?: string;
+    }
+  | {
+      id: string;
       type: 'totals';
       style?: z.infer<typeof nodeStyleRefSchema>;
       sourceBinding: z.infer<typeof bindingRefSchema>;
@@ -335,6 +352,23 @@ const nodeSchema: z.ZodType<NodeInput> = z.lazy(() =>
       style: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
       rowBinding: z.string().min(1),
+      columns: z.array(z.object({
+        id: z.string().min(1),
+        header: z.string().optional(),
+        value: valueExpressionSchema,
+        style: nodeStyleRefSchema.optional(),
+      }).strict()).min(1),
+      emptyStateText: z.string().optional(),
+    }).strict(),
+    z.object({
+      id: z.string().min(1),
+      type: z.literal('dynamic-table'),
+      style: nodeStyleRefSchema.optional(),
+      repeat: z.object({
+        sourceBinding: bindingRefSchema,
+        itemBinding: z.string().min(1),
+        keyPath: z.string().min(1).optional(),
+      }).strict(),
       columns: z.array(z.object({
         id: z.string().min(1),
         header: z.string().optional(),

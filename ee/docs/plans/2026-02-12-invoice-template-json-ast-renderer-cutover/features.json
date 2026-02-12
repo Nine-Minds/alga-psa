@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Represent repeatable line-item/table regions declaratively in AST",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {

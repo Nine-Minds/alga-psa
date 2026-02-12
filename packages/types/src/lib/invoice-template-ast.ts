@@ -28,6 +28,7 @@ export type InvoiceTemplateNodeType =
   | 'image'
   | 'divider'
   | 'table'
+  | 'dynamic-table'
   | 'totals';
 
 export interface InvoiceTemplateNodeBase {
@@ -96,6 +97,20 @@ export interface InvoiceTemplateTableNode extends InvoiceTemplateNodeBase {
   children?: never;
 }
 
+export interface InvoiceTemplateRepeatRegionBinding {
+  sourceBinding: InvoiceTemplateBindingRef;
+  itemBinding: string;
+  keyPath?: string;
+}
+
+export interface InvoiceTemplateDynamicTableNode extends InvoiceTemplateNodeBase {
+  type: 'dynamic-table';
+  repeat: InvoiceTemplateRepeatRegionBinding;
+  columns: InvoiceTemplateTableColumn[];
+  emptyStateText?: string;
+  children?: never;
+}
+
 export interface InvoiceTemplateTotalsNode extends InvoiceTemplateNodeBase {
   type: 'totals';
   sourceBinding: InvoiceTemplateBindingRef;
@@ -119,6 +134,7 @@ export type InvoiceTemplateNode =
   | InvoiceTemplateImageNode
   | InvoiceTemplateDividerNode
   | InvoiceTemplateTableNode
+  | InvoiceTemplateDynamicTableNode
   | InvoiceTemplateTotalsNode;
 
 export interface InvoiceTemplateNodeStyleRef {

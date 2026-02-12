@@ -135,3 +135,24 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
+
+### 2026-02-12 — F003 implemented
+
+- Extended AST node model with explicit repeatable region support:
+  - Added `dynamic-table` node type in `packages/types/src/lib/invoice-template-ast.ts`.
+  - Added `InvoiceTemplateRepeatRegionBinding` with required `sourceBinding` and `itemBinding`.
+- Updated runtime validator in `packages/billing/src/lib/invoice-template-ast/schema.ts`:
+  - Added `dynamic-table` schema variant.
+  - Enforced required repeat metadata (`repeat.sourceBinding`, `repeat.itemBinding`).
+- Added/extended tests in `packages/billing/src/lib/invoice-template-ast/schema.test.ts` to ensure:
+  - missing repeat binding metadata fails with structured path-aware errors,
+  - valid dynamic table payload passes.
+
+Rationale:
+
+- Repeatable line-item regions should be first-class AST semantics, not implicit conventions on generic tables.
+- Explicit repeat metadata is required for deterministic evaluator behavior in upcoming features.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
