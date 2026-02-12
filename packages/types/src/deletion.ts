@@ -1,3 +1,5 @@
+import type { Knex } from 'knex';
+
 export type DeletionBlockCode =
   | 'PERMISSION_DENIED'
   | 'UNKNOWN_ENTITY'
@@ -27,4 +29,21 @@ export type DeletionValidationResult = {
   message?: string;
   dependencies: DeletionDependency[];
   alternatives: DeletionAlternative[];
+};
+
+export type EntityDependencyConfig = {
+  type: string;
+  label: string;
+  table: string;
+  foreignKey?: string;
+  countQuery?: (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => Promise<number>;
+  viewUrlTemplate?: string;
+};
+
+export type EntityDeletionConfig = {
+  entityType: string;
+  dependencies: EntityDependencyConfig[];
+  supportsInactive?: boolean;
+  supportsArchive?: boolean;
+  tagEntityType?: string;
 };
