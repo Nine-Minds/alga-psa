@@ -258,7 +258,7 @@
   {
     "id": "F030",
     "description": "Implement unit coverage for AST validation and evaluator transform semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]

@@ -709,3 +709,20 @@ Rationale:
 Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
+
+### 2026-02-12 — F030 implemented
+
+- Expanded evaluator unit coverage for transform semantics and edge behavior in:
+  - `packages/billing/src/lib/invoice-template-ast/evaluator.test.ts`
+- Added coverage for:
+  - explicit composition order behavior (`filter -> sort -> group -> aggregate`),
+  - empty-item edge case behavior for grouping/aggregate/totals composition outputs.
+- Existing AST schema + strategy + evaluator unit suites now cover core transform semantics comprehensively.
+
+Rationale:
+
+- These tests harden deterministic transform semantics and prevent regressions in composition/edge-case handling.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).

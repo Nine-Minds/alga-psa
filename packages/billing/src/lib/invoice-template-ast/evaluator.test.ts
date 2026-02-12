@@ -300,4 +300,84 @@ describe('evaluateInvoiceTemplateAst', () => {
       expect((error as InvoiceTemplateEvaluationError).code).toBe('INVALID_OPERAND');
     }
   });
+
+  it('applies transform composition in declared order (filter -> sort -> group -> aggregate)', () => {
+    const ast = buildAst([
+      {
+        id: 'filter-positive',
+        type: 'filter',
+        predicate: {
+          type: 'comparison',
+          path: 'total',
+          op: 'gt',
+          value: 0,
+        },
+      },
+      {
+        id: 'sort-total-desc',
+        type: 'sort',
+        keys: [{ path: 'total', direction: 'desc' }],
+      },
+      {
+        id: 'group-category',
+        type: 'group',
+        key: 'category',
+      },
+      {
+        id: 'aggregate-grouped',
+        type: 'aggregate',
+        aggregations: [
+          { id: 'sumTotal', op: 'sum', path: 'total' },
+          { id: 'countItems', op: 'count' },
+        ],
+      },
+    ]);
+
+    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    expect(result.groups?.map((group) => group.key)).toEqual(['Services', 'Products']);
+    expect(result.aggregates.sumTotal).toBe(330);
+    expect(result.aggregates.countItems).toBe(3);
+    expect(result.groups?.find((group) => group.key === 'Services')?.items.map((item) => item.id)).toEqual(['a', 'b']);
+  });
+
+  it('handles empty invoice-item collections for grouping and totals composition', () => {
+    const ast = buildAst([
+      {
+        id: 'group-category',
+        type: 'group',
+        key: 'category',
+      },
+      {
+        id: 'aggregate-grouped',
+        type: 'aggregate',
+        aggregations: [
+          { id: 'sumTotal', op: 'sum', path: 'total' },
+          { id: 'countItems', op: 'count' },
+          { id: 'avgTotal', op: 'avg', path: 'total' },
+        ],
+      },
+      {
+        id: 'totals-compose',
+        type: 'totals-compose',
+        totals: [
+          { id: 'total', label: 'Total', value: { type: 'aggregate-ref', aggregateId: 'sumTotal' } },
+          { id: 'count', label: 'Count', value: { type: 'aggregate-ref', aggregateId: 'countItems' } },
+          { id: 'avg', label: 'Average', value: { type: 'aggregate-ref', aggregateId: 'avgTotal' } },
+        ],
+      },
+    ]);
+
+    const result = evaluateInvoiceTemplateAst(ast, { ...invoiceFixture, items: [] });
+    expect(result.groups).toEqual([]);
+    expect(result.aggregates).toEqual({
+      sumTotal: 0,
+      countItems: 0,
+      avgTotal: 0,
+    });
+    expect(result.totals).toEqual({
+      total: 0,
+      count: 0,
+      avg: 0,
+    });
+  });
 });
