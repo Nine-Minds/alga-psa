@@ -22,7 +22,7 @@
   {
     "id": "T003",
     "description": "AST schema enforces required binding metadata for dynamic table nodes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F002"

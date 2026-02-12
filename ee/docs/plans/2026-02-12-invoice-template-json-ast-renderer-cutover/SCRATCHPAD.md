@@ -13313,3 +13313,12 @@ Ignored nodes: comments, script, style
       Tests  62 failed | 311 passed | 37 skipped (410)
    Start at  14:53:12
    Duration  37.95s (transform 1.69s, setup 228ms, collect 1.07s, tests 29.30s, environment 249ms, prepare 53ms) (pass).
+
+### 2026-02-12 — T002 implemented
+
+- Marked unknown node-type rejection with actionable schema diagnostics as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/schema.test.ts::returns structured validation errors for invalid AST payloads
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
