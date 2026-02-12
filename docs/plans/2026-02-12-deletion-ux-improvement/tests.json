@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "DeletionDependency type includes type, count, label, description, viewUrl fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
