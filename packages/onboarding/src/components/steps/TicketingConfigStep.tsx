@@ -2,12 +2,12 @@
 
 // Onboarding step: configure ticketing defaults.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star, AlertTriangle, CornerDownRight, HelpCircle } from 'lucide-react';
-import type { StepProps } from '@alga-psa/types';
+import type { StepProps, DeletionValidationResult } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
@@ -28,6 +28,8 @@ import { createStatus } from '@alga-psa/reference-data/actions';
 import { createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
+import { preCheckDeletion } from '@alga-psa/core';
 
 interface SectionState {
   numbering: boolean;
@@ -163,6 +165,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [importedStatuses, setImportedStatuses] = useState<any[]>([]);
   const [importedCategories, setImportedCategories] = useState<string[]>([]);
   const [importedPriorities, setImportedPriorities] = useState<any[]>([]);
+  const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [categoryDeleteValidation, setCategoryDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isCategoryDeleteValidating, setIsCategoryDeleteValidating] = useState(false);
+  const [isCategoryDeleteProcessing, setIsCategoryDeleteProcessing] = useState(false);
 
   // ITIL configuration
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
@@ -770,30 +776,73 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
-  const removeCategory = async (categoryId: string) => {
+  const resetCategoryDeleteState = () => {
+    setCategoryToDelete(null);
+    setCategoryDeleteValidation(null);
+    setIsCategoryDeleteValidating(false);
+    setIsCategoryDeleteProcessing(false);
+  };
+
+  const runCategoryDeleteValidation = useCallback(async (categoryId: string) => {
+    setIsCategoryDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('categories', categoryId);
-      if (result.success) {
-        // Remove from data.categories
-        updateData({ 
-          categories: data.categories.filter(cat => cat.category_id !== categoryId) 
-        });
-        
-        // Remove from imported categories tracking
-        const category = data.categories.find(cat => cat.category_id === categoryId);
-        if (category) {
-          setImportedCategories(prev => prev.filter(name => name !== category.category_name));
-        }
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Category deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete category');
+      const result = await preCheckDeletion('category', categoryId);
+      setCategoryDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating category deletion:', error);
+      setCategoryDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsCategoryDeleteValidating(false);
+    }
+  }, []);
+
+  const openCategoryDeleteDialog = (categoryId: string) => {
+    const category = data.categories.find(cat => cat.category_id === categoryId);
+    setCategoryToDelete({
+      id: categoryId,
+      name: category?.category_name || 'this category'
+    });
+    void runCategoryDeleteValidation(categoryId);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    try {
+      setIsCategoryDeleteProcessing(true);
+      const result = await deleteReferenceDataItem('categories', categoryToDelete.id);
+      if (!result.success) {
+        setCategoryDeleteValidation(result);
+        return;
       }
+
+      updateData({
+        categories: data.categories.filter(cat => cat.category_id !== categoryToDelete.id)
+      });
+
+      if (categoryToDelete.name) {
+        setImportedCategories(prev => prev.filter(name => name !== categoryToDelete.name));
+      }
+
+      loadExistingData();
+      toast.success('Category deleted successfully');
+      resetCategoryDeleteState();
     } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error('Failed to delete category');
+      setCategoryDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete category.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsCategoryDeleteProcessing(false);
     }
   };
 
@@ -1828,7 +1877,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => removeCategory(category.category_id)}
+                                  onClick={() => openCategoryDeleteDialog(category.category_id)}
                                   className="p-1 h-6 w-6"
                                   title="Remove category"
                                 >
@@ -2690,6 +2739,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           </Button>
         </DialogFooter>
       </Dialog>
+      <DeleteEntityDialog
+        id="delete-category-dialog"
+        isOpen={Boolean(categoryToDelete)}
+        onClose={resetCategoryDeleteState}
+        onConfirmDelete={confirmDeleteCategory}
+        entityName={categoryToDelete?.name || 'this category'}
+        validationResult={categoryDeleteValidation}
+        isValidating={isCategoryDeleteValidating}
+        isDeleting={isCategoryDeleteProcessing}
+      />
     </div>
   );
 }

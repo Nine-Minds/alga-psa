@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "Migrate @alga-psa/reference-data category deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]

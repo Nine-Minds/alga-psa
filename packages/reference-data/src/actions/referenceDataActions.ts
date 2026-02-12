@@ -3,11 +3,12 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { IStandardPriority, IPriority } from '@alga-psa/types';
+import { IStandardPriority, IPriority, DeletionValidationResult } from '@alga-psa/types';
 import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 export type ReferenceDataType = 'priorities' | 'statuses' | 'service_types' | 'task_types' | 'interaction_types' | 'service_categories' | 'categories' | 'boards';
 
@@ -603,10 +604,9 @@ export const deleteReferenceDataItem = withAuth(async (
   { tenant },
   dataType: ReferenceDataType,
   itemId: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string }> => {
   try {
     const config = referenceDataConfigs[dataType];
-    const { knex: db } = await createTenantKnex();
 
     // Define the ID field name for each data type
     const idFieldMap: Record<ReferenceDataType, string> = {
@@ -625,6 +625,28 @@ export const deleteReferenceDataItem = withAuth(async (
       throw new Error(`Unknown ID field for data type: ${dataType}`);
     }
 
+    if (dataType === 'categories') {
+      const result = await deleteEntityWithValidation('category', itemId, async (trx, tenantId) => {
+        const deletedCount = await trx(config.targetTable)
+          .where({
+            [idField]: itemId,
+            tenant: tenantId
+          })
+          .delete();
+
+        if (deletedCount === 0) {
+          throw new Error('Item not found or access denied');
+        }
+      });
+
+      return {
+        ...result,
+        success: result.deleted === true,
+        deleted: result.deleted
+      };
+    }
+
+    const { knex: db } = await createTenantKnex();
     await withTransaction(db, async (trx) => {
       // Check if the item exists and belongs to the tenant
       const existing = await trx(config.targetTable)
@@ -692,11 +714,21 @@ export const deleteReferenceDataItem = withAuth(async (
         .delete();
     });
 
-    return { success: true };
+    return {
+      success: true,
+      canDelete: true,
+      dependencies: [],
+      alternatives: []
+    };
   } catch (error) {
     console.error('Error deleting reference data item:', error);
     return {
       success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      dependencies: [],
+      alternatives: [],
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }

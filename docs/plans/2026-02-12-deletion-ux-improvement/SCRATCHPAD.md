@@ -76,3 +76,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.
 - (2026-02-12) Migrated ticket deletion to deleteEntityWithValidation with DeleteEntityDialog preview in TicketingDashboard; removed manual ticket tag cleanup and updated bulk delete to use validation helper.
 - (2026-02-12) Migrated project deletion to deleteEntityWithValidation + DeleteEntityDialog with preCheckDeletion preview; added project task tag cleanup via deleteEntitiesTags and removed manual project task tag deletion in ProjectTask model.
+- (2026-02-12) Wired reference-data category deletion to deleteEntityWithValidation and added DeleteEntityDialog + preCheckDeletion preview in TicketingConfigStep.
