@@ -572,7 +572,7 @@
   {
     "id": "T096",
     "description": "Role deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F074"]
   },
   {
