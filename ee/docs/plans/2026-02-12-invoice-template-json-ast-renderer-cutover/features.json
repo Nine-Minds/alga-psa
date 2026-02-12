@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Update template persistence model/repository paths to read/write AST as primary template representation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

@@ -388,3 +388,30 @@ Verification:
 Commands run:
 
 - `npx vitest run packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts` (pass).
+
+### 2026-02-12 — F016 implemented
+
+- Added DB migration for tenant template AST persistence:
+  - `server/migrations/20260212143000_add_template_ast_to_invoice_templates.cjs`
+  - introduces nullable `templateAst` JSONB column on `invoice_templates`.
+- Updated template read/write repository/model paths:
+  - `packages/billing/src/actions/invoiceTemplates.ts`
+    - `getInvoiceTemplate` now selects `templateAst`,
+    - `saveInvoiceTemplate` now treats `templateAst` payload as canonical and skips compile gating for AST templates.
+  - `packages/billing/src/models/invoice.ts`
+    - tenant template list path includes `templateAst`,
+    - upsert merge list includes `templateAst`.
+- Updated API schema contract:
+  - `server/src/lib/api/schemas/invoiceSchemas.ts`
+  - `assemblyScriptSource` optional, `templateAst` optional nullable object payload.
+- Added wiring tests:
+  - `packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts`.
+
+Rationale:
+
+- Persistence/read paths now treat AST as first-class template payload while keeping legacy fields for transition compatibility.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` (pass).
+- `npx vitest run packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` (pass).

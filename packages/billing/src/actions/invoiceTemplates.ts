@@ -38,6 +38,7 @@ export const getInvoiceTemplate = withAuth(async (
           'name',
           'version',
           'is_default',
+          'templateAst',
           'created_at',
           'updated_at',
           'assemblyScriptSource'
@@ -196,6 +197,7 @@ export const saveInvoiceTemplate = withAuth(async (
         id: template.template_id,
         name: template.name,
         isClone: template.isClone,
+        hasTemplateAst: 'templateAst' in template && Boolean((template as any).templateAst),
         hasAssemblyScriptSource: 'assemblyScriptSource' in template,
         hasWasmBinary: 'wasmBinary' in template
     });
@@ -231,6 +233,7 @@ export const saveInvoiceTemplate = withAuth(async (
         id: templateToSaveWithoutFlags.template_id,
         name: templateToSaveWithoutFlags.name,
         version: templateToSaveWithoutFlags.version,
+        hasTemplateAst: Boolean((templateToSaveWithoutFlags as any).templateAst),
         hasAssemblyScriptSource: 'assemblyScriptSource' in templateToSaveWithoutFlags,
         assemblyScriptSourceLength: templateToSaveWithoutFlags.assemblyScriptSource ? templateToSaveWithoutFlags.assemblyScriptSource.length : 0,
         hasWasmBinary: 'wasmBinary' in templateToSaveWithoutFlags,
@@ -238,8 +241,12 @@ export const saveInvoiceTemplate = withAuth(async (
         wasmBinaryLength: templateToSaveWithoutFlags.wasmBinary ? templateToSaveWithoutFlags.wasmBinary.length : 0
     });
 
-    // If we have AssemblyScript source but no WASM binary (or it's null), compile it
-    if (templateToSaveWithoutFlags.assemblyScriptSource &&
+    const hasCanonicalAst = Boolean((templateToSaveWithoutFlags as any).templateAst);
+
+    // If we have AssemblyScript source but no WASM binary (or it's null), compile it.
+    // Canonical AST templates intentionally skip this compile path.
+    if (!hasCanonicalAst &&
+        templateToSaveWithoutFlags.assemblyScriptSource &&
         (!templateToSaveWithoutFlags.wasmBinary || templateToSaveWithoutFlags.wasmBinary === null)) {
         console.log('Template has AssemblyScript source but no WASM binary, attempting compilation...');
 

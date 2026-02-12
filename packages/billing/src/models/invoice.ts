@@ -526,6 +526,7 @@ const Invoice = {
           'name',
           'version',
           'is_default',
+          'templateAst',
           'assemblyScriptSource',
           'created_at',
           'updated_at'
@@ -594,7 +595,7 @@ const Invoice = {
     const [savedTemplate] = await knexOrTrx('invoice_templates')
       .insert(templateWithDefaults)
       .onConflict(['tenant', 'template_id'])
-      .merge(['name', 'version', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
+      .merge(['name', 'version', 'templateAst', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
       .returning('*');
 
     return savedTemplate;
