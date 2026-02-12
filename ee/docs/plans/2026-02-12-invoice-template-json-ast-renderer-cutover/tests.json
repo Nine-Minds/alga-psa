@@ -460,7 +460,7 @@
   {
     "id": "T048",
     "description": "Integration suite validates preview pipeline with sample data fixtures",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],

@@ -29916,3 +29916,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T048 implemented
+
+- Marked integration coverage for preview pipeline using AST sample fixtures as implemented.
+- Evidence: packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts' (pass).
