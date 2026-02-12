@@ -172,3 +172,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Build fix: ClientPortalSettingsPage `slugToLabelMap` now depends on `tProfile` instead of undefined `t` (TS error during Next build).
 - Build fix: Documents `tDoc` now accepts string defaults and maps them to `defaultValue` to satisfy TS typing during Next build.
 - Build fix: FolderSelectorModal `tDoc` now accepts string defaults and maps them to `defaultValue` to satisfy TS typing.
+- Build fix: added missing `Globe` icon import in `server/src/config/menuConfig.ts` for Language settings nav item.

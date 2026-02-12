@@ -17,6 +17,7 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  Globe,
   Gauge,
   Handshake,
   HelpCircle,
