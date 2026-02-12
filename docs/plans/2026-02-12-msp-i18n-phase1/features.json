@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Create msp/core.json for all 6 non-English languages (machine-translated placeholders)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {

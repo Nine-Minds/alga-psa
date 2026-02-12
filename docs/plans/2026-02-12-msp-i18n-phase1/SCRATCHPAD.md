@@ -100,3 +100,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Migrated client portal profile/clientSettings/notifications strings to `client-portal/profile` namespace.
 - Emptied legacy `server/public/locales/*/clientPortal.json` files after migration to avoid duplicate keys.
 - Added `server/public/locales/en/msp/core.json` with MSP nav, sidebar, header, and settings tab strings.
+- Added machine-translated `msp/core.json` files for fr/es/de/nl/it/pl.
