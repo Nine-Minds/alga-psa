@@ -368,7 +368,7 @@
   {
     "id": "T062",
     "description": "useDeletionValidation reset clears all state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F043"]
   },
   {
