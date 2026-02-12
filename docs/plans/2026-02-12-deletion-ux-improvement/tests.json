@@ -320,7 +320,7 @@
   {
     "id": "T054",
     "description": "DeleteEntityDialog shows loading spinner on buttons when isDeleting=true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
