@@ -65,6 +65,57 @@ const UserManagement = (): React.JSX.Element => {
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
 
+  const extractErrorMessage = (error: unknown): string => {
+    if (typeof error === 'string') {
+      return error.trim();
+    }
+    if (error instanceof Error) {
+      return error.message.trim();
+    }
+    if (
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      typeof (error as { message?: unknown }).message === 'string'
+    ) {
+      return (error as { message: string }).message.trim();
+    }
+    return '';
+  };
+
+  const normalizeCreateUserError = (error: unknown): string => {
+    const rawMessage = extractErrorMessage(error);
+    if (!rawMessage) {
+      return 'Failed to create user';
+    }
+
+    if (rawMessage.includes('EMAIL_EXISTS:') || rawMessage.includes('VALIDATION_ERROR:')) {
+      return rawMessage.replace('EMAIL_EXISTS:', '').replace('VALIDATION_ERROR:', '').trim();
+    }
+
+    if (/already exists|duplicate key value|unique constraint/i.test(rawMessage)) {
+      if (rawMessage.includes('already exists for this contact or email address')) {
+        return 'A portal user already exists for this contact or email address.';
+      }
+      if (rawMessage.includes('already exists for this contact')) {
+        return 'A portal user already exists for this contact. Use password reset for the existing user.';
+      }
+      return 'This email address is already in use. Please use a different email address.';
+    }
+
+    if (/cannot assign/i.test(rawMessage)) {
+      return 'Please select an appropriate role for this user type';
+    }
+
+    return rawMessage;
+  };
+
+  const reportCreateUserError = (error: unknown): void => {
+    const message = normalizeCreateUserError(error);
+    toast.error(message);
+    setError(message);
+  };
+
   useEffect(() => {
     setLoading(true);
     fetchUsers();
@@ -380,7 +431,8 @@ const fetchContacts = async (): Promise<void> => {
           if (result.success) {
             toast.success('Client portal user created successfully!');
           } else {
-            throw new Error(result.error || 'Failed to create client portal user');
+            reportCreateUserError(result.error || 'Failed to create client portal user');
+            return;
           }
           await fetchUsers();
         }
@@ -419,30 +471,9 @@ const fetchContacts = async (): Promise<void> => {
         last_name: [],
         email: []
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating user:', error);
-      // Display specific error message if available
-      if (error.message === "A user with this email address already exists") {
-        const errorMsg = 'This email address is already in use. Please use a different email address.';
-        toast.error(errorMsg);
-        setError(errorMsg);
-      } else if (error.message?.includes('EMAIL_EXISTS:')) {
-        const errorMsg = error.message.replace('EMAIL_EXISTS:', '').trim();
-        toast.error(errorMsg);
-        setError(errorMsg);
-      } else if (error.message?.includes('VALIDATION_ERROR:')) {
-        const errorMsg = error.message.replace('VALIDATION_ERROR:', '').trim();
-        toast.error(errorMsg);
-        setError(errorMsg);
-      } else if (error.message.includes("Cannot assign")) {
-        const errorMsg = 'Please select an appropriate role for this user type';
-        toast.error(errorMsg);
-        setError(errorMsg);
-      } else {
-        const errorMsg = error.message || 'Failed to create user';
-        toast.error(errorMsg);
-        setError(errorMsg);
-      }
+      reportCreateUserError(error);
     }
   };
 
