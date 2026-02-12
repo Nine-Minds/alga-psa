@@ -109,7 +109,7 @@
   {
     "id": "T014",
     "description": "features/documents.json exists for all 7 languages with flattened keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
