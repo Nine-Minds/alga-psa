@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "Migrate @alga-psa/teams team deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]

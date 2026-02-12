@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { createTeam, deleteTeam } from '@alga-psa/teams/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
-import { ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
+import { DeletionValidationResult, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
+import { preCheckDeletion } from '@alga-psa/core';
 
 interface TeamListProps {
   teams: ITeam[];
@@ -20,6 +21,9 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
   const [allUsers, setAllUsers] = useState<IUserWithRoles[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [teamToDelete, setTeamToDelete] = useState<ITeam | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
 
   useEffect(() => {
     fetchAllUsers();
@@ -57,22 +61,55 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
     }
   };
 
+  const resetDeleteState = () => {
+    setTeamToDelete(null);
+    setDeleteValidation(null);
+  };
+
+  const runDeleteValidation = async (teamId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('team', teamId);
+      setDeleteValidation(result);
+    } catch (err) {
+      console.error('Error validating team deletion:', err);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate team deletion.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  };
+
   const handleDeleteTeam = async (team: ITeam): Promise<void> => {
     setTeamToDelete(team);
+    void runDeleteValidation(team.team_id);
   };
 
   const confirmDelete = async (): Promise<void> => {
-    if (teamToDelete) {
-      try {
-        await deleteTeam(teamToDelete.team_id);
-        onSelectTeam(teamToDelete, true);
-        setError(null);
-      } catch (err: unknown) {
-        setError('Failed to delete team');
-        console.error('Error deleting team:', err);
-      } finally {
-        setTeamToDelete(null);
+    if (!teamToDelete) {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      const result = await deleteTeam(teamToDelete.team_id);
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
       }
+      onSelectTeam(teamToDelete, true);
+      setError(null);
+      resetDeleteState();
+    } catch (err: unknown) {
+      setError('Failed to delete team');
+      console.error('Error deleting team:', err);
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -146,14 +183,15 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
         ))}
       </ul>
 
-      <ConfirmationDialog
+      <DeleteEntityDialog
+        id="delete-team-dialog"
         isOpen={!!teamToDelete}
-        onClose={() => setTeamToDelete(null)}
-        onConfirm={confirmDelete}
-        title="Delete Team"
-        message={`Are you sure you want to delete the team "${teamToDelete?.team_name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDelete}
+        entityName={teamToDelete?.team_name || 'this team'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
     </div>
   );
