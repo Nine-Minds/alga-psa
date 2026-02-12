@@ -312,7 +312,7 @@
   {
     "id": "T038",
     "description": "Inbound email reply integration: reply to existing ticket from matched contact without user stores contact-authored comment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025"

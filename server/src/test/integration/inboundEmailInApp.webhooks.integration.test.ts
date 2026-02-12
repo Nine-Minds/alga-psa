@@ -707,6 +707,98 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('Contact reply match: reply-token threading stores contact-authored comment when sender has no user', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-ms-contact-reply-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const contactEmail = `ms-contact-reply-${uuidv4().slice(0, 6)}@example.com`;
+    const contactId = uuidv4();
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Reply Contact',
+      email: contactEmail,
+      client_id: clientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REPLY-CONTACT-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Contact reply threaded ticket',
+      client_id: clientId,
+      status_id: statusId,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const replyToken = `token-${uuidv4()}`;
+    await db('email_reply_tokens').insert({
+      tenant: tenantId,
+      token: replyToken,
+      ticket_id: ticketId,
+      comment_id: null,
+      project_id: null,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('email_reply_tokens').where({ tenant: tenantId, token: replyToken }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-email-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: contactEmail, name: 'Reply Contact' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Contact reply threaded ticket',
+        body: {
+          text: `Customer contact reply\n\n[ALGA-REPLY-TOKEN ${replyToken}]\n\nOlder content`,
+          html: undefined,
+        },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(result.outcome === 'replied' ? result.ticketId : null).toBe(ticketId);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('client');
+    expect(comments[0].contact_id).toBe(contactId);
+    expect(comments[0].user_id ?? null).toBeNull();
+  });
+
   it('Contact match: initial comment is associated with matched client user', async () => {
     const providerId = uuidv4();
     const mailbox = `support-contact-user-${uuidv4().slice(0, 6)}@example.com`;
