@@ -415,3 +415,25 @@ Commands run:
 
 - `npx vitest run packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` (pass).
 - `npx vitest run packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` (pass).
+
+### 2026-02-12 — F017 implemented
+
+- Added AST-based standard template definitions:
+  - `packages/billing/src/lib/invoice-template-ast/standardTemplates.ts`
+  - includes `standard-default` and `standard-detailed` canonical AST payloads.
+- Added DB migration for standard template AST persistence:
+  - `server/migrations/20260212143500_add_template_ast_to_standard_invoice_templates.cjs`
+- Updated standard template read/update wiring:
+  - `packages/billing/src/models/invoice.ts` now selects `templateAst` for standard templates and falls back to AST definitions by standard code.
+  - `packages/billing/src/actions/invoiceTemplates.ts` now writes canonical `templateAst` during `compileStandardTemplate` updates.
+- Added tests:
+  - `packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts`
+  - extended `packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` for standard-template AST wiring assertions.
+
+Rationale:
+
+- Standard templates now have AST-native source representations, enabling unified renderer/evaluator behavior with tenant templates.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` (pass).

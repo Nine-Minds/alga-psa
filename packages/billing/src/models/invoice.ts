@@ -21,6 +21,7 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrlAsync } from '../lib/documentsHelpers';
+import { getStandardInvoiceTemplateAstByCode } from '../lib/invoice-template-ast/standardTemplates';
 
 /**
  * Invoice model with tenant-explicit methods.
@@ -495,16 +496,24 @@ const Invoice = {
   getStandardTemplates: async (
     knexOrTrx: Knex | Knex.Transaction
   ): Promise<IInvoiceTemplate[]> => {
-    return knexOrTrx('standard_invoice_templates')
+    const records = await knexOrTrx('standard_invoice_templates')
       .select(
         'template_id',
         'name',
         'version',
         'standard_invoice_template_code',
+        'templateAst',
         'assemblyScriptSource',
         'sha'
       )
       .orderBy('name');
+
+    return records.map((record) => ({
+      ...record,
+      templateAst:
+        record.templateAst ??
+        getStandardInvoiceTemplateAstByCode(record.standard_invoice_template_code),
+    })) as IInvoiceTemplate[];
   },
 
   /**

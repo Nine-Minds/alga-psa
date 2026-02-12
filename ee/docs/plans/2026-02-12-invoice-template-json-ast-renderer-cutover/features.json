@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Update standard template source representation to AST-based definitions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
   {

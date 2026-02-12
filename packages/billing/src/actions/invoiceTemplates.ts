@@ -23,6 +23,7 @@ import {
   buildAssemblyScriptCompileCommand,
   resolveAssemblyScriptProjectDir,
 } from '../lib/invoice-template-compiler/assemblyScriptCompile';
+import { getStandardInvoiceTemplateAstByCode } from '../lib/invoice-template-ast/standardTemplates';
 
 export const getInvoiceTemplate = withAuth(async (
     user,
@@ -1125,6 +1126,7 @@ export async function compileStandardTemplate(
         console.log(`[compileStandardTemplate] Updating standard_invoice_templates for ${standard_invoice_template_code}`);
         const updatePayload = {
             wasmBinary: knex.raw('?', [wasmBinary]), // Use the newly compiled binary
+            templateAst: getStandardInvoiceTemplateAstByCode(standard_invoice_template_code) ?? null,
             sha: currentSha, // Update SHA to match the source code that was just compiled
             updated_at: knex.fn.now() // Update the timestamp
         };
