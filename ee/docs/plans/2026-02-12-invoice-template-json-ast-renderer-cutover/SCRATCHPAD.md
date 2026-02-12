@@ -177,3 +177,18 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).
+
+### 2026-02-12 — F005 implemented
+
+- Confirmed/retained `strategyId?: string` on transform operation base model in:
+  - `packages/types/src/lib/invoice-template-ast.ts`
+  - `packages/billing/src/lib/invoice-template-ast/schema.ts`
+- Added runtime acceptance test in `packages/billing/src/lib/invoice-template-ast/schema.test.ts` ensuring `strategyId` is valid on grouped/aggregate transforms.
+
+Rationale:
+
+- Declares extension points in AST shape now, while deferring actual strategy resolution/execution to allowlisted registry implementation.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).

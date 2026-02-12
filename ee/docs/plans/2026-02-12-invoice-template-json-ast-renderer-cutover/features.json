@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Add `strategyId` references in AST for advanced grouping/calculation extension points",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Security / Permissions"]
   },
   {

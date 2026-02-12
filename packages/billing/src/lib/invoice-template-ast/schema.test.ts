@@ -198,4 +198,42 @@ describe('invoiceTemplateAstSchema', () => {
 
     expect(validTransformPayload.success).toBe(true);
   });
+
+  it('accepts optional strategyId on transform operations', () => {
+    const result = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      transforms: {
+        sourceBindingId: 'invoice.items',
+        outputBindingId: 'invoice.items.grouped',
+        operations: [
+          {
+            id: 'group-1',
+            type: 'group',
+            key: 'category',
+            strategyId: 'custom-group-key',
+          },
+          {
+            id: 'aggregate-1',
+            type: 'aggregate',
+            strategyId: 'custom-aggregate',
+            aggregations: [
+              {
+                id: 'sum-total',
+                op: 'sum',
+                path: 'total',
+              },
+            ],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [],
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
