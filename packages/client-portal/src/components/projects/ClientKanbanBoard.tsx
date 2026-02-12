@@ -352,7 +352,7 @@ function PhaseCard({
       onClick={onClick}
       className={`p-3 rounded-lg cursor-pointer transition-all ${
         isSelected
-          ? 'bg-purple-500/10'
+          ? 'bg-[rgb(var(--color-primary-50))] dark:bg-primary-500/10'
           : 'hover:bg-[rgb(var(--color-border-50))]'
       }`}
     >

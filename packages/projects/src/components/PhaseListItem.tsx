@@ -215,7 +215,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
-        ${isSelected ? 'bg-purple-50 dark:bg-purple-950' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
+        ${isSelected ? 'bg-purple-50 dark:bg-purple-500/10' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
         ${isDragging ? styles.dragging + ' opacity-50 scale-95' : ''}
         ${isAnimating ? styles.entering : ''}
         ${taskDraggingOverPhaseId === phase.phase_id ? styles.taskDragOver : ''}
@@ -317,7 +317,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
           <div className="flex flex-col flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
                 {taskCount ?? 0} {(taskCount ?? 0) === 1 ? 'task' : 'tasks'}
               </span>
             </div>

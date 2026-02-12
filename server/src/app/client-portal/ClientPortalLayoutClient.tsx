@@ -5,8 +5,6 @@ import { ClientPortalLayout } from "@alga-psa/client-portal/components";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { BrandingProvider } from "@alga-psa/tenancy/components";
-import { AppThemeProvider } from "@/components/providers/AppThemeProvider";
-import { ThemeBridge } from "@/components/providers/ThemeBridge";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "@alga-psa/tenancy/actions";
 import type { SupportedLocale } from "@alga-psa/ui/lib/i18n/config";
@@ -22,17 +20,13 @@ export function ClientPortalLayoutClient({ children, session, branding, initialL
   return (
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
-      <AppThemeProvider>
-        <ThemeBridge>
-          <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
-            <BrandingProvider initialBranding={branding}>
-              <ClientPortalLayout>
-                {children}
-              </ClientPortalLayout>
-            </BrandingProvider>
-          </I18nWrapper>
-        </ThemeBridge>
-      </AppThemeProvider>
+      <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
+        <BrandingProvider initialBranding={branding}>
+          <ClientPortalLayout>
+            {children}
+          </ClientPortalLayout>
+        </BrandingProvider>
+      </I18nWrapper>
     </AppSessionProvider>
   );
 }
