@@ -469,7 +469,7 @@
   {
     "id": "T049",
     "description": "Integration suite validates preview pipeline with existing invoice query payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],
