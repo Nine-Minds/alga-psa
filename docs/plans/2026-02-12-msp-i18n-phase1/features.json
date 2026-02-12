@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "EE MspLayoutClient conditionally wraps children in I18nWrapper when flag is enabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
