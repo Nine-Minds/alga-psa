@@ -427,7 +427,7 @@
   {
     "id": "T052",
     "description": "Locale resolution for internal users: falls back to system default when no user or org preference",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
