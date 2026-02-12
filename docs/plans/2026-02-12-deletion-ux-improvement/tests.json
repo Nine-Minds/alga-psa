@@ -518,7 +518,7 @@
   {
     "id": "T087",
     "description": "Category deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F065"]
   },
   {
