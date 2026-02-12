@@ -12,6 +12,7 @@ import {
   isAllowlistedInvoiceTemplateStrategy,
   resolveInvoiceTemplateStrategy,
 } from './strategies';
+import { validateInvoiceTemplateAst } from './schema';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -30,24 +31,36 @@ export interface InvoiceTemplateEvaluationResult {
   bindings: Record<string, unknown>;
 }
 
-export class InvoiceTemplateEvaluationError extends Error {
-  public readonly code:
+export interface InvoiceTemplateEvaluationIssue {
+  code:
+    | 'SCHEMA_VALIDATION_FAILED'
     | 'INVALID_SOURCE_COLLECTION'
     | 'MISSING_BINDING'
     | 'INVALID_TRANSFORM_INPUT'
     | 'UNKNOWN_STRATEGY'
-    | 'STRATEGY_EXECUTION_FAILED';
+    | 'STRATEGY_EXECUTION_FAILED'
+    | 'INVALID_OPERAND';
+  message: string;
+  path?: string;
+  operationId?: string;
+}
+
+export class InvoiceTemplateEvaluationError extends Error {
+  public readonly code: InvoiceTemplateEvaluationIssue['code'];
   public readonly operationId?: string;
+  public readonly issues: InvoiceTemplateEvaluationIssue[];
 
   constructor(
-    code: InvoiceTemplateEvaluationError['code'],
+    code: InvoiceTemplateEvaluationIssue['code'],
     message: string,
-    operationId?: string
+    operationId?: string,
+    issues: InvoiceTemplateEvaluationIssue[] = [{ code, message, operationId }]
   ) {
     super(message);
     this.name = 'InvoiceTemplateEvaluationError';
     this.code = code;
     this.operationId = operationId;
+    this.issues = issues;
   }
 }
 
@@ -133,6 +146,9 @@ const resolveBindingValue = (
 
   return getPathValue(invoiceData, bindingId);
 };
+
+const hasBindingReference = (ast: InvoiceTemplateAst, bindingId: string): boolean =>
+  Boolean(ast.bindings?.values?.[bindingId] || ast.bindings?.collections?.[bindingId]);
 
 const evaluatePredicate = (predicate: InvoiceTemplatePredicate, item: UnknownRecord): boolean => {
   if (predicate.type === 'comparison') {
@@ -320,6 +336,7 @@ const evaluateComputationExpression = (
     invoiceData: UnknownRecord;
     item?: UnknownRecord;
     aggregates: Record<string, number>;
+    operationId?: string;
   }
 ): number => {
   switch (expression.type) {
@@ -330,6 +347,13 @@ const evaluateComputationExpression = (
       return safeNumber(getPathValue(source, expression.path));
     }
     case 'aggregate-ref':
+      if (!(expression.aggregateId in context.aggregates)) {
+        throw new InvoiceTemplateEvaluationError(
+          'INVALID_OPERAND',
+          `Aggregate reference "${expression.aggregateId}" was not produced before use.`,
+          context.operationId
+        );
+      }
       return safeNumber(context.aggregates[expression.aggregateId]);
     case 'binary': {
       const left = evaluateComputationExpression(expression.left, context);
@@ -381,6 +405,21 @@ export const evaluateInvoiceTemplateAst = (
   ast: InvoiceTemplateAst,
   invoiceDataInput: UnknownRecord
 ): InvoiceTemplateEvaluationResult => {
+  const astValidation = validateInvoiceTemplateAst(ast);
+  if (!astValidation.success) {
+    const issues: InvoiceTemplateEvaluationIssue[] = astValidation.errors.map((error) => ({
+      code: 'SCHEMA_VALIDATION_FAILED',
+      message: error.message,
+      path: error.path,
+    }));
+    throw new InvoiceTemplateEvaluationError(
+      'SCHEMA_VALIDATION_FAILED',
+      'Invoice template AST schema validation failed.',
+      undefined,
+      issues
+    );
+  }
+
   const invoiceData = isRecord(invoiceDataInput) ? invoiceDataInput : {};
   const bindings: Record<string, unknown> = {
     invoice: invoiceData,
@@ -405,6 +444,13 @@ export const evaluateInvoiceTemplateAst = (
     };
   }
 
+  if (!hasBindingReference(ast, ast.transforms.sourceBindingId) && getPathValue(invoiceData, ast.transforms.sourceBindingId) === undefined) {
+    throw new InvoiceTemplateEvaluationError(
+      'MISSING_BINDING',
+      `Transform source binding "${ast.transforms.sourceBindingId}" is not defined in bindings and did not resolve from invoice data.`
+    );
+  }
+
   const sourceValue = resolveBindingValue(ast, ast.transforms.sourceBindingId, invoiceData);
   if (!Array.isArray(sourceValue)) {
     throw new InvoiceTemplateEvaluationError(
@@ -420,6 +466,14 @@ export const evaluateInvoiceTemplateAst = (
   let totals: Record<string, number> = {};
 
   for (const operation of ast.transforms.operations) {
+    if (groups && (operation.type === 'filter' || operation.type === 'sort' || operation.type === 'computed-field')) {
+      throw new InvoiceTemplateEvaluationError(
+        'INVALID_TRANSFORM_INPUT',
+        `Operation "${operation.id}" (${operation.type}) cannot run after grouped output without an ungroup step.`,
+        operation.id
+      );
+    }
+
     switch (operation.type) {
       case 'filter':
         currentItems = applyFilterTransform(currentItems, operation);
@@ -437,6 +491,7 @@ export const evaluateInvoiceTemplateAst = (
               invoiceData,
               item: next,
               aggregates,
+              operationId: operation.id,
             });
           }
           return next;
@@ -500,6 +555,7 @@ export const evaluateInvoiceTemplateAst = (
             totals[total.id] = evaluateComputationExpression(total.value, {
               invoiceData,
               aggregates,
+              operationId: operation.id,
             });
           }
         }

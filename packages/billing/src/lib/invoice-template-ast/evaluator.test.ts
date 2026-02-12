@@ -173,8 +173,13 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    expect(() => evaluateInvoiceTemplateAst(ast, invoiceFixture)).toThrow(InvoiceTemplateEvaluationError);
-    expect(() => evaluateInvoiceTemplateAst(ast, invoiceFixture)).toThrow(/unknown strategy/i);
+    try {
+      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      throw new Error('Expected evaluator to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvoiceTemplateEvaluationError);
+      expect((error as InvoiceTemplateEvaluationError).code).toBe('UNKNOWN_STRATEGY');
+    }
   });
 
   it('returns byte-for-byte stable output for equivalent AST and input data', () => {
@@ -205,5 +210,94 @@ describe('evaluateInvoiceTemplateAst', () => {
     const second = evaluateInvoiceTemplateAst(ast, invoiceFixture);
 
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
+
+  it('returns structured schema validation issues for invalid AST payloads', () => {
+    const invalidAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      transforms: {
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.shaped',
+        operations: [],
+      },
+      layout: {
+        id: 'root',
+        type: 'unknown-node',
+      },
+    } as unknown as InvoiceTemplateAst;
+
+    try {
+      evaluateInvoiceTemplateAst(invalidAst, invoiceFixture);
+      throw new Error('Expected evaluator to throw');
+    } catch (error) {
+      const evaluationError = error as InvoiceTemplateEvaluationError;
+      expect(evaluationError.code).toBe('SCHEMA_VALIDATION_FAILED');
+      expect(evaluationError.issues.length).toBeGreaterThan(0);
+      expect(evaluationError.issues[0]).toEqual(
+        expect.objectContaining({
+          code: 'SCHEMA_VALIDATION_FAILED',
+          message: expect.any(String),
+        })
+      );
+    }
+  });
+
+  it('throws a missing-binding error when source binding cannot be resolved', () => {
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      transforms: {
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.shaped',
+        operations: [
+          {
+            id: 'filter-positive',
+            type: 'filter',
+            predicate: {
+              type: 'comparison',
+              path: 'total',
+              op: 'gt',
+              value: 0,
+            },
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [],
+      },
+    };
+
+    try {
+      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      throw new Error('Expected evaluator to throw');
+    } catch (error) {
+      expect((error as InvoiceTemplateEvaluationError).code).toBe('MISSING_BINDING');
+    }
+  });
+
+  it('throws invalid-operand errors for unresolved aggregate references', () => {
+    const ast = buildAst([
+      {
+        id: 'compose-totals',
+        type: 'totals-compose',
+        totals: [
+          {
+            id: 'invalid-total',
+            label: 'Invalid',
+            value: { type: 'aggregate-ref', aggregateId: 'unknownAggregate' },
+          },
+        ],
+      },
+    ]);
+
+    try {
+      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      throw new Error('Expected evaluator to throw');
+    } catch (error) {
+      expect((error as InvoiceTemplateEvaluationError).code).toBe('INVALID_OPERAND');
+    }
   });
 });

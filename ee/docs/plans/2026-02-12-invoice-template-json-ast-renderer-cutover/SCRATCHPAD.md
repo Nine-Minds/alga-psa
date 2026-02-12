@@ -256,3 +256,26 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (pass).
+
+### 2026-02-12 — F009 implemented
+
+- Upgraded evaluator failure handling to structured error model in `packages/billing/src/lib/invoice-template-ast/evaluator.ts`.
+- Added `InvoiceTemplateEvaluationIssue` and enriched `InvoiceTemplateEvaluationError` with:
+  - canonical error code,
+  - operationId (where applicable),
+  - issue list payload for multi-error contexts.
+- Covered required failure classes:
+  - `SCHEMA_VALIDATION_FAILED` (integrated runtime schema validation before evaluation),
+  - `MISSING_BINDING` (undefined source binding),
+  - `UNKNOWN_STRATEGY` / `STRATEGY_EXECUTION_FAILED`,
+  - `INVALID_TRANSFORM_INPUT`,
+  - `INVALID_OPERAND` (e.g., unresolved aggregate references).
+- Added evaluator tests asserting explicit codes and structured issue payloads in `packages/billing/src/lib/invoice-template-ast/evaluator.test.ts`.
+
+Rationale:
+
+- Preview/PDF pipeline error surfacing needs explicit, machine-readable evaluator errors rather than ad hoc thrown strings.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (pass).

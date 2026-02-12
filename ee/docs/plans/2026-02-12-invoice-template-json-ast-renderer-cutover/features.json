@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Implement evaluator error model for schema violations, missing bindings, missing strategies, and invalid transform operands",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Non-functional Requirements"]
   },
   {
