@@ -296,7 +296,7 @@
   {
     "id": "T050",
     "description": "DeleteEntityDialog does not render View link when viewUrl is undefined",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
