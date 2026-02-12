@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Alternatives include 'Archive' when supportsArchive is true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
