@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "preCheckDeletion returns canDelete:true for entity with no dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F028"]
   },
   {
