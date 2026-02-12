@@ -346,7 +346,7 @@
   {
     "id": "T042",
     "description": "With flag OFF: no Language section visible in Settings > General > Organization & Access",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
