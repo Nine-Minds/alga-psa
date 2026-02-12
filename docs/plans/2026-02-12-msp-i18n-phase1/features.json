@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Add MspLanguageSettings to Settings > General > Organization & Access section, after Teams, gated by feature flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR10"]
   },
   {
