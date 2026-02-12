@@ -443,7 +443,7 @@
   {
     "id": "T054",
     "description": "No duplicate keys exist in any new JSON namespace file",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
