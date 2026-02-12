@@ -46,10 +46,6 @@
       "import": "./src/lib/documentUtils.ts",
       "types": "./src/lib/documentUtils.ts"
     },
-    "./lib/entityImageService": {
-      "import": "./src/lib/entityImageService.ts",
-      "types": "./src/lib/entityImageService.ts"
-    },
     "./storage/StorageService": {
       "import": "./src/storage/StorageService.ts",
       "types": "./src/storage/StorageService.ts"

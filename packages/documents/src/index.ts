@@ -7,9 +7,8 @@
 
 export * from './components';
 
-// Avatar and entity image utilities
+// Avatar URL helpers (batch functions live in @alga-psa/media)
 export * from './lib/avatarUtils';
-export * from './lib/entityImageService';
 
 // Storage utilities
 export { StorageProviderFactory, generateStoragePath } from './storage/StorageProviderFactory';

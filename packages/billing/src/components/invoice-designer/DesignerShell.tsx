@@ -1938,7 +1938,7 @@ export const DesignerShell: React.FC = () => {
 
       const beforeSize = section.size;
       updateNodeSize(section.id, intent.size, true);
-      const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === section.id);
+      const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === section?.id);
       if (!afterSection || sizesAreEffectivelyEqual(beforeSize, afterSection.size)) {
         showDropFeedback('info', getSectionFitNoopMessage(section));
         return;

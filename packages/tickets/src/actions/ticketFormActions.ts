@@ -10,6 +10,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { getClientLogoUrlsBatch } from '@alga-psa/media';
 
 export interface TicketFormData {
   users: IUser[];
@@ -25,7 +26,7 @@ export interface TicketFormData {
   };
 }
 
-export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?: string): Promise<TicketFormData> => {
+export const getTicketFormData = withAuth(async (_user, { tenant }, prefilledClientId?: string): Promise<TicketFormData> => {
   try {
     // Fetch required data first
     const [users, boards, statuses, priorities, clients] = await Promise.all([
@@ -51,6 +52,22 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
       })
     ]);
 
+    // Enrich clients with logo URLs
+    const clientList = clients || [];
+    let enrichedClients = clientList;
+    if (clientList.length > 0) {
+      try {
+        const clientIds = clientList.map((c: IClient) => c.client_id);
+        const logoUrls = await getClientLogoUrlsBatch(clientIds, tenant);
+        enrichedClients = clientList.map((c: IClient) => ({
+          ...c,
+          logoUrl: logoUrls.get(c.client_id) || null,
+        }));
+      } catch (error) {
+        console.error('Error fetching client logos:', error);
+      }
+    }
+
     // Handle optional prefilled client data separately
     let selectedClient: any | null = null;
     let contacts: IContact[] = [];
@@ -72,7 +89,7 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
       boards: boards || [],
       statuses: statuses || [],
       priorities: priorities || [],
-      clients: clients || [],
+      clients: enrichedClients,
       contacts: contacts.length > 0 ? contacts : undefined,
       selectedClient: selectedClient && selectedClient.client_type ? {
         client_id: selectedClient.client_id,

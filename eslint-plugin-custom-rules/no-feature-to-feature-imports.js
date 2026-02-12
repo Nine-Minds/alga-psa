@@ -1,3 +1,6 @@
+// Vertical feature packages that must NOT import each other.
+// Composition layers (msp-composition, client-portal) are intentionally excluded --
+// they are allowed to import from multiple verticals to assemble cross-domain views.
 const VERTICAL_PACKAGES = new Set([
   'billing',
   'clients',
@@ -9,7 +12,13 @@ const VERTICAL_PACKAGES = new Set([
   'assets',
   'surveys',
   'integrations',
-  'client-portal',
+]);
+
+// Allowed cross-vertical dependency pairs where the import is architecturally intentional.
+// Format: 'source → target'
+const ALLOWED_PAIRS = new Set([
+  'integrations → clients',   // integrations inherently resolve client/contact references
+  'billing → integrations',   // company sync adapters bridge billing ↔ accounting providers
 ]);
 
 function getSourcePackage(filename) {
@@ -54,6 +63,7 @@ export default {
 
         if (!VERTICAL_PACKAGES.has(targetPkg)) return;
         if (targetPkg === sourcePkg) return;
+        if (ALLOWED_PAIRS.has(`${sourcePkg} → ${targetPkg}`)) return;
 
         context.report({
           node: node.source,
