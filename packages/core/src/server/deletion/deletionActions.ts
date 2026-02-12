@@ -30,7 +30,13 @@ function buildUnknownEntity(entityType: string): DeletionValidationResult {
 }
 
 function permissionEntityFor(entityType: string): string {
-  return entityType === 'client' ? 'company' : entityType;
+  if (entityType === 'client') {
+    return 'company';
+  }
+  if (entityType === 'schedule_entry') {
+    return 'user_schedule';
+  }
+  return entityType;
 }
 
 export async function preCheckDeletion(

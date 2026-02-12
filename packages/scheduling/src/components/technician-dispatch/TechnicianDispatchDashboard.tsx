@@ -485,15 +485,25 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         setEvents((prevEvents) => prevEvents.filter(event => event.entry_id !== eventId));
         setError(null);
       } else {
-        if (result.isPrivateError) {
-          toast.error(result.error || 'This is a private entry. Only the creator can delete it.');
-        } else {
-          setError('Failed to delete schedule entry');
+        const message = result.error || result.message || 'Failed to delete schedule entry';
+        if (!result.isPrivateError) {
+          setError(message);
         }
       }
+      return result;
     } catch (err) {
       console.error('Error deleting schedule entry:', err);
-      setError('Failed to delete schedule entry');
+      const fallback = {
+        success: false,
+        error: 'Failed to delete schedule entry',
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete schedule entry',
+        dependencies: [],
+        alternatives: []
+      } as const;
+      setError(fallback.error);
+      return fallback;
     }
   }, []);
 

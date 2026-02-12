@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "Migrate @alga-psa/scheduling schedule entry deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]

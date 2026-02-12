@@ -1,6 +1,6 @@
 'use server'
 import ScheduleEntry from '../models/scheduleEntry';
-import { IScheduleEntry, IEditScope } from '@alga-psa/types';
+import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
@@ -8,6 +8,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCanceledPayload,
@@ -629,145 +630,153 @@ export const deleteScheduleEntry = withAuth(async (
   { tenant },
   entry_id: string,
   deleteType: IEditScope = IEditScope.SINGLE
-) => {
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; isPrivateError?: boolean; error?: string }> => {
   try {
     const { knex: db } = await createTenantKnex();
-    const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
 
-    // Parse entry ID to get master entry ID (for virtual entries)
     const isVirtualId = entry_id.includes('_');
     const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;
 
-    // Fetch the existing entry first to check permissions
     const existingEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await ScheduleEntry.get(trx, tenant, masterEntryId);
     });
+
     if (!existingEntry) {
-      // If entry doesn't exist, deletion is technically successful (idempotent)
-      // or we could return an error. Returning success for now.
-      return { success: true };
-      // Alternative: return { success: false, error: 'Schedule entry not found.' };
+      return {
+        success: true,
+        deleted: true,
+        canDelete: true,
+        dependencies: [],
+        alternatives: []
+      };
     }
 
-    // --- Permission Check ---
-    let canDeleteThisEntry = false;
-
-    // Check if the entry is private
     const isPrivateEntry = existingEntry.is_private;
     const isOwnEntry =
       existingEntry.assigned_user_ids.length === 1 &&
       existingEntry.assigned_user_ids[0] === user.user_id;
 
-    // If the entry is private, only the creator can delete it
     if (isPrivateEntry && !isOwnEntry) {
+      const message = 'This is a private entry. Only the creator can delete it.';
       return {
         success: false,
-        error: 'This is a private entry. Only the creator can delete it.',
-        isPrivateError: true
+        error: message,
+        isPrivateError: true,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: []
       };
     }
 
-    if (canUpdateGlobally) {
-      // Global update permission allows deleting any non-private entry
-      canDeleteThisEntry = true;
-    } else {
-      // User might only have 'user_schedule:read'
-      if (isOwnEntry) {
-        canDeleteThisEntry = true; // Allowed to delete own entry
+    const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, async (trx, tenantId) => {
+      const success = await ScheduleEntry.delete(trx, tenantId, entry_id, deleteType);
+      if (!success) {
+        throw new Error('Schedule entry not found');
       }
-    }
-
-    if (!canDeleteThisEntry) {
-      return { success: false, error: 'Permission denied to delete this schedule entry.' };
-    }
-    // --- End Permission Check ---
-
-    const success = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return ScheduleEntry.delete(trx, tenant, entry_id, deleteType);
     });
 
-    if (success) {
-      try {
-        await publishEvent({
-          eventType: 'SCHEDULE_ENTRY_DELETED',
-          payload: {
-            tenantId: tenant,
-            userId: user.user_id,
-            entryId: entry_id,
-            changes: {
-              before: sanitizeScheduleEntryForEvent(existingEntry),
-              deleteType,
-            },
+    if (!result.deleted) {
+      return {
+        ...result,
+        success: false,
+        error: result.message ?? 'Failed to delete schedule entry'
+      };
+    }
+
+    try {
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_DELETED',
+        payload: {
+          tenantId: tenant,
+          userId: user.user_id,
+          entryId: entry_id,
+          changes: {
+            before: sanitizeScheduleEntryForEvent(existingEntry),
+            deleteType,
           },
-        });
-      } catch (eventError) {
-        console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
-      }
+        },
+      });
+    } catch (eventError) {
+      console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
+    }
 
-      if (isScheduleBlockEntry(existingEntry)) {
-        const ctx = {
-          tenantId: tenant,
-          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-        };
-
-        try {
-          await publishWorkflowEvent({
-            eventType: 'SCHEDULE_BLOCK_DELETED',
-            ctx,
-            payload: buildScheduleBlockDeletedPayload({
-              scheduleBlockId: existingEntry.entry_id,
-              reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
-            }),
-          });
-        } catch (eventError) {
-          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
-        }
-      }
-
-      if (shouldEmitAppointmentEvents(existingEntry)) {
-        const ticketId =
-          getTicketIdFromScheduleEntry(existingEntry) ||
-          (existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
-            ? await getTicketIdForAppointmentRequest(db, tenant, existingEntry.work_item_id)
-            : undefined);
-
-        const ctx = {
-          tenantId: tenant,
-          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-        };
-
-        try {
-          await publishWorkflowEvent({
-            eventType: 'APPOINTMENT_CANCELED',
-            ctx,
-            payload: buildAppointmentCanceledPayload({
-              appointmentId: existingEntry.entry_id,
-              ticketId,
-              reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
-            }),
-          });
-        } catch (eventError) {
-          console.error('[ScheduleActions] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
-        }
-      }
+    if (isScheduleBlockEntry(existingEntry)) {
+      const ctx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      };
 
       try {
-        await maybePublishCapacityThresholdReached({
-          db,
-          tenantId: tenant,
-          actorUserId: user.user_id,
-          before: existingEntry,
+        await publishWorkflowEvent({
+          eventType: 'SCHEDULE_BLOCK_DELETED',
+          ctx,
+          payload: buildScheduleBlockDeletedPayload({
+            scheduleBlockId: existingEntry.entry_id,
+            reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
+          }),
         });
       } catch (eventError) {
-        console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
+        console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
       }
     }
 
-    return { success };
+    if (shouldEmitAppointmentEvents(existingEntry)) {
+      const ticketId =
+        getTicketIdFromScheduleEntry(existingEntry) ||
+        (existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
+          ? await getTicketIdForAppointmentRequest(db, tenant, existingEntry.work_item_id)
+          : undefined);
+
+      const ctx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      };
+
+      try {
+        await publishWorkflowEvent({
+          eventType: 'APPOINTMENT_CANCELED',
+          ctx,
+          payload: buildAppointmentCanceledPayload({
+            appointmentId: existingEntry.entry_id,
+            ticketId,
+            reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
+          }),
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
+      }
+    }
+
+    try {
+      await maybePublishCapacityThresholdReached({
+        db,
+        tenantId: tenant,
+        actorUserId: user.user_id,
+        before: existingEntry,
+      });
+    } catch (eventError) {
+      console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
+    }
+
+    return {
+      ...result,
+      success: true,
+      deleted: true
+    };
   } catch (error) {
     console.error('Error deleting schedule entry:', error);
     const message = error instanceof Error ? error.message : 'Failed to delete schedule entry';
-    return { success: false, error: message };
+    return {
+      success: false,
+      error: message,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message,
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 
