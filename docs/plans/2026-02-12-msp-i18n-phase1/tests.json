@@ -264,7 +264,7 @@
   {
     "id": "T032",
     "description": "msp/core.json nav items match navigation entries in menuConfig.ts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

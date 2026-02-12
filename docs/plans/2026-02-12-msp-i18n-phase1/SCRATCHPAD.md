@@ -142,3 +142,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T029: Client portal continues working after full migration (no regressions — same translations, new namespace paths) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T030: clientPortal.json removed or emptied after all components migrated — no duplication of keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T031: msp/core.json exists for English with nav, sidebar, header, and settings keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T032: msp/core.json nav items match navigation entries in menuConfig.ts (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
