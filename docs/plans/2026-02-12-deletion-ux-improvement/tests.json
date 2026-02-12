@@ -416,7 +416,7 @@
   {
     "id": "T070",
     "description": "ClientDetails.tsx uses DeleteEntityDialog instead of ConfirmationDialog for deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F049"]
   },
   {
