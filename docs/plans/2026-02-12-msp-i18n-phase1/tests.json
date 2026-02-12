@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "With flag OFF: standard MSP layout does NOT call getHierarchicalLocaleAction (no locale fetch overhead)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
