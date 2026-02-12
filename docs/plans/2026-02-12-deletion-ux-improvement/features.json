@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "Migrate @alga-psa/clients contact deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "Remove manual deleteEntityTags from contactActions.tsx (automatic via config)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
