@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "EE MSP layout checks flag and fetches locale when enabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
