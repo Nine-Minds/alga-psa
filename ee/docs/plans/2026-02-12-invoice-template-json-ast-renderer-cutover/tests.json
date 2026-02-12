@@ -295,7 +295,7 @@
   {
     "id": "T031",
     "description": "Preview existing-invoice source continues rendering output after pipeline swap",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
