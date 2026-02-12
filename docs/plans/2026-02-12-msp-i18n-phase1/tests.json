@@ -395,7 +395,7 @@
   {
     "id": "T048",
     "description": "getTenantMspLocaleSettings server action reads mspPortal locale settings from tenant_settings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
