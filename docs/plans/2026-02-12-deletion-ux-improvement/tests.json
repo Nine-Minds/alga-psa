@@ -434,7 +434,7 @@
   {
     "id": "T073",
     "description": "ClientDetails.tsx no longer has inline dependency rendering JSX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F052"]
   },
   {
