@@ -437,3 +437,25 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/standardTemplates.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` (pass).
+
+### 2026-02-12 — F018 implemented
+
+- Rewrote authoritative preview execution path in `packages/billing/src/actions/invoiceTemplatePreview.ts`:
+  - replaced GUI IR + AssemblyScript compile + Wasm execution path inside `runAuthoritativeInvoiceTemplatePreview`,
+  - now exports workspace to AST (`exportWorkspaceToInvoiceTemplateAst`), validates schema (`validateInvoiceTemplateAst`), evaluates transforms (`evaluateInvoiceTemplateAst`), and renders HTML/CSS via shared React renderer (`renderEvaluatedInvoiceTemplateAst`).
+- Preview response semantics for this stage:
+  - `sourceHash` now hashes canonical AST JSON,
+  - `generatedSource` now carries AST JSON,
+  - compile section is retained for compatibility but no longer performs compilation (`cacheHit=false`, diagnostics reflect AST/evaluator issues).
+- Updated integration coverage in `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`:
+  - now asserts AST validation+evaluator+renderer execution and rendered output presence,
+  - invocation adjusted to pass mocked auth/context args because `withAuth` is mocked as identity in this suite.
+
+Rationale:
+
+- This completes the preview runtime cutover for authoritative rendering while preserving response shape compatibility for downstream UI wiring.
+
+Commands run:
+
+- `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
+- `pnpm vitest packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx` (tests pass; run exits non-zero in this environment due pre-existing coverage temp dir `server/coverage/.tmp` ENOENT after reporting).

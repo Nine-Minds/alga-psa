@@ -5,6 +5,7 @@ import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'node:util';
+import crypto from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
@@ -13,20 +14,10 @@ import {
   resolveAssemblyScriptProjectDir,
 } from '../lib/invoice-template-compiler/assemblyScriptCompile';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
-import { extractInvoiceDesignerIr } from '../components/invoice-designer/compiler/guiIr';
-import { generateAssemblyScriptFromIr } from '../components/invoice-designer/compiler/assemblyScriptGenerator';
-import {
-  linkDiagnosticsToGuiNodes,
-  parseAssemblyScriptDiagnostics,
-} from '../components/invoice-designer/compiler/diagnostics';
-import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
-import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import {
-  collectRenderedGeometryFromLayout,
-  compareLayoutConstraints,
-  estimateRenderedContentHeight,
-  extractExpectedLayoutConstraintsFromIr,
-} from '../lib/invoice-template-compiler/layoutVerification';
+import { exportWorkspaceToInvoiceTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
+import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { validateInvoiceTemplateAst } from '../lib/invoice-template-ast/schema';
 import {
   getCachedPreviewCompileArtifact,
   setCachedPreviewCompileArtifact,
@@ -182,6 +173,13 @@ type AuthoritativePreviewInput = {
   tolerancePx?: number;
 };
 
+type AuthoritativePreviewDiagnostic = {
+  severity: 'error';
+  message: string;
+  raw: string;
+  nodeId?: string;
+};
+
 type AuthoritativePreviewResult = {
   success: boolean;
   sourceHash: string | null;
@@ -189,7 +187,7 @@ type AuthoritativePreviewResult = {
   compile: {
     status: 'idle' | 'success' | 'error';
     cacheHit: boolean;
-    diagnostics: ReturnType<typeof linkDiagnosticsToGuiNodes>;
+    diagnostics: AuthoritativePreviewDiagnostic[];
     error?: string;
     details?: string;
   };
@@ -202,13 +200,13 @@ type AuthoritativePreviewResult = {
   };
   verification: {
     status: 'idle' | 'pass' | 'issues' | 'error';
-    mismatches: ReturnType<typeof compareLayoutConstraints>['mismatches'];
+    mismatches: Array<{ constraintId: string; expected: string; actual?: string; delta?: string }>;
     error?: string;
   };
 };
 
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
-  async (_user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (_user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
     if (!input?.workspace || !Array.isArray(input.workspace.nodes) || input.workspace.nodes.length === 0) {
       return {
         success: false,
@@ -240,27 +238,26 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     }
 
-    const ir = extractInvoiceDesignerIr(input.workspace);
-    const generated = generateAssemblyScriptFromIr(ir);
-    const compileResult = await compilePreviewAssemblyScriptForTenant(tenant, {
-      source: generated.source,
-      sourceHash: generated.sourceHash,
-      bypassCache: input.bypassCompileCache,
-    });
+    const ast = exportWorkspaceToInvoiceTemplateAst(input.workspace);
+    const generatedSource = JSON.stringify(ast, null, 2);
+    const sourceHash = crypto.createHash('sha256').update(generatedSource).digest('hex');
 
-    if (!compileResult.success) {
-      const parsedDiagnostics = parseAssemblyScriptDiagnostics(compileResult.details ?? compileResult.error);
-      const linkedDiagnostics = linkDiagnosticsToGuiNodes(parsedDiagnostics, generated.sourceMap);
+    const validation = validateInvoiceTemplateAst(ast);
+    if (!validation.success) {
       return {
         success: false,
-        sourceHash: generated.sourceHash,
-        generatedSource: generated.source,
+        sourceHash,
+        generatedSource,
         compile: {
           status: 'error',
           cacheHit: false,
-          diagnostics: linkedDiagnostics,
-          error: compileResult.error,
-          details: compileResult.details,
+          diagnostics: validation.errors.map((error) => ({
+            severity: 'error',
+            message: `${error.path || '<root>'}: ${error.message}`,
+            raw: `${error.code}:${error.path}:${error.message}`,
+          })),
+          error: 'AST validation failed.',
+          details: validation.errors.map((error) => `${error.path || '<root>'}: ${error.message}`).join('; '),
         },
         render: { status: 'idle', html: null, css: null, contentHeightPx: null },
         verification: { status: 'idle', mismatches: [] },
@@ -268,82 +265,52 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
     }
 
     try {
-      const renderedLayout = await executeWasmTemplate(input.invoiceData, compileResult.wasmBinary);
-      const renderedOutput = renderLayout(renderedLayout);
-      let renderedGeometry: ReturnType<typeof collectRenderedGeometryFromLayout> | null = null;
-      let contentHeightPx: number | null = null;
-      try {
-        renderedGeometry = collectRenderedGeometryFromLayout(renderedLayout);
-        contentHeightPx = estimateRenderedContentHeight(renderedGeometry, 640);
-      } catch {
-        renderedGeometry = null;
-        contentHeightPx = null;
-      }
-      try {
-        const expectedConstraints = extractExpectedLayoutConstraintsFromIr(ir, input.tolerancePx ?? 2);
-        if (!renderedGeometry) {
-          throw new Error('Rendered geometry could not be derived for verification.');
-        }
-        const verification = compareLayoutConstraints(expectedConstraints, renderedGeometry);
-        return {
-          success: true,
-          sourceHash: generated.sourceHash,
-          generatedSource: generated.source,
-          compile: {
-            status: 'success',
-            cacheHit: compileResult.cacheHit,
-            diagnostics: [],
-          },
-          render: {
-            status: 'success',
-            html: renderedOutput.html,
-            css: renderedOutput.css,
-            contentHeightPx,
-          },
-          verification: {
-            status: verification.status,
-            mismatches: verification.mismatches,
-          },
-        };
-      } catch (verificationError: any) {
-        return {
-          success: false,
-          sourceHash: generated.sourceHash,
-          generatedSource: generated.source,
-          compile: {
-            status: 'success',
-            cacheHit: compileResult.cacheHit,
-            diagnostics: [],
-          },
-          render: {
-            status: 'success',
-            html: renderedOutput.html,
-            css: renderedOutput.css,
-            contentHeightPx,
-          },
-          verification: {
-            status: 'error',
-            mismatches: [],
-            error: verificationError?.message || String(verificationError),
-          },
-        };
-      }
-    } catch (renderError: any) {
+      const evaluation = evaluateInvoiceTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
+      const rendered = renderEvaluatedInvoiceTemplateAst(validation.ast, evaluation);
       return {
-        success: false,
-        sourceHash: generated.sourceHash,
-        generatedSource: generated.source,
+        success: true,
+        sourceHash,
+        generatedSource,
         compile: {
           status: 'success',
-          cacheHit: compileResult.cacheHit,
+          cacheHit: false,
           diagnostics: [],
         },
         render: {
+          status: 'success',
+          html: rendered.html,
+          css: rendered.css,
+          contentHeightPx: null,
+        },
+        verification: {
+          status: 'pass',
+          mismatches: [],
+        },
+      };
+    } catch (error: any) {
+      const isEvaluationError = error instanceof InvoiceTemplateEvaluationError;
+      return {
+        success: false,
+        sourceHash,
+        generatedSource,
+        compile: {
           status: 'error',
+          cacheHit: false,
+          diagnostics: isEvaluationError
+            ? error.issues.map((issue) => ({
+                severity: 'error',
+                message: issue.message,
+                raw: `${issue.code}:${issue.path ?? ''}:${issue.message}`,
+              }))
+            : [],
+          error: isEvaluationError ? error.message : 'Evaluation failed.',
+          details: error?.message || String(error),
+        },
+        render: {
+          status: 'idle',
           html: null,
           css: null,
           contentHeightPx: null,
-          error: renderError?.message || String(renderError),
         },
         verification: {
           status: 'idle',

@@ -1,14 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
-import { extractInvoiceDesignerIr } from '../components/invoice-designer/compiler/guiIr';
-import { generateAssemblyScriptFromIr } from '../components/invoice-designer/compiler/assemblyScriptGenerator';
-import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
-import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import {
-  compilePreviewAssemblyScript,
-  runAuthoritativeInvoiceTemplatePreview,
-} from './invoiceTemplatePreview';
-import { __previewCompileCacheTestUtils } from './invoiceTemplatePreviewCache';
+import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
@@ -50,8 +42,8 @@ const workspace: DesignerWorkspaceSnapshot = {
       rotation: 0,
       metadata: {},
       parentId: 'doc',
-      childIds: ['field-number'],
-      allowedChildren: ['field'],
+      childIds: ['field-number', 'items-table'],
+      allowedChildren: ['field', 'dynamic-table'],
       layout: {
         mode: 'flex',
         direction: 'column',
@@ -76,6 +68,26 @@ const workspace: DesignerWorkspaceSnapshot = {
       childIds: [],
       allowedChildren: [],
     },
+    {
+      id: 'items-table',
+      type: 'dynamic-table',
+      name: 'Line Items',
+      position: { x: 24, y: 96 },
+      size: { width: 520, height: 220 },
+      canRotate: false,
+      allowResize: true,
+      rotation: 0,
+      metadata: {
+        collectionBindingKey: 'items',
+        columns: [
+          { id: 'description', header: 'Description', key: 'item.description' },
+          { id: 'total', header: 'Amount', key: 'item.total' },
+        ],
+      },
+      parentId: 'page',
+      childIds: [],
+      allowedChildren: [],
+    },
   ],
   constraints: [],
   snapToGrid: true,
@@ -93,54 +105,19 @@ const invoiceData = {
   poNumber: null,
   customer: { name: 'Acme Co.', address: '123 Main' },
   tenantClient: { name: 'Northwind MSP', address: '400 SW Main', logoUrl: null },
-  items: [],
-  subtotal: 0,
-  tax: 0,
-  total: 0,
+  items: [
+    { id: 'item-1', description: 'Consulting', quantity: 2, unitPrice: 100, total: 200 },
+  ],
+  subtotal: 200,
+  tax: 20,
+  total: 220,
 };
 
-describe('invoiceTemplatePreview authoritative runtime integration', () => {
-  it('matches direct runtime HTML/CSS output for the same generated template', async () => {
-    __previewCompileCacheTestUtils.clear();
-    const generated = generateAssemblyScriptFromIr(extractInvoiceDesignerIr(workspace));
-    const compileResult = await compilePreviewAssemblyScript(
-      {
-        source: generated.source,
-        sourceHash: generated.sourceHash,
-        bypassCache: true,
-      }
-    );
-
-    expect(compileResult.success, compileResult.success ? undefined : compileResult.details ?? compileResult.error).toBe(true);
-    if (!compileResult.success) {
-      throw new Error(compileResult.error);
-    }
-
-    const directLayout = await executeWasmTemplate(invoiceData, compileResult.wasmBinary);
-    const directRender = renderLayout(directLayout);
-    const renderedPageStyle = ((directLayout as any).children?.[0]?.style ?? null) as
-      | Record<string, string>
-      | null;
-    const renderedFieldStyle = ((directLayout as any).children?.[0]?.children?.[0]?.style ?? null) as
-      | Record<string, string>
-      | null;
-    expect(renderedPageStyle).toBeTruthy();
-    expect(renderedPageStyle?.height).toBe('1056px');
-    expect(renderedPageStyle?.paddingTop).toBe('24px');
-    expect(renderedPageStyle?.paddingRight).toBe('24px');
-    expect(renderedPageStyle?.paddingBottom).toBe('24px');
-    expect(renderedPageStyle?.paddingLeft).toBe('24px');
-    expect(renderedPageStyle?.marginLeft).toBe('0px');
-    expect(renderedPageStyle?.borderTop).toBeUndefined();
-    expect(renderedFieldStyle).toBeTruthy();
-    expect(renderedFieldStyle?.width).toBe('220px');
-    expect(renderedFieldStyle?.height).toBe('48px');
-    expect(renderedFieldStyle?.marginLeft).toBe('0px');
-    expect(renderedFieldStyle?.paddingLeft).toBeUndefined();
-    expect(renderedFieldStyle?.marginTop).toBe('0px');
-    expect(renderedFieldStyle?.borderTop).toBeUndefined();
-
-    const actionResult = await runAuthoritativeInvoiceTemplatePreview(
+describe('invoiceTemplatePreview authoritative AST integration', () => {
+  it('executes AST validation + evaluator + renderer path without requiring compilation', async () => {
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
       {
         workspace,
         invoiceData,
@@ -149,12 +126,13 @@ describe('invoiceTemplatePreview authoritative runtime integration', () => {
     );
 
     expect(actionResult.success).toBe(true);
+    expect(actionResult.sourceHash).toBeTruthy();
+    expect(actionResult.generatedSource).toContain('"kind": "invoice-template-ast"');
     expect(actionResult.compile.status).toBe('success');
+    expect(actionResult.compile.cacheHit).toBe(false);
     expect(actionResult.render.status).toBe('success');
+    expect(actionResult.render.html).toContain('INV-9001');
+    expect(actionResult.render.html).toContain('Consulting');
     expect(actionResult.verification.status).toBe('pass');
-    expect(actionResult.verification.mismatches).toHaveLength(0);
-    expect(actionResult.render.html).toBe(directRender.html);
-    expect(actionResult.render.css).toBe(directRender.css);
-    expect(actionResult.render.contentHeightPx).toBe(1056);
-  }, 45000);
+  });
 });
