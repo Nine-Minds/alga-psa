@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "deleteEntityWithValidation returns { canDelete: true, deleted: true } on successful deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
