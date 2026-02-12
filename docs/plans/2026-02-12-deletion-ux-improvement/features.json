@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Create validateDeletion function that counts dependencies within a transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "validateDeletion supports custom countQuery for polymorphic tables (document_associations)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "validateDeletion returns formatted dependency labels with correct pluralization",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "validateDeletion builds human-readable block message listing all dependencies",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "validateDeletion builds alternatives list based on supportsInactive/supportsArchive config flags",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "validateDeletion populates viewUrl from viewUrlTemplate when configured",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

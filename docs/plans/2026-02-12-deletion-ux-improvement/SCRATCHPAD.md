@@ -62,3 +62,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Added DeletionBlockCode union and wired it into DeletionValidationResult.code.
 - (2026-02-12) Added EntityDeletionConfig and EntityDependencyConfig types (with tagEntityType) to deletion types.
 - (2026-02-12) Exported deletion types from packages/types/src/index.ts barrel.
+- (2026-02-12) Implemented validateDeletion with dependency counting, custom countQuery support, pluralized labels, block message, alternatives, and viewUrl template expansion.
