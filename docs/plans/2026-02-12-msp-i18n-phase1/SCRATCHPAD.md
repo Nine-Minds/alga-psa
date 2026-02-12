@@ -74,3 +74,6 @@ Batch into ~4 meaningful commits (not one-liners):
 - When migrating client portal components, need to handle components that use keys from multiple top-level sections (may need multiple namespaces in one `useTranslation` call)
 - EE layout has `TenantProvider` wrapping — I18nWrapper must go outside or inside it consistently
 - Onboarding pages in MSP layout use a different render path (`isOnboardingPage` check) — I18nWrapper must wrap both paths
+
+## Updates
+- Added `msp-i18n-enabled` default flag in `server/src/lib/feature-flags/featureFlags.ts`.

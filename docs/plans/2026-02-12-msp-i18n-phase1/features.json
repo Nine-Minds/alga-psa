@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Add 'msp-i18n-enabled' boolean feature flag (default: false) to DEFAULT_BOOLEAN_FLAGS",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
