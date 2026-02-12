@@ -308,7 +308,7 @@
   {
     "id": "T052",
     "description": "DeleteEntityDialog renders secondary alternative as outline button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
