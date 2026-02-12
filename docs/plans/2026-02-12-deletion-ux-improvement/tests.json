@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "validateDeletion returns canDelete:false with dependency list when entity has blocking deps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
