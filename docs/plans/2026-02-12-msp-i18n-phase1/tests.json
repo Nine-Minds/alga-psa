@@ -280,7 +280,7 @@
   {
     "id": "T034",
     "description": "useTranslation('msp/core') returns correct English translations when flag is ON",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
