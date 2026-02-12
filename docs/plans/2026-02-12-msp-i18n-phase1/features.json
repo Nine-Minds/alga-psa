@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Migrate all client portal components using documents.* keys to useTranslation('features/documents')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
