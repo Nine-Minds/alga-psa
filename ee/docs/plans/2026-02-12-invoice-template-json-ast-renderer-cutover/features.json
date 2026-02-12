@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Implement shared AST evaluator that applies declarative transforms to invoice data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Goals"]
   },
   {

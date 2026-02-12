@@ -216,3 +216,27 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).
+
+### 2026-02-12 — F007 implemented
+
+- Added shared AST evaluator in `packages/billing/src/lib/invoice-template-ast/evaluator.ts`.
+- Implemented declarative transform execution over invoice collections:
+  - `filter` via predicate evaluation
+  - `sort` via stable multi-key ordering
+  - `group` with optional strategy hook support
+  - `aggregate` for `sum/count/avg/min/max` (overall + per-group aggregates)
+  - `computed-field` for derived numeric expressions
+  - `totals-compose` for totals from aggregate refs/computation expressions
+- Evaluator exports:
+  - `evaluateInvoiceTemplateAst(ast, invoiceData)`
+  - `evaluateAstTransforms(ast, invoiceData)` alias
+  - typed result with `output`, `groups`, `aggregates`, `totals`, and resolved `bindings`.
+- Added evaluator test suite in `packages/billing/src/lib/invoice-template-ast/evaluator.test.ts`.
+
+Rationale:
+
+- Central evaluator module is the core abstraction needed to unify preview and PDF behavior around AST data-shaping semantics.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).
