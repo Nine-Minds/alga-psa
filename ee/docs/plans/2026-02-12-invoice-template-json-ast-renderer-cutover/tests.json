@@ -478,7 +478,7 @@
   {
     "id": "T050",
     "description": "Integration suite validates PDF generation pipeline with AST template fixture",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ],
