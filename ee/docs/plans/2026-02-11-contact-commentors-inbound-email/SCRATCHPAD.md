@@ -126,3 +126,5 @@ EOF && git add ee/docs/plans/2026-02-11-contact-commentors-inbound-email/tests.j
 - (2026-02-11) T033 complete: API schema unit tests validate contact-authored ticket comment payloads without requiring `created_by` UUID.
 - (2026-02-11) T034 complete: response-shape test now covers schema-validated contact-authored comment payload acceptance for ticket comments API outputs.
 - (2026-02-11) T035 complete: added ticket-email-subscriber contract tests asserting contact-author exclusion gates in recipient fan-out logic.
+- (2026-02-12) T036 complete: existing inbound integration test `Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id` already asserts Google contact-only authorship (`author_type=client`, `contact_id` set, `user_id` null).
+- (2026-02-12) Integration test execution in this worktree currently cannot establish DB auth (`password authentication failed for user "postgres"`), so webhook integration cases are validated by test code inspection + committed assertions but cannot be executed locally end-to-end.
