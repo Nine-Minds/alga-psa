@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Create msp/core.json for English with nav items from menuConfig.ts, sidebar labels, header actions, and settings tab names",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {

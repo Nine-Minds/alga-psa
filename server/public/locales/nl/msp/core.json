@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "home": "Start",
+    "userActivities": "Gebruikersactiviteiten",
+    "tickets": "Tickets",
+    "surveys": "Enquêtes",
+    "projects": "Projecten",
+    "projectsAll": "Alle projecten",
+    "projectsTemplates": "Sjablonen",
+    "clients": "Klanten",
+    "contacts": "Contacten",
+    "documents": "Documenten",
+    "assets": "Assets",
+    "timeManagement": "Tijdbeheer",
+    "timeEntry": "Tijdregistratie",
+    "approvals": "Goedkeuringen",
+    "billing": "Facturatie",
+    "schedule": "Planning",
+    "technicianDispatch": "Technicus-dispatch",
+    "automationHub": "Automatiseringshub",
+    "workflows": "Workflows",
+    "runs": "Uitvoeringen",
+    "events": "Gebeurtenissen",
+    "deadLetter": "Dead Letter",
+    "systemMonitor": "Systeemmonitor",
+    "jobs": "Taken",
+    "emailLogs": "E-maillogs",
+    "extensions": "Extensies"
+  },
+  "sidebar": {
+    "backToMain": "Terug naar hoofd",
+    "searchPlaceholder": "Zoeken",
+    "settings": "Instellingen",
+    "support": "Support"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organisatie & toegang",
+      "workManagement": "Werkbeheer",
+      "timeBilling": "Tijd & facturatie",
+      "communication": "Communicatie",
+      "dataIntegration": "Data & integratie",
+      "experimental": "Experimenteel"
+    },
+    "tabs": {
+      "general": "Algemeen",
+      "users": "Gebruikers",
+      "teams": "Teams",
+      "clientPortal": "Klantenportaal",
+      "ticketing": "Ticketing",
+      "projects": "Projecten",
+      "interactions": "Interacties",
+      "notifications": "Meldingen",
+      "timeEntry": "Tijdregistratie",
+      "billing": "Facturatie",
+      "secrets": "Geheimen",
+      "importExport": "Import/Export",
+      "email": "E-mail",
+      "integrations": "Integraties",
+      "extensions": "Extensies",
+      "experimentalFeatures": "Experimentele functies",
+      "profile": "Profiel",
+      "security": "Beveiliging"
+    }
+  },
+  "header": {
+    "userFallback": "Gebruiker",
+    "quickAccess": "Snelle toegang tot profiel en account.",
+    "profile": "Profiel",
+    "account": "Account",
+    "signOut": "Afmelden"
+  }
+}

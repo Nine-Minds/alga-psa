@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "userActivities": "Activités des utilisateurs",
+    "tickets": "Tickets",
+    "surveys": "Sondages",
+    "projects": "Projets",
+    "projectsAll": "Tous les projets",
+    "projectsTemplates": "Modèles",
+    "clients": "Clients",
+    "contacts": "Contacts",
+    "documents": "Documents",
+    "assets": "Actifs",
+    "timeManagement": "Gestion du temps",
+    "timeEntry": "Saisie du temps",
+    "approvals": "Approbations",
+    "billing": "Facturation",
+    "schedule": "Planning",
+    "technicianDispatch": "Répartition des techniciens",
+    "automationHub": "Centre d'automatisation",
+    "workflows": "Workflows",
+    "runs": "Exécutions",
+    "events": "Événements",
+    "deadLetter": "Dead Letter",
+    "systemMonitor": "Moniteur système",
+    "jobs": "Tâches",
+    "emailLogs": "Journaux d’e-mail",
+    "extensions": "Extensions"
+  },
+  "sidebar": {
+    "backToMain": "Retour au principal",
+    "searchPlaceholder": "Rechercher",
+    "settings": "Paramètres",
+    "support": "Assistance"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organisation et accès",
+      "workManagement": "Gestion du travail",
+      "timeBilling": "Temps et facturation",
+      "communication": "Communication",
+      "dataIntegration": "Données et intégration",
+      "experimental": "Expérimental"
+    },
+    "tabs": {
+      "general": "Général",
+      "users": "Utilisateurs",
+      "teams": "Équipes",
+      "clientPortal": "Portail client",
+      "ticketing": "Gestion des tickets",
+      "projects": "Projets",
+      "interactions": "Interactions",
+      "notifications": "Notifications",
+      "timeEntry": "Saisie du temps",
+      "billing": "Facturation",
+      "secrets": "Secrets",
+      "importExport": "Import/Export",
+      "email": "E-mail",
+      "integrations": "Intégrations",
+      "extensions": "Extensions",
+      "experimentalFeatures": "Fonctionnalités expérimentales",
+      "profile": "Profil",
+      "security": "Sécurité"
+    }
+  },
+  "header": {
+    "userFallback": "Utilisateur",
+    "quickAccess": "Accès rapide au profil et au compte.",
+    "profile": "Profil",
+    "account": "Compte",
+    "signOut": "Se déconnecter"
+  }
+}
