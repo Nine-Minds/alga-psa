@@ -476,7 +476,7 @@
   {
     "id": "T080",
     "description": "Tax rate deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F058"]
   },
   {
