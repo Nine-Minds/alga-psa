@@ -747,3 +747,19 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts` (pass).
+
+### 2026-02-12 — F032 implemented
+
+- Added integration-style coverage for shared AST renderer in server-side invoice render action:
+  - `packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts`
+- Coverage verifies:
+  - canonical `templateAst` payload renders HTML/CSS through `renderTemplateOnServer`,
+  - missing AST payloads fail explicitly, preventing silent legacy runtime fallback.
+
+Rationale:
+
+- PDF/server rendering path now has executable tests validating AST renderer behavior beyond static wiring assertions.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts` (pass).

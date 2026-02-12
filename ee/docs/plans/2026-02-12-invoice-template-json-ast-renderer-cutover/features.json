@@ -274,7 +274,7 @@
   {
     "id": "F032",
     "description": "Implement integration coverage for PDF generation path using shared renderer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]
