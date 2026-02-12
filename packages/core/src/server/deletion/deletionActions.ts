@@ -39,6 +39,9 @@ function permissionEntityFor(entityType: string): string {
   if (entityType === 'survey_template') {
     return 'settings';
   }
+  if (entityType === 'role') {
+    return 'security_settings';
+  }
   return entityType;
 }
 

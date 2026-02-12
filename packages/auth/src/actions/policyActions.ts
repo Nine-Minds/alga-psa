@@ -1,6 +1,6 @@
 'use server'
 
-import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition } from '@alga-psa/types';
+import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, DeletionValidationResult } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
@@ -8,6 +8,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 const policyEngine = new PolicyEngine();
 
@@ -37,25 +38,60 @@ export const updateRole = withAuth(async (_user, { tenant }, roleId: string, rol
     });
 });
 
-export const deleteRole = withAuth(async (_user, { tenant }, roleId: string): Promise<void> => {
+export const deleteRole = withAuth(async (
+  _user,
+  { tenant },
+  roleId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        // Check if role is an Admin role (immutable)
-        const role = await trx('roles')
-            .where({ role_id: roleId, tenant })
-            .first();
 
-        if (!role) {
-            throw new Error('Role not found');
-        }
+    const role = await db('roles')
+      .where({ role_id: roleId, tenant })
+      .first();
 
-        // Prevent deletion of Admin roles
-        if (role.role_name.toLowerCase() === 'admin') {
-            throw new Error('Admin roles cannot be deleted');
-        }
+    if (!role) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'Role not found',
+        dependencies: [],
+        alternatives: []
+      };
+    }
 
-        await trx('roles').where({ role_id: roleId, tenant }).del();
+    if (role.role_name.toLowerCase() === 'admin') {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message: 'Admin roles cannot be deleted',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
+    const result = await deleteEntityWithValidation('role', roleId, async (trx, tenantId) => {
+      await trx('roles').where({ role_id: roleId, tenant: tenantId }).del();
     });
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete role';
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message,
+      dependencies: [],
+      alternatives: []
+    };
+  }
 });
 
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {

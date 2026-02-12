@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "Migrate @alga-psa/users role deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
