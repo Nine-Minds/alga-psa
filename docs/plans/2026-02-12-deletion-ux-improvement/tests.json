@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "Board config includes categories.board_id as a dependency",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
