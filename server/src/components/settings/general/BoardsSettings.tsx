@@ -1,10 +1,10 @@
 'use client'
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
-import { IBoard, CategoryType, PriorityType, IPriority, IUser, ColumnDefinition } from '@alga-psa/types';
+import { IBoard, CategoryType, PriorityType, IPriority, IUser, ColumnDefinition, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
 import {
   getAllBoards,
   createBoard,
@@ -22,6 +22,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -54,6 +55,36 @@ const BoardsSettings: React.FC = () => {
     boardId: '',
     boardName: ''
   });
+
+  const deleteValidation = useMemo<DeletionValidationResult | null>(() => {
+    if (!deleteDialog.isOpen) {
+      return null;
+    }
+
+    if (deleteDialog.blockingError) {
+      const dependencies: DeletionDependency[] = deleteDialog.blockingError.counts
+        ? Object.entries(deleteDialog.blockingError.counts).map(([key, count]) => ({
+            type: key,
+            count,
+            label: count === 1 ? key.replace(/_/g, ' ') : `${key.replace(/_/g, ' ')}s`
+          }))
+        : [];
+
+      return {
+        canDelete: false,
+        code: 'DEPENDENCIES_EXIST',
+        message: deleteDialog.blockingError.message,
+        dependencies,
+        alternatives: []
+      };
+    }
+
+    return {
+      canDelete: true,
+      dependencies: [],
+      alternatives: []
+    };
+  }, [deleteDialog]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -558,14 +589,22 @@ const BoardsSettings: React.FC = () => {
         </div>
       </div>
 
+      <DeleteEntityDialog
+        id="delete-board-dialog"
+        isOpen={deleteDialog.isOpen && !deleteDialog.confirmForce && !deleteDialog.confirmCleanupItil}
+        onClose={() => setDeleteDialog({ isOpen: false, boardId: '', boardName: '' })}
+        onConfirmDelete={() => handleDeleteBoard(false, false)}
+        entityName={deleteDialog.boardName || 'board'}
+        validationResult={deleteValidation}
+        isValidating={false}
+        isDeleting={false}
+      />
+
       <ConfirmationDialog
-        isOpen={deleteDialog.isOpen}
+        isOpen={deleteDialog.isOpen && (deleteDialog.confirmForce || deleteDialog.confirmCleanupItil)}
         onClose={() => setDeleteDialog({ isOpen: false, boardId: '', boardName: '' })}
         onConfirm={() => {
-          if (deleteDialog.blockingError) {
-            // Just close the dialog when there's a blocking error
-            setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
-          } else if (deleteDialog.confirmCleanupItil) {
+          if (deleteDialog.confirmCleanupItil) {
             // User confirmed ITIL cleanup
             handleDeleteBoard(deleteDialog.confirmForce || false, true);
           } else {
@@ -573,55 +612,19 @@ const BoardsSettings: React.FC = () => {
           }
         }}
         title={
-          deleteDialog.blockingError
-            ? "Cannot Delete Board"
-            : deleteDialog.confirmCleanupItil
-              ? "Cleanup ITIL Data?"
-              : deleteDialog.confirmForce
-                ? "Delete Board and Categories"
-                : "Delete Board"
+          deleteDialog.confirmCleanupItil
+            ? "Cleanup ITIL Data?"
+            : "Delete Board and Categories"
         }
         message={
-          deleteDialog.blockingError ? (
-            <div className="space-y-4">
-              <p className="text-gray-700">Unable to delete this board.</p>
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-4">
-                <p className="text-amber-800">{deleteDialog.blockingError.message}</p>
-                {deleteDialog.blockingError.counts && Object.keys(deleteDialog.blockingError.counts).length > 0 && (
-                  <ul className="list-disc list-inside mt-2 text-amber-700">
-                    {Object.entries(deleteDialog.blockingError.counts).map(([key, count]) => {
-                      const label = key.replace(/_/g, ' ');
-                      // Don't add 's' if label already ends in 's' or for count of 1
-                      const pluralLabel = count === 1
-                        ? label.replace(/s$/, '') // Remove trailing 's' for singular
-                        : label.endsWith('s') ? label : label + 's';
-                      return <li key={key}>{count} {pluralLabel}</li>;
-                    })}
-                  </ul>
-                )}
-              </div>
-              <p className="text-gray-600 text-sm">
-                {deleteDialog.blockingError.code === 'BOARD_HAS_TICKETS'
-                  ? 'Please reassign or delete the tickets before deleting this board.'
-                  : deleteDialog.blockingError.code === 'BOARD_IS_DEFAULT'
-                    ? 'Set another board as default before deleting this one.'
-                    : 'Please resolve the above issues before deleting this board.'}
-              </p>
-            </div>
-          ) : deleteDialog.confirmCleanupItil
+          deleteDialog.confirmCleanupItil
             ? `${deleteDialog.message}\n\nClick "Delete & Cleanup" to remove unused ITIL data, or "Delete Only" to keep ITIL priorities/categories for other boards.`
-            : deleteDialog.confirmForce
-              ? `${deleteDialog.message} This will permanently delete the board and all its categories.`
-              : `Are you sure you want to delete "${deleteDialog.boardName}"? This action cannot be undone.`
+            : `${deleteDialog.message} This will permanently delete the board and all its categories.`
         }
         confirmLabel={
-          deleteDialog.blockingError
-            ? "Close"
-            : deleteDialog.confirmCleanupItil
-              ? "Delete & Cleanup"
-              : deleteDialog.confirmForce
-                ? "Delete All"
-                : "Delete"
+          deleteDialog.confirmCleanupItil
+            ? "Delete & Cleanup"
+            : "Delete All"
         }
         thirdButtonLabel={deleteDialog.confirmCleanupItil && !deleteDialog.blockingError ? "Delete Only" : undefined}
         onCancel={deleteDialog.confirmCleanupItil && !deleteDialog.blockingError ? () => {

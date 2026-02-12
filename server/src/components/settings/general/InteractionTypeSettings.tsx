@@ -17,7 +17,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { QuickAddInteractionType } from './QuickAddInteractionType';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
@@ -28,6 +28,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
+import { useDeletionValidation } from '@alga-psa/core';
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,13 @@ const InteractionTypesSettings: React.FC = () => {
     typeId: '',
     typeName: ''
   });
+  const {
+    validate: validateDeletion,
+    reset: resetDeletionValidation,
+    validationResult: deleteValidation,
+    isValidating: isDeleteValidating
+  } = useDeletionValidation('interaction_type');
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingType, setEditingType] = useState<IInteractionType | null>(null);
   
@@ -84,20 +92,39 @@ const InteractionTypesSettings: React.FC = () => {
     setError(null);
   };
 
-  const handleDeleteType = async () => {
+  const resetDeleteDialog = () => {
+    setDeleteDialog({ isOpen: false, typeId: '', typeName: '' });
+    resetDeletionValidation();
+    setIsDeleteProcessing(false);
+  };
+
+  const openDeleteDialog = async (type: IInteractionType) => {
+    setDeleteDialog({ isOpen: true, typeId: type.type_id, typeName: type.type_name });
     try {
-      await deleteInteractionType(deleteDialog.typeId);
-      setError(null);
-      fetchTypes();
+      await validateDeletion(type.type_id);
+    } catch (error: any) {
+      console.error('Error validating interaction type deletion:', error);
+      toast.error(error?.message || 'Failed to validate interaction type deletion');
+    }
+  };
+
+  const handleDeleteType = async () => {
+    setIsDeleteProcessing(true);
+    try {
+      const result = await deleteInteractionType(deleteDialog.typeId);
+      if (result.deleted) {
+        toast.success('Interaction type deleted');
+        setError(null);
+        fetchTypes();
+        resetDeleteDialog();
+        return;
+      }
+      await validateDeletion(deleteDialog.typeId);
     } catch (error: any) {
       console.error('Error deleting interaction type:', error);
-      if (error.message.includes('records exist')) {
-        setError('Cannot delete this interaction type because it is being used by existing records');
-      } else {
-        setError('Failed to delete interaction type');
-      }
+      setError(error?.message || 'Failed to delete interaction type');
     } finally {
-      setDeleteDialog({ isOpen: false, typeId: '', typeName: '' });
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -195,11 +222,7 @@ const InteractionTypesSettings: React.FC = () => {
               className="text-red-600 focus:text-red-600"
               onClick={(e) => {
                 e.stopPropagation();
-                setDeleteDialog({
-                  isOpen: true,
-                  typeId: record.type_id,
-                  typeName: record.type_name
-                });
+                openDeleteDialog(record);
               }}
             >
               Delete
@@ -271,14 +294,15 @@ const InteractionTypesSettings: React.FC = () => {
         </div>
       </div>
 
-      <ConfirmationDialog
+      <DeleteEntityDialog
+        id="delete-interaction-type-dialog"
         isOpen={deleteDialog.isOpen}
-        onClose={() => setDeleteDialog({ isOpen: false, typeId: '', typeName: '' })}
-        onConfirm={handleDeleteType}
-        title="Delete Interaction Type"
-        message={`Are you sure you want to delete the interaction type "${deleteDialog.typeName}"?\n\nWarning: If there are any records using this interaction type, the deletion will fail.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        onClose={resetDeleteDialog}
+        onConfirmDelete={handleDeleteType}
+        entityName={deleteDialog.typeName || 'interaction type'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
 
       <QuickAddInteractionType

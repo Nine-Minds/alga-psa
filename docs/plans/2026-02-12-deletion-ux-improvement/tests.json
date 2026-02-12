@@ -398,7 +398,7 @@
   {
     "id": "T067",
     "description": "Client deleteClient uses deleteEntityWithValidation (single transaction)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F046"]
   },
   {
