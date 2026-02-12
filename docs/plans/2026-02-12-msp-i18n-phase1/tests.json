@@ -177,7 +177,7 @@
   {
     "id": "T022",
     "description": "All client portal components using projects.* keys migrated to useTranslation('features/projects')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
