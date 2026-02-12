@@ -113,3 +113,25 @@ Commands run:
 Gotchas:
 
 - `@alga-psa/types` package currently has baseline build/test failures unrelated to AST changes; continue with targeted feature implementation and track failures in commit notes.
+
+### 2026-02-12 — F002 implemented
+
+- Added runtime AST schema parser in `packages/billing/src/lib/invoice-template-ast/schema.ts`.
+- Implemented strict Zod schemas for:
+  - AST root (`kind`, `version`, `metadata`, `styles`, `bindings`, `transforms`, `layout`),
+  - recursive layout nodes,
+  - expressions, predicates, and transform operation payloads.
+- Added structured validation model:
+  - `InvoiceTemplateAstValidationError` (`code`, `path`, `message`),
+  - `validateInvoiceTemplateAst(input)` returning success/error union,
+  - `parseInvoiceTemplateAst(input)` throwing a consolidated message for invalid payloads.
+- Added targeted validator tests in `packages/billing/src/lib/invoice-template-ast/schema.test.ts`.
+
+Rationale:
+
+- Runtime schema validation is required before evaluator/renderer cutover so preview/PDF pipelines can fail fast with actionable diagnostics.
+- Strict object validation prevents accidental schema drift and catches unknown fields early.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/schema.test.ts` (pass).

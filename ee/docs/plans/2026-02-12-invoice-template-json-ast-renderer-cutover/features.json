@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add runtime AST validation (schema parser) that returns structured validation errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
