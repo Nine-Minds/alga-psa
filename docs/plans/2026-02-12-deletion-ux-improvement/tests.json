@@ -380,7 +380,7 @@
   {
     "id": "T064",
     "description": "validateBulkDeletion returns canDeleteAll=true when all entities pass",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F045"]
   },
   {
