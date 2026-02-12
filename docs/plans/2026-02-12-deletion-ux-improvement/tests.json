@@ -386,7 +386,7 @@
   {
     "id": "T065",
     "description": "validateBulkDeletion returns canDeleteAll=false with cannotDelete list when some fail",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F045"]
   },
   {
