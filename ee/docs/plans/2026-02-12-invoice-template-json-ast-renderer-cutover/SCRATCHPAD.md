@@ -29862,3 +29862,12 @@ Verification:
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateSaveRuntimeWasmRemoval.test.ts` (pass).
+
+### 2026-02-12 — T042 implemented
+
+- Closed persistence/runtime Wasm artifact removal coverage using save/runtime regression guards.
+- Evidence: `packages/billing/src/actions/invoiceTemplateSaveRuntimeWasmRemoval.test.ts` (wasmBinary drop + no runtime Wasm requirement).
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateSaveRuntimeWasmRemoval.test.ts` (pass).

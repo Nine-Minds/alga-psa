@@ -401,7 +401,7 @@
   {
     "id": "T042",
     "description": "Template persistence no longer requires or writes Wasm binary for runtime rendering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"
