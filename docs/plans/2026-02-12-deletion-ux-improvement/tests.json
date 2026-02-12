@@ -422,7 +422,7 @@
   {
     "id": "T071",
     "description": "ClientDetails.tsx calls validateClientDeletion when delete dialog opens",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F050"]
   },
   {
