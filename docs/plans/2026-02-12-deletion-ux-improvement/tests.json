@@ -452,7 +452,7 @@
   {
     "id": "T076",
     "description": "User deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F054"]
   },
   {
