@@ -362,7 +362,7 @@
   {
     "id": "T061",
     "description": "useDeletionValidation returns error string when validation throws",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F043"]
   },
   {

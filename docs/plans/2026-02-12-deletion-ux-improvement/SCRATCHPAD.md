@@ -131,6 +131,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T058 complete for DeleteEntityDialog confirm handler.
 - (2026-02-12) Added useDeletionValidation hook tests (T059-T062 coverage started); marked T059 complete.
 - (2026-02-12) Marked T060 complete for useDeletionValidation validationResult.
+- (2026-02-12) Marked T061 complete for useDeletionValidation error handling.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.
