@@ -470,7 +470,7 @@
   {
     "id": "T079",
     "description": "Service deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F057"]
   },
   {
