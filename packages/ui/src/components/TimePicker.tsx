@@ -299,6 +299,7 @@ export function TimePicker({
                   aria-label="Open time picker"
                   className={cn(
                     'flex h-full w-10 items-center justify-center rounded-r-md border-l border-gray-300',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2',
                     disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
                   )}
                 >
