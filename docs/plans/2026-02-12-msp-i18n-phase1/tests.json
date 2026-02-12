@@ -101,7 +101,7 @@
   {
     "id": "T013",
     "description": "features/billing.json exists for all 7 languages with flattened keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]

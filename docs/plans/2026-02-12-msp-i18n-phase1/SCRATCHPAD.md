@@ -123,3 +123,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T010: MSP onboarding flow still works when flag is ON (I18nWrapper does not break redirect logic) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T011: features/tickets.json exists for all 7 languages (en, fr, es, de, nl, it, pl) with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T012: features/projects.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T013: features/billing.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
