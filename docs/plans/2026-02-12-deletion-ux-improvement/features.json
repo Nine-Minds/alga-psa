@@ -1,0 +1,458 @@
+[
+  {
+    "id": "F001",
+    "description": "Create DeletionValidationResult, DeletionDependency, DeletionAlternative types in packages/types/src/deletion.ts",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002",
+    "description": "Create DeletionBlockCode union type with all block reason codes",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Create EntityDeletionConfig and EntityDependencyConfig types with tagEntityType field",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004",
+    "description": "Export all deletion types from packages/types/src/index.ts",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F005",
+    "description": "Create validateDeletion function that counts dependencies within a transaction",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F006",
+    "description": "validateDeletion supports custom countQuery for polymorphic tables (document_associations)",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F007",
+    "description": "validateDeletion returns formatted dependency labels with correct pluralization",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F008",
+    "description": "validateDeletion builds human-readable block message listing all dependencies",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F009",
+    "description": "validateDeletion builds alternatives list based on supportsInactive/supportsArchive config flags",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F010",
+    "description": "validateDeletion populates viewUrl from viewUrlTemplate when configured",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F011",
+    "description": "Create client entity deletion config with 9 schema-verified dependencies",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F012",
+    "description": "Create contact entity deletion config with 4 schema-verified dependencies",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F013",
+    "description": "Create ticket entity deletion config (cascade, no blocking deps, tagEntityType='ticket')",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F014",
+    "description": "Create project entity deletion config (cascade, no blocking deps, tagEntityType='project')",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F015",
+    "description": "Create category entity deletion config with subcategory, ticket, and service deps",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F016",
+    "description": "Create status entity deletion config (dynamic deps handled specially in action)",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F017",
+    "description": "Create team entity deletion config with team_members and assigned ticket deps",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F018",
+    "description": "Create user entity deletion config with ticket, time_entry, schedule_assignee, team_member deps",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F019",
+    "description": "Create contract_line entity deletion config with service_config, usage, bucket_usage, time_entry deps",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F020",
+    "description": "Create service entity deletion config with time_entry, bucket_usage, contract_line_service deps",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F021",
+    "description": "Create tax_rate entity deletion config with client_tax_rates, time_entry, service_catalog deps",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F022",
+    "description": "Create asset entity deletion config with maintenance_schedule dep and tagEntityType",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F023",
+    "description": "Create document, invoice_template, workflow, schedule_entry, time_entry, priority, board, interaction_type, role deletion configs",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F024",
+    "description": "Create getDeletionConfig lookup function",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F025",
+    "description": "Create preCheckDeletion server action for read-only dependency preview",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F026",
+    "description": "preCheckDeletion checks getCurrentUser and returns PERMISSION_DENIED if not authenticated",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F027",
+    "description": "preCheckDeletion checks hasPermission with correct entity mapping (client->company)",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F028",
+    "description": "preCheckDeletion uses withTransaction for the read-only validation query",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F029",
+    "description": "Create deleteEntityWithValidation that validates + deletes in a single withTransaction call",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F030",
+    "description": "deleteEntityWithValidation automatically calls deleteEntityTags when tagEntityType is set",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F031",
+    "description": "deleteEntityWithValidation returns { ...validation, deleted: true } on success",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F032",
+    "description": "deleteEntityWithValidation returns validation result (canDelete: false) if deps found during atomic check",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F033",
+    "description": "Export preCheckDeletion, deleteEntityWithValidation, validateDeletion, getDeletionConfig from @alga-psa/core",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F034",
+    "description": "Create DeleteEntityDialog component in packages/ui/src/components/DeleteEntityDialog.tsx",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F035",
+    "description": "DeleteEntityDialog shows spinner with 'Checking for dependencies...' when isValidating=true",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F036",
+    "description": "DeleteEntityDialog shows delete confirmation when canDelete=true",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F037",
+    "description": "DeleteEntityDialog shows 'Cannot Delete' title, dependency list, and block message when canDelete=false",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F038",
+    "description": "DeleteEntityDialog renders View links for dependencies with viewUrl",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F039",
+    "description": "DeleteEntityDialog shows alternative action buttons when alternatives are available",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F040",
+    "description": "DeleteEntityDialog shows loading spinner on Delete/alternative buttons when isDeleting=true",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F041",
+    "description": "DeleteEntityDialog calls onAlternativeAction with action type string (deactivate/archive)",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F042",
+    "description": "Export DeleteEntityDialog from packages/ui/src/index.ts",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F043",
+    "description": "Create useDeletionValidation hook with validate, reset, validationResult, isValidating, error, canDelete",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F044",
+    "description": "Create validateBulkDeletion action that validates multiple entities in a single transaction",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F045",
+    "description": "validateBulkDeletion returns canDeleteAll, canDelete[], cannotDelete[] with reasons",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F046",
+    "description": "Refactor deleteClient to use deleteEntityWithValidation for atomic transaction",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F047",
+    "description": "deleteClient checks is_default before standard validation (entity-specific precondition)",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F048",
+    "description": "Remove manual deleteEntityTags call from deleteClient (automatic via tagEntityType config)",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F049",
+    "description": "Replace ConfirmationDialog with DeleteEntityDialog in ClientDetails.tsx",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F050",
+    "description": "ClientDetails.tsx calls validateClientDeletion on dialog open for dependency preview",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F051",
+    "description": "ClientDetails.tsx wires onAlternativeAction to markClientInactiveWithContacts",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F052",
+    "description": "Remove inline dependency rendering JSX from ClientDetails.tsx (handled by DeleteEntityDialog)",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F053",
+    "description": "Migrate @alga-psa/clients contact deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F054",
+    "description": "Migrate @alga-psa/users user deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F055",
+    "description": "Migrate @alga-psa/teams team deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F056",
+    "description": "Migrate @alga-psa/billing contract line deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F057",
+    "description": "Migrate @alga-psa/billing service deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F058",
+    "description": "Migrate @alga-psa/billing tax rate deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F059",
+    "description": "Migrate @alga-psa/billing invoice template deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F060",
+    "description": "Migrate @alga-psa/tickets ticket deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F061",
+    "description": "Remove manual deleteEntityTags call from ticketActions.ts (automatic via config)",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F062",
+    "description": "Migrate @alga-psa/projects project deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F063",
+    "description": "Add bulk task tag cleanup (deleteEntitiesTags) to project deletion performDelete callback",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F064",
+    "description": "Remove manual deleteEntityTags from projectTask.ts (automatic via config)",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F065",
+    "description": "Migrate @alga-psa/reference-data category deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F066",
+    "description": "Migrate @alga-psa/reference-data status deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F067",
+    "description": "Migrate @alga-psa/reference-data priority deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F068",
+    "description": "Migrate @alga-psa/reference-data board deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F069",
+    "description": "Migrate @alga-psa/documents document deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F070",
+    "description": "Migrate @alga-psa/assets asset deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F071",
+    "description": "Migrate @alga-psa/scheduling schedule entry deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F072",
+    "description": "Migrate @alga-psa/surveys survey template deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F073",
+    "description": "Migrate @alga-psa/workflows workflow deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F074",
+    "description": "Migrate @alga-psa/users role deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F075",
+    "description": "Migrate @alga-psa/reference-data interaction type deletion to use deleteEntityWithValidation + DeleteEntityDialog",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F076",
+    "description": "Remove manual deleteEntityTags from contactActions.tsx (automatic via config)",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  }
+]
