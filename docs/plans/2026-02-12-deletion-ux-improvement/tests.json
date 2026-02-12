@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Block message includes all dependency labels joined with commas",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
