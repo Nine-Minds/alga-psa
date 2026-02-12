@@ -286,7 +286,7 @@
   {
     "id": "T030",
     "description": "Preview sample source continues rendering output after pipeline swap",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
