@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Introduce server-side render-to-html helper that uses the same React renderer component for backend PDF pipeline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Data / API / Integrations"]
   },
   {

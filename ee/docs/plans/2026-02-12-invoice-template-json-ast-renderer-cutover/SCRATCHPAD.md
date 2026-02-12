@@ -302,3 +302,21 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).
+
+### 2026-02-12 — F011 implemented
+
+- Added server-side HTML document wrapper helper in `packages/billing/src/lib/invoice-template-ast/server-render.ts`.
+- Implemented `renderInvoiceTemplateAstHtmlDocument(ast, evaluation, options)` to:
+  - call the shared React renderer (`renderEvaluatedInvoiceTemplateAst`),
+  - wrap output in a complete `<!doctype html><html><head><body>` document,
+  - include generated CSS + optional additional CSS,
+  - support configurable title/body class with HTML escaping.
+- Added unit test `packages/billing/src/lib/invoice-template-ast/server-render.test.ts` validating complete wrapper output for headless PDF use.
+
+Rationale:
+
+- PDF pipeline needs a full HTML document entrypoint, but should reuse the exact same AST React renderer output to maintain parity.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/*.test.ts packages/billing/src/lib/invoice-template-ast/*.test.tsx` (pass).
