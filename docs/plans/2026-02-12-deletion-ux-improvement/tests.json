@@ -332,7 +332,7 @@
   {
     "id": "T056",
     "description": "DeleteEntityDialog calls onAlternativeAction with action type string on alternative button click",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041"]
   },
   {
