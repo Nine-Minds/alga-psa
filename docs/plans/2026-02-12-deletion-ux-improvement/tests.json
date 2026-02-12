@@ -170,7 +170,7 @@
   {
     "id": "T029",
     "description": "getDeletionConfig returns correct config for known entity types",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
