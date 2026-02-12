@@ -326,7 +326,7 @@
   {
     "id": "T055",
     "description": "DeleteEntityDialog disables all buttons when isDeleting=true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {

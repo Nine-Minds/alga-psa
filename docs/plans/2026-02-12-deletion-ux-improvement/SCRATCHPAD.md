@@ -125,6 +125,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T052 complete for DeleteEntityDialog secondary alternative styling.
 - (2026-02-12) Marked T053 complete for DeleteEntityDialog no-alternatives case.
 - (2026-02-12) Marked T054 complete for DeleteEntityDialog deleting spinners.
+- (2026-02-12) Marked T055 complete for DeleteEntityDialog disabled buttons while deleting.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.
