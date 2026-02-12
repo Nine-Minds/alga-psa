@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Client config uses custom countQuery for document_associations with entity_type='company'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
