@@ -372,3 +372,19 @@ Commands run:
 Verification:
 
 - `rg -n "extractInvoiceDesignerIr|generateAssemblyScriptFromIr" packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx` (no matches).
+
+### 2026-02-12 — F015 implemented
+
+- Updated shared and server invoice template contracts to include canonical AST payload:
+  - `packages/types/src/interfaces/invoice.interfaces.ts`
+  - `server/src/interfaces/invoice.interfaces.ts`
+- Contract updates:
+  - added `templateAst?: InvoiceTemplateAst | null`
+  - relaxed `assemblyScriptSource` from required to optional (`assemblyScriptSource?: string`) for cutover compatibility.
+- Added type contract test:
+  - `packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts`
+  - verifies `IInvoiceTemplate` accepts AST payload without requiring legacy AssemblyScript source.
+
+Commands run:
+
+- `npx vitest run packages/types/src/interfaces/invoice-template-ast-contract.typecheck.test.ts` (pass).

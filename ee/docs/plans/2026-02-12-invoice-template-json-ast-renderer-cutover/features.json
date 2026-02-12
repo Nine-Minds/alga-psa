@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Update invoice template interfaces/contracts to include canonical AST payload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
