@@ -1,15 +1,8 @@
 'use client'
 
 // InvoiceTemplates.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'; // Added router and searchParams import
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-} from '@alga-psa/ui/components/Dialog'; // Added Dialog imports
 import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
@@ -19,23 +12,32 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate, deleteInvoiceTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Added deleteInvoiceTemplate import
-import { IInvoiceTemplate } from '@alga-psa/types';
+import { IInvoiceTemplate, DeletionValidationResult } from '@alga-psa/types';
 // Removed InvoiceTemplateManager import
 import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added PencilIcon and MoreVertical imports
 import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { DeleteEntityDialog } from '@alga-psa/ui';
+import { preCheckDeletion } from '@alga-psa/core';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
   // Removed selectedTemplate state
   const [error, setError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null); // State for delete-specific errors
   const [templateToDeleteId, setTemplateToDeleteId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter(); // Initialize router
+  const templateToDeleteName = useMemo(() => {
+    if (!templateToDeleteId) {
+      return 'this template';
+    }
+    return invoiceTemplates.find((template) => template.template_id === templateToDeleteId)?.name || 'this template';
+  }, [invoiceTemplates, templateToDeleteId]);
 
   const handleCloneTemplate = async (template: IInvoiceTemplate) => {
     try {
@@ -193,8 +195,7 @@ const InvoiceTemplates: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 setTemplateToDeleteId(record.template_id);
-                setIsDeleteDialogOpen(true);
-                setDeleteError(null); // Clear previous delete errors
+                void runDeleteValidation(record.template_id);
               }}
             >
               Delete
@@ -205,24 +206,57 @@ const InvoiceTemplates: React.FC = () => {
   },
 ];
 
+const resetDeleteState = () => {
+  setTemplateToDeleteId(null);
+  setDeleteValidation(null);
+  setIsDeleteValidating(false);
+  setIsDeleteProcessing(false);
+};
+
+const runDeleteValidation = useCallback(async (templateId: string) => {
+  setIsDeleteValidating(true);
+  try {
+    const result = await preCheckDeletion('invoice_template', templateId);
+    setDeleteValidation(result);
+  } catch (err) {
+    console.error('Error validating invoice template deletion:', err);
+    setDeleteValidation({
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'Failed to validate deletion. Please try again.',
+      dependencies: [],
+      alternatives: []
+    });
+  } finally {
+    setIsDeleteValidating(false);
+  }
+}, []);
+
 const handleDeleteTemplate = async () => {
   if (!templateToDeleteId) return;
 
+  setIsDeleteProcessing(true);
   try {
-    setDeleteError(null); // Clear previous errors
     const result = await deleteInvoiceTemplate(templateToDeleteId);
 
-    if (result.success) {
-      setIsDeleteDialogOpen(false);
-      setTemplateToDeleteId(null);
-      await fetchTemplates(); // Refresh the list
-      // Optional: Show success notification
-    } else {
-      setDeleteError(result.error || 'Failed to delete template.');
+    if (!result.success) {
+      setDeleteValidation(result);
+      return;
     }
+
+    resetDeleteState();
+    await fetchTemplates(); // Refresh the list
   } catch (err) {
     console.error('Error deleting template:', err);
-    setDeleteError('An unexpected error occurred while deleting the template.');
+    setDeleteValidation({
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'An unexpected error occurred while deleting the template.',
+      dependencies: [],
+      alternatives: []
+    });
+  } finally {
+    setIsDeleteProcessing(false);
   }
 };
 
@@ -269,40 +303,16 @@ return (
           </div>
         )}
       </CardContent>
-      {/* Confirmation Dialog */}
-      <Dialog 
-        id="delete-template-dialog" 
-        isOpen={isDeleteDialogOpen} 
-        onClose={() => setIsDeleteDialogOpen(false)} 
-        title="Confirm Deletion"
-      >
-        <DialogContent>
-          <DialogDescription>
-            Are you sure you want to delete the template "{invoiceTemplates.find(t => t.template_id === templateToDeleteId)?.name || 'this template'}"?
-            This action cannot be undone.
-            {deleteError && (
-              <p className="text-red-600 mt-2">{deleteError}</p>
-            )}
-          </DialogDescription>
-          <DialogFooter>
-            <Button
-              id="cancel-delete-template-button"
-              variant="outline"
-              onClick={() => {
-                setIsDeleteDialogOpen(false);
-                setDeleteError(null);
-              }}>Cancel</Button>
-            <Button
-              id="confirm-delete-template-button"
-              variant="destructive"
-              onClick={handleDeleteTemplate}
-              disabled={!!deleteError} // Disable if there was an error during the attempt
-            >
-              Confirm Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteEntityDialog
+        id="delete-template-dialog"
+        isOpen={Boolean(templateToDeleteId)}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleDeleteTemplate}
+        entityName={templateToDeleteName}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </Card>
   );
 };

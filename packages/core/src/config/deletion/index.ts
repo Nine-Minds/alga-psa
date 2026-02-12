@@ -221,7 +221,14 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: false,
     dependencies: [
-      { type: 'invoice', table: 'invoices', foreignKey: 'template_id', label: 'invoice' }
+      { type: 'invoice', table: 'invoices', foreignKey: 'template_id', label: 'invoice' },
+      { type: 'client', table: 'clients', foreignKey: 'invoice_template_id', label: 'client' },
+      {
+        type: 'conditional_rule',
+        table: 'conditional_display_rules',
+        foreignKey: 'template_id',
+        label: 'conditional display rule'
+      }
     ]
   },
   workflow: {

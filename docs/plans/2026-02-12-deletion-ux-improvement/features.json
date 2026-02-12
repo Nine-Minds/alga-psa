@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "Migrate @alga-psa/billing invoice template deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]
