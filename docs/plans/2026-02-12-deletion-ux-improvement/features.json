@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "Migrate @alga-psa/billing contract line deletion to use deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-9"
     ]

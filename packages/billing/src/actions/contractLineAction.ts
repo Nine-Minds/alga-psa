@@ -1,7 +1,7 @@
 // server/src/lib/actions/contractLineActions.ts
 'use server'
 import ContractLine from '../models/contractLine';
-import { IContractLine, IContractLineFixedConfig } from '@alga-psa/types'; // Added IContractLineFixedConfig
+import { DeletionValidationResult, IContractLine, IContractLineFixedConfig } from '@alga-psa/types'; // Added IContractLineFixedConfig
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex'; // Import Knex type
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
@@ -11,6 +11,7 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 
 
@@ -286,21 +287,26 @@ export const deleteContractLine = withAuth(async (
     user,
     { tenant },
     planId: string
-): Promise<void> => {
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
-        const { knex } = await createTenantKnex(); // Capture knex instance here
+        const { knex } = await createTenantKnex();
         if (!tenant) {
-            throw new Error("tenant context not found");
+            return {
+                success: false,
+                canDelete: false,
+                code: 'VALIDATION_FAILED',
+                message: 'Tenant context not found',
+                dependencies: [],
+                alternatives: []
+            };
         }
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const contractsWithClients = await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!hasPermission(user, 'billing', 'delete')) {
                 throw new Error('Permission denied: Cannot delete contract lines');
             }
 
-            // Check if plan is associated with any contracts and fetch associated clients
-            // After migration 20251028090000, data is stored directly in contract_lines
-            const contractsWithClients = await trx('contract_lines as cl')
+            return await trx('contract_lines as cl')
                 .join('contracts as c', function() {
                     this.on('cl.contract_id', '=', 'c.contract_id')
                         .andOn('cl.tenant', '=', 'c.tenant');
@@ -316,97 +322,39 @@ export const deleteContractLine = withAuth(async (
                 .where('cl.contract_line_id', planId)
                 .where('cl.tenant', tenant)
                 .whereNotNull('cl.contract_id')
-                .select('c.contract_name', 'cli.client_name', 'c.contract_id')
-                .orderBy(['c.contract_name', 'cli.client_name']);
+                .select('c.contract_id');
+        });
 
-            if (contractsWithClients.length > 0) {
-                // Group clients by contract
-                const contractMap = new Map<string, { contractName: string; clients: string[] }>();
+        if (contractsWithClients.length > 0) {
+            return {
+                success: false,
+                canDelete: false,
+                code: 'DEPENDENCIES_EXIST',
+                message: 'Cannot delete contract line: It is currently assigned to one or more clients.',
+                dependencies: [{ type: 'contract', count: contractsWithClients.length, label: 'contract' }],
+                alternatives: []
+            };
+        }
 
-                for (const row of contractsWithClients) {
-                    if (!contractMap.has(row.contract_id)) {
-                        contractMap.set(row.contract_id, {
-                            contractName: row.contract_name,
-                            clients: []
-                        });
-                    }
-                    if (row.client_name) {
-                        contractMap.get(row.contract_id)!.clients.push(row.client_name);
-                    }
-                }
-
-                // Build detailed error message with contract and client info
-                const details = Array.from(contractMap.values()).map(({ contractName, clients }) => {
-                    if (clients.length > 0) {
-                        return `${contractName} (assigned to: ${clients.join(', ')})`;
-                    }
-                    return contractName;
-                });
-
-                // Create a structured error message that the UI can parse
-                const errorData = JSON.stringify({
-                    type: 'CONTRACT_LINE_IN_USE',
-                    contracts: Array.from(contractMap.values()).map(({ contractName, clients }) => ({
-                        name: contractName,
-                        clients: clients
-                    }))
-                });
-
-                throw new Error(`STRUCTURED_ERROR:${errorData}`);
-            }
-
+        const result = await deleteEntityWithValidation('contract_line', planId, async (trx) => {
             await ContractLine.delete(trx, planId);
         });
+
+        return {
+            ...result,
+            success: result.deleted === true,
+            deleted: result.deleted
+        };
     } catch (error) {
         console.error('Error deleting contract line:', error);
-        if (error instanceof Error) {
-            // Check for specific PostgreSQL foreign key violation error code (23503)
-            // This indicates the plan is likely referenced by another table (e.g., client_contract_lines)
-            // We cast to 'any' to access potential driver-specific properties like 'code'
-            if ((error as any).code === '23503') {
-                 // Fetch client IDs associated with the plan
-                 const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex();
-                 const clientPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
-                     return await trx('client_contract_lines')
-                         .select('client_id')
-                         .where({ contract_line_id: planId, tenant: queryTenant });
-                 });
-
-                 const clientIds = clientPlanLinks.map(link => link.client_id);
-
-                 let clientNames: string[] = [];
-                 if (clientIds.length > 0) {
-                     const clients = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
-                         return await trx('clients')
-                             .select('client_name')
-                             .whereIn('client_id', clientIds)
-                             .andWhere({ tenant: queryTenant });
-                     });
-                     clientNames = clients.map(c => c.client_name);
-                 }
-
-                 let errorMessage = "Cannot delete contract line: It is currently assigned to one or more clients.";
-                 if (clientNames.length > 0) {
-                     // Truncate if too many names
-                     const displayLimit = 5;
-                     const displayNames = clientNames.length > displayLimit
-                         ? clientNames.slice(0, displayLimit).join(', ') + ` and ${clientNames.length - displayLimit} more`
-                         : clientNames.join(', ');
-                     errorMessage = `Cannot delete contract line: It is assigned to the following clients: ${displayNames}.`;
-                 }
-                 throw new Error(errorMessage);
-            }
-
-            // Preserve the user-friendly error from the hasAssociatedServices pre-check
-            if (error.message.includes('associated services')) {
-                throw error;
-            }
-
-            // Preserve other specific error messages (including the one from the 'isInUse' pre-check)
-            throw error;
-        }
-        // Fallback for non-Error objects
-        throw new Error(`Failed to delete contract line: ${error}`);
+        return {
+            success: false,
+            canDelete: false,
+            code: 'VALIDATION_FAILED',
+            message: 'Failed to delete contract line',
+            dependencies: [],
+            alternatives: []
+        };
     }
 });
 
