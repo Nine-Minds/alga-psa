@@ -235,7 +235,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
                     id={`${id}-board-picker-board-${board.board_id}`}
                     variant="ghost"
                     onClick={(e) => handleSelect(board.board_id!, e)}
-                    className={`w-full justify-start ${board.board_id === selectedBoardId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
+                    className={`w-full justify-start ${board.board_id === selectedBoardId ? 'bg-primary-500/15 hover:bg-primary-500/25' : ''}`}
                     label={board.board_name || ''}
                     role="option"
                     aria-selected={board.board_id === selectedBoardId}

@@ -4,7 +4,7 @@
 
 The `DataTable` component is a reusable, flexible, and customizable table component designed to display data in a tabular format. It uses TanStack Table (formerly React Table) to provide functionalities such as pagination, sorting, row selection, and custom rendering. This component aims to standardize the way lists of items are displayed across the application, promoting code reusability and consistency.
 
-**Location**: `server/src/components/ui/DataTable.tsx`
+**Location**: `packages/ui/src/components/DataTable.tsx`
 
 **Last Updated**: January 2025 (Mass pagination fixes + user preference improvements)
 
@@ -24,7 +24,6 @@ The `DataTable` component is a reusable, flexible, and customizable table compon
   - [Basic Usage](#basic-usage)
   - [Defining Columns](#defining-columns)
   - [Sorting](#sorting)
-  - [Row Selection](#row-selection)
   - [Row Click Handlers](#row-click-handlers)
 - [Props Interface](#props-interface)
   - [DataTableProps](#datatableprops)
@@ -45,13 +44,12 @@ The `DataTable` component is a reusable, flexible, and customizable table compon
 - **Data Display**: Render data in a customizable table format with TanStack Table
 - **Pagination**: Client-side and server-side pagination with customizable page sizes
 - **Sorting**: Multi-column sorting with asc/desc toggle
-- **Row Selection**: Single or multi-row selection with callbacks
 - **Custom Rendering**: Full control over cell and header rendering
 - **Row Click Handlers**: Navigate or open drawers on row click
 - **User Preferences**: Persist page size preferences via `useUserPreference` hook
 - **Responsive Design**: Adapts to different screen sizes
-- **Loading States**: Built-in loading indicator support
-- **Empty States**: Customizable empty state messages
+- **Row Styling**: Custom row class names via `rowClassName` callback
+- **Editable Cells**: Inline editing support via `editableConfig`
 
 ---
 
@@ -60,8 +58,8 @@ The `DataTable` component is a reusable, flexible, and customizable table compon
 The DataTable component is built-in and ready to use:
 
 ```tsx
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { DataTable } from '@alga-psa/ui';
+import { ColumnDefinition, DataTableProps } from '@alga-psa/types';
 ```
 
 **Dependencies** (already installed):
@@ -75,7 +73,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 Here's a minimal working example:
 
 ```tsx
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui';
 import { useState } from 'react';
 
 function MyComponent() {
@@ -139,7 +137,7 @@ All data is loaded into memory, and DataTable automatically slices it into pages
 
 ```tsx
 import { useState } from 'react';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui';
 
 function ClientsList() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -188,7 +186,7 @@ Only one page of data is fetched from the server at a time.
 
 ```tsx
 import { useState, useEffect } from 'react';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui';
 
 function ActivitiesList() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -253,7 +251,7 @@ interface PagedResponse<T> {
 Use the `useUserPreference` hook to persist the user's page size preference:
 
 ```tsx
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const PAGE_SIZE_KEY = 'my_page_size_preference';
 
@@ -315,7 +313,7 @@ Minimum required props:
 Columns are defined using the `ColumnDefinition` interface:
 
 ```tsx
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 
 const columns: ColumnDefinition<Contact>[] = [
   {
@@ -348,15 +346,17 @@ const columns: ColumnDefinition<Contact>[] = [
 
 #### Column Properties
 
-- `title` (required): Column header text
-- `dataIndex` (required): Key in data object
-- `sortable` (optional): Enable sorting for this column (default: false)
+- `title` (required): Column header text or ReactNode
+- `dataIndex` (required): Key in data object (string or string array for nested paths)
+- `sortable` (optional): Enable sorting for this column (default: true)
 - `render` (optional): Custom cell renderer function
-- `width` (optional): Column width (CSS value)
+- `width` (optional): Column width (CSS string value)
+- `headerClassName` (optional): CSS class for the header cell
+- `cellClassName` (optional): CSS class for body cells
 
 ### Sorting
 
-Sorting is enabled per-column using the `sortable` property:
+Sorting is enabled by default on all columns. Use the `sortable` property to disable it:
 
 ```tsx
 const columns = [
@@ -374,23 +374,6 @@ const columns = [
 ```
 
 Users can click column headers to toggle between ascending, descending, and no sort.
-
-### Row Selection
-
-Enable row selection with checkboxes:
-
-```tsx
-const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
-
-<DataTable
-  data={items}
-  columns={columns}
-  enableRowSelection={true}
-  onSelectedRowsChange={setSelectedRowIds}
-/>
-```
-
-Access selected row IDs from the state for batch operations.
 
 ### Row Click Handlers
 
@@ -423,40 +406,52 @@ interface DataTableProps<T> {
   currentPage?: number;
   onPageChange?: (page: number) => void;
   pageSize?: number;
-  onItemsPerPageChange?: (pageSize: number) => void;
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
   totalItems?: number;  // Enables server-side pagination
   itemsPerPageOptions?: Array<{ value: string; label: string }>;
 
   // Row interaction
   onRowClick?: (record: T) => void;
-  enableRowSelection?: boolean;
-  onSelectedRowsChange?: (selectedIds: string[]) => void;
+  rowClassName?: (record: T) => string;
+  onVisibleRowsChange?: (rows: T[]) => void;
 
   // Sorting
-  initialSortKey?: string;
-  initialSortOrder?: 'asc' | 'desc';
+  initialSorting?: { id: string; desc: boolean }[];
+  manualSorting?: boolean;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 
-  // UI customization
-  id?: string;
-  emptyMessage?: string;
-  isLoading?: boolean;
+  // Editable support
+  editableConfig?: EditableConfig;
 }
 ```
 
 ### ColumnDefinition
 
+The `ColumnDefinition` type is a union of two variants:
+
 ```typescript
-interface ColumnDefinition<T> {
-  title: string;                    // Column header text
-  dataIndex: keyof T & string;      // Key in data object
-  sortable?: boolean;               // Enable sorting (default: false)
-  width?: string | number;          // Column width
-  render?: (                        // Custom renderer
-    value: any,
-    record: T,
-    index: number
-  ) => React.ReactNode;
+interface BaseColumnDefinition<T> {
+  title: string | ReactNode;        // Column header text or ReactNode
+  dataIndex: string | string[];     // Key in data object (or nested path)
+  width?: string;                   // Column width (CSS string)
+  headerClassName?: string;         // CSS class for the header cell
+  cellClassName?: string;           // CSS class for body cells
+  sortable?: boolean;               // Enable sorting (default: true)
 }
+
+// Variant with custom render function
+interface RenderColumnDefinition<T, V> extends BaseColumnDefinition<T> {
+  render: (value: V, record: T, index: number) => ReactNode;
+}
+
+// Variant without render (simple text display)
+interface SimpleColumnDefinition<T> extends BaseColumnDefinition<T> {
+  render?: never;
+}
+
+type ColumnDefinition<T> = RenderColumnDefinition<T, any> | SimpleColumnDefinition<T>;
 ```
 
 ---
@@ -467,7 +462,7 @@ interface ColumnDefinition<T> {
 
 ```tsx
 import { useState, useEffect } from 'react';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 
 function ContactsList() {
@@ -540,7 +535,7 @@ function ContactsList() {
 
 ```tsx
 import { useState, useEffect } from 'react';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui';
 import { Activity } from 'server/src/interfaces/activity.interfaces';
 
 function ActivitiesList() {
@@ -548,8 +543,6 @@ function ActivitiesList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
@@ -561,13 +554,11 @@ function ActivitiesList() {
 
   // Fetch current page only
   useEffect(() => {
-    setIsLoading(true);
     fetchActivitiesPage(currentPage, pageSize)
       .then(result => {
         setActivities(result.items);
         setTotalItems(result.totalCount);
-      })
-      .finally(() => setIsLoading(false));
+      });
   }, [currentPage, pageSize]);
 
   const columns = [
@@ -600,7 +591,6 @@ function ActivitiesList() {
       pageSize={pageSize}
       onItemsPerPageChange={handlePageSizeChange}
       totalItems={totalItems}
-      isLoading={isLoading}
     />
   );
 }
@@ -610,8 +600,8 @@ function ActivitiesList() {
 
 ```tsx
 import { useState } from 'react';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { useUserPreference } from '@alga-psa/users/hooks';
+import { DataTable } from '@alga-psa/ui';
 
 const CLIENTS_PAGE_SIZE_KEY = 'clients_list_page_size';
 
@@ -822,7 +812,7 @@ const [value, setValueState] = useState<T>(() => {
 - Added `handlePageSizeChange` handlers across the application
 - Standardized page size options (10/25/50/100 for lists)
 
-**Files Modified**: See `docs/DATATABLE_PAGINATION_FINAL_REPORT.md`
+**Files Modified**: Multiple DataTable instances across the application
 
 **Pattern Established**:
 1. Add pagination state (`currentPage`, `pageSize`)
@@ -840,7 +830,7 @@ const [value, setValueState] = useState<T>(() => {
 
 **Solution**: Changed to lazy initialization - read localStorage **before** first render.
 
-**Files Modified**: `server/src/hooks/useUserPreference.ts`
+**Files Modified**: `packages/users/src/hooks/useUserPreference.ts`
 
 ---
 
@@ -889,7 +879,7 @@ Defaults are 10/25/50/100 for lists, 9/18/27/36 for grids.
 
 ### What's the difference between the two DataTable components?
 
-1. **Server DataTable** (`server/src/components/ui/DataTable.tsx`): Full-featured with pagination, used by main app
+1. **Main DataTable** (`packages/ui/src/components/DataTable.tsx`): Full-featured with pagination, used by main app
 2. **UI Kit DataTable** (`packages/ui-kit/src/components/DataTable.tsx`): Minimal version for extensions, **no pagination**
 
 Use the server DataTable unless building a standalone extension.
@@ -919,13 +909,10 @@ Currently, sorting state is not persisted. Page size preferences are persisted v
 
 ## Additional Resources
 
-- **DataTable Implementation**: `server/src/components/ui/DataTable.tsx`
-- **DataTable Interfaces**: `server/src/interfaces/dataTable.interfaces.ts`
-- **Pagination Component**: `server/src/components/ui/Pagination.tsx`
-- **useUserPreference Hook**: `server/src/hooks/useUserPreference.ts`
-- **Fix Pattern Doc**: `docs/DATATABLE_PAGINATION_FIX_PATTERN.md`
-- **Fix Report**: `docs/DATATABLE_PAGINATION_FINAL_REPORT.md`
-- **Detailed Pagination Guide**: `docs/DATATABLE_PAGINATION_GUIDE.md`
+- **DataTable Implementation**: `packages/ui/src/components/DataTable.tsx`
+- **DataTable Types**: `@alga-psa/types` (ColumnDefinition, DataTableProps)
+- **Pagination Component**: `packages/ui/src/components/Pagination.tsx`
+- **useUserPreference Hook**: `packages/users/src/hooks/useUserPreference.ts`
 
 ---
 

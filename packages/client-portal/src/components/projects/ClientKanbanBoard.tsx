@@ -11,6 +11,8 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import { useTheme } from 'next-themes';
+import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 
 interface Phase {
   phase_id: string;
@@ -118,11 +120,11 @@ function TaskCard({
   );
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] p-3 shadow-sm hover:shadow-md transition-shadow">
       {/* Task Name with Priority */}
       {visibleFields.includes('task_name') && task.task_name && (
         <div className="flex items-start gap-2 mb-2">
-          <h4 className="font-semibold text-gray-900 text-lg flex-1">{task.task_name}</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg flex-1">{task.task_name}</h4>
           {visibleFields.includes('priority') && task.priority_name && (
             <Tooltip content={`${t('projects.tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
               <div
@@ -139,7 +141,7 @@ function TaskCard({
         <div className="mb-2">
           <p
             ref={descriptionRef}
-            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+            className={`text-sm text-[rgb(var(--color-text-600))] ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
             {task.description}
           </p>
@@ -160,14 +162,14 @@ function TaskCard({
       )}
 
       {/* Task Details */}
-      <div className="space-y-1.5 text-sm text-gray-600">
+      <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
         {/* Due Date row with badges inline */}
         {(visibleFields.includes('due_date') || visibleFields.includes('checklist_progress') || showDependencies) && (
           <div className="flex items-center justify-between gap-2">
             {/* Left side: Due Date */}
             {visibleFields.includes('due_date') && task.due_date ? (
               <div className="flex items-center gap-1.5">
-                <Calendar className="w-3 h-3 text-gray-400" />
+                <Calendar className="w-3 h-3 text-[rgb(var(--color-text-400))]" />
                 <span>{format(new Date(task.due_date), 'PP', { locale: dateLocale })}</span>
               </div>
             ) : (
@@ -196,7 +198,7 @@ function TaskCard({
                   }
                 >
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded cursor-help ${
-                    (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
+                    (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-green-500/10 text-green-600' : 'bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-500))]'
                   }`}>
                     <CheckSquare className="w-3 h-3" />
                     <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
@@ -245,7 +247,7 @@ function TaskCard({
                   }
                 >
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
-                    hasBlockingDeps ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
+                    hasBlockingDeps ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
                   }`}>
                     {hasBlockingDeps ? <Ban className="w-3 h-3" /> : <GitBranch className="w-3 h-3" />}
                     <span>{dependencies!.predecessors.length + dependencies!.successors.length}</span>
@@ -305,7 +307,7 @@ function TaskCard({
         {/* Estimated Hours */}
         {visibleFields.includes('estimated_hours') && task.estimated_hours != null && (
           <div className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-gray-400" />
+            <Clock className="w-3 h-3 text-[rgb(var(--color-text-400))]" />
             <span>{t('projects.tasks.estimatedHours', 'Est')}: {(task.estimated_hours / 60).toFixed(1)}</span>
           </div>
         )}
@@ -313,7 +315,7 @@ function TaskCard({
         {/* Actual Hours (Hours Logged) */}
         {visibleFields.includes('actual_hours') && task.actual_hours != null && (
           <div className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-gray-400" />
+            <Clock className="w-3 h-3 text-[rgb(var(--color-text-400))]" />
             <span>{t('projects.fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}</span>
           </div>
         )}
@@ -321,7 +323,7 @@ function TaskCard({
 
       {/* Document Upload Section */}
       {allowUploads && (
-        <div className="mt-3 pt-2 border-t border-gray-100">
+        <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
           <TaskDocumentUpload taskId={task.task_id} compact />
         </div>
       )}
@@ -350,26 +352,26 @@ function PhaseCard({
       onClick={onClick}
       className={`p-3 rounded-lg cursor-pointer transition-all ${
         isSelected
-          ? 'bg-purple-50'
-          : 'hover:bg-gray-50'
+          ? 'bg-[rgb(var(--color-primary-50))] dark:bg-primary-500/10'
+          : 'hover:bg-[rgb(var(--color-border-50))]'
       }`}
     >
       <div className="flex flex-col gap-1">
         {/* Phase name */}
         <div className="flex items-start justify-between gap-2">
-          <span className={`text-lg font-bold ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
+          <span className={`text-lg font-bold ${isSelected ? 'text-purple-600' : 'text-[rgb(var(--color-text-900))]'}`}>
             {phase.phase_name}
           </span>
         </div>
         {showCompletion && phase.completion_percentage !== undefined && (
-          <span className={`text-xs font-medium ${isSelected ? 'text-purple-600' : 'text-gray-500'}`}>
+          <span className={`text-xs font-medium ${isSelected ? 'text-purple-600' : 'text-[rgb(var(--color-text-500))]'}`}>
             {phase.completion_percentage}%
           </span>
         )}
 
         {/* Phase dates */}
         {(phase.start_date || phase.end_date) && (
-          <div className="flex items-center gap-1 text-xs text-gray-500">
+          <div className="flex items-center gap-1 text-xs text-[rgb(var(--color-text-500))]">
             <Calendar className="w-3 h-3" />
             {phase.start_date && format(new Date(phase.start_date), 'MMM d', { locale: dateLocale })}
             {phase.start_date && phase.end_date && ' - '}
@@ -379,7 +381,7 @@ function PhaseCard({
 
         {/* Phase description */}
         {phase.description && (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-600))]">
             {phase.description}
           </p>
         )}
@@ -399,6 +401,8 @@ export default function ClientKanbanBoard({
   taskDependencies
 }: ClientKanbanBoardProps) {
   const { t, i18n } = useTranslation('clientPortal');
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const dateLocale = getDateFnsLocale(i18n.language);
   const showPhases = config.show_phases ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
@@ -431,7 +435,7 @@ export default function ClientKanbanBoard({
 
   if (statuses.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
         {t('projects.tasks.noTasks', 'No tasks to display')}
       </div>
     );
@@ -442,7 +446,7 @@ export default function ClientKanbanBoard({
       {/* Left Pane - Phase Cards */}
       {showPhases && phases.length > 0 && (
         <div className="w-56 flex-shrink-0 space-y-2">
-          <h4 className="text-xs font-medium text-gray-500 px-1 mb-3">
+          <h4 className="text-xs font-medium text-[rgb(var(--color-text-500))] px-1 mb-3">
             {t('projects.phases.title', 'Phases')}
           </h4>
           {phases.map((phase) => (
@@ -469,8 +473,8 @@ export default function ClientKanbanBoard({
               key={status.project_status_mapping_id}
               className="flex-shrink-0 w-80 rounded-lg border-2"
               style={{
-                backgroundColor: lightenColor(statusColor, 0.90),
-                borderColor: lightenColor(statusColor, 0.70)
+                backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.90),
+                borderColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70)
               }}
             >
               {/* Column Header */}
@@ -479,21 +483,21 @@ export default function ClientKanbanBoard({
                   <div
                     className="flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2"
                     style={{
-                      backgroundColor: lightenColor(statusColor, 0.75),
-                      borderColor: lightenColor(statusColor, 0.50)
+                      backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.75),
+                      borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.50)
                     }}
                   >
                     <div
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: statusColor }}
                     />
-                    <h3 className="font-medium text-gray-900 text-sm">{status.name}</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 text-sm">{status.name}</h3>
                   </div>
                   <span
                     className="text-xs font-medium px-2 py-0.5 rounded-full"
                     style={{
-                      backgroundColor: lightenColor(statusColor, 0.70),
-                      color: statusColor
+                      backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                      color: isDark ? lightenColor(statusColor, 0.40) : statusColor
                     }}
                   >
                     {statusTasks.length}
@@ -504,7 +508,7 @@ export default function ClientKanbanBoard({
               {/* Tasks */}
               <div className="px-2 pb-2 space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
                 {statusTasks.length === 0 ? (
-                  <div className="text-center py-4 text-xs text-gray-400">
+                  <div className="text-center py-4 text-xs text-[rgb(var(--color-text-400))]">
                     {t('projects.tasks.noTasks', 'No tasks')}
                   </div>
                 ) : (

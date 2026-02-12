@@ -9,6 +9,8 @@ import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
 import { IUserWithRoles } from '@alga-psa/types';
 import { useState, useRef } from 'react';
+import { useTheme } from 'next-themes';
+import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 
 interface StatusColumnProps {
   status: ProjectStatus;
@@ -97,6 +99,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   onTaskTagsChange,
   taskTypes,
 }) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const [isDraggedOver, setIsDraggedOver] = useState(false);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
@@ -307,8 +311,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     minWidth: `${columnWidth}px`,
     maxWidth: `${columnWidth}px`,
     ...(configuredColor ? {
-      backgroundColor: lightenColor(configuredColor, 0.85),
-      borderColor: isDraggedOver ? undefined : lightenColor(configuredColor, 0.70)
+      backgroundColor: isDark ? darkenColor(configuredColor, 0.75) : lightenColor(configuredColor, 0.85),
+      borderColor: isDraggedOver ? undefined : (isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70))
     } : {})
   };
 
@@ -327,8 +331,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           <div
             className={`flex ${configuredColor ? '' : darkBackgroundColor} ${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} ${configuredColor ? '' : borderColor} shadow-sm items-center min-w-0 flex-1`}
             style={configuredColor ? {
-              backgroundColor: lightenColor(configuredColor, 0.70),
-              borderColor: lightenColor(configuredColor, 0.40)
+              backgroundColor: isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70),
+              borderColor: isDark ? darkenColor(configuredColor, 0.40) : lightenColor(configuredColor, 0.40)
             } : undefined}
           >
             <span className="flex-shrink-0">{statusIcon}</span>
@@ -353,8 +357,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
             <span
               className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
               style={configuredColor ? {
-                backgroundColor: lightenColor(configuredColor, 0.70),
-                color: configuredColor
+                backgroundColor: isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70),
+                color: isDark ? lightenColor(configuredColor, 0.40) : configuredColor
               } : undefined}
             >
               {displayTasks.length}

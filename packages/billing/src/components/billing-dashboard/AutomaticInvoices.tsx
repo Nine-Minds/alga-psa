@@ -796,7 +796,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onItemsPerPageChange={handlePageSizeChange}
             totalItems={totalPeriods}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
-            rowClassName={() => "hover:bg-muted/50"}
+            rowClassName={() => ""}
           />
         </div>
 

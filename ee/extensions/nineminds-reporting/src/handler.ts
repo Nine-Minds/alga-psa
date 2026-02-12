@@ -365,8 +365,14 @@ async function handleUpdateFeatureFlag(request: ExecuteRequest, host: HostBindin
 async function handleDeleteFeatureFlag(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
   const flagId = params.param0;
   await safeLog(host, 'info', `[nineminds-control-panel] deleting feature flag id=${flagId} via uiProxy`);
-  const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}`, { __method: 'DELETE' });
-  return jsonResponse(result.data, { status: result.status });
+  try {
+    const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}`, { __method: 'DELETE' });
+    return jsonResponse(result.data ?? { success: true, message: 'Flag deleted' }, { status: result.status });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    await safeLog(host, 'error', `[nineminds-control-panel] delete feature flag id=${flagId} failed: ${detail}`);
+    return jsonResponse({ error: 'Delete failed', detail }, { status: 500 });
+  }
 }
 
 // Handler: Manage tenants on a feature flag

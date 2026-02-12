@@ -6,6 +6,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
+import { normalizeEmailAddress } from '../lib/email/addressUtils';
 
 // =============================================================================
 // INTERFACES
@@ -216,6 +217,11 @@ export class EmailService {
    */
   async findContactByEmail(email: string): Promise<FindContactByEmailOutput | null> {
     try {
+      const normalizedEmail = normalizeEmailAddress(email);
+      if (!normalizedEmail) {
+        return null;
+      }
+
       const contact = await this.knex('contacts')
         .leftJoin('clients', 'contacts.client_id', 'clients.client_id')
         .select(
@@ -229,7 +235,7 @@ export class EmailService {
         )
         .where({
           'contacts.tenant': this.tenant,
-          'contacts.email': email.toLowerCase()
+          'contacts.email': normalizedEmail
         })
         .first();
 
@@ -257,8 +263,13 @@ export class EmailService {
    */
   async createOrFindContact(input: CreateOrFindContactInput): Promise<CreateOrFindContactOutput> {
     try {
+      const normalizedEmail = normalizeEmailAddress(input.email);
+      if (!normalizedEmail) {
+        throw new Error('Invalid email address');
+      }
+
       // First try to find existing contact
-      const existingContact = await this.findContactByEmail(input.email);
+      const existingContact = await this.findContactByEmail(normalizedEmail);
 
       if (existingContact && existingContact.client_id === input.client_id) {
         return {
@@ -280,8 +291,8 @@ export class EmailService {
       await this.knex('contacts').insert({
         contact_name_id: contactId,
         tenant: this.tenant,
-        full_name: input.name || input.email,
-        email: input.email.toLowerCase(),
+        full_name: input.name || normalizedEmail,
+        email: normalizedEmail,
         client_id: input.client_id,
         phone_number: input.phone,
         role: input.title,
@@ -291,8 +302,8 @@ export class EmailService {
 
       return {
         id: contactId,
-        name: input.name || input.email,
-        email: input.email,
+        name: input.name || normalizedEmail,
+        email: normalizedEmail,
         client_id: input.client_id,
         phone: input.phone,
         title: input.title,

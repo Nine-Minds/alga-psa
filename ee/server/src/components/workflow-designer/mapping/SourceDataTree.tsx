@@ -660,20 +660,20 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                     onClick={() => !disabled && onSelectField(context.forEach!.itemVar)}
                     className={`
                       flex items-center gap-2 py-1 px-2 ml-6 rounded cursor-pointer
-                      ${selectedPath === context.forEach.itemVar ? 'bg-orange-100' : 'hover:bg-gray-50'}
+                      ${selectedPath === context.forEach.itemVar ? 'bg-orange-500/15' : 'hover:bg-gray-50'}
                     `}
                   >
                     {getTypeIcon(context.forEach.itemType || 'any')}
                     <span className="text-sm font-medium text-gray-800">
                       {context.forEach.itemVar}
                     </span>
-                    <Badge className="text-xs bg-orange-100 text-orange-700">current item</Badge>
+                    <Badge className="text-xs bg-orange-500/15 text-orange-700">current item</Badge>
                   </div>
                   <div
                     onClick={() => !disabled && onSelectField(context.forEach!.indexVar)}
                     className={`
                       flex items-center gap-2 py-1 px-2 ml-6 rounded cursor-pointer
-                      ${selectedPath === context.forEach.indexVar ? 'bg-orange-100' : 'hover:bg-gray-50'}
+                      ${selectedPath === context.forEach.indexVar ? 'bg-orange-500/15' : 'hover:bg-gray-50'}
                     `}
                   >
                     <Hash className="w-3.5 h-3.5 text-blue-600" />

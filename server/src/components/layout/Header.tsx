@@ -32,6 +32,7 @@ import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
+import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -123,7 +124,7 @@ const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
 
   return (
     <span
-      className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200"
+      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-400))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
       aria-label={`Active tenant ${tenant}`}
     >
       {tenant}
@@ -339,14 +340,14 @@ export default function Header({
   const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname]);
 
   return (
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <header className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3 shadow-sm">
       <div className="flex items-center gap-3">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center space-x-2">
             {breadcrumbItems.map((item, index) => (
               <li key={`${item.href}-${index}`} className="flex items-center">
                 {index > 0 && (
-                  <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 mx-2 text-[rgb(var(--color-text-400))]" />
                 )}
                 {index === 0 ? (
                   <Link
@@ -379,6 +380,7 @@ export default function Header({
       <div className="flex items-center gap-3">
         <TenantBadge tenant={userData?.tenant} />
         <QuickCreateMenu />
+        <ThemeToggle />
         <NotificationBell />
         <JobActivityIndicator />
         <DropdownMenu>
@@ -405,16 +407,16 @@ export default function Header({
                   size="sm"
                 />
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[rgb(var(--color-card))]" />
             </Button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="min-w-[220px]">
             <div className="px-3 py-2">
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
                 {userData ? `${userData.first_name ?? ''} ${userData.last_name ?? ''}`.trim() : 'User'}
               </p>
-              <p className="text-xs text-gray-500">Quick access to profile & account.</p>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">Quick access to profile & account.</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem

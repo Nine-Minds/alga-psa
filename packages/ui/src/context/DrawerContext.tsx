@@ -350,83 +350,93 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       history: state.history
     }}>
       {children}
-      <Drawer
-        isOpen={state.isOpen}
-        onClose={closeDrawer}
-        isInDrawer={state.history.length > 1}
-        hideCloseButton={true}
-        drawerVariant="nested"
-        width={currentEntry?.width}
-      >
-        {currentEntry && (
-          <div className="flex flex-col h-full relative">
-            {/* Show full header if there's a title or navigation buttons */}
-            {(currentEntry.title || canGoBack || canGoForward) ? (
-              <div className="flex items-center justify-between mb-4 border-b pb-3">
-                <div className="flex items-center">
-                  {canGoBack && (
-                    <Button
-                      id="drawer-back-button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={goBack}
-                      className="mr-2"
-                      aria-label="Go back"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {currentEntry.title && <h2 className="text-xl font-semibold">{currentEntry.title}</h2>}
-                </div>
-                <div className="flex items-center">
-                  {canGoForward && (
-                    <Button
-                      id="drawer-forward-button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={goForward}
-                      className="mr-2"
-                      aria-label="Go forward"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  )}
+    </DrawerContext>
+  );
+};
+
+/**
+ * Renders the managed drawer UI for DrawerProvider.
+ * Place this inside all context providers so drawer content inherits the full provider tree.
+ */
+export const DrawerOutlet: React.FC = () => {
+  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history } = useDrawer();
+  const isOpen = history.length > 0 && currentEntry !== null;
+
+  return (
+    <Drawer
+      isOpen={isOpen}
+      onClose={closeDrawer}
+      isInDrawer={history.length > 1}
+      hideCloseButton={true}
+      drawerVariant="nested"
+      width={currentEntry?.width}
+    >
+      {currentEntry && (
+        <div className="flex flex-col h-full relative">
+          {(currentEntry.title || canGoBack || canGoForward) ? (
+            <div className="flex items-center justify-between mb-4 border-b pb-3">
+              <div className="flex items-center">
+                {canGoBack && (
                   <Button
-                    id="drawer-close-button"
+                    id="drawer-back-button"
                     variant="ghost"
                     size="sm"
-                    onClick={closeDrawer}
-                    aria-label="Close drawer"
+                    onClick={goBack}
+                    className="mr-2"
+                    aria-label="Go back"
                   >
-                    <X className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                </div>
+                )}
+                {currentEntry.title && <h2 className="text-xl font-semibold">{currentEntry.title}</h2>}
               </div>
-            ) : (
-              /* Minimal header with just close button - takes less vertical space */
-              <div className="flex justify-end">
+              <div className="flex items-center">
+                {canGoForward && (
+                  <Button
+                    id="drawer-forward-button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={goForward}
+                    className="mr-2"
+                    aria-label="Go forward"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   id="drawer-close-button"
                   variant="ghost"
                   size="sm"
                   onClick={closeDrawer}
                   aria-label="Close drawer"
-                  className="hover:bg-gray-100"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            )}
-            <div className="flex-1 overflow-auto">
-              <DrawerContent
-                content={currentEntry.content}
-                onMount={currentEntry.onMount}
-              />
             </div>
+          ) : (
+            <div className="flex justify-end">
+              <Button
+                id="drawer-close-button"
+                variant="ghost"
+                size="sm"
+                onClick={closeDrawer}
+                aria-label="Close drawer"
+                className="hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          <div className="flex-1 overflow-auto">
+            <DrawerContent
+              content={currentEntry.content}
+              onMount={currentEntry.onMount}
+            />
           </div>
-        )}
-      </Drawer>
-    </DrawerContext>
+        </div>
+      )}
+    </Drawer>
   );
 };
 

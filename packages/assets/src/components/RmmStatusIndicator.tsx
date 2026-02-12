@@ -127,7 +127,7 @@ export function RmmBadge({
   if (isUnknown) {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 ${className}`}
+        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-500/10 text-gray-600 ${className}`}
       >
         <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
         Unknown
@@ -140,8 +140,8 @@ export function RmmBadge({
       <span
         className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
           isOnline
-            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20'
-            : 'bg-gray-100 text-gray-600 ring-1 ring-gray-400/20'
+            ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20'
+            : 'bg-gray-500/10 text-gray-600 ring-1 ring-gray-500/20'
         }`}
       >
         <span

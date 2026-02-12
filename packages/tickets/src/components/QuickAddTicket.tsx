@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket } from '../actions/ticketActions';
 import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
@@ -35,6 +36,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
+import { useRouter } from 'next/navigation';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -69,6 +71,44 @@ const formatLocationDisplay = (location: IClientLocation): string => {
   }
   
   return parts.join(' - ') || 'Unnamed Location';
+};
+
+const getDefaultBoard = (availableBoards: IBoard[]): IBoard | null => {
+  const activeBoards = availableBoards.filter(board => !board.is_inactive);
+
+  return (
+    activeBoards.find(board => board.is_default) ||
+    activeBoards[0] ||
+    availableBoards.find(board => board.is_default) ||
+    availableBoards[0] ||
+    null
+  );
+};
+
+const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | null => {
+  const statusesWithDefault = availableStatuses as Array<ITicketStatus & { is_default?: boolean }>;
+  const openStatuses = statusesWithDefault.filter(status => !status.is_closed);
+
+  return (
+    openStatuses.find(status => status.is_default) ||
+    openStatuses[0] ||
+    statusesWithDefault.find(status => status.is_default) ||
+    statusesWithDefault[0] ||
+    null
+  );
+};
+
+const getDefaultPriorityId = (availablePriorities: IPriority[], priorityType?: 'custom' | 'itil'): string => {
+  if (!availablePriorities.length) return '';
+
+  if (priorityType === 'itil') {
+    const itilPriorities = availablePriorities.filter(priority => priority.is_from_itil_standard);
+    const mediumItilPriority = itilPriorities.find(priority => priority.itil_priority_level === 3);
+    return mediumItilPriority?.priority_id || itilPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
+  }
+
+  const customPriorities = availablePriorities.filter(priority => !priority.is_from_itil_standard);
+  return customPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
 };
 
 interface QuickAddTicketProps {
@@ -110,6 +150,7 @@ export function QuickAddTicket({
   assetId,
   renderBeforeFooter
 }: QuickAddTicketProps) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -219,6 +260,38 @@ export function QuickAddTicket({
 
         if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
           setStatuses(formData.statuses);
+        }
+
+        const availableBoards = formData.boards || [];
+        const availableStatuses = Array.isArray(formData.statuses) ? formData.statuses : [];
+        const availablePriorities = formData.priorities || [];
+
+        const defaultBoard = getDefaultBoard(availableBoards);
+        const defaultStatus = getDefaultStatus(availableStatuses);
+        const defaultPriorityType = defaultBoard?.priority_type || 'custom';
+        const defaultPriorityId = getDefaultPriorityId(availablePriorities, defaultPriorityType);
+
+        if (defaultBoard?.board_id) {
+          setBoardId(defaultBoard.board_id);
+
+          // If no prefilled assignee was provided, prefer board-level default assignee.
+          if (!prefilledAssignedTo && defaultBoard.default_assigned_to) {
+            setAssignedTo(defaultBoard.default_assigned_to);
+          }
+        }
+
+        if (defaultStatus?.status_id) {
+          setStatusId(defaultStatus.status_id);
+        }
+
+        if (defaultPriorityId) {
+          setPriorityId(defaultPriorityId);
+        }
+
+        if (defaultPriorityType === 'itil') {
+          // Default ITIL tickets to medium impact/urgency for quick entry.
+          setItilImpact(3);
+          setItilUrgency(3);
         }
 
         if (formData.selectedClient) {
@@ -386,14 +459,31 @@ export function QuickAddTicket({
     setBoardId(newBoardId);
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
+    setPriorityId('');
+    setItilImpact(undefined);
+    setItilUrgency(undefined);
     clearErrorIfSubmitted();
+
+    const selectedBoard = boards.find(b => b.board_id === newBoardId);
 
     // Pre-fill assigned agent from board's default if current assignedTo is empty
     if (!assignedTo && newBoardId) {
-      const selectedBoard = boards.find(b => b.board_id === newBoardId);
       if (selectedBoard?.default_assigned_to) {
         setAssignedTo(selectedBoard.default_assigned_to);
       }
+    }
+
+    const priorityType = selectedBoard?.priority_type || 'custom';
+    const defaultPriorityId = getDefaultPriorityId(priorities, priorityType);
+
+    if (defaultPriorityId) {
+      setPriorityId(defaultPriorityId);
+    }
+
+    if (priorityType === 'itil') {
+      // Default ITIL tickets to medium impact/urgency for quick entry.
+      setItilImpact(3);
+      setItilUrgency(3);
     }
   };
 
@@ -444,8 +534,6 @@ export function QuickAddTicket({
   const validateForm = () => {
     const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push('Title');
-    if (!description.trim()) validationErrors.push('Description');
-    if (!assignedTo) validationErrors.push('Assigned To');
     if (!boardId) validationErrors.push('Board');
     if (!statusId) validationErrors.push('Status');
 
@@ -470,12 +558,10 @@ export function QuickAddTicket({
     return validationErrors;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
     setHasAttemptedSubmit(true);
 
-      const validationErrors = validateForm();
+    const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       setError(validationErrors.join('\n'));
       return;
@@ -580,6 +666,10 @@ export function QuickAddTicket({
       await onTicketAdded({ ...newTicket, tags: createdTags });
       resetForm();
       onOpenChange(false);
+
+      if (openAfterCreate && newTicket.ticket_id) {
+        router.push(`/msp/tickets/${newTicket.ticket_id}`);
+      }
     } catch (error) {
       console.error('Error creating ticket:', error);
       setError(error instanceof Error ? error.message : 'Failed to create ticket. Please try again.');
@@ -588,12 +678,24 @@ export function QuickAddTicket({
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await handleCreateTicket();
+  };
+
   const filteredClients = clients.filter(client => {
     if (clientFilterState === 'all') return true;
     if (clientFilterState === 'active') return !client.is_inactive;
     if (clientFilterState === 'inactive') return client.is_inactive;
     return true;
   });
+
+  const hasRequiredFieldErrors = !title.trim() || !boardId || !statusId ||
+    (boardConfig.priority_type === 'custom' && !priorityId) ||
+    (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
+    (boardConfig.priority_type === undefined && !priorityId) ||
+    !clientId;
 
 
   const memoizedStatusOptions = useMemo(
@@ -634,8 +736,8 @@ export function QuickAddTicket({
       >
         <DialogContent>
           {isLoading ? (
-            <div className="flex items-center justify-center p-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
+            <div className="p-6">
+              <Spinner size="sm" />
             </div>
           ) : (
             <>
@@ -673,8 +775,7 @@ export function QuickAddTicket({
                       setDescription(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Description *"
-                    className={hasAttemptedSubmit && !description.trim() ? 'border-red-500' : ''}
+                    placeholder="Description"
                   />
 
                   <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
@@ -729,23 +830,21 @@ export function QuickAddTicket({
                       showPlaceholderInDropdown={false}
                     />
                   )}
-                  <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <UserPicker
-                      value={assignedTo}
-                      onValueChange={(value) => {
-                        setAssignedTo(value);
-                        clearErrorIfSubmitted();
-                      }}
-                      users={users.map(user => ({
-                        ...user,
-                        roles: []
-                      }))}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      buttonWidth="full"
-                      size="sm"
-                      placeholder="Assign To *"
-                    />
-                  </div>
+                  <UserPicker
+                    value={assignedTo}
+                    onValueChange={(value) => {
+                      setAssignedTo(value);
+                      clearErrorIfSubmitted();
+                    }}
+                    users={users.map(user => ({
+                      ...user,
+                      roles: []
+                    }))}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    buttonWidth="full"
+                    size="sm"
+                    placeholder="Assign To"
+                  />
 
                   <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <BoardPicker
@@ -877,8 +976,8 @@ export function QuickAddTicket({
 
                             {/* ITIL Priority Matrix - Show when help icon is clicked */}
                             {showPriorityMatrix && (
-                              <div className="mt-3 p-4 bg-gray-50 border rounded-lg">
-                                <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                              <div className="mt-3 p-4 bg-gray-500/10 border rounded-lg">
+                                <h4 className="text-sm font-medium mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full text-xs">
                                     <thead>
@@ -894,43 +993,43 @@ export function QuickAddTicket({
                                     <tbody>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                                        <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-red-500/15 text-red-600 font-semibold">Critical (1)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 font-semibold">Planning (5)</td>
                                       </tr>
                                       <tr>
                                         <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 font-semibold">Planning (5)</td>
                                       </tr>
                                     </tbody>
                                   </table>
@@ -1010,16 +1109,24 @@ export function QuickAddTicket({
                       Cancel
                     </Button>
                     <Button
+                      id={`${id}-create-open-btn`}
+                      type="button"
+                      variant="default"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        void handleCreateTicket({ openAfterCreate: true });
+                      }}
+                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save + Open'}
+                    </Button>
+                    <Button
                       id={`${id}-submit-btn`}
                       type={isEmbedded ? "button" : "submit"}
                       variant="default"
                       disabled={isSubmitting}
-                      onClick={isEmbedded ? () => handleSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent) : undefined}
-                      className={!title.trim() || !description.trim() || !assignedTo || !boardId || !statusId ||
-                        (boardConfig.priority_type === 'custom' && !priorityId) ||
-                        (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
-                        (boardConfig.priority_type === undefined && !priorityId) ||
-                        !clientId ? 'opacity-50' : ''}
+                      onClick={isEmbedded ? () => { void handleCreateTicket(); } : undefined}
+                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>

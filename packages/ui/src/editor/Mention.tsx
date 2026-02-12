@@ -25,7 +25,7 @@ export const Mention = createReactInlineContentSpec(
 
       return (
         <span
-          className="inline-flex items-center px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-medium cursor-pointer hover:bg-blue-200 transition-colors"
+          className="inline-flex items-center px-1 py-0.5 rounded bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] font-medium cursor-pointer hover:opacity-80 transition-colors"
           data-user-id={userId}
           title={`${displayName} (${username || 'no username'})`}
         >

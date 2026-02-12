@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -41,7 +42,7 @@ const config: Config = {
       colors: {
         // Base semantic colors for UI components
         border: 'rgb(var(--color-border-200))',
-        background: 'white',
+        background: 'rgb(var(--color-background) / <alpha-value>)',
         foreground: 'rgb(var(--color-text-900))',
         muted: {
           DEFAULT: 'rgb(var(--color-border-100))',
@@ -49,18 +50,18 @@ const config: Config = {
         },
         // Status colors
         success: {
-          DEFAULT: '#22c55e', // green-500
-          foreground: '#ffffff',
+          DEFAULT: 'rgb(var(--color-status-success) / <alpha-value>)',
+          foreground: 'rgb(var(--color-status-success-foreground) / <alpha-value>)',
         },
         warning: {
-          DEFAULT: '#f59e0b', // amber-500
-          foreground: '#ffffff',
+          DEFAULT: 'rgb(var(--color-status-warning) / <alpha-value>)',
+          foreground: 'rgb(var(--color-status-warning-foreground) / <alpha-value>)',
         },
         error: {
-          DEFAULT: '#ef4444', // red-500
-          foreground: '#ffffff',
+          DEFAULT: 'rgb(var(--color-status-error) / <alpha-value>)',
+          foreground: 'rgb(var(--color-status-error-foreground) / <alpha-value>)',
         },
-        card: 'white',
+        card: 'rgb(var(--color-card) / <alpha-value>)',
         'card-foreground': 'rgb(var(--color-text-900))',
         primary: {
           DEFAULT: 'rgb(var(--color-primary-500) / <alpha-value>)',
@@ -122,6 +123,12 @@ const config: Config = {
           hover: 'var(--color-submenu-hover)',
           icon: 'var(--color-submenu-icon)',
         },
+        // Table row colors
+        'table-row-alt': 'rgb(var(--color-table-row-alt) / <alpha-value>)',
+        'table-hover': 'rgb(var(--color-table-hover) / <alpha-value>)',
+        'table-selected': 'rgb(var(--color-table-selected) / <alpha-value>)',
+        'table-status-approved': 'rgb(var(--color-table-status-approved) / <alpha-value>)',
+        'table-status-warning': 'rgb(var(--color-table-status-warning) / <alpha-value>)',
         // Add destructive colors based on assumed CSS variables
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',
         'destructive-foreground': 'rgb(var(--color-destructive-foreground) / <alpha-value>)',

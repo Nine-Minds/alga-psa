@@ -1,0 +1,147 @@
+[
+  {
+    "id": "F001",
+    "description": "Define duplicate-version API contract for finalize: HTTP 409 + stable error code + friendly message",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Update registry-v2 finalize version upsert path to enforce strict immutability (reject existing version regardless of hash)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Remove/disable duplicate-version branch that currently appends a new bundle hash to an existing version",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements",
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Map DB unique-constraint races for (registry_id, version) to the same friendly duplicate-version 409 response",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Ensure ext-bundles/finalize route and server action return consistent duplicate-version error payloads for UI and CLI callers",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Update installer/publish UI flow to surface duplicate-version message directly to users",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add registry query/action to list all versions for a registry extension in tenant context",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Include in version list payload: version string, created/published timestamp, latest content hash metadata",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Include installed marker in version list payload by joining tenant_extension_install.version_id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Handle legacy version rows with multiple bundles by deterministically selecting latest bundle metadata in viewer payload",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Render read-only Versions section in Extension Details page",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Versions table shows columns Version, Published, Content hash, Installed",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Versions section includes explicit empty state when no versions exist",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Enforce existing permission checks for version listing (extension read scope)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Add tests for duplicate-version friendly response in both direct duplicate and race-condition paths",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add tests for strict immutability guaranteeing no new bundle rows are created when version already exists",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add tests for versions viewer backend query covering installed marker and legacy multi-bundle versions",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add UI tests for Extension Details versions section rendering, sorting, and empty state",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

@@ -1,14 +1,9 @@
-import { Theme } from '@radix-ui/themes';
+import type { ReactNode } from 'react';
 
 export default function AuthLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-
-  return (
-    <Theme>
-      {children}
-    </Theme>
-  );
+  return <>{children}</>;
 }

@@ -1,0 +1,380 @@
+[
+  {
+    "id": "F001",
+    "description": "Install `next-themes` package in the server workspace",
+    "implemented": true,
+    "prdRefs": ["FR-1.1"]
+  },
+  {
+    "id": "F001b",
+    "description": "Add `darkMode: 'class'` to `server/tailwind.config.ts`",
+    "implemented": true,
+    "prdRefs": ["FR-1.2"]
+  },
+  {
+    "id": "F002",
+    "description": "Replace hardcoded `background: 'white'` and `card: 'white'` in Tailwind config `colors` with CSS variable references that swap between themes",
+    "implemented": true,
+    "prdRefs": ["FR-1.2"]
+  },
+  {
+    "id": "F003",
+    "description": "Make status colors (success, warning, error) in Tailwind config theme-aware by defining CSS variables for them in both `.light` and `.dark` blocks",
+    "implemented": true,
+    "prdRefs": ["FR-1.3"]
+  },
+  {
+    "id": "F004",
+    "description": "Replace custom `ThemeContext` with `next-themes` `ThemeProvider` in root layout — remove `server/src/context/ThemeContext.tsx` hardcoded light-only logic; `next-themes` handles localStorage, system preference, and flash prevention",
+    "implemented": true,
+    "prdRefs": ["FR-1.5"]
+  },
+  {
+    "id": "F004b",
+    "description": "Create `useAppTheme()` wrapper hook that combines `next-themes` `useTheme()` with DB persistence — syncs theme changes to `user_preferences` table via `UserPreferences.upsert()`",
+    "implemented": true,
+    "prdRefs": ["FR-1.6"]
+  },
+  {
+    "id": "F005",
+    "description": "Update root layout (`server/src/app/layout.tsx`) — remove hardcoded `className=\"light\"` on `<body>`, wrap with `next-themes` `ThemeProvider` (attribute='class', defaultTheme='system')",
+    "implemented": true,
+    "prdRefs": ["FR-1.5"]
+  },
+  {
+    "id": "F006",
+    "description": "Pass `appearance` prop (light/dark) to Radix UI `<Theme>` component based on active theme",
+    "implemented": true,
+    "prdRefs": ["FR-1.6"]
+  },
+  {
+    "id": "F007",
+    "description": "Pass `forceColorScheme` or equivalent color scheme prop to `<MantineProvider>` based on active theme",
+    "implemented": true,
+    "prdRefs": ["FR-1.7"]
+  },
+  {
+    "id": "F008",
+    "description": "Create a `ThemeToggle` component with three options: Light, Dark, System — using sun/moon icons",
+    "implemented": true,
+    "prdRefs": ["FR-2.1"]
+  },
+  {
+    "id": "F009",
+    "description": "Place the `ThemeToggle` component in the MSP portal header bar, accessible from every page",
+    "implemented": true,
+    "prdRefs": ["FR-2.2"]
+  },
+  {
+    "id": "F009b",
+    "description": "Place the `ThemeToggle` component in the client portal navigation bar",
+    "implemented": true,
+    "prdRefs": ["FR-2.3"]
+  },
+  {
+    "id": "F010",
+    "description": "`next-themes` handles localStorage persistence (key: `theme`) and blocking script for flash prevention automatically — no custom code needed",
+    "implemented": true,
+    "prdRefs": ["FR-2.4"]
+  },
+  {
+    "id": "F011",
+    "description": "On theme change, sync preference to `user_preferences` DB table via `UserPreferences.upsert(knex, { user_id, setting_name: 'theme', setting_value: JSON.stringify(theme) })`",
+    "implemented": true,
+    "prdRefs": ["FR-2.6"]
+  },
+  {
+    "id": "F012",
+    "description": "On authenticated page load, fetch theme preference from `user_preferences` DB and apply it (overriding localStorage if different) — enables cross-device sync",
+    "implemented": true,
+    "prdRefs": ["FR-2.7"]
+  },
+  {
+    "id": "F013",
+    "description": "Create a token mapping layer that syncs `--color-*` variables to `--alga-*` variables (or vice versa) whenever the theme changes",
+    "implemented": true,
+    "prdRefs": ["FR-3.1"]
+  },
+  {
+    "id": "F014",
+    "description": "Ensure both `--color-*` and `--alga-*` token sets update when theme class changes on `<body>`",
+    "implemented": true,
+    "prdRefs": ["FR-3.2"]
+  },
+  {
+    "id": "F015",
+    "description": "Update the iframe bridge (`iframeBridge.ts`) to re-send theme tokens to extension iframes when the user switches theme",
+    "implemented": true,
+    "prdRefs": ["FR-3.3"]
+  },
+  {
+    "id": "F016",
+    "description": "Sidebar renders correctly in dark mode — verify CSS variables and visual appearance",
+    "implemented": true,
+    "prdRefs": ["FR-4.1"]
+  },
+  {
+    "id": "F017",
+    "description": "Header renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-4.2"]
+  },
+  {
+    "id": "F018",
+    "description": "Fix dark submenu CSS variables in `.dark` block — change `--color-submenu-bg: #D0D5DD` to dark value (e.g. `#1f2937`), `--color-submenu-text: #000000` to light value (e.g. `#f5f5f5`), and verify submenu renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-1.9", "FR-4.3"]
+  },
+  {
+    "id": "F019",
+    "description": "Main content area background switches to dark background in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-4.4"]
+  },
+  {
+    "id": "F020",
+    "description": "Page-level layout wrappers (e.g., content containers, split panes) use theme-aware backgrounds",
+    "implemented": true,
+    "prdRefs": ["FR-4.5"]
+  },
+  {
+    "id": "F021",
+    "description": "Cards and panels use theme-aware backgrounds instead of `bg-white`",
+    "implemented": true,
+    "prdRefs": ["FR-5.1"]
+  },
+  {
+    "id": "F022",
+    "description": "Form components (inputs, selects, textareas) use theme-aware borders, backgrounds, and text colors",
+    "implemented": true,
+    "prdRefs": ["FR-5.2"]
+  },
+  {
+    "id": "F023",
+    "description": "Checkbox and switch components use theme-aware colors — fix hardcoded `white` in globals.css switch thumb",
+    "implemented": true,
+    "prdRefs": ["FR-5.2", "FR-8.1"]
+  },
+  {
+    "id": "F024",
+    "description": "All button variants render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-5.3"]
+  },
+  {
+    "id": "F025",
+    "description": "Data tables and grids use theme-aware borders, row hovers, header backgrounds, and text colors",
+    "implemented": true,
+    "prdRefs": ["FR-5.4"]
+  },
+  {
+    "id": "F026",
+    "description": "Modals and dialogs have dark backgrounds and borders in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-5.5"]
+  },
+  {
+    "id": "F027",
+    "description": "Dropdowns and popovers use theme-aware backgrounds",
+    "implemented": true,
+    "prdRefs": ["FR-5.6"]
+  },
+  {
+    "id": "F028",
+    "description": "Tooltips use theme-aware backgrounds and text",
+    "implemented": true,
+    "prdRefs": ["FR-5.7"]
+  },
+  {
+    "id": "F029",
+    "description": "Badges and status indicators are readable in dark mode — badge CSS variables already exist for both themes",
+    "implemented": true,
+    "prdRefs": ["FR-5.8"]
+  },
+  {
+    "id": "F030",
+    "description": "Alerts and notification toasts render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-5.9"]
+  },
+  {
+    "id": "F031",
+    "description": "Tabs and navigation components use theme-aware colors",
+    "implemented": true,
+    "prdRefs": ["FR-5.10"]
+  },
+  {
+    "id": "F032",
+    "description": "Ticket list and detail views render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.1"]
+  },
+  {
+    "id": "F033",
+    "description": "Project views (board and list) render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.2"]
+  },
+  {
+    "id": "F034",
+    "description": "Billing and invoice screens render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.3"]
+  },
+  {
+    "id": "F035",
+    "description": "Scheduling and calendar views render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.4"]
+  },
+  {
+    "id": "F036",
+    "description": "Dashboard widgets and chart components render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.5"]
+  },
+  {
+    "id": "F037",
+    "description": "Document editor (Tiptap/ProseMirror) renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.6"]
+  },
+  {
+    "id": "F038",
+    "description": "Settings pages render correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-6.7"]
+  },
+  {
+    "id": "F039",
+    "description": "react-day-picker custom overrides in globals.css support dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-7.1"]
+  },
+  {
+    "id": "F040",
+    "description": "react-big-calendar has dark mode overrides (CDN CSS + custom overrides)",
+    "implemented": true,
+    "prdRefs": ["FR-7.2"]
+  },
+  {
+    "id": "F041",
+    "description": "Radix UI Tables custom overrides in globals.css support dark mode — fix hardcoded `rgba(0, 0, 0, 0.05)` hover",
+    "implemented": true,
+    "prdRefs": ["FR-7.3"]
+  },
+  {
+    "id": "F042",
+    "description": "Mantine components respect the active theme color scheme",
+    "implemented": true,
+    "prdRefs": ["FR-7.4"]
+  },
+  {
+    "id": "F043",
+    "description": "Tiptap/ProseMirror editor area has appropriate dark mode styles",
+    "implemented": true,
+    "prdRefs": ["FR-7.5"]
+  },
+  {
+    "id": "F044",
+    "description": "Replace hardcoded `white` values in globals.css switch/button styles with `rgb(var(--color-*))` references",
+    "implemented": true,
+    "prdRefs": ["FR-8.1"]
+  },
+  {
+    "id": "F045",
+    "description": "Replace hardcoded hex colors for collaboration cursor (`#0d0d0d`) in globals.css with CSS variables",
+    "implemented": true,
+    "prdRefs": ["FR-8.2"]
+  },
+  {
+    "id": "F046",
+    "description": "Migrate CSS module files (12 files) from hardcoded hex colors to CSS variable references",
+    "implemented": true,
+    "prdRefs": ["FR-8.3"]
+  },
+  {
+    "id": "F047",
+    "description": "Replace hardcoded `rgba(0, 0, 0, ...)` in table hover rows and `bg-dotted` background with theme-aware values",
+    "implemented": true,
+    "prdRefs": ["FR-8.4"]
+  },
+  {
+    "id": "F048",
+    "description": "Hardcoded `time-slot-working` background `white` in globals.css replaced with CSS variable",
+    "implemented": true,
+    "prdRefs": ["FR-8.1"]
+  },
+  {
+    "id": "F049",
+    "description": "Extension loading overlay gradient uses theme-aware values in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-8.4"]
+  },
+  {
+    "id": "F050",
+    "description": "Add `next-themes` `ThemeProvider` to client portal layout (`server/src/app/client-portal/ClientPortalLayoutClient.tsx`)",
+    "implemented": true,
+    "prdRefs": ["FR-9.1"]
+  },
+  {
+    "id": "F051",
+    "description": "Replace hardcoded `bg-gray-100` in `ClientPortalLayout.tsx` with theme-aware CSS variable reference",
+    "implemented": true,
+    "prdRefs": ["FR-9.3"]
+  },
+  {
+    "id": "F052",
+    "description": "Update `generateColorShades()` in `packages/tenancy/src/lib/generateBrandingStyles.ts` to also produce an inverted dark-mode scale (swap 50↔900, 100↔800, 200↔700, 300↔600, keep 400/500 similar) — same RGB lerp algorithm, inverted step mapping",
+    "implemented": true,
+    "prdRefs": ["FR-9.4"]
+  },
+  {
+    "id": "F052b",
+    "description": "Update `generateBrandingStyles()` to emit branded CSS variables scoped under `.dark` selector for dark mode shades, in addition to existing unscoped (light mode) variables",
+    "implemented": true,
+    "prdRefs": ["FR-9.4"]
+  },
+  {
+    "id": "F052c",
+    "description": "Update `BrandingProvider` client-side injection to also inject `.dark`-scoped branded variables (inverted shades) alongside the existing light-mode variables",
+    "implemented": true,
+    "prdRefs": ["FR-9.4"]
+  },
+  {
+    "id": "F053",
+    "description": "Add `next-themes` provider to client portal auth pages (`server/src/app/auth/client-portal/`) so login/signup forms support dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-9.5"]
+  },
+  {
+    "id": "F054",
+    "description": "Client portal tickets page renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-9.6"]
+  },
+  {
+    "id": "F055",
+    "description": "Client portal invoices/billing page renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-9.6"]
+  },
+  {
+    "id": "F056",
+    "description": "Client portal approvals page renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-9.6"]
+  },
+  {
+    "id": "F057",
+    "description": "Client portal profile page renders correctly in dark mode",
+    "implemented": true,
+    "prdRefs": ["FR-9.6"]
+  },
+  {
+    "id": "F058",
+    "description": "Add dark/light mode preview toggle to client portal branding settings page — when admin configures branding colors, they can preview how the client portal looks in both light and dark modes",
+    "implemented": true,
+    "prdRefs": ["FR-9.4"]
+  }
+]

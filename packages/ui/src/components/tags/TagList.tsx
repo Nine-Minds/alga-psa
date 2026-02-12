@@ -3,10 +3,11 @@
 import React from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { generateEntityColor } from '../../lib/colorUtils';
+import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
 import { TagEditForm } from './TagEditForm';
 import type { TagSize } from './tagSizeConfig';
+import { useTheme } from 'next-themes';
 
 interface TagListProps {
   tags: ITag[];
@@ -38,6 +39,10 @@ export const TagList: React.FC<TagListProps> = ({
   onDeleteAll: onDeleteAllProp,
   size = 'md'
 }) => {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
   const sizeConfig = tagSizeConfig[size];
   const displayTags = maxDisplay && tags.length > maxDisplay
     ? tags.slice(0, maxDisplay)
@@ -64,15 +69,16 @@ export const TagList: React.FC<TagListProps> = ({
   return (
     <div className={`flex flex-wrap ${sizeConfig.gap}`}>
       {displayTags.map((tag): React.JSX.Element => {
-        const colors = generateEntityColor(tag.tag_text);
+        const rawColors = generateEntityColor(tag);
+        const colors = isDark ? adaptColorsForDarkMode(rawColors) : rawColors;
 
         return (
           <span
             key={tag.tag_id}
             title={tag.tag_text}
             style={{
-              backgroundColor: tag.background_color || colors.background,
-              color: tag.text_color || colors.text,
+              backgroundColor: colors.background,
+              color: colors.text,
               padding: sizeConfig.padding,
               borderRadius: '9999px',
               fontSize: sizeConfig.fontSize,
@@ -94,7 +100,7 @@ export const TagList: React.FC<TagListProps> = ({
                   type="button"
                   className={`inline-flex items-center justify-center h-full hover:opacity-70 transition-opacity flex-shrink-0 ${sizeConfig.editPadding}`}
                   style={{
-                    borderRight: `1px dotted ${tag.text_color || colors.text}`,
+                    borderRight: `1px dotted ${colors.text}`,
                     marginRight: sizeConfig.marginRight,
                   }}
                 >
@@ -127,8 +133,8 @@ export const TagList: React.FC<TagListProps> = ({
       {remainingCount > 0 && (
         <span
           style={{
-            backgroundColor: '#e5e7eb',
-            color: '#6b7280',
+            backgroundColor: isDark ? '#1e293b' : '#e5e7eb',
+            color: isDark ? '#94a3b8' : '#6b7280',
             padding: sizeConfig.padding,
             borderRadius: '9999px',
             fontSize: sizeConfig.fontSize,

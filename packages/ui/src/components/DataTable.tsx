@@ -607,7 +607,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[rgb(var(--color-border-100))]">
               {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
@@ -617,8 +617,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
-                    ${rowIndex % 2 === 0 ? 'bg-[rgb(var(--color-border-50))]' : 'bg-background'}
-                    ${onRowClick ? 'hover:bg-primary-50 cursor-pointer' : 'cursor-default'}
+                    ${rowIndex % 2 === 0 ? 'bg-table-row-alt' : 'bg-background'}
+                    ${onRowClick ? 'hover:bg-table-hover cursor-pointer' : 'cursor-default'}
                     transition-colors
                     ${extraRowClass}
                   `}
@@ -659,7 +659,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </table>
         </div>
         {pagination && data.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
-          <div className="border-t border-gray-100">
+          <div className="border-t border-[rgb(var(--color-border-100))]">
             <Pagination
               id={id ? `${id}-pagination` : 'datatable-pagination'}
               currentPage={pageIndex + 1}

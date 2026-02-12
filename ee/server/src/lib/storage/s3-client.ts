@@ -23,6 +23,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
  * - STORAGE_S3_SECRET_KEY
  * - STORAGE_S3_REGION
  * - STORAGE_S3_BUCKET
+ * - STORAGE_S3_BUNDLE_BUCKET (optional override for extension bundles)
  * - STORAGE_S3_FORCE_PATH_STYLE (optional, "true"/"false")
  */
 
@@ -142,7 +143,12 @@ function wrapAwsError(e: unknown, context: string): never {
 
 /**
  * Load and validate S3 configuration from environment variables.
- * - Requires STORAGE_S3_BUCKET and STORAGE_S3_REGION.
+ * - Requires STORAGE_S3_BUCKET.
+ * - Region resolution order:
+ *   1) STORAGE_S3_REGION
+ *   2) AWS_REGION
+ *   3) AWS_DEFAULT_REGION
+ *   4) us-east-1 (only when STORAGE_S3_ENDPOINT is set, e.g., MinIO)
  * - If STORAGE_S3_ENDPOINT is provided, requires STORAGE_S3_ACCESS_KEY and STORAGE_S3_SECRET_KEY.
  * - forcePathStyle defaults:
  *   - When endpoint is provided: defaults to true unless STORAGE_S3_FORCE_PATH_STYLE is explicitly set.
@@ -152,7 +158,12 @@ export function getS3Config(): S3EnvConfig {
   if (s3ConfigSingleton) return s3ConfigSingleton;
 
   const endpoint = process.env.STORAGE_S3_ENDPOINT?.trim() || undefined;
-  const region = required("STORAGE_S3_REGION", process.env.STORAGE_S3_REGION?.trim());
+  const region =
+    process.env.STORAGE_S3_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    process.env.AWS_DEFAULT_REGION?.trim() ||
+    (endpoint ? "us-east-1" : undefined);
+  const resolvedRegion = required("STORAGE_S3_REGION", region);
   const bucket = required("STORAGE_S3_BUCKET", process.env.STORAGE_S3_BUCKET?.trim());
 
   const forcePathStyle = endpoint
@@ -175,7 +186,7 @@ export function getS3Config(): S3EnvConfig {
 
   s3ConfigSingleton = {
     endpoint,
-    region,
+    region: resolvedRegion,
     credentials,
     forcePathStyle,
     bucket,
@@ -198,11 +209,7 @@ export function getBucket(): string {
 export function getBundleBucket(): string {
   const override = process.env.STORAGE_S3_BUNDLE_BUCKET?.trim();
   if (override && override.length > 0) return override;
-  throw new S3ClientError(
-    'Extension bundles bucket not configured. Set STORAGE_S3_BUNDLE_BUCKET',
-    500,
-    'BUNDLE_CONFIG_MISSING'
-  );
+  return getBucket();
 }
 
 /**

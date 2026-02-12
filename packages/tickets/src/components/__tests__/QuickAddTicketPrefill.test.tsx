@@ -3,11 +3,18 @@
 
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QuickAddTicket } from '../QuickAddTicket';
 
 const addTicketMock = vi.fn();
 const getTicketFormDataMock = vi.fn();
+const pushMock = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: pushMock
+  })
+}));
 
 vi.mock('../actions/ticketActions', () => ({
   addTicket: (...args: unknown[]) => addTicketMock(...args)
@@ -94,6 +101,7 @@ vi.mock('@alga-psa/ui/components/TimePicker', () => ({
 
 describe('QuickAddTicket prefills', () => {
   beforeEach(() => {
+    pushMock.mockReset();
     getTicketFormDataMock.mockResolvedValue({
       users: [],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
@@ -145,6 +153,30 @@ describe('QuickAddTicket prefills', () => {
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
     expect(screen.getByTestId('due-date')).toHaveValue('2026-02-05T12:00:00.000Z');
+  });
+
+  it('navigates to the created ticket when Save + Open is clicked', async () => {
+    const onTicketAdded = vi.fn();
+
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={onTicketAdded}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
+      target: { value: 'New ticket from quick add' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save + Open' }));
+
+    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
+    await waitFor(() => expect(onTicketAdded).toHaveBeenCalled());
+    expect(pushMock).toHaveBeenCalledWith('/msp/tickets/ticket-1');
   });
 
 });

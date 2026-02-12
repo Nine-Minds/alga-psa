@@ -10,9 +10,9 @@ export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
 const tones: Record<NonNullable<BadgeProps['tone']>, React.CSSProperties> = {
   default: { background: 'var(--alga-muted, #f3f4f6)', color: 'var(--alga-fg)', borderColor: 'var(--alga-border)' },
   info: { background: 'var(--alga-primary-50, #f0e6fd)', color: 'var(--alga-primary-dark, #6b3dab)', borderColor: 'var(--alga-primary, #8a4dea)' },
-  success: { background: '#dcfce7', color: '#166534', borderColor: 'var(--alga-success, #16a34a)' },
-  warning: { background: '#fef3c7', color: '#92400e', borderColor: 'var(--alga-warning, #d97706)' },
-  danger: { background: '#fef2f2', color: '#991b1b', borderColor: 'var(--alga-danger, #dc2626)' },
+  success: { background: 'color-mix(in srgb, var(--alga-success, #16a34a) 12%, var(--alga-bg, #fff))', color: 'var(--alga-success, #166534)', borderColor: 'var(--alga-success, #16a34a)' },
+  warning: { background: 'color-mix(in srgb, var(--alga-warning, #d97706) 12%, var(--alga-bg, #fff))', color: 'var(--alga-warning, #92400e)', borderColor: 'var(--alga-warning, #d97706)' },
+  danger: { background: 'color-mix(in srgb, var(--alga-danger, #dc2626) 12%, var(--alga-bg, #fff))', color: 'var(--alga-danger, #991b1b)', borderColor: 'var(--alga-danger, #dc2626)' },
 };
 
 /** Small pill-shaped label for status indicators and tags. */

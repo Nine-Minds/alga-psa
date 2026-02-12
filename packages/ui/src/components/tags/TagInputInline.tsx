@@ -5,7 +5,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus } from 'lucide-react';
 import { ITag } from '@alga-psa/types';
-import { generateEntityColor } from '../../lib/colorUtils';
+import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
+import { useTheme } from 'next-themes';
 import { tagInputSizeConfig, type TagSize } from './tagSizeConfig';
 
 interface TagInputInlineProps {
@@ -27,6 +28,10 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
   className = '',
   size = 'md'
 }) => {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
   const sizeConfig = tagInputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -144,7 +149,8 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
       {suggestions.length > 0 && inputValue.trim() && (
         <div className="mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
           {suggestions.map((suggestion, index) => {
-            const colors = generateEntityColor(suggestion.tag_text);
+            const rawColors = generateEntityColor(suggestion);
+            const colors = isDark ? adaptColorsForDarkMode(rawColors) : rawColors;
             return (
               <button
                 key={index}
@@ -159,8 +165,8 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
                 <span
                   className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
                   style={{
-                    backgroundColor: suggestion.background_color || colors.background,
-                    color: suggestion.text_color || colors.text
+                    backgroundColor: colors.background,
+                    color: colors.text
                   }}
                 >
                   {suggestion.tag_text}

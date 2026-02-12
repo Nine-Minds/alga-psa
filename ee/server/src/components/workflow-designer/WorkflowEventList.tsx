@@ -427,7 +427,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             onRowClick={(row) => setSelectedEventId((row as WorkflowEventRecord).event_id)}
             rowClassName={(row) =>
               (row as WorkflowEventRecord).event_id === selectedEventId
-                ? 'bg-[rgb(var(--color-primary-50))]'
+                ? 'bg-table-selected'
                 : ''
             }
             manualSorting={true}

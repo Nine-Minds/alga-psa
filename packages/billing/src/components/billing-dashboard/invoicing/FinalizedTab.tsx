@@ -463,7 +463,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 totalItems={totalInvoices}
                 onRowClick={handleInvoiceSelect}
                 rowClassName={(record) =>
-                  selectedInvoiceId === record.invoice_id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"
+                  selectedInvoiceId === record.invoice_id ? "bg-table-selected" : ""
                 }
               />
             </div>

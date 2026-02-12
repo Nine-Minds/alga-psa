@@ -518,7 +518,7 @@ function DocumentStorageCardComponent({
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
             <div
                 ref={cardRef}
-                className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
+                className={`bg-white dark:bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
                 }`}
                 onClick={(isContentDocument || !document.file_id) && onClick ? (e) => {
                     // Prevent click event if it's coming from the delete button
@@ -692,7 +692,7 @@ function DocumentStorageCardComponent({
                                     handleDisassociate();
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.detach', 'Detach')}
@@ -708,7 +708,7 @@ function DocumentStorageCardComponent({
                                     onMove(document);
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-50 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 inline-flex items-center"
                             >
                                 <FolderInput className="w-4 h-4 mr-2" />
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.move', 'Move')}
@@ -724,7 +724,7 @@ function DocumentStorageCardComponent({
                                     handleDelete();
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.deletePermanently', 'Delete Permanently')}
@@ -767,7 +767,7 @@ function DocumentStorageCardComponent({
         {/* Full Size View Modal */}
         {showFullSizeModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowFullSizeModal(false)}>
-                <div className={`relative bg-white rounded-lg shadow-xl overflow-hidden ${
+                <div className={`relative bg-white dark:bg-[rgb(var(--color-card))] rounded-lg shadow-xl overflow-hidden ${
                     document.mime_type === 'application/pdf' 
                         ? 'w-[95vw] max-w-6xl h-[90vh]' 
                         : 'max-w-[90vw] max-h-[90vh]'

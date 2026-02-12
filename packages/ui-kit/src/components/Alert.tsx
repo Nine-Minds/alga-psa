@@ -21,16 +21,16 @@ const toneBorder: Record<Tone, string> = {
 
 const toneBg: Record<Tone, string> = {
   info: 'var(--alga-primary-soft, #f6f0fe)',
-  success: '#f0fdf4',
-  warning: '#fffbeb',
-  danger: '#fef2f2',
+  success: 'color-mix(in srgb, var(--alga-success, #16a34a) 10%, var(--alga-bg, #fff))',
+  warning: 'color-mix(in srgb, var(--alga-warning, #d97706) 10%, var(--alga-bg, #fff))',
+  danger: 'color-mix(in srgb, var(--alga-danger, #dc2626) 10%, var(--alga-bg, #fff))',
 };
 
 const toneFg: Record<Tone, string> = {
   info: 'var(--alga-primary-soft-fg, #6e3dbb)',
-  success: '#166534',
-  warning: '#92400e',
-  danger: '#991b1b',
+  success: 'var(--alga-success, #166534)',
+  warning: 'var(--alga-warning, #92400e)',
+  danger: 'var(--alga-danger, #991b1b)',
 };
 
 /* Inline SVG icon paths per tone (16x16, Lucide-style) */

@@ -3344,9 +3344,9 @@ const WorkflowDesigner: React.FC = () => {
                       ? eventCatalogOptions.find((e) => e.event_type === selectedEventName) ?? null
                       : null;
                     const schemaBadgeClass = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
-                      if (status === 'missing') return 'bg-gray-100 text-gray-600 border-gray-200';
-                      if (status === 'unknown') return 'bg-red-50 text-red-700 border-red-200';
-                      return 'bg-sky-50 text-sky-700 border-sky-200';
+                      if (status === 'missing') return 'bg-gray-500/15 text-gray-600 border-gray-500/30';
+                      if (status === 'unknown') return 'bg-red-500/15 text-red-600 border-red-500/30';
+                      return 'bg-sky-500/15 text-sky-600 border-sky-500/30';
                     };
                     const schemaBadgeLabel = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
                       if (status === 'missing') return 'No schema';
@@ -3408,14 +3408,14 @@ const WorkflowDesigner: React.FC = () => {
 	                        {selectedOption && (
 	                          <div className="rounded border border-gray-200 bg-white px-3 py-2 space-y-1">
 	                            <div className="flex flex-wrap items-center gap-2">
-	                              <Badge className={selectedOption.source === 'system' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}>
+	                              <Badge className={selectedOption.source === 'system' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}>
                                 {selectedOption.source === 'system' ? 'System' : 'Tenant'}
                               </Badge>
                               <Badge className={
-                                selectedOption.status === 'active' ? 'bg-green-50 text-green-700 border-green-200'
-                                  : selectedOption.status === 'beta' ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
-                                    : selectedOption.status === 'draft' ? 'bg-gray-100 text-gray-700 border-gray-200'
-                                      : 'bg-red-50 text-red-700 border-red-200'
+                                selectedOption.status === 'active' ? 'bg-green-500/15 text-green-600 border-green-500/30'
+                                  : selectedOption.status === 'beta' ? 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30'
+                                    : selectedOption.status === 'draft' ? 'bg-gray-500/15 text-gray-600 border-gray-500/30'
+                                      : 'bg-red-500/15 text-red-600 border-red-500/30'
                               }>
                                 {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
                               </Badge>
@@ -3514,10 +3514,10 @@ const WorkflowDesigner: React.FC = () => {
                             {triggerSourceSchemaRef && (
                               <Badge className={
                                 triggerSourceSchemaOrigin === 'override'
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  ? 'bg-purple-500/15 text-purple-600 border-purple-500/30'
                                   : triggerSourceSchemaOrigin === 'catalog'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                                    ? 'bg-blue-500/15 text-blue-600 border-blue-500/30'
+                                    : 'bg-gray-500/15 text-gray-600 border-gray-500/30'
                               }>
                                 {triggerSourceSchemaOrigin === 'override' ? 'Override' : triggerSourceSchemaOrigin === 'catalog' ? 'Catalog' : 'Unknown'}
                               </Badge>
@@ -3885,7 +3885,7 @@ const WorkflowDesigner: React.FC = () => {
                               <span className="text-gray-600">from the selected trigger event.</span>
                             </div>
                             {effectivePayloadSchemaRef && (
-                              <Badge className="bg-sky-50 text-sky-700 border-sky-200">Effective</Badge>
+                              <Badge className="bg-sky-500/15 text-sky-600 border-sky-500/30">Effective</Badge>
                             )}
                           </div>
                           <div className="mt-1 text-[11px] text-gray-500 font-mono break-all">
@@ -6142,7 +6142,7 @@ const ActionSchemaReference: React.FC<{
     <div className="space-y-3">
       {/* Action description */}
       {action.ui?.description && (
-        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md flex items-start gap-2">
+        <div className="text-xs text-gray-600 bg-blue-500/10 p-2 rounded-md flex items-start gap-2">
           <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
           <span>{action.ui.description}</span>
         </div>

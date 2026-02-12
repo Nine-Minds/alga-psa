@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTruncationDetection } from '@alga-psa/ui/hooks';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
+import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -958,13 +960,13 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           onDragEnd={handlePhaseDragEnd}
                           className={`${styles.phaseItem} group relative px-3 py-2 rounded-lg transition-all cursor-pointer ${
                             selectedPhase?.template_phase_id === phase.template_phase_id
-                              ? 'bg-purple-100 text-purple-900'
-                              : 'hover:bg-gray-100 text-gray-700'
+                              ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200'
+                              : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))] text-gray-700 dark:text-gray-300'
                           } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
                             isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
                           } ${
                             isTaskDrop && !isCurrentPhaseForTask
-                              ? 'ring-2 ring-blue-400 bg-blue-50 scale-[1.02]'
+                              ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950 scale-[1.02]'
                               : ''
                           }`}
                           onClick={() => {
@@ -989,7 +991,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               />
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <label className="text-xs text-gray-500">Duration (days)</label>
+                                  <label className="text-xs text-gray-500 dark:text-gray-400">Duration (days)</label>
                                   <Input
                                     type="number"
                                     value={editingPhaseDuration || ''}
@@ -1000,7 +1002,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs text-gray-500">Start offset</label>
+                                  <label className="text-xs text-gray-500 dark:text-gray-400">Start offset</label>
                                   <Input
                                     type="number"
                                     value={editingPhaseOffset}
@@ -1025,22 +1027,22 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                             </div>
                           ) : (
                             <div className="flex items-start gap-2">
-                              <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab mt-0.5 shrink-0" />
+                              <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 cursor-grab mt-0.5 shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
-                                  <span className="text-lg font-bold text-gray-900">{phase.phase_name}</span>
+                                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
                                   {phaseTaskCounts[phase.template_phase_id] !== undefined && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 shrink-0">
                                       {phaseTaskCounts[phase.template_phase_id]} {phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks'}
                                     </span>
                                   )}
                                 </div>
                                 {phase.description && (
-                                  <div className="text-sm text-gray-600 mt-1">
+                                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                     {phase.description}
                                   </div>
                                 )}
-                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
                                   {phase.duration_days !== undefined && phase.duration_days !== null && (
                                     <span>{phase.duration_days}d</span>
                                   )}
@@ -1055,7 +1057,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                     e.stopPropagation();
                                     handleEditPhase(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-gray-200"
+                                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
                                 >
                                   <Pencil className="w-3 h-3" />
                                 </button>
@@ -1064,7 +1066,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                     e.stopPropagation();
                                     handleDeletePhase(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-red-100 text-red-600"
+                                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950 text-red-600"
                                 >
                                   <Trash className="w-3 h-3" />
                                 </button>
@@ -1237,6 +1239,8 @@ function StatusColumn({
   allTasks,
   avatarUrls,
 }: StatusColumnProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
 
@@ -1305,8 +1309,8 @@ function StatusColumn({
         isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : ''
       }`}
       style={{
-        backgroundColor: lightenColor(statusColor, 0.85),
-        borderColor: isDraggedOver && draggedTaskId ? undefined : lightenColor(statusColor, 0.70)
+        backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85),
+        borderColor: isDraggedOver && draggedTaskId ? undefined : (isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70))
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -1317,8 +1321,8 @@ function StatusColumn({
         <div
           className="flex rounded-[20px] border-2 shadow-sm items-center ps-3 py-3 pe-4"
           style={{
-            backgroundColor: lightenColor(statusColor, 0.7),
-            borderColor: lightenColor(statusColor, 0.4),
+            backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.7),
+            borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.4),
           }}
         >
           <Circle className="w-4 h-4 mr-2" fill={statusColor} stroke={statusColor} />
@@ -1338,8 +1342,8 @@ function StatusColumn({
           <span
             className="text-xs font-medium px-2 py-0.5 rounded-full"
             style={{
-              backgroundColor: lightenColor(statusColor, 0.70),
-              color: statusColor
+              backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+              color: isDark ? lightenColor(statusColor, 0.40) : statusColor
             }}
           >
             {sortedTasks.length}
@@ -1466,7 +1470,7 @@ function TaskCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onEdit(task)}
-      className={`${styles.taskCard} relative bg-white border border-gray-200 rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 cursor-pointer hover:border-gray-300 ${
+      className={`${styles.taskCard} relative bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 cursor-pointer hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] ${
         isDragging ? styles.dragging : ''
       }`}
     >
@@ -1524,7 +1528,7 @@ function TaskCard({
         <div className="mb-1 px-1">
           <p
             ref={descriptionRef}
-            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+            className={`text-sm text-gray-600 dark:text-gray-400 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
             {task.description}
           </p>
@@ -1655,8 +1659,8 @@ function TaskCard({
               <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
                 taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
-                  ? 'bg-red-50 text-red-500'
-                  : 'bg-blue-50 text-blue-500'
+                  ? 'bg-red-50 dark:bg-red-950 text-red-500'
+                  : 'bg-blue-50 dark:bg-blue-950 text-blue-500'
               }`}>
                 {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                  taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')

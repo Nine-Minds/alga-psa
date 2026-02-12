@@ -146,7 +146,7 @@ const GenericDialog = ({
         <Dialog.Content 
           ref={dialogRef}
           {...dialogProps}
-          className="fixed top-1/2 left-1/2 bg-background rounded-lg shadow-lg w-full max-w-md focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2"
+          className="fixed top-1/2 left-1/2 bg-background dark:bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] w-full max-w-md focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 focus-within:ring-offset-[rgb(var(--color-card))]"
           style={dialogStyle}
           onMouseDown={handleMouseDown}
         >
