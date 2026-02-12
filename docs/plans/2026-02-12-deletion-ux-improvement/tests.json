@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "Client config has correct foreign keys: contacts.client_id, tickets.client_id, projects.client_id, invoices.client_id, interactions.client_id, assets.client_id, usage_tracking.client_id, bucket_usage.client_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
