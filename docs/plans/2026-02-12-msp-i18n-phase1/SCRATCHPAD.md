@@ -105,3 +105,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Profile language selector uses `LanguagePreference` with `showNoneOption` for inherited defaults.
 - Added `MspLanguageSettings` component for MSP org language defaults and enabled locales.
 - Inserted MSP language settings tab in Settings (after Teams) and gated visibility behind `msp-i18n-enabled`.
+- MSP org language settings now persist to `tenant_settings.settings.mspPortal` via new actions.

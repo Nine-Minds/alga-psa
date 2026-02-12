@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Org MSP language settings persist to tenant_settings (mspPortal.defaultLocale and mspPortal.enabledLocales)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR10"]
   },
   {
