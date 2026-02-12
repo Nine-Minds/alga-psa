@@ -19,6 +19,8 @@ describe('invoice template AST persistence wiring', () => {
 
     expect(actionsSource).toContain('Canonical AST templates are the only runtime path; persist metadata directly.');
     expect(actionsSource).not.toContain('if (!hasCanonicalAst &&');
+    expect(actionsSource).not.toContain('const compileResult = await compileAndSaveTemplate(');
+    expect(actionsSource).not.toContain('compilationError');
     expect(actionsSource).not.toContain('buildAssemblyScriptCompileCommand');
   });
 

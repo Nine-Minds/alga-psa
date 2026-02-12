@@ -167,23 +167,17 @@ export const setClientTemplate = withAuth(async (
     });
 });
 
-// Note: This function handles saving tenant-specific invoice templates, including compilation.
-// It returns a structured response indicating success, the saved template, or compilation errors.
+// Saves tenant-specific invoice templates with AST as the canonical runtime payload.
 export const saveInvoiceTemplate = withAuth(async (
     user,
     { tenant },
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
-): Promise<{ success: boolean; template?: IInvoiceTemplate; compilationError?: { error: string; details?: string } }> => {
+): Promise<{ success: boolean; template?: IInvoiceTemplate }> => {
     const { knex } = await createTenantKnex();
-    // The original function had `isStandard` check, assuming it's handled before calling or within Invoice.saveTemplate
-    // if (template.isStandard) {
-    //   throw new Error('Cannot modify standard templates');
-    // }
 
-    // Explicitly remove wasmBinary if sent from client to rely on server compilation
+    // Drop legacy Wasm payloads from clients; runtime rendering uses templateAst.
     if ('wasmBinary' in template) {
-        delete (template as any).wasmBinary; // Use 'any' cast to allow deletion
-        console.log('Removed wasmBinary received from client.');
+        delete (template as any).wasmBinary;
     }
 
     console.log('saveInvoiceTemplate called with template:', {
@@ -192,7 +186,6 @@ export const saveInvoiceTemplate = withAuth(async (
         isClone: template.isClone,
         hasTemplateAst: 'templateAst' in template && Boolean((template as any).templateAst),
         hasAssemblyScriptSource: 'assemblyScriptSource' in template,
-        hasWasmBinary: 'wasmBinary' in template
     });
 
     // When cloning, create a new template object with a new template_id
@@ -221,17 +214,13 @@ export const saveInvoiceTemplate = withAuth(async (
         version: templateToSaveWithoutFlags.version
     });
 
-    // Make sure we're passing assemblyScriptSource and wasmBinary to saveTemplate
     console.log('Template data before saving:', {
         id: templateToSaveWithoutFlags.template_id,
         name: templateToSaveWithoutFlags.name,
         version: templateToSaveWithoutFlags.version,
         hasTemplateAst: Boolean((templateToSaveWithoutFlags as any).templateAst),
         hasAssemblyScriptSource: 'assemblyScriptSource' in templateToSaveWithoutFlags,
-        assemblyScriptSourceLength: templateToSaveWithoutFlags.assemblyScriptSource ? templateToSaveWithoutFlags.assemblyScriptSource.length : 0,
-        hasWasmBinary: 'wasmBinary' in templateToSaveWithoutFlags,
-        wasmBinaryIsNull: templateToSaveWithoutFlags.wasmBinary === null,
-        wasmBinaryLength: templateToSaveWithoutFlags.wasmBinary ? templateToSaveWithoutFlags.wasmBinary.length : 0
+        assemblyScriptSourceLength: templateToSaveWithoutFlags.assemblyScriptSource ? templateToSaveWithoutFlags.assemblyScriptSource.length : 0
     });
 
     // Canonical AST templates are the only runtime path; persist metadata directly.

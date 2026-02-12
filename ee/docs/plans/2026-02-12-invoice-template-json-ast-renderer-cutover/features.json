@@ -223,7 +223,7 @@
   {
     "id": "F026",
     "description": "Remove save-time AssemblyScript compile and Wasm binary persistence behavior from invoice template actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Deleted / Eliminated Layers",
       "Data / API / Integrations"

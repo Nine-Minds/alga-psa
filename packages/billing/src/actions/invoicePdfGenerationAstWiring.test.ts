@@ -51,6 +51,7 @@ describe('invoice PDF generation AST wiring', () => {
 
     expect(templateActionsSource).toContain('evaluateInvoiceTemplateAst');
     expect(templateActionsSource).toContain('renderEvaluatedInvoiceTemplateAst');
+    expect(templateActionsSource).not.toContain('await getCompiledWasm(');
     expect(templateActionsSource).not.toContain('executeWasmTemplate(');
     expect(templateActionsSource).not.toContain('renderLayout(');
   });

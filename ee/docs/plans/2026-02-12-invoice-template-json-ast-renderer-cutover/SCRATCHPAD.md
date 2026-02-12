@@ -630,3 +630,25 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts` (pass).
+
+### 2026-02-12 — F026 implemented
+
+- Removed save-time AssemblyScript compile and Wasm persistence behavior from invoice template actions:
+  - `packages/billing/src/actions/invoiceTemplates.ts`
+- `saveInvoiceTemplate` now persists template metadata directly (AST canonical) without compile gating.
+- `compileAndSaveTemplate` retained as compatibility API shape but now performs direct metadata save (no compile command, no Wasm generation).
+- `compileStandardTemplate` now updates `assemblyScriptSource`/`templateAst`/`sha` only and no longer writes compiled `wasmBinary` artifacts.
+- Updated startup sync behavior accordingly:
+  - `server/src/lib/startupTasks.ts` no longer treats missing `wasmBinary` as a recompilation trigger.
+- Updated wiring tests to enforce no save-time compile path:
+  - `packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts`
+  - `packages/billing/src/actions/invoiceTemplateCompileParity.test.ts`
+
+Rationale:
+
+- Template save/update behavior now reflects AST-as-data architecture and avoids compiler lifecycle during persistence.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts` (pass).
