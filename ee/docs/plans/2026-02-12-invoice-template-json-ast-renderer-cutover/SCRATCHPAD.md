@@ -29781,3 +29781,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T033 implemented
+
+- Marked structured AST validation error surfacing in preview as implemented.
+- Evidence: packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts::surfaces structured schema diagnostics
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).

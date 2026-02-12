@@ -313,7 +313,7 @@
   {
     "id": "T033",
     "description": "Preview surfaces structured AST validation errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F002"
