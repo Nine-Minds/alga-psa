@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "Alternatives include 'Mark as Inactive' when supportsInactive is true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
