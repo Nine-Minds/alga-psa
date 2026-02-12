@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "preCheckDeletion returns error for unknown entity type",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
