@@ -29970,3 +29970,12 @@ Verification:
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateDocsArchitecture.test.ts` (pass).
+
+### 2026-02-12 — T054 implemented
+
+- Closed documentation removal-note coverage using docs architecture regression tests that assert compiler/Wasm deletion details are documented.
+- Evidence: `packages/billing/src/actions/invoiceTemplateDocsArchitecture.test.ts` (removed modules + preview cache removal assertions).
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateDocsArchitecture.test.ts` (pass).

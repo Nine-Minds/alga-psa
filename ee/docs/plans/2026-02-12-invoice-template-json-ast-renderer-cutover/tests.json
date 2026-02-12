@@ -515,7 +515,7 @@
   {
     "id": "T054",
     "description": "Docs include deletion/removal notes for compiler/Wasm runtime architecture",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F025"
