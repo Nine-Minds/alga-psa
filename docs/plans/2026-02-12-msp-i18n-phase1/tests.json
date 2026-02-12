@@ -387,7 +387,7 @@
   {
     "id": "T047",
     "description": "Changing enabled languages persists to tenant_settings (mspPortal.enabledLocales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

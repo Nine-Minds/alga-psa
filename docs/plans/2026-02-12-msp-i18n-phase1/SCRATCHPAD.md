@@ -157,3 +157,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T044: MspLanguageSettings shows default language dropdown with all 7 languages (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T045: MspLanguageSettings shows enabled languages checkboxes (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T046: Changing default language persists to tenant_settings (mspPortal.defaultLocale) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T047: Changing enabled languages persists to tenant_settings (mspPortal.enabledLocales) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
