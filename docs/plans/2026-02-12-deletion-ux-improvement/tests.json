@@ -512,7 +512,7 @@
   {
     "id": "T086",
     "description": "Project task deletion no longer manually calls deleteEntityTags",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F064"]
   },
   {
