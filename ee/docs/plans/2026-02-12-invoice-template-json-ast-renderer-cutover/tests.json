@@ -430,7 +430,7 @@
   {
     "id": "T045",
     "description": "Runtime rejects non-allowlisted strategy IDs even if present in AST payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F006"

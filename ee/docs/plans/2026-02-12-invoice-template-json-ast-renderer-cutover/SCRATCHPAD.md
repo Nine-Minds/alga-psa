@@ -29889,3 +29889,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T045 implemented
+
+- Marked runtime rejection of non-allowlisted strategy IDs as implemented.
+- Evidence: packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts::rejects non-allowlisted strategy ids at runtime
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
