@@ -72,3 +72,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Migrated team deletion to deleteEntityWithValidation and updated TeamList to use DeleteEntityDialog with dependency preview.
 - (2026-02-12) Migrated contract line deletion to deleteEntityWithValidation and updated ContractLines UI to use DeleteEntityDialog with dependency preview.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
+- (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.

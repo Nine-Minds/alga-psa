@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -9,14 +9,14 @@ import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/component
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, confirmDeleteTaxRate, DeleteTaxRateResult } from '@alga-psa/billing/actions/taxRateActions';
+import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, DeleteTaxRateResult } from '@alga-psa/billing/actions/taxRateActions';
 import { getActiveTaxRegions } from '@alga-psa/billing/actions/taxSettingsActions';
-import { ITaxRate, IService } from '@alga-psa/types';
+import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
 import { ITaxRegion, ITaxRate as FullTaxRate } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { toPlainDate, parseDateSafe } from '@alga-psa/core';
+import { toPlainDate, parseDateSafe, preCheckDeletion } from '@alga-psa/core';
 import { Temporal } from '@js-temporal/polyfill';
 import { MoreVertical, Layers, Settings } from 'lucide-react';
 import {
@@ -28,6 +28,7 @@ import {
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { TaxRateDetailPanel } from './TaxRateDetailPanel';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 
 const TaxRates: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -38,13 +39,25 @@ const TaxRates: React.FC = () => {
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true);
   const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null);
-  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [taxRateIdToDelete, setTaxRateIdToDelete] = useState<string | null>(null);
-  const [affectedServicesForConfirmation, setAffectedServicesForConfirmation] = useState<Pick<IService, 'service_id' | 'service_name'>[]>([]);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewingTaxRate, setViewingTaxRate] = useState<ITaxRate | null>(null);
+  const taxRateToDeleteName = useMemo(() => {
+    if (!taxRateIdToDelete) {
+      return 'this tax rate';
+    }
+    const match = taxRates.find((rate) => rate.tax_rate_id === taxRateIdToDelete);
+    if (!match) {
+      return 'this tax rate';
+    }
+    const regionName = taxRegions.find((region) => region.region_code === match.region_code)?.region_name;
+    return regionName ? `${regionName} tax rate` : 'this tax rate';
+  }, [taxRateIdToDelete, taxRates, taxRegions]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -159,39 +172,56 @@ const TaxRates: React.FC = () => {
     setValidationErrors([]);
   };
 
-  const handleDeleteTaxRate = async (taxRateId: string) => {
-    setError(null); // Clear previous errors
-    try {
-      const result: DeleteTaxRateResult = await deleteTaxRate(taxRateId);
+  const resetDeleteState = () => {
+    setTaxRateIdToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
 
-      if (result.deleted) {
-        await fetchTaxRates();
-      } else if (result.affectedServices && result.affectedServices.length > 0) {
-        setAffectedServicesForConfirmation(result.affectedServices);
-        setTaxRateIdToDelete(taxRateId);
-        setIsConfirmDeleteDialogOpen(true);
-      } else {
-        setError('An unexpected issue occurred while checking for dependencies.');
-      }
-    } catch (error: any) {
-      console.error('Error initiating tax rate deletion:', error);
-      setError(error.message || 'Failed to initiate tax rate deletion.');
+  const runDeleteValidation = useCallback(async (taxRateId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('tax_rate', taxRateId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate tax rate deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
     }
+  }, []);
+
+  const handleDeleteTaxRate = async (taxRateId: string) => {
+    setError(null);
+    setTaxRateIdToDelete(taxRateId);
+    void runDeleteValidation(taxRateId);
   };
 
   const handleConfirmDelete = async () => {
     if (!taxRateIdToDelete) return;
 
     setError(null);
+    setIsDeleteProcessing(true);
     try {
-      await confirmDeleteTaxRate(taxRateIdToDelete);
-      setIsConfirmDeleteDialogOpen(false);
-      setTaxRateIdToDelete(null);
-      setAffectedServicesForConfirmation([]);
+      const result: DeleteTaxRateResult = await deleteTaxRate(taxRateIdToDelete);
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
+      resetDeleteState();
       await fetchTaxRates();
     } catch (error: any) {
       console.error('Error confirming tax rate deletion:', error);
       setError(error.message || 'Failed to confirm tax rate deletion.');
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -462,49 +492,16 @@ const TaxRates: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog for Deletion */}
-      <Dialog 
-        isOpen={isConfirmDeleteDialogOpen} 
-        onClose={() => setIsConfirmDeleteDialogOpen(false)}
-        title="Confirm Tax Rate Deletion"
-      >
-        <DialogContent>
-          <DialogDescription>
-            This tax rate is currently assigned to the following services. Deleting it will remove the tax rate assignment (set to non-taxable) for these services. Are you sure you want to proceed?
-          </DialogDescription>
-          <div className="my-4 max-h-48 overflow-y-auto">
-            <ul className="list-disc pl-5 space-y-1">
-              {affectedServicesForConfirmation.map(service => (
-                <li key={service.service_id}>{service.service_name}</li>
-              ))}
-            </ul>
-          </div>
-          {error && isConfirmDeleteDialogOpen && (
-             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-               <span className="block sm:inline">{error}</span>
-             </div>
-           )}
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsConfirmDeleteDialogOpen(false);
-                setError(null);
-              }}
-              id="cancel-delete-tax-rate-button"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              id="confirm-delete-tax-rate-button"
-            >
-              Confirm Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DeleteEntityDialog
+        id="delete-tax-rate-dialog"
+        isOpen={Boolean(taxRateIdToDelete)}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleConfirmDelete}
+        entityName={taxRateToDeleteName}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </div>
   );
 };
