@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "getDeletionConfig returns undefined for unknown entity type",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
