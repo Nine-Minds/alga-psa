@@ -338,7 +338,7 @@
   {
     "id": "T057",
     "description": "DeleteEntityDialog calls onClose when Cancel is clicked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
