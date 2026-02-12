@@ -85,7 +85,7 @@
   {
     "id": "T011",
     "description": "features/tickets.json exists for all 7 languages (en, fr, es, de, nl, it, pl) with flattened keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
