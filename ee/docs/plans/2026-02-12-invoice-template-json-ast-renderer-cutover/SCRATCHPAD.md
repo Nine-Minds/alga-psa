@@ -22304,3 +22304,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).
+
+### 2026-02-12 — T020 implemented
+
+- Marked AST hydration back into designer workspace as implemented.
+- Evidence: packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts::hydrates a designer workspace from persisted AST
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/server-render.test.ts packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts' (pass).

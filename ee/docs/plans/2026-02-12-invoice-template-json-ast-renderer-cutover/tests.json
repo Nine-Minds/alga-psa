@@ -189,7 +189,7 @@
   {
     "id": "T020",
     "description": "Designer hydration reconstructs workspace from persisted AST",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
