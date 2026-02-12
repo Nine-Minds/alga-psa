@@ -73,6 +73,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Migrated contract line deletion to deleteEntityWithValidation and updated ContractLines UI to use DeleteEntityDialog with dependency preview.
 - (2026-02-12) Added deletion type tests (deletion.test.ts) covering T001-T005; marked T001 complete.
 - (2026-02-12) Marked T002 complete for DeletionDependency type coverage.
+- (2026-02-12) Marked T003 complete for DeletionAlternative type coverage.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.

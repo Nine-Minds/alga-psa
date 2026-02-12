@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "DeletionAlternative type includes action, label, description, warning fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
