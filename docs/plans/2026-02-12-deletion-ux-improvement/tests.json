@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "validateDeletion formats '5 tickets' (plural) correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

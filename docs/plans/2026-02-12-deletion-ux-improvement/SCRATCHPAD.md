@@ -81,6 +81,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T008 complete for validateDeletion foreignKey counting coverage.
 - (2026-02-12) Marked T009 complete for validateDeletion custom countQuery coverage.
 - (2026-02-12) Marked T010 complete for validateDeletion singular label formatting.
+- (2026-02-12) Marked T011 complete for validateDeletion plural label formatting.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.
