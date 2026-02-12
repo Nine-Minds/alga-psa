@@ -356,7 +356,7 @@
   {
     "id": "T060",
     "description": "useDeletionValidation returns validationResult after successful validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F043"]
   },
   {
