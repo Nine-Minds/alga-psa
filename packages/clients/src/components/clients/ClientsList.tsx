@@ -326,7 +326,9 @@ const ClientsList = ({
                 totalItems={totalCount}
                 onPageChange={onPageChange}
                 onItemsPerPageChange={onPageSizeChange}
-                rowClassName={() => ''}
+                rowClassName={(record: IClient) =>
+                  record.client_id && selectedClients.includes(record.client_id) ? 'bg-table-selected' : ''
+                }
                 manualSorting={true}
                 sortBy={sortBy}
                 sortDirection={sortDirection}

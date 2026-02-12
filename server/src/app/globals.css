@@ -295,9 +295,18 @@ body {
     --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
     --badge-info-text: 191 219 254;     /* blue-200 */
     --badge-info-border: 30 64 175;     /* blue-800 */
-    --badge-warning-bg: 120 53 15;      /* amber-900 for dark mode */
-    --badge-warning-text: 253 230 138;  /* amber-200 */
-    --badge-warning-border: 146 64 14;  /* amber-800 */
+    --badge-warning-bg: 69 26 3;         /* orange-950 — less brown */
+    --badge-warning-text: 253 186 116;  /* orange-300 — warm but not yellow */
+    --badge-warning-border: 124 45 18;  /* orange-900 */
+    --badge-success-bg: 20 83 45;       /* green-900 for dark mode */
+    --badge-success-text: 134 239 172;  /* green-300 — muted */
+    --badge-success-border: 22 101 52;  /* green-800 */
+    --badge-error-bg: 127 29 29;        /* red-900 for dark mode */
+    --badge-error-text: 254 202 202;    /* red-200 */
+    --badge-error-border: 153 27 27;    /* red-800 */
+    --badge-default-bg: 30 41 59;       /* slate-800 for dark mode */
+    --badge-default-text: 203 213 225;  /* slate-300 */
+    --badge-default-border: 51 65 85;   /* slate-700 */
 
     /* STATUS COLORS */
     --color-status-success: 74 222 128; /* green-400 */
@@ -377,6 +386,13 @@ body {
     --color-destructive: 220 38 38; /* red-600 */
     --color-destructive-foreground: 254 226 226; /* red-100 */
 
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
+    --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
+    --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
+    --color-table-status-approved: 10 30 20;     /* muted dark green */
+    --color-table-status-warning: 35 25 10;      /* muted dark amber */
+
     /* Sidebar Colors  */
     --color-sidebar-bg: #0f172a;
     --color-sidebar-text: #f5f5f5;
@@ -417,6 +433,15 @@ body {
     --badge-warning-bg: 254 243 199;    /* amber-100 */
     --badge-warning-text: 146 64 14;    /* amber-800 */
     --badge-warning-border: 253 230 138; /* amber-200 */
+    --badge-success-bg: 220 252 231;    /* green-100 */
+    --badge-success-text: 22 101 52;    /* green-800 */
+    --badge-success-border: 187 247 208; /* green-200 */
+    --badge-error-bg: 254 226 226;      /* red-100 */
+    --badge-error-text: 153 27 27;      /* red-800 */
+    --badge-error-border: 254 202 202;  /* red-200 */
+    --badge-default-bg: 241 245 249;    /* slate-100 */
+    --badge-default-text: 51 65 85;     /* slate-700 */
+    --badge-default-border: 226 232 240; /* slate-200 */
 
     /* STATUS COLORS */
     --color-status-success: 34 197 94; /* green-500 */
@@ -454,6 +479,13 @@ body {
 
     /* Switch */
     --color-switch-thumb: 255 255 255;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 248 250 252;           /* slate-50, matches current */
+    --color-table-hover: 246 240 254;             /* light purple, matches current primary-50 */
+    --color-table-selected: 237 226 253;          /* primary-100 — slightly stronger purple than hover */
+    --color-table-status-approved: 240 253 244;   /* green-50 */
+    --color-table-status-warning: 255 237 213;    /* orange-100 */
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
@@ -888,7 +920,19 @@ body {
 }
 
 .dark .rbc-today {
-  background-color: rgb(var(--color-border-100));
+  background-color: rgb(var(--color-primary-500) / 0.1);
+}
+
+.dark .rbc-header {
+  background-color: rgb(var(--color-card));
+}
+
+.dark .rbc-time-header {
+  background-color: rgb(var(--color-card));
+}
+
+.dark .rbc-toolbar {
+  background-color: rgb(var(--color-background));
 }
 
 .dark .rbc-timeslot-group,

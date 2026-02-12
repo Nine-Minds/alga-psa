@@ -5313,7 +5313,7 @@ function TenantPicker({
           right: 0,
           maxHeight: '240px',
           overflowY: 'auto',
-          background: 'var(--alga-background)',
+          background: 'var(--alga-bg)',
           border: '1px solid var(--alga-border)',
           borderRadius: 'var(--alga-radius)',
           zIndex: 50,

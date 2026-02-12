@@ -142,11 +142,11 @@ type RunStudioShellProps = {
 };
 
 const statusBadgeClasses: Record<string, string> = {
-  RUNNING: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  WAITING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  SUCCEEDED: 'bg-green-100 text-green-800 border-green-200',
-  FAILED: 'bg-red-100 text-red-800 border-red-200',
-  CANCELED: 'bg-gray-100 text-gray-700 border-gray-200'
+  RUNNING: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
+  WAITING: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
+  SUCCEEDED: 'bg-green-500/15 text-green-600 border-green-500/30',
+  FAILED: 'bg-red-500/15 text-red-600 border-red-500/30',
+  CANCELED: 'bg-gray-500/15 text-gray-600 border-gray-500/30'
 };
 
 const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
@@ -447,7 +447,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const getStepStatusStyle = (record?: WorkflowRunStepRecord) => {
     if (!record) {
       return {
-        badge: { label: 'Pending', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+        badge: { label: 'Pending', className: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
         card: 'border-gray-200',
         pulse: false,
         stripe: false,
@@ -458,39 +458,39 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     switch (record.status) {
       case 'STARTED':
         return {
-          badge: { label: 'Running', className: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-          card: 'border-cyan-200 ring-2 ring-cyan-200',
+          badge: { label: 'Running', className: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30' },
+          card: 'border-cyan-500/30 ring-2 ring-cyan-500/30',
           pulse: true,
           stripe: false,
           timestamp
         };
       case 'SUCCEEDED':
         return {
-          badge: { label: 'Succeeded', className: 'bg-green-100 text-green-800 border-green-200' },
-          card: 'border-green-200 ring-1 ring-green-200',
+          badge: { label: 'Succeeded', className: 'bg-green-500/15 text-green-600 border-green-500/30' },
+          card: 'border-green-500/30 ring-1 ring-green-500/30',
           pulse: false,
           stripe: false,
           timestamp
         };
       case 'FAILED':
         return {
-          badge: { label: 'Failed', className: 'bg-red-100 text-red-800 border-red-200' },
-          card: 'border-red-200 ring-2 ring-red-200',
+          badge: { label: 'Failed', className: 'bg-red-500/15 text-red-600 border-red-500/30' },
+          card: 'border-red-500/30 ring-2 ring-red-500/30',
           pulse: false,
           stripe: false,
           timestamp
         };
       case 'RETRY_SCHEDULED':
         return {
-          badge: { label: 'Retrying', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-          card: 'border-yellow-200 ring-1 ring-yellow-200',
+          badge: { label: 'Retrying', className: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30' },
+          card: 'border-yellow-500/30 ring-1 ring-yellow-500/30',
           pulse: false,
           stripe: true,
           timestamp
         };
       case 'CANCELED':
         return {
-          badge: { label: 'Canceled', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+          badge: { label: 'Canceled', className: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
           card: 'border-gray-200',
           pulse: false,
           stripe: false,
@@ -498,7 +498,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         };
       default:
         return {
-          badge: { label: record.status, className: 'bg-gray-100 text-gray-700 border-gray-200' },
+          badge: { label: record.status, className: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
           card: 'border-gray-200',
           pulse: false,
           stripe: false,

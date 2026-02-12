@@ -529,15 +529,15 @@ const handleAssetAdded = async () => {
           <span
             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
               status === 'active'
-                ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20'
+                ? 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] ring-1 ring-[rgb(var(--badge-success-border))]'
                 : status === 'inactive'
-                ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20'
-                : 'bg-amber-100 text-amber-700 ring-1 ring-amber-600/20'
+                ? 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]'
+                : 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] ring-1 ring-[rgb(var(--badge-warning-border))]'
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                status === 'active' ? 'bg-emerald-500' : status === 'inactive' ? 'bg-gray-500' : 'bg-amber-500'
+                status === 'active' ? 'bg-[rgb(var(--badge-success-text))]' : status === 'inactive' ? 'bg-[rgb(var(--badge-default-text))]' : 'bg-[rgb(var(--badge-warning-text))]'
               }`}
             ></span>
             {status.charAt(0).toUpperCase() + status.slice(1)}

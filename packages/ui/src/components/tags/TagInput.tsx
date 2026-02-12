@@ -33,7 +33,9 @@ export const TagInput: React.FC<TagInputProps> = ({
   size = 'md'
 }) => {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === 'dark';
   const sizeConfig = tagInputSizeConfig[size];
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');

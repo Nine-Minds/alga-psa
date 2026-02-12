@@ -23,22 +23,22 @@ const STATUS_STYLES: Record<
 > = {
   matched: {
     label: 'Detected',
-    className: 'text-emerald-700 bg-emerald-50 border border-emerald-200',
+    className: 'text-emerald-600 bg-emerald-500/10 border border-emerald-500/30',
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
   },
   mismatch: {
     label: 'Mismatch',
-    className: 'text-amber-700 bg-amber-50 border border-amber-200',
+    className: 'text-amber-600 bg-amber-500/10 border border-amber-500/30',
     icon: <AlertTriangle className="h-3.5 w-3.5" />,
   },
   missing: {
     label: 'Not Found',
-    className: 'text-red-700 bg-red-50 border border-red-200',
+    className: 'text-red-600 bg-red-500/10 border border-red-500/30',
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
   unknown: {
     label: 'Waiting for Check',
-    className: 'text-gray-600 bg-gray-50 border border-gray-200',
+    className: 'text-gray-600 bg-gray-500/10 border border-gray-500/30',
     icon: <Clock className="h-3.5 w-3.5" />,
   },
 };

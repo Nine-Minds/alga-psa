@@ -62,7 +62,7 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                       {response.technicianName ?? 'Unassigned'}
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-600">
                         {response.rating} ★
                       </span>
                     </TableCell>

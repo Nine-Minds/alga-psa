@@ -64,8 +64,8 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     // Loading state
     if (isLoading) {
         return (
-            <div className={`flex items-center justify-center h-48 bg-gray-100 rounded-md ${className}`}>
-                <span className="text-gray-600">Loading preview...</span>
+            <div className={`flex items-center justify-center h-48 bg-[rgb(var(--color-border-100))] rounded-md ${className}`}>
+                <span className="text-[rgb(var(--color-text-600))]">Loading preview...</span>
             </div>
         );
     }
@@ -73,7 +73,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     // Error state
     if (error) {
         return (
-            <div className={`flex items-center justify-center h-48 bg-red-50 rounded-md ${className}`}>
+            <div className={`flex items-center justify-center h-48 bg-red-500/10 rounded-md ${className}`}>
                 <span className="text-red-600">{error}</span>
             </div>
         );
@@ -96,7 +96,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     // PDF preview
     if (mime === 'application/pdf' && preview) {
         return (
-            <div className={`h-48 bg-gray-100 rounded-md overflow-hidden ${className}`}>
+            <div className={`h-48 bg-[rgb(var(--color-border-100))] rounded-md overflow-hidden ${className}`}>
                 {preview.previewImage ? (
                     <div className="relative w-full h-full">
                         {/* Preview image */}
@@ -114,8 +114,8 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
                 ) : (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                            <p className="text-gray-600 font-medium">PDF Document</p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-[rgb(var(--color-text-600))] font-medium">PDF Document</p>
+                            <p className="text-sm text-[rgb(var(--color-text-500))]">
                                 {preview.pageCount} {preview.pageCount === 1 ? 'page' : 'pages'}
                             </p>
                         </div>
@@ -129,7 +129,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     if ((mime === 'text/markdown' || document.document_name.endsWith('.md')) && preview?.content) {
         return (
             <div 
-                className={`h-48 p-4 bg-white rounded-md overflow-auto prose prose-sm max-w-none ${className}`}
+                className={`h-48 p-4 bg-[rgb(var(--color-card))] rounded-md overflow-auto prose prose-sm max-w-none ${className}`}
                 dangerouslySetInnerHTML={{ __html: preview.content }}
             />
         );
@@ -138,7 +138,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     // Text preview (including JSON)
     if ((mime.startsWith('text/') || mime === 'application/json') && preview?.content) {
         return (
-            <div className={`h-48 p-4 bg-gray-100 rounded-md overflow-auto ${className}`}>
+            <div className={`h-48 p-4 bg-[rgb(var(--color-border-100))] rounded-md overflow-auto ${className}`}>
                 <pre className="text-sm whitespace-pre-wrap font-mono">
                     {preview.content}
                 </pre>
@@ -172,10 +172,10 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
         return (
             <div className={`flex items-center justify-center h-48 bg-gray-900 rounded-md ${className}`}>
                 <div className="text-center">
-                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-16 h-16 text-[rgb(var(--color-text-400))] mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
-                    <span className="text-gray-400">Video File</span>
+                    <span className="text-[rgb(var(--color-text-400))]">Video File</span>
                 </div>
             </div>
         );
@@ -183,8 +183,8 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
 
     // Default preview for unsupported types
     return (
-        <div className={`flex items-center justify-center h-48 bg-gray-100 rounded-md ${className}`}>
-            <span className="text-gray-600">Preview not available</span>
+        <div className={`flex items-center justify-center h-48 bg-[rgb(var(--color-border-100))] rounded-md ${className}`}>
+            <span className="text-[rgb(var(--color-text-600))]">Preview not available</span>
         </div>
     );
 };

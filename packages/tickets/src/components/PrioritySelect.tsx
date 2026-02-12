@@ -44,7 +44,7 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
         <span>{option.label}</span>
         {/* Show ITIL badge if this is an ITIL priority */}
         {option.is_from_itil_standard && (
-          <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+          <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 rounded">
             ITIL
           </span>
         )}

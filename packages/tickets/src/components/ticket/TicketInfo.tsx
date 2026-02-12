@@ -963,9 +963,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   const now = new Date();
                   const hoursUntilDue = (effectiveDueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                   if (hoursUntilDue < 0) {
-                    containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 [&_button]:bg-red-50';
+                    containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 [&_button]:bg-red-500/10';
                   } else if (hoursUntilDue <= 24) {
-                    containerClass = '[&_button]:border-orange-500 [&_button]:text-orange-600 [&_button]:bg-orange-50';
+                    containerClass = '[&_button]:border-orange-500 [&_button]:text-orange-600 [&_button]:bg-orange-500/10';
                   }
                 }
 
@@ -1020,7 +1020,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => handlePendingChange('due_date', null)}
-                          className="text-gray-400 hover:text-gray-600 px-2"
+                          className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] px-2"
                           title="Clear due date"
                         >
                           ✕

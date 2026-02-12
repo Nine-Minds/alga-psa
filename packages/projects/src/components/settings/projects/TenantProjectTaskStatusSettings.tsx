@@ -399,7 +399,7 @@ export function TenantProjectTaskStatusSettings() {
 
               {/* Preview */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
                   Preview
                 </label>
                 <div
@@ -435,9 +435,9 @@ export function TenantProjectTaskStatusSettings() {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="text-xs text-gray-500 mb-1">Sample Task</div>
-                    <div className="text-sm text-gray-700">This is how tasks will appear in the column</div>
+                  <div className="bg-[rgb(var(--color-card))] rounded-lg p-3 shadow-sm">
+                    <div className="text-xs text-[rgb(var(--color-text-500))] mb-1">Sample Task</div>
+                    <div className="text-sm text-[rgb(var(--color-text-700))]">This is how tasks will appear in the column</div>
                   </div>
                 </div>
               </div>

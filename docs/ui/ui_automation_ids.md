@@ -41,6 +41,22 @@ Follow these patterns for component IDs:
    id={`${parentId}-search-input`}   // ticketing-dashboard-filters-search-input
    ```
 
+## Sidebar Menu ID Convention
+
+The sidebar menu items use a double-prefix pattern in their DOM automation IDs. The `Sidebar` component generates an `id` of `menu-{name}` for each item, which is then passed to `SidebarMenuItem`. The `SidebarMenuItem` renders the element with a `data-automation-id` of `sidebar-menu-menu-{name}`, resulting in the `menu-` prefix appearing twice.
+
+For example, the Home menu item renders as:
+```
+data-automation-id="sidebar-menu-menu-home"
+```
+
+Other examples:
+- Tickets: `sidebar-menu-menu-tickets`
+- Companies: `sidebar-menu-menu-companies`
+- Settings: `sidebar-menu-menu-settings`
+
+When writing tests or automation scripts targeting sidebar items, use the full double-prefix form (`sidebar-menu-menu-{name}`).
+
 ## The useAutomationIdAndRegister Hook
 
 Use this hook to combine UI reflection registration and data-automation-id props:
@@ -88,10 +104,15 @@ function MyComponent({ id, ...props }) {
 
 ## Core Components
 
-The following core UI components already implement this pattern:
-- Button (`server/src/components/ui/Button.tsx`)
-- Input (`server/src/components/ui/Input.tsx`)
-- Dialog (`server/src/components/ui/Dialog.tsx`)
+Over 52 UI components now implement the `useAutomationIdAndRegister` pattern, including but not limited to:
+- Button (`packages/ui/src/components/Button.tsx`)
+- Input (`packages/ui/src/components/Input.tsx`)
+- Dialog (`packages/ui/src/components/Dialog.tsx`)
+- SearchableSelect, CustomSelect, AsyncSearchableSelect
+- TextArea, SearchInput, TagInput
+- ClientPicker, UserPicker, ContactPicker, CountryPicker
+- DateTimePicker, DatePicker, TimePicker
+- GenericDialog, CategoryPicker, BoardPicker
 
 When creating new components that use the UI reflection system, follow these examples to maintain consistency.
 

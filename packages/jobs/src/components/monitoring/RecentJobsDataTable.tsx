@@ -231,7 +231,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
         columns={columns}
         onRowClick={handleRowClick}
         id="recent-jobs-table"
-        rowClassName={() => 'hover:bg-[rgb(var(--color-primary-50))] cursor-pointer'}
+        rowClassName={() => 'cursor-pointer'}
         initialSorting={[{ id: 'processed_at', desc: true }]}
         pagination={true}
         currentPage={currentPage}

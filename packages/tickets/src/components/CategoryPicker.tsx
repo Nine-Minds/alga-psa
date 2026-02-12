@@ -95,7 +95,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       label: parent.is_from_itil_standard ? (
         <span className="flex items-center gap-1">
           {parent.category_name}
-          <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">ITIL</span>
+          <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 rounded">ITIL</span>
         </span>
       ) : parent.category_name,
       value: parent.category_id,
@@ -106,7 +106,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
         label: child.is_from_itil_standard ? (
           <span className="flex items-center gap-1">
             {child.category_name}
-            <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">ITIL</span>
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 rounded">ITIL</span>
           </span>
         ) : child.category_name,
         value: child.category_id,

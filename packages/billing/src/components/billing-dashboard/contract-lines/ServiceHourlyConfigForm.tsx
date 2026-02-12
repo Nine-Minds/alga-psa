@@ -197,7 +197,7 @@ export function ServiceHourlyConfigForm({
             <Info className="h-4 w-4 text-muted-foreground" />
          </Button>
       </RadixTooltip.Trigger>
-      <RadixTooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
+      <RadixTooltip.Content side="top" className="max-w-xs bg-[rgb(var(--color-text-800))] text-[rgb(var(--color-text-50))] p-2 rounded shadow-lg text-sm z-50">
           <p>{tooltipContent}</p>
       </RadixTooltip.Content>
     </RadixTooltip.Root>

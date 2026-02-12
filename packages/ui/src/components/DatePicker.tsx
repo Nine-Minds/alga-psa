@@ -104,10 +104,10 @@ export function DatePicker({
           aria-label={label || placeholder}
           onKeyDown={handleKeyDown}
           className={`
-            flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
+            flex h-10 w-full rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm
             file:border-0 file:bg-transparent file:text-sm file:font-medium
-            placeholder:text-gray-500
-            hover:border-gray-400
+            placeholder:text-[rgb(var(--color-text-500))]
+            hover:border-[rgb(var(--color-border-400))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2
             disabled:cursor-not-allowed disabled:opacity-50
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -132,7 +132,7 @@ export function DatePicker({
                   clearValue();
                 }
               }}
-              className="mr-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              className="mr-2 text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] cursor-pointer"
             >
               <X className="h-4 w-4" />
             </span>
