@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "User config uses table 'schedule_entry_assignees' (not 'schedule_entries')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
