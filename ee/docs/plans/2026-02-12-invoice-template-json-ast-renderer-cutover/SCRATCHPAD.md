@@ -459,3 +459,22 @@ Commands run:
 
 - `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
 - `pnpm vitest packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx` (tests pass; run exits non-zero in this environment due pre-existing coverage temp dir `server/coverage/.tmp` ENOENT after reporting).
+
+### 2026-02-12 — F019 implemented
+
+- Preserved Sample/Existing source-selection semantics for preview UX after AST backend cutover.
+- Added source-mode specific test coverage in pure preview state/status modules:
+  - `packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts`
+    - sample source validity now explicitly verified to depend on preview sample payload.
+  - `packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts`
+    - source toggle flow verifies sample selection is preserved across Sample <-> Existing transitions.
+
+Rationale:
+
+- These tests guard the source-selection UX contract independently of the compile/runtime pipeline internals.
+
+Commands run:
+
+- `pnpm vitest packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts` (pass).
+- `pnpm vitest packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (test passes; command exits non-zero in this environment due existing coverage temp dir issue: `server/coverage/.tmp` ENOENT).
+- Attempted targeted `DesignerVisualWorkspace` component source-switch tests; blocked by pre-existing `React.act is not a function` compatibility issue in current React/testing-library stack.

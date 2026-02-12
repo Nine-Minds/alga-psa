@@ -60,6 +60,36 @@ describe('previewSessionState', () => {
     expect(state.selectedInvoiceData).toBeNull();
   });
 
+  it('preserves sample selection when toggling between sample and existing sources', () => {
+    let state = createInitialPreviewSessionState();
+    const initialSampleId = state.selectedSampleId;
+    expect(initialSampleId).toBeTruthy();
+
+    state = previewSessionReducer(state, { type: 'set-source', source: 'existing' });
+    state = previewSessionReducer(state, { type: 'select-existing-invoice', invoiceId: 'inv-1' });
+    state = previewSessionReducer(state, {
+      type: 'detail-load-success',
+      payload: {
+        invoiceNumber: 'INV-EXISTING',
+        issueDate: '2026-02-01',
+        dueDate: '2026-02-15',
+        currencyCode: 'USD',
+        poNumber: null,
+        customer: { name: 'Acme', address: '123 Main' },
+        tenantClient: null,
+        items: [],
+        subtotal: 50,
+        tax: 5,
+        total: 55,
+      },
+    });
+
+    state = previewSessionReducer(state, { type: 'set-source', source: 'sample' });
+    expect(state.sourceKind).toBe('sample');
+    expect(state.selectedSampleId).toBe(initialSampleId);
+    expect(state.selectedInvoiceId).toBe('inv-1');
+  });
+
   it('tracks list/detail async state transitions', () => {
     let state = createInitialPreviewSessionState();
     state = previewSessionReducer(state, { type: 'list-load-start' });

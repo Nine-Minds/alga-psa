@@ -20,6 +20,26 @@ const previewInvoice = {
 };
 
 describe('previewStatus', () => {
+  it('treats sample-source validity as driven by sample preview data', () => {
+    expect(
+      hasValidPreviewSelectionForSource({
+        sourceKind: 'sample',
+        selectedInvoiceId: 'inv-1',
+        selectedInvoiceData: previewInvoice,
+        previewData: null,
+      })
+    ).toBe(false);
+
+    expect(
+      hasValidPreviewSelectionForSource({
+        sourceKind: 'sample',
+        selectedInvoiceId: null,
+        selectedInvoiceData: null,
+        previewData: previewInvoice,
+      })
+    ).toBe(true);
+  });
+
   it('requires selected invoice id and mapped data for existing-source validity', () => {
     expect(
       hasValidPreviewSelectionForSource({

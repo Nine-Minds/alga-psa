@@ -161,7 +161,7 @@
   {
     "id": "F019",
     "description": "Preserve preview sample/existing data source UX while swapping backend execution path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
