@@ -305,7 +305,7 @@
   {
     "id": "T037",
     "description": "Language selector shows all 7 supported languages plus 'Not set' option (fallback to org default)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
