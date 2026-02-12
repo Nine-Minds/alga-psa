@@ -33,7 +33,7 @@ export default function ClientPortalSettingsPage() {
     'account': tProfile('clientSettings.tabs.account'),
     'client-details': tProfile('clientSettings.tabs.clientDetails'),
     'user-management': tProfile('clientSettings.tabs.userManagement')
-  }), [t]);
+  }), [tProfile]);
 
   // Map translated labels back to URL slugs
   const labelToSlugMap = useMemo<Record<string, TabId>>(() => {
