@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import * as evaluatorModule from '../lib/invoice-template-ast/evaluator';
+import * as schemaModule from '../lib/invoice-template-ast/schema';
 import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';
 
 vi.mock('@alga-psa/auth', () => ({
@@ -134,5 +136,88 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
     expect(actionResult.render.html).toContain('INV-9001');
     expect(actionResult.render.html).toContain('Consulting');
     expect(actionResult.verification.status).toBe('pass');
+  });
+
+  it('surfaces structured schema diagnostics with AST context', async () => {
+    const schemaSpy = vi.spyOn(schemaModule, 'validateInvoiceTemplateAst').mockReturnValueOnce({
+      success: false,
+      errors: [
+        {
+          code: 'invalid_type',
+          path: 'layout.children.0',
+          message: 'Invalid input: expected "text"',
+        },
+      ],
+    } as any);
+
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      {
+        workspace,
+        invoiceData,
+        bypassCompileCache: true,
+      }
+    );
+
+    schemaSpy.mockRestore();
+
+    expect(actionResult.success).toBe(false);
+    expect(actionResult.compile.status).toBe('error');
+    expect(actionResult.compile.error).toBe('AST validation failed.');
+    expect(actionResult.compile.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'schema',
+          code: 'invalid_type',
+          path: 'layout.children.0',
+        }),
+      ])
+    );
+  });
+
+  it('surfaces structured evaluator diagnostics with operation context', async () => {
+    const evaluationSpy = vi
+      .spyOn(evaluatorModule, 'evaluateInvoiceTemplateAst')
+      .mockImplementationOnce(() => {
+        throw new evaluatorModule.InvoiceTemplateEvaluationError(
+          'MISSING_BINDING',
+          'Missing transform binding.',
+          'op-filter-1',
+          [
+            {
+              code: 'MISSING_BINDING',
+              message: 'Missing transform binding.',
+              path: 'transforms.operations.0.predicate.path',
+              operationId: 'op-filter-1',
+            },
+          ]
+        );
+      });
+
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      {
+        workspace,
+        invoiceData,
+        bypassCompileCache: true,
+      }
+    );
+
+    evaluationSpy.mockRestore();
+
+    expect(actionResult.success).toBe(false);
+    expect(actionResult.compile.status).toBe('error');
+    expect(actionResult.compile.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'evaluation',
+          code: 'MISSING_BINDING',
+          path: 'transforms.operations.0.predicate.path',
+          operationId: 'op-filter-1',
+        }),
+      ])
+    );
   });
 });

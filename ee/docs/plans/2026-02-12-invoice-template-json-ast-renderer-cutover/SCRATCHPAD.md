@@ -506,3 +506,27 @@ Rationale:
 Commands run:
 
 - `pnpm vitest packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts` (pass).
+
+### 2026-02-12 — F021 implemented
+
+- Retained and strengthened structured preview diagnostics with AST/evaluator context in `runAuthoritativeInvoiceTemplatePreview`:
+  - `packages/billing/src/actions/invoiceTemplatePreview.ts`
+  - expanded diagnostic payload with `kind`, `code`, `path`, and `operationId` metadata.
+  - schema validation failures now emit `kind: 'schema'` diagnostics with path/code context.
+  - evaluator failures now emit `kind: 'evaluation'` diagnostics with operation/path/code context.
+  - non-evaluator runtime failures now emit `kind: 'runtime'` diagnostics.
+- Updated preview diagnostics rendering surface:
+  - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
+  - diagnostics list now renders contextual `code/path/op` metadata alongside message severity.
+- Added integration coverage for structured diagnostics:
+  - `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`
+  - validates schema diagnostic context mapping and evaluator diagnostic context mapping.
+
+Rationale:
+
+- Preview diagnostics now preserve machine-meaningful context needed for targeted AST/evaluator debugging without reverting to compiler-era error formats.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts` (pass).

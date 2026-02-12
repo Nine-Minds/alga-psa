@@ -579,6 +579,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                 >
                   <span className="font-semibold uppercase">{diagnostic.severity}</span>{' '}
                   <span>{diagnostic.message}</span>
+                  {diagnostic.code && <span className="text-amber-700"> [{diagnostic.code}]</span>}
+                  {diagnostic.path && <span className="text-amber-700"> path: {diagnostic.path}</span>}
+                  {diagnostic.operationId && <span className="text-amber-700"> op: {diagnostic.operationId}</span>}
                   {diagnostic.nodeId && <span className="text-amber-700"> (node: {diagnostic.nodeId})</span>}
                 </li>
               ))}

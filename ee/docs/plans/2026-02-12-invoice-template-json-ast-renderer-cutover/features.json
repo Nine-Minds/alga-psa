@@ -178,7 +178,7 @@
   {
     "id": "F021",
     "description": "Retain structured preview diagnostics surfaced with AST/evaluator context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Non-functional Requirements"

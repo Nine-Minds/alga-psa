@@ -174,9 +174,13 @@ type AuthoritativePreviewInput = {
 };
 
 type AuthoritativePreviewDiagnostic = {
+  kind: 'schema' | 'evaluation' | 'runtime';
   severity: 'error';
   message: string;
   raw: string;
+  code?: string;
+  path?: string;
+  operationId?: string;
   nodeId?: string;
 };
 
@@ -252,9 +256,12 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           status: 'error',
           cacheHit: false,
           diagnostics: validation.errors.map((error) => ({
+            kind: 'schema',
             severity: 'error',
             message: `${error.path || '<root>'}: ${error.message}`,
             raw: `${error.code}:${error.path}:${error.message}`,
+            code: error.code,
+            path: error.path || undefined,
           })),
           error: 'AST validation failed.',
           details: validation.errors.map((error) => `${error.path || '<root>'}: ${error.message}`).join('; '),
@@ -298,11 +305,20 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           cacheHit: false,
           diagnostics: isEvaluationError
             ? error.issues.map((issue) => ({
+                kind: 'evaluation',
                 severity: 'error',
                 message: issue.message,
                 raw: `${issue.code}:${issue.path ?? ''}:${issue.message}`,
+                code: issue.code,
+                path: issue.path,
+                operationId: issue.operationId,
               }))
-            : [],
+            : [{
+                kind: 'runtime',
+                severity: 'error',
+                message: error?.message || String(error),
+                raw: String(error?.message || error),
+              }],
           error: isEvaluationError ? error.message : 'Evaluation failed.',
           details: error?.message || String(error),
         },
