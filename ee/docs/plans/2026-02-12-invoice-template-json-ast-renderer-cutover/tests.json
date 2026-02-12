@@ -323,7 +323,7 @@
   {
     "id": "T034",
     "description": "Preview surfaces structured evaluator/strategy errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F009"
