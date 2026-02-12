@@ -198,7 +198,7 @@
   {
     "id": "T021",
     "description": "InvoiceTemplateEditor save path no longer calls `extractInvoiceDesignerIr`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F025"

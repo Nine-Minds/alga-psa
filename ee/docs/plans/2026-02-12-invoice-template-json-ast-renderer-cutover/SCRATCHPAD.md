@@ -29673,3 +29673,12 @@ If you need to partially mock a module, you can use "importOriginal" helper insi
       Tests  138 failed | 456 passed | 271 skipped | 1 todo (866)
    Start at  14:54:45
    Duration  25.80s (transform 2.37s, setup 314ms, collect 3.11s, tests 14.90s, environment 233ms, prepare 53ms) (pass).
+
+### 2026-02-12 — T021 implemented
+
+- Added `InvoiceTemplateEditor` compiler-cutover wiring test to enforce save-path removal of `extractInvoiceDesignerIr`.
+- Evidence: `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.compilerCutover.test.ts`.
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.compilerCutover.test.ts` (pass).
