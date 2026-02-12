@@ -446,7 +446,7 @@
   {
     "id": "T075",
     "description": "Contact deletion no longer manually calls deleteEntityTags",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F076"]
   },
   {
