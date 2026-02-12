@@ -374,7 +374,7 @@
   {
     "id": "T063",
     "description": "validateBulkDeletion validates all entities in a single transaction",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F044"]
   },
   {
