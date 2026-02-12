@@ -169,7 +169,7 @@
   {
     "id": "T021",
     "description": "All client portal components using tickets.* keys migrated to useTranslation('features/tickets')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
