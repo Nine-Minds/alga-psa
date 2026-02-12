@@ -236,7 +236,7 @@
   {
     "id": "T025",
     "description": "Template fetch returns AST payload for tenant templates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],
