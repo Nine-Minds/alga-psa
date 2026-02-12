@@ -530,7 +530,7 @@
   {
     "id": "T089",
     "description": "Priority deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F067"]
   },
   {
