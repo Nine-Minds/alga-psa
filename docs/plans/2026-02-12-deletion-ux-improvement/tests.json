@@ -578,7 +578,7 @@
   {
     "id": "T097",
     "description": "Interaction type deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F075"]
   },
   {
