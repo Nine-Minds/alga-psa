@@ -230,7 +230,7 @@
   {
     "id": "T039",
     "description": "deleteEntityWithValidation calls deleteEntityTags before performDelete when tagEntityType is set",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {

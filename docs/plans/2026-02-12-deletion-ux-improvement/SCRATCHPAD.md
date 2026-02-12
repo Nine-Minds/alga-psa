@@ -109,6 +109,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T036 complete for preCheckDeletion unknown entity.
 - (2026-02-12) Marked T037 complete for deleteEntityWithValidation single transaction.
 - (2026-02-12) Marked T038 complete for deleteEntityWithValidation skip on failed validation.
+- (2026-02-12) Marked T039 complete for deleteEntityWithValidation tag cleanup order.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.
