@@ -330,7 +330,7 @@
   {
     "id": "T040",
     "description": "Regression: unmatched sender path remains functional and still uses unknown fallback when no contact exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F025"

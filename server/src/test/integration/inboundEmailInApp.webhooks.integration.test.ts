@@ -935,6 +935,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
     expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('internal');
+    expect(comments[0].contact_id ?? null).toBeNull();
+    expect(comments[0].user_id ?? null).toBeNull();
 
     cleanup.push(async () => {
       await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
