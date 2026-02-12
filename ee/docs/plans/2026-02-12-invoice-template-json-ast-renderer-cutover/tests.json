@@ -52,7 +52,7 @@
   {
     "id": "T006",
     "description": "Strategy registry resolves known strategy IDs and rejects unknown IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F029"

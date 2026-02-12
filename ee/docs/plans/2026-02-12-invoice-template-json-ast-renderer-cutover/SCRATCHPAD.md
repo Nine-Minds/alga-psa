@@ -13349,3 +13349,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T006 implemented
+
+- Marked strategy registry allowlist resolution and unknown-ID rejection as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/strategies.test.ts
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
