@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "preCheckDeletion returns PERMISSION_DENIED when user is not authenticated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
