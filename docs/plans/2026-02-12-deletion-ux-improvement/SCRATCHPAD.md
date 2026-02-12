@@ -90,3 +90,5 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) **Lint note**: workflows eslint shows many pre-existing warnings; no new errors.
 - (2026-02-12) **Role deletion migrated**: deleteRole now uses deleteEntityWithValidation with admin-role guard and returns DeletionValidationResult. RoleManagement uses DeleteEntityDialog with preCheckDeletion preview and handles validation failures. Added permission mapping for role deletions to security_settings.
 - (2026-02-12) **Lint note**: auth package retains pre-existing warnings (unused Flex/Text, handleUpdateRole, explicit any).
+- (2026-02-12) **Interaction type deletion migrated**: deleteReferenceDataItem now routes interaction_types through deleteEntityWithValidation using interaction_type config. No dedicated UI entrypoint found for interaction type settings; action now returns DeletionValidationResult for DeleteEntityDialog usage where applicable.
+- (2026-02-12) **Lint note**: reference-data eslint warnings are pre-existing.
