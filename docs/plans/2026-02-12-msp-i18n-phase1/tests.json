@@ -233,7 +233,7 @@
   {
     "id": "T029",
     "description": "Client portal continues working after full migration (no regressions \u2014 same translations, new namespace paths)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
