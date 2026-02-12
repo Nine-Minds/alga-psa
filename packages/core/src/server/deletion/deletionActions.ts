@@ -42,6 +42,13 @@ function permissionEntityFor(entityType: string): string {
   return entityType;
 }
 
+function permissionActionFor(entityType: string): string {
+  if (entityType === 'workflow') {
+    return 'manage';
+  }
+  return 'delete';
+}
+
 export async function preCheckDeletion(
   entityType: string,
   entityId: string
@@ -57,7 +64,7 @@ export async function preCheckDeletion(
     return buildUnknownEntity(entityType);
   }
 
-  const canDelete = await hasPermission(user, permissionEntityFor(entityType), 'delete');
+  const canDelete = await hasPermission(user, permissionEntityFor(entityType), permissionActionFor(entityType));
   if (!canDelete) {
     return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
   }
@@ -92,7 +99,7 @@ export async function deleteEntityWithValidation(
     return buildUnknownEntity(entityType);
   }
 
-  const canDelete = await hasPermission(user, permissionEntityFor(entityType), 'delete');
+  const canDelete = await hasPermission(user, permissionEntityFor(entityType), permissionActionFor(entityType));
   if (!canDelete) {
     return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
   }
