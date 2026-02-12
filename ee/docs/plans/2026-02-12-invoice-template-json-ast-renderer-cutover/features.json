@@ -232,7 +232,7 @@
   {
     "id": "F027",
     "description": "Remove runtime dependency on `getCompiledWasm` for invoice rendering paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Deleted / Eliminated Layers",
       "Users and Primary Flows"

@@ -652,3 +652,24 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts` (pass).
+
+### 2026-02-12 — F027 implemented
+
+- Removed runtime dependency on `getCompiledWasm` for invoice rendering paths.
+- Active render entry points now use AST evaluator/renderer stack and do not fetch compiled Wasm:
+  - `packages/billing/src/actions/invoiceTemplates.ts` (`renderTemplateOnServer`)
+  - `server/src/services/pdf-generation.service.ts`
+  - `packages/billing/src/actions/invoiceTemplatePreview.ts`
+- `getCompiledWasm` action remains only as an explicit unsupported guard path and is not used by rendering flows.
+- Added/updated wiring assertions to prevent regressions:
+  - `packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts`
+  - `packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts`
+
+Rationale:
+
+- Invoice runtime rendering no longer depends on Wasm artifact retrieval lifecycle.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts` (pass).
