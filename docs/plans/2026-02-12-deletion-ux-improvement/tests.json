@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "deleteEntityWithValidation does NOT call deleteEntityTags when tagEntityType is not set",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
