@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Personal language preference uses existing LanguagePreference component with showNoneOption for fallback to org default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
