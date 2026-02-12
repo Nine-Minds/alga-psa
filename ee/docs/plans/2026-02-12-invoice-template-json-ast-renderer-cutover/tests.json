@@ -112,7 +112,7 @@
   {
     "id": "T012",
     "description": "Evaluator executes allowlisted strategy hook for custom group key generation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",

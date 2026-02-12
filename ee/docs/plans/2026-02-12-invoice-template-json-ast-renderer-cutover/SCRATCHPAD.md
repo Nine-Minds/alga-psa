@@ -13403,3 +13403,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
+
+### 2026-02-12 — T012 implemented
+
+- Marked allowlisted strategy hook execution path as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/evaluator.test.ts::executes allowlisted strategy hooks
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts packages/billing/src/lib/invoice-template-ast/evaluator.test.ts' (pass).
