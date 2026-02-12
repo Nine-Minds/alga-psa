@@ -421,7 +421,7 @@
   {
     "id": "T044",
     "description": "Compatibility behavior is defined when legacy columns exist but AST is canonical",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ],

@@ -29880,3 +29880,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T044 implemented
+
+- Marked compatibility behavior where legacy columns coexist but AST stays canonical as implemented.
+- Evidence: packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts::treats templateAst as canonical even when legacy columns exist
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
