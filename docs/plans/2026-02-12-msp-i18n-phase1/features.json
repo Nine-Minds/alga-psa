@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Migrate all client portal components using billing.* keys to useTranslation('features/billing')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
