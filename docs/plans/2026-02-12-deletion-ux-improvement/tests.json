@@ -584,7 +584,7 @@
   {
     "id": "T098",
     "description": "Existing ConfirmationDialog component is unchanged after all migrations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F049"]
   },
   {
