@@ -29772,3 +29772,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T032 implemented
+
+- Marked shape/render/verify status UI mapping coverage as implemented.
+- Evidence: packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts + previewStatus.test.ts + DesignerVisualWorkspace.test.tsx
+
+Verification:
+
+- 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).

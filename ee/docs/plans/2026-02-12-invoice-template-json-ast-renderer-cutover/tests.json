@@ -304,7 +304,7 @@
   {
     "id": "T032",
     "description": "Preview status UI maps to shape/render/verify phases correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
