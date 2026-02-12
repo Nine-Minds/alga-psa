@@ -218,7 +218,7 @@
   {
     "id": "T037",
     "description": "deleteEntityWithValidation validates and deletes in a single transaction (no TOCTOU race)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
