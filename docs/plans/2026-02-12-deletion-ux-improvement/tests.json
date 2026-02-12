@@ -536,7 +536,7 @@
   {
     "id": "T090",
     "description": "Board deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F068"]
   },
   {
