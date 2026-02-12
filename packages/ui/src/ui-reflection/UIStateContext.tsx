@@ -3,10 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { PageState, UIComponent, DatePickerComponent } from './types';
-import { create } from 'jsondiffpatch';
-
-// Create a jsondiffpatch instance
-const jsondiffpatch = create();
 
 /**
  * Context value interface containing the page state and methods to manipulate it
@@ -41,6 +37,14 @@ const defaultContextValue: UIStateContextValue = {
 
 // Define a dictionary for all UI components keyed by ID
 type ComponentDict = Record<string, UIComponent>;
+
+function hasStateChanged(previous: PageState | null, next: PageState): boolean {
+  if (!previous) {
+    return true;
+  }
+
+  return JSON.stringify(previous) !== JSON.stringify(next);
+}
 
 /** 
  * Rebuild the entire tree from the component dictionary.
@@ -334,10 +338,7 @@ export function UIStateProvider({ children, initialPageState }: {
       components: newRoot
     };
 
-    // use jsondiffpatch to compare the current state with the next state
-    // and only update if there are changes
-    const patch = jsondiffpatch.diff(pageState, nextState);
-    if (!patch) {
+    if (!hasStateChanged(pageState, nextState)) {
       console.log(`⚪ [UI-STATE] No changes detected for ${component.id}, skipping state update`);
       return;
     }
