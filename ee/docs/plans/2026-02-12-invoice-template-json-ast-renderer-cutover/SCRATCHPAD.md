@@ -29853,3 +29853,12 @@ Verification:
 Verification:
 
 - 'NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts' (pass).
+
+### 2026-02-12 — T041 implemented
+
+- Added explicit save-path regression guard test ensuring AST template saves do not invoke `compileAndSaveTemplate`.
+- Evidence: `packages/billing/src/actions/invoiceTemplateSaveRuntimeWasmRemoval.test.ts`.
+
+Verification:
+
+- `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateSaveRuntimeWasmRemoval.test.ts` (pass).

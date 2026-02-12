@@ -392,7 +392,7 @@
   {
     "id": "T041",
     "description": "saveInvoiceTemplate path does not invoke compileAndSaveTemplate for AST templates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ],
