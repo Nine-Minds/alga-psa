@@ -276,7 +276,7 @@
   {
     "id": "T029",
     "description": "Preview action no longer references Wasm executor modules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F025"
