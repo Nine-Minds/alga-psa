@@ -76,6 +76,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Marked T003 complete for DeletionAlternative type coverage.
 - (2026-02-12) Marked T004 complete for EntityDeletionConfig tagEntityType coverage.
 - (2026-02-12) Marked T005 complete for deletion type barrel exports coverage.
+- (2026-02-12) Added validateDeletion unit tests (T006-T018 coverage started); marked T006 complete.
 - (2026-02-12) Migrated billing service deletion to deleteEntityWithValidation + DeleteEntityDialog, added preCheckDeletion preview and deactivate alternative in ServiceCatalogManager; deleteService now returns validation result for dialog handling.
 - (2026-02-12) Migrated billing tax rate deletion to DeleteEntityDialog + deleteEntityWithValidation with dependency preview via preCheckDeletion; removed custom confirm dialog flow in TaxRates.
 - (2026-02-12) Migrated invoice template deletion to DeleteEntityDialog + deleteEntityWithValidation; added preCheckDeletion preview and expanded invoice_template deletion config to include clients and conditional rules.

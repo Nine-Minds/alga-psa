@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "validateDeletion returns canDelete:true when entity has no dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
