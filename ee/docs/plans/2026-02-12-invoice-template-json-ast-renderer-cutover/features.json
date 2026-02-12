@@ -266,7 +266,7 @@
   {
     "id": "F031",
     "description": "Implement integration coverage for preview path using AST evaluator+renderer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]

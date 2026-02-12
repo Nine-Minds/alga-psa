@@ -726,3 +726,24 @@ Rationale:
 Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).
+
+### 2026-02-12 — F031 implemented
+
+- Established integration coverage for AST-based preview pipeline in:
+  - `packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts`
+  - `packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts`
+- Covered integration behaviors include:
+  - end-to-end preview action success over AST validation -> evaluator -> renderer,
+  - schema diagnostic surfacing,
+  - evaluator diagnostic surfacing,
+  - strategy allowlist rejection surfaced through preview diagnostics,
+  - realistic invoice fixture rendering sanity via mapped invoice payload.
+
+Rationale:
+
+- Preview integration tests now exercise the AST pipeline directly without compiler/Wasm execution dependencies.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts` (pass).
