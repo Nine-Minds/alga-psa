@@ -4,6 +4,7 @@ import type { DesignerWorkspaceSnapshot } from '../state/designerStore';
 import {
   exportWorkspaceToInvoiceTemplateAst,
   exportWorkspaceToInvoiceTemplateAstJson,
+  importInvoiceTemplateAstToWorkspace,
 } from './workspaceAst';
 
 const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot => {
@@ -98,5 +99,16 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     expect(dynamicTable.repeat.itemBinding).toBe('item');
     expect(dynamicTable.columns.length).toBeGreaterThan(0);
     expect(json).toContain('"dynamic-table"');
+  });
+
+  it('hydrates a designer workspace from persisted AST', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+
+    expect(hydrated.nodes.some((node) => node.type === 'field')).toBe(true);
+    expect(hydrated.nodes.some((node) => node.type === 'dynamic-table')).toBe(true);
+    const page = hydrated.nodes.find((node) => node.type === 'page');
+    expect(page?.childIds.length).toBeGreaterThan(0);
   });
 });

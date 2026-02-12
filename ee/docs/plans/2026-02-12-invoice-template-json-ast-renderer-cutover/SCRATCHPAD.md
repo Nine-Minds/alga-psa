@@ -342,3 +342,22 @@ Commands run:
 
 - `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` (pass).
 - `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (fails due existing React 19 test harness issue: `React.act is not a function` from `@testing-library/react`/`react-dom-test-utils` in this environment).
+
+### 2026-02-12 — F013 implemented
+
+- Extended AST utility module (`packages/billing/src/components/invoice-designer/ast/workspaceAst.ts`) with import/hydration support:
+  - `importInvoiceTemplateAstToWorkspace(ast)` builds designer workspace snapshot from persisted AST.
+- Updated `InvoiceTemplateEditor` hydration flow (`packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx`):
+  - prefers `templateAst` payload hydration when available,
+  - falls back to legacy embedded-source/localStorage workspace hydration only if AST hydration is unavailable or fails.
+- Added AST import coverage in `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`.
+- Added editor integration expectation for `templateAst` hydration in `packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx` (execution blocked by existing act-compat issue in current test harness).
+
+Rationale:
+
+- Save/reopen flow should hydrate editor state from canonical AST representation as cutover progresses.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` (pass).
+- `npx vitest run packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx` (editor test files fail due existing `React.act is not a function` harness issue).

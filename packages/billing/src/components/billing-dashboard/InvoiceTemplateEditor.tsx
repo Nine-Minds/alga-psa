@@ -23,6 +23,7 @@ import {
 import {
   exportWorkspaceToInvoiceTemplateAst,
   exportWorkspaceToInvoiceTemplateAstJson,
+  importInvoiceTemplateAstToWorkspace,
 } from '../invoice-designer/ast/workspaceAst';
 
 interface InvoiceTemplateEditorProps {
@@ -136,6 +137,18 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     const hydrationKey = templateId ?? 'new';
     if (designerHydratedFor === hydrationKey) {
       return;
+    }
+
+    const templateAst = (template as Record<string, unknown>)?.templateAst;
+    if (templateAst && typeof templateAst === 'object') {
+      try {
+        const importedWorkspace = importInvoiceTemplateAstToWorkspace(templateAst as any);
+        designerLoadWorkspace(importedWorkspace);
+        setDesignerHydratedFor(hydrationKey);
+        return;
+      } catch {
+        // fall through to legacy hydration paths
+      }
     }
 
     const source = template.assemblyScriptSource ?? '';

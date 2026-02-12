@@ -1,6 +1,10 @@
 import type { InvoiceTemplateAst, InvoiceTemplateNode, InvoiceTemplateTableColumn } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type { DesignerNode, DesignerWorkspaceSnapshot } from '../state/designerStore';
+import { DOCUMENT_NODE_ID } from '../state/designerStore';
+import { getAllowedChildrenForType } from '../state/hierarchy';
+import { getDefinition } from '../constants/componentCatalog';
+import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -293,3 +297,218 @@ export const exportWorkspaceToInvoiceTemplateAst = (
 export const exportWorkspaceToInvoiceTemplateAstJson = (
   workspace: DesignerWorkspaceSnapshot
 ): string => JSON.stringify(exportWorkspaceToInvoiceTemplateAst(workspace), null, 2);
+
+const denormalizeBindingPath = (path: string): string => {
+  const aliases: Record<string, string> = {
+    invoiceNumber: 'invoice.number',
+    issueDate: 'invoice.issueDate',
+    dueDate: 'invoice.dueDate',
+    subtotal: 'invoice.subtotal',
+    tax: 'invoice.tax',
+    total: 'invoice.total',
+    discount: 'invoice.discount',
+    currencyCode: 'invoice.currencyCode',
+    poNumber: 'invoice.poNumber',
+    'customer.name': 'customer.name',
+    'customer.address': 'customer.address',
+    'tenantClient.name': 'tenant.name',
+    'tenantClient.address': 'tenant.address',
+  };
+  return aliases[path] ?? path;
+};
+
+const parseSizeFromStyle = (node: InvoiceTemplateNode): { width: number; height: number } => {
+  const inline = node.style?.inline ?? {};
+  const defaultSize = getDefinition('text')?.defaultSize ?? { width: 180, height: 48 };
+  const parse = (value: unknown, fallback: number): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return Math.max(1, value);
+    }
+    if (typeof value === 'string') {
+      const numeric = Number.parseFloat(value.replace('px', '').trim());
+      if (Number.isFinite(numeric)) {
+        return Math.max(1, numeric);
+      }
+    }
+    return fallback;
+  };
+  return {
+    width: parse(inline.width, defaultSize.width),
+    height: parse(inline.height, defaultSize.height),
+  };
+};
+
+const buildDesignerNode = (
+  node: InvoiceTemplateNode,
+  designerType: DesignerNode['type'],
+  parentId: string,
+  index: number
+): DesignerNode => {
+  const def = getDefinition(designerType);
+  const size = parseSizeFromStyle(node);
+  return {
+    id: node.id,
+    type: designerType,
+    name: node.id,
+    position: { x: 24, y: 24 + index * (size.height + 12) },
+    size: {
+      width: Number.isFinite(size.width) ? size.width : def?.defaultSize.width ?? 220,
+      height: Number.isFinite(size.height) ? size.height : def?.defaultSize.height ?? 56,
+    },
+    baseSize: undefined,
+    canRotate: false,
+    allowResize: true,
+    rotation: 0,
+    metadata: { ...(def?.defaultMetadata ?? {}) },
+    layoutPresetId: undefined,
+    parentId,
+    childIds: [],
+    allowedChildren: getAllowedChildrenForType(designerType),
+    layout: undefined,
+  };
+};
+
+const importAstNode = (
+  node: InvoiceTemplateNode,
+  parentId: string,
+  nodes: DesignerNode[],
+  ast: InvoiceTemplateAst,
+  depthIndex: number
+) => {
+  const typeMap: Partial<Record<InvoiceTemplateNode['type'], DesignerNode['type']>> = {
+    section: 'section',
+    stack: 'container',
+    text: 'text',
+    field: 'field',
+    image: 'image',
+    divider: 'divider',
+    table: 'table',
+    'dynamic-table': 'dynamic-table',
+    totals: 'totals',
+  };
+
+  const designerType = typeMap[node.type];
+  if (!designerType) {
+    return;
+  }
+
+  const nextNode = buildDesignerNode(node, designerType, parentId, depthIndex);
+
+  if (node.type === 'text') {
+    if (node.content.type === 'literal') {
+      nextNode.metadata = {
+        ...(nextNode.metadata ?? {}),
+        text: String(node.content.value ?? ''),
+      };
+      nextNode.name = String(node.content.value ?? nextNode.name);
+    }
+  } else if (node.type === 'field') {
+    const bindingPath =
+      ast.bindings?.values?.[node.binding.bindingId]?.path ??
+      ast.bindings?.collections?.[node.binding.bindingId]?.path ??
+      node.binding.bindingId;
+    nextNode.metadata = {
+      ...(nextNode.metadata ?? {}),
+      bindingKey: denormalizeBindingPath(bindingPath),
+    };
+    if (node.label) {
+      nextNode.name = node.label;
+      nextNode.metadata.label = node.label;
+    }
+  } else if (node.type === 'dynamic-table' || node.type === 'table') {
+    const collectionPath =
+      ast.bindings?.collections?.[node.type === 'dynamic-table'
+        ? node.repeat.sourceBinding.bindingId
+        : node.sourceBinding.bindingId]?.path ?? 'items';
+    nextNode.metadata = {
+      ...(nextNode.metadata ?? {}),
+      collectionBindingKey: denormalizeBindingPath(collectionPath),
+      columns: node.columns.map((column) => ({
+        id: column.id,
+        header: column.header,
+        key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+      })),
+    };
+  }
+
+  nodes.push(nextNode);
+
+  const childNodes = node.type === 'section' || node.type === 'stack' ? node.children : [];
+  childNodes.forEach((child, index) => {
+    importAstNode(child, nextNode.id, nodes, ast, index);
+    nextNode.childIds.push(child.id);
+  });
+};
+
+export const importInvoiceTemplateAstToWorkspace = (
+  ast: InvoiceTemplateAst
+): DesignerWorkspaceSnapshot => {
+  const documentNode: DesignerNode = {
+    id: DOCUMENT_NODE_ID,
+    type: 'document',
+    name: 'Document',
+    position: { x: 0, y: 0 },
+    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+    canRotate: false,
+    allowResize: false,
+    rotation: 0,
+    metadata: {},
+    layoutPresetId: undefined,
+    parentId: null,
+    childIds: ['designer-page-imported'],
+    allowedChildren: getAllowedChildrenForType('document'),
+    layout: {
+      mode: 'flex',
+      direction: 'column',
+      gap: 0,
+      padding: 0,
+      justify: 'start',
+      align: 'stretch',
+      sizing: 'fixed',
+    },
+  };
+
+  const pageNode: DesignerNode = {
+    id: 'designer-page-imported',
+    type: 'page',
+    name: 'Page 1',
+    position: { x: 0, y: 0 },
+    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+    canRotate: false,
+    allowResize: false,
+    rotation: 0,
+    metadata: {},
+    layoutPresetId: undefined,
+    parentId: DOCUMENT_NODE_ID,
+    childIds: [],
+    allowedChildren: getAllowedChildrenForType('page'),
+    layout: {
+      mode: 'flex',
+      direction: 'column',
+      gap: 32,
+      padding: 40,
+      justify: 'start',
+      align: 'stretch',
+      sizing: 'hug',
+    },
+  };
+
+  const nodes: DesignerNode[] = [documentNode, pageNode];
+  const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
+  rootChildren.forEach((child, index) => {
+    importAstNode(child, pageNode.id, nodes, ast, index);
+    pageNode.childIds.push(child.id);
+  });
+
+  return {
+    nodes,
+    constraints: [],
+    snapToGrid: true,
+    gridSize: 8,
+    showGuides: true,
+    showRulers: true,
+    canvasScale: 1,
+  };
+};

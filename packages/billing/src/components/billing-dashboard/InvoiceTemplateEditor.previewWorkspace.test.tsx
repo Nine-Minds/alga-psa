@@ -7,6 +7,7 @@ import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
 import * as persistenceUtils from '../invoice-designer/utils/persistence';
 import type { DesignerWorkspaceSnapshot } from '../invoice-designer/state/designerStore';
+import { exportWorkspaceToInvoiceTemplateAst } from '../invoice-designer/ast/workspaceAst';
 
 const pushMock = vi.fn();
 const getInvoiceTemplateMock = vi.fn();
@@ -94,6 +95,49 @@ const createWorkspaceWithField = (fieldId: string): DesignerWorkspaceSnapshot =>
         childIds: [...node.childIds, fieldId],
       };
     }).concat(fieldNode),
+  };
+};
+
+const createWorkspaceWithFieldAndDynamicTable = (fieldId: string): DesignerWorkspaceSnapshot => {
+  const base = createWorkspaceWithField(fieldId);
+  const pageNode = base.nodes.find((node) => node.type === 'page');
+  if (!pageNode) {
+    return base;
+  }
+  const tableId = `${fieldId}-table`;
+  const tableNode = {
+    id: tableId,
+    type: 'dynamic-table' as const,
+    name: 'Line Items',
+    position: { x: 24, y: 96 },
+    size: { width: 520, height: 220 },
+    canRotate: false,
+    allowResize: true,
+    rotation: 0,
+    metadata: {
+      collectionBindingKey: 'items',
+      columns: [
+        { id: 'col-desc', header: 'Description', key: 'item.description' },
+        { id: 'col-total', header: 'Amount', key: 'item.total' },
+      ],
+    },
+    parentId: pageNode.id,
+    childIds: [],
+    allowedChildren: [],
+  };
+
+  return {
+    ...base,
+    nodes: base.nodes
+      .map((node) =>
+        node.id === pageNode.id
+          ? {
+              ...node,
+              childIds: [...node.childIds, tableId],
+            }
+          : node
+      )
+      .concat(tableNode),
   };
 };
 
@@ -199,6 +243,25 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
 
     await waitFor(() => {
       expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'local-field')).toBe(true);
+    });
+  });
+
+  it('hydrates workspace from persisted templateAst payload', async () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable('ast-field');
+    const astPayload = exportWorkspaceToInvoiceTemplateAst(workspace);
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-ast',
+      name: 'Template AST',
+      assemblyScriptSource: '',
+      templateAst: astPayload,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-ast" />);
+
+    await waitFor(() => {
+      expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.type === 'dynamic-table')).toBe(true);
+      expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'ast-field')).toBe(true);
     });
   });
 
