@@ -55,4 +55,18 @@ describe('invoice PDF generation AST wiring', () => {
     expect(templateActionsSource).not.toContain('executeWasmTemplate(');
     expect(templateActionsSource).not.toContain('renderLayout(');
   });
+
+  it('treats templateAst as canonical in runtime render paths even when legacy columns exist', () => {
+    const serverPdfSource = readServerPdfServiceSource();
+    const templateActionsSource = readInvoiceTemplateActionsSource();
+
+    expect(serverPdfSource).toContain('templateAst');
+    expect(serverPdfSource).toContain('does not include a template AST payload');
+
+    const renderActionBlockStart = templateActionsSource.indexOf('export const renderTemplateOnServer');
+    const renderActionBlock = templateActionsSource.slice(renderActionBlockStart);
+    expect(renderActionBlock).toContain('template.templateAst');
+    expect(renderActionBlock).not.toContain('template.assemblyScriptSource');
+    expect(renderActionBlock).not.toContain('template.wasmBinary');
+  });
 });

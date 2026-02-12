@@ -241,7 +241,7 @@
   {
     "id": "F028",
     "description": "Keep legacy template columns as temporary compatibility fields only if needed while runtime is fully cut over",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]

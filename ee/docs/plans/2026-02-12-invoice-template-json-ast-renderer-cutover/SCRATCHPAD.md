@@ -673,3 +673,21 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/actions/invoiceTemplateCompileParity.test.ts packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts packages/billing/src/actions/invoiceTemplatePreview.inv005.sanity.test.ts packages/billing/src/actions/invoiceLegacyCompilerRemoval.test.ts` (pass).
+
+### 2026-02-12 — F028 implemented
+
+- Defined and verified compatibility behavior where legacy template columns may coexist with canonical AST payloads.
+- Runtime rendering paths now explicitly treat `templateAst` as canonical and do not consume legacy `assemblyScriptSource`/`wasmBinary` columns:
+  - `server/src/services/pdf-generation.service.ts`
+  - `packages/billing/src/actions/invoiceTemplates.ts` (`renderTemplateOnServer`)
+- Extended wiring coverage:
+  - `packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts`
+  - new assertion checks render-action block uses `template.templateAst` and does not depend on legacy runtime columns.
+
+Rationale:
+
+- Legacy columns remain available as temporary scaffolding, but runtime cutover behavior is AST-first and deterministic.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
