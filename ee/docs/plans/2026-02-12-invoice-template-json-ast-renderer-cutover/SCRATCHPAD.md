@@ -13421,3 +13421,8832 @@ Verification:
 Verification:
 
 - `NODE_ENV=test pnpm vitest --coverage.enabled=false packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (pass).
+
+### 2026-02-12 — T003 implemented
+
+- Marked repeat-binding metadata requirements for dynamic tables as implemented.
+- Evidence: packages/billing/src/lib/invoice-template-ast/schema.test.ts::requires repeat binding metadata for dynamic-table nodes
+
+Verification:
+
+-   \ WARN  Unsupported engine: wanted: {"node":">=20 <25"} (current: {"node":"v25.5.0","pnpm":"9.15.9"})
+
+ RUN  v3.2.4 /Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer
+      Running tests with seed "1770926031206"
+
+Environment file path: /Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer/.env.localtest
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts > Tax Rate Changes Mid-Billing Period
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/infrastructure/billing/tax/taxRateChanges.test.ts (1 test | 1 skipped) 20ms 43 MB heap used
+   ↓ Tax Rate Changes Mid-Billing Period > should apply correct tax rates based on charge dates
+ ✓ ee/server/src/__tests__/unit/basic.test.ts (3 tests) 1ms 32 MB heap used
+ ❯ ee/extensions/samples/ui-kit-showcase/test/build.test.ts (1 test | 1 failed) 2ms 33 MB heap used
+   × build output > iframe bundle is generated in ui/dist/iframe 2ms
+     → expected false to be true // Object.is equality
+ ✓ packages/scheduling/tests/serverPageSchedulingProvider.test.ts (1 test) 0ms 57 MB heap used
+ ✓ packages/billing/src/actions/invoiceTemplatePreviewCacheRemoval.test.ts (2 tests) 0ms 57 MB heap used
+ ✓ packages/clients/src/schemas/client.schema.test.ts (4 tests) 1ms 60 MB heap used
+ ❯ packages/auth/src/lib/rbac.test.ts (3 tests | 3 failed) 4ms 62 MB heap used
+   × rbac permission checks > allows internal users to use MSP permissions only 0ms
+     → promise rejected "Error: [vitest] No "runWithTenant" export… { codeFrame: '…' }" instead of resolving
+   × rbac permission checks > allows client users to use client permissions only 3ms
+     → promise rejected "Error: [vitest] No "runWithTenant" export… { codeFrame: '…' }" instead of resolving
+   × rbac permission checks > returns aggregated permission results 0ms
+     → [vitest] No "runWithTenant" export is defined on the "@alga-psa/db" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+ ✓ packages/types/src/interfaces/comment.interface.typecheck.test.ts (1 test) 0ms 63 MB heap used
+stdout | ee/temporal-workflows/src/activities/__tests__/test-file-check.test.ts > Check if file actually gets created > should show file exists after test
+File exists: false
+File path: /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/test-check-gYZTLn/msp/istio-virtualservice.yaml
+
+ ✓ ee/temporal-workflows/src/activities/__tests__/test-file-check.test.ts (1 test) 0ms 64 MB heap used
+stdout | server/src/test/integration/appointmentNotifications.integration.test.ts > Appointment Notification System Integration Tests
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/appointmentNotifications.integration.test.ts > Appointment Notification System Integration Tests
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/appointmentNotifications.integration.test.ts > Appointment Notification System Integration Tests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/appointmentNotifications.integration.test.ts > Appointment Notification System Integration Tests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/appointmentNotifications.integration.test.ts > Appointment Notification System Integration Tests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/appointmentNotifications.integration.test.ts > Appointment Notification System Integration Tests
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/appointmentNotifications.integration.test.ts (29 tests | 29 skipped) 2ms 67 MB heap used
+   ↓ Appointment Notification System Integration Tests > Email Notifications > should send appointment request received email to client
+   ↓ Appointment Notification System Integration Tests > Email Notifications > should send new appointment request email to MSP staff
+   ↓ Appointment Notification System Integration Tests > Email Notifications > should send appointment approved email with correct locale
+   ↓ Appointment Notification System Integration Tests > Email Notifications > should send appointment declined email with reason
+   ↓ Appointment Notification System Integration Tests > Email Notifications > should include tenant settings in all emails
+   ↓ Appointment Notification System Integration Tests > Email Notifications > should replace template variables correctly
+   ↓ Appointment Notification System Integration Tests > Internal Notifications > should create notification for client on request submission
+   ↓ Appointment Notification System Integration Tests > Internal Notifications > should create notifications for MSP staff on request submission
+   ↓ Appointment Notification System Integration Tests > Internal Notifications > should create notification for client on approval
+   ↓ Appointment Notification System Integration Tests > Internal Notifications > should create notification for client on decline
+   ↓ Appointment Notification System Integration Tests > Internal Notifications > should include correct link in notifications
+   ↓ Appointment Notification System Integration Tests > Internal Notifications > should populate metadata correctly for staff notifications
+   ↓ Appointment Notification System Integration Tests > Helper Function Integration > should get correct schedule approvers
+   ↓ Appointment Notification System Integration Tests > Helper Function Integration > should get correct tenant settings
+   ↓ Appointment Notification System Integration Tests > Helper Function Integration > should map contact to client user ID correctly
+   ↓ Appointment Notification System Integration Tests > Helper Function Integration > should return null for non-existent contact
+   ↓ Appointment Notification System Integration Tests > Helper Function Integration > should format dates with correct locale
+   ↓ Appointment Notification System Integration Tests > Helper Function Integration > should format times with correct locale
+   ↓ Appointment Notification System Integration Tests > Multi-Language Notification Support > should send email notifications in different languages
+   ↓ Appointment Notification System Integration Tests > Multi-Language Notification Support > should format dates according to locale in notifications
+   ↓ Appointment Notification System Integration Tests > Multi-Language Notification Support > should default to English when locale is not supported
+   ↓ Appointment Notification System Integration Tests > Cancellation Notifications > should send cancellation notification to client
+   ↓ Appointment Notification System Integration Tests > Cancellation Notifications > should handle cancellation of already cancelled request gracefully
+   ↓ Appointment Notification System Integration Tests > Notification Metadata and Navigation > should include actionable metadata in staff notifications
+   ↓ Appointment Notification System Integration Tests > Notification Metadata and Navigation > should include appropriate links for client notifications
+   ↓ Appointment Notification System Integration Tests > Notification Metadata and Navigation > should set correct notification types for different events
+   ↓ Appointment Notification System Integration Tests > Error Handling and Edge Cases > should handle missing email addresses gracefully
+   ↓ Appointment Notification System Integration Tests > Error Handling and Edge Cases > should batch notifications to multiple staff members efficiently
+   ↓ Appointment Notification System Integration Tests > Error Handling and Edge Cases > should include all required data fields in notifications
+ ✓ packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts (3 tests) 0ms 67 MB heap used
+ ❯ ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts (11 tests | 10 failed) 4393ms 108 MB heap used
+   × Email Activities - Temporal Unit Tests > Password Generation with Temporal Context > should generate secure passwords with proper entropy 0ms
+     → expected Promise{…} to have property 'length'
+   × Email Activities - Temporal Unit Tests > Password Generation with Temporal Context > should handle various password lengths correctly 1ms
+     → expected Promise{…} to have property 'length'
+   ✓ Email Activities - Temporal Unit Tests > Password Generation with Temporal Context > should ensure consistent randomness across calls 0ms
+   × Email Activities - Temporal Unit Tests > Email Activity Direct Testing > should send welcome email with valid input 0ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Email Activity Direct Testing > should handle invalid email addresses gracefully 0ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Email Activity Direct Testing > should handle empty email addresses 0ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Email Activity Direct Testing > should work with minimal required fields 0ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Email Template Generation > should generate proper email content structure 0ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Email Template Generation > should handle template variable substitution 1ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Error Handling and Resilience > should not throw exceptions on failure 0ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Temporal Unit Tests > Error Handling and Resilience > should handle missing required fields gracefully 0ms
+     → Cannot read properties of undefined (reading 'info')
+ ✓ packages/billing/src/lib/invoice-template-ast/schema.test.ts (5 tests) 3ms 116 MB heap used
+ ❯ server/src/test/unit/scheduling/actionGuardWiring.test.ts (7 tests | 4 failed) 2ms 119 MB heap used
+   ✓ delegation guard wiring (static) > fetchTimePeriods enforces delegation via assertCanActOnBehalf 0ms
+   ✓ delegation guard wiring (static) > fetchOrCreateTimeSheet enforces delegation via assertCanActOnBehalf 0ms
+   × delegation guard wiring (static) > fetchTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf 0ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /export const fetchTimeSheet[\\s\\S]*a…/
+   × delegation guard wiring (static) > fetchTimeEntriesForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf 0ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /export const fetchTimeEntriesForTimeS…/
+   × delegation guard wiring (static) > fetchWorkItemsForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf 0ms
+     → expected '\'use server\'\n\nimport { Knex } fro…' to match /export const fetchWorkItemsForTimeShe…/
+   ✓ delegation guard wiring (static) > reopen/reverse approval is blocked when a timesheet contains invoiced entries 0ms
+   × delegation guard wiring (static) > reopen/reverse approval transitions timesheet and entries to CHANGES_REQUESTED 1ms
+     → expected '\'use server\'\n\nimport {\n  ITimeEn…' to match /reverseTimeSheetApproval[\\s\\S]*appr…/
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/infrastructure/time-periods/timePeriodsActions.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ ee/temporal-workflows/src/test-utils/test-connection.test.ts (3 tests | 1 failed) 122ms 170 MB heap used
+   ✓ Temporal Connection Tests > should connect to temporalio/auto-setup Docker container 9ms
+   ✓ Temporal Connection Tests > should create TestWorkflowEnvironment for unit tests 110ms
+   × Temporal Connection Tests > should verify Docker Postgres connection 3ms
+     → 
+ ✓ ee/server/src/__tests__/unit/invoicingHostApi.unit.test.ts (4 tests) 3ms 172 MB heap used
+stdout | packages/billing/src/lib/adapters/invoiceAdapters.test.ts > mapDbInvoiceToWasmViewModel > maps tenant snapshot details when provided by the invoice query payload
+[mapDbInvoiceToWasmViewModel] Received Data: {
+  "invoice_number": "INV-601",
+  "invoice_date": "2026-02-06",
+  "due_date": "2026-02-20",
+  "currency_code": "USD",
+  "client": {
+    "name": "Blue Harbor Dental",
+    "address": "901 Harbor Ave"
+  },
+  "tenantClientInfo": {
+    "client_name": "Northwind MSP",
+    "location_address": "400 SW Main St",
+    "logo_url": "https://cdn.example.com/logo.png"
+  },
+  "invoice_charges": [],
+  "subtotal": 0,
+  "tax": 0,
+  "total": 0
+}
+[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...
+[mapDbInvoiceToWasmViewModel] Mapped ViewModel: {
+  "invoiceNumber": "INV-601",
+  "issueDate": "2026-02-06",
+  "dueDate": "2026-02-20",
+  "customer": {
+    "name": "Blue Harbor Dental",
+    "address": "901 Harbor Ave"
+  },
+  "poNumber": null,
+  "tenantClient": {
+    "name": "Northwind MSP",
+    "address": "400 SW Main St",
+    "logoUrl": "https://cdn.example.com/logo.png"
+  },
+  "items": [],
+  "subtotal": 0,
+  "tax": 0,
+  "total": 0,
+  "taxSource": "internal",
+  "currencyCode": "USD"
+}
+
+stdout | packages/billing/src/lib/adapters/invoiceAdapters.test.ts > mapDbInvoiceToWasmViewModel > handles nullable/partial values safely
+[mapDbInvoiceToWasmViewModel] Received Data: {
+  "invoice_number": null,
+  "invoice_date": null,
+  "due_date": null,
+  "client": {
+    "name": null,
+    "address": null
+  },
+  "invoice_charges": [
+    {
+      "item_id": null,
+      "description": null,
+      "quantity": null,
+      "unit_price": null,
+      "total_price": null
+    }
+  ],
+  "subtotal": null,
+  "tax": null,
+  "total": null
+}
+[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...
+[mapDbInvoiceToWasmViewModel] Mapped ViewModel: {
+  "invoiceNumber": "N/A",
+  "issueDate": "",
+  "dueDate": "",
+  "customer": {
+    "name": "N/A",
+    "address": "N/A"
+  },
+  "poNumber": null,
+  "tenantClient": null,
+  "items": [
+    {
+      "id": "",
+      "description": "",
+      "quantity": 0,
+      "unitPrice": 0,
+      "total": 0
+    }
+  ],
+  "subtotal": 0,
+  "tax": 0,
+  "total": 0,
+  "taxSource": "internal",
+  "currencyCode": "USD"
+}
+
+stdout | packages/billing/src/lib/adapters/invoiceAdapters.test.ts > mapDbInvoiceToWasmViewModel > keeps canonical minor-unit payloads unchanged
+[mapDbInvoiceToWasmViewModel] Received Data: {
+  "invoice_number": "INV-2026-0147",
+  "invoice_date": "2026-02-06",
+  "due_date": "2026-02-20",
+  "currency_code": "USD",
+  "client": {
+    "name": "Blue Harbor Dental",
+    "address": "901 Harbor Ave"
+  },
+  "invoice_charges": [
+    {
+      "item_id": "svc-monitoring",
+      "description": "Managed Endpoint Monitoring",
+      "quantity": 15,
+      "unit_price": 4200,
+      "total_price": 63000
+    }
+  ],
+  "subtotal": 87000,
+  "tax": 7830,
+  "total": 94830
+}
+[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...
+[mapDbInvoiceToWasmViewModel] Mapped ViewModel: {
+  "invoiceNumber": "INV-2026-0147",
+  "issueDate": "2026-02-06",
+  "dueDate": "2026-02-20",
+  "customer": {
+    "name": "Blue Harbor Dental",
+    "address": "901 Harbor Ave"
+  },
+  "poNumber": null,
+  "tenantClient": null,
+  "items": [
+    {
+      "id": "svc-monitoring",
+      "description": "Managed Endpoint Monitoring",
+      "quantity": 15,
+      "unitPrice": 4200,
+      "total": 63000
+    }
+  ],
+  "subtotal": 87000,
+  "tax": 7830,
+  "total": 94830,
+  "taxSource": "internal",
+  "currencyCode": "USD"
+}
+
+stdout | packages/billing/src/lib/adapters/invoiceAdapters.test.ts > mapDbInvoiceToWasmViewModel > normalizes legacy existing-invoice major-unit payloads into minor units
+[mapDbInvoiceToWasmViewModel] Received Data: {
+  "invoice_number": "INV-005",
+  "invoice_date": "2026-01-01",
+  "due_date": "2026-02-16",
+  "currency_code": "USD",
+  "client": {
+    "name": "Emerald City",
+    "address": "1010 Emerald Street"
+  },
+  "invoice_charges": [
+    {
+      "item_id": "line-1",
+      "description": "Premium Rabbit Tracking Services",
+      "quantity": 50,
+      "unit_price": 125,
+      "total_price": 6250
+    },
+    {
+      "item_id": "line-2",
+      "description": "Monthly Looking Glass Maintenance",
+      "quantity": 1,
+      "unit_price": 1250,
+      "total_price": 1250
+    }
+  ],
+  "subtotal": 0,
+  "tax": 0,
+  "total": 7500
+}
+[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...
+[mapDbInvoiceToWasmViewModel] Mapped ViewModel: {
+  "invoiceNumber": "INV-005",
+  "issueDate": "2026-01-01",
+  "dueDate": "2026-02-16",
+  "customer": {
+    "name": "Emerald City",
+    "address": "1010 Emerald Street"
+  },
+  "poNumber": null,
+  "tenantClient": null,
+  "items": [
+    {
+      "id": "line-1",
+      "description": "Premium Rabbit Tracking Services",
+      "quantity": 50,
+      "unitPrice": 12500,
+      "total": 625000
+    },
+    {
+      "id": "line-2",
+      "description": "Monthly Looking Glass Maintenance",
+      "quantity": 1,
+      "unitPrice": 125000,
+      "total": 125000
+    }
+  ],
+  "subtotal": 750000,
+  "tax": 0,
+  "total": 750000,
+  "taxSource": "internal",
+  "currencyCode": "USD"
+}
+
+stdout | packages/billing/src/lib/adapters/invoiceAdapters.test.ts > mapDbInvoiceToWasmViewModel > keeps tenant snapshot null when tenant details are not present
+[mapDbInvoiceToWasmViewModel] Received Data: {
+  "invoice_number": "INV-602",
+  "invoice_date": "2026-02-06",
+  "due_date": "2026-02-20",
+  "currency_code": "USD",
+  "client": {
+    "name": "Blue Harbor Dental",
+    "address": "901 Harbor Ave"
+  },
+  "invoice_charges": [],
+  "subtotal": 0,
+  "tax": 0,
+  "total": 0
+}
+[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...
+[mapDbInvoiceToWasmViewModel] Mapped ViewModel: {
+  "invoiceNumber": "INV-602",
+  "issueDate": "2026-02-06",
+  "dueDate": "2026-02-20",
+  "customer": {
+    "name": "Blue Harbor Dental",
+    "address": "901 Harbor Ave"
+  },
+  "poNumber": null,
+  "tenantClient": null,
+  "items": [],
+  "subtotal": 0,
+  "tax": 0,
+  "total": 0,
+  "taxSource": "internal",
+  "currencyCode": "USD"
+}
+
+stdout | packages/billing/src/lib/adapters/invoiceAdapters.test.ts > mapDbInvoiceToWasmViewModel > maps db invoice payload numeric and string fields into wasm preview model
+[mapDbInvoiceToWasmViewModel] Received Data: {
+  "invoice_number": "INV-500",
+  "invoice_date": "2026-02-01",
+  "due_date": "2026-02-15",
+  "currency_code": "USD",
+  "po_number": "PO-1",
+  "tax_source": "internal",
+  "client": {
+    "name": "Acme",
+    "address": "123 Main"
+  },
+  "invoice_charges": [
+    {
+      "item_id": "item-1",
+      "description": "Managed Service",
+      "quantity": "2",
+      "unit_price": "1000",
+      "total_price": "2000"
+    }
+  ],
+  "subtotal": "2000",
+  "tax": "100",
+  "total": "2100"
+}
+[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...
+[mapDbInvoiceToWasmViewModel] Mapped ViewModel: {
+  "invoiceNumber": "INV-500",
+  "issueDate": "2026-02-01",
+  "dueDate": "2026-02-15",
+  "customer": {
+    "name": "Acme",
+    "address": "123 Main"
+  },
+  "poNumber": "PO-1",
+  "tenantClient": null,
+  "items": [
+    {
+      "id": "item-1",
+      "description": "Managed Service",
+      "quantity": 2,
+      "unitPrice": 1000,
+      "total": 2000
+    }
+  ],
+  "subtotal": 2000,
+  "tax": 100,
+  "total": 2100,
+  "taxSource": "internal",
+  "currencyCode": "USD"
+}
+
+ ✓ packages/billing/src/lib/adapters/invoiceAdapters.test.ts (6 tests) 1ms 152 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts (3 tests) 1ms 159 MB heap used
+ ✓ server/src/test/unit/migrations/timeEntriesAuditColumns.test.ts (2 tests) 0ms 160 MB heap used
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | ee/server/src/lib/extensions/__tests__/registry-v2.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ↓ ee/server/src/lib/extensions/__tests__/registry-v2.test.ts (5 tests | 5 skipped)
+ ✓ server/src/test/unit/menuConfig.experimentalFeatures.test.ts (1 test) 0ms 186 MB heap used
+ ✓ server/src/test/unit/workflowRunDialogEventUtils.test.ts (3 tests) 1ms 187 MB heap used
+ ✓ packages/tickets/src/lib/__tests__/ticketOriginCreatePath.test.ts (5 tests) 2ms 193 MB heap used
+ ✓ packages/auth/src/components/ssoProviderButtonsImport.test.ts (1 test) 0ms 195 MB heap used
+ ❯ server/src/test/integration/payments/stripePaymentIntegration.test.ts (21 tests | 21 skipped) 1ms 197 MB heap used
+   ↓ Stripe Payment Integration - Vulnerability Tests > Race Condition in Concurrent Webhook Processing > should correctly update invoice status when processing concurrent webhooks
+   ↓ Stripe Payment Integration - Vulnerability Tests > Race Condition in Concurrent Webhook Processing > should handle duplicate webhook events idempotently
+   ↓ Stripe Payment Integration - Vulnerability Tests > Tenant Isolation Vulnerabilities > should expose tenant isolation gap when webhook contains different tenant_id
+   ↓ Stripe Payment Integration - Vulnerability Tests > Tenant Isolation Vulnerabilities > should prevent cross-tenant payment recording
+   ↓ Stripe Payment Integration - Vulnerability Tests > Missing Amount and Currency Validation > should accept partial payments and update invoice status appropriately
+   ↓ Stripe Payment Integration - Vulnerability Tests > Missing Amount and Currency Validation > should reject payment in different currency than invoice
+   ↓ Stripe Payment Integration - Vulnerability Tests > Missing Refund Handling > should update invoice status when payment is refunded
+   ↓ Stripe Payment Integration - Vulnerability Tests > Missing Refund Handling > should track partial refunds and update invoice balance
+   ↓ Stripe Payment Integration - Vulnerability Tests > Invoice Status Transition Issues > should reject payments for cancelled invoices
+   ↓ Stripe Payment Integration - Vulnerability Tests > Invoice Status Transition Issues > should reject payments for draft invoices
+   ↓ Stripe Payment Integration - Vulnerability Tests > Webhook Error Handling Gaps > should properly report errors for webhooks referencing non-existent invoices
+   ↓ Stripe Payment Integration - Vulnerability Tests > Webhook Error Handling Gaps > should record webhook events for valid invoices
+   ↓ Stripe Payment Integration - Vulnerability Tests > Payment Link Expiration Issues > should expose payment link expiration beyond Stripe limit
+   ↓ Stripe Payment Integration - Vulnerability Tests > Payment Link Expiration Issues > should expose expired payment links remaining in active status
+   ↓ Stripe Payment Integration - Vulnerability Tests > Integer Overflow and Precision Issues > should expose potential precision loss with large payment amounts
+   ↓ Stripe Payment Integration - Vulnerability Tests > Customer Sharing Vulnerability > should expose potential customer sharing across tenants
+   ↓ Stripe Payment Integration - Vulnerability Tests > BUG: Wrong Redirect URLs in Payment Links > should generate correct client portal redirect URLs
+   ↓ Stripe Payment Integration - Vulnerability Tests > BUG: Refund Events Not Parsed Correctly > should parse charge.refunded events with correct amount and currency
+   ↓ Stripe Payment Integration - Vulnerability Tests > BUG: Refund Events Not Parsed Correctly > should process charge.refunded webhook and record refund
+   ↓ Stripe Payment Integration - Vulnerability Tests > BUG: sessionId Parameter Not Used in Verification > should verify the specific session, not just invoice status
+   ↓ Stripe Payment Integration - Vulnerability Tests > BUG: Incorrect Payment Method Recording > should record payment method as "stripe" not "stripe_stripe"
+ ✓ server/src/test/unit/workflowsEntryTypingGuard.unit.test.ts (2 tests) 0ms 201 MB heap used
+stdout | ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts > buildExtUiSrc > appends tenant when provided
+[ext-ui][buildExtUiSrc] {
+  extensionId: 'ext-1',
+  mode: 'rust',
+  clientPath: '/',
+  tenantId: 'tenant-123',
+  overrideBase: null,
+  runnerBase: undefined,
+  publicBase: '/runner'
+}
+
+stdout | ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts > buildExtUiSrc > supports relative public base for gateway proxy
+[ext-ui][buildExtUiSrc] {
+  extensionId: 'ext-1',
+  mode: 'rust',
+  clientPath: '/',
+  tenantId: undefined,
+  overrideBase: null,
+  runnerBase: '/runner',
+  publicBase: '/runner'
+}
+
+stdout | ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts > buildExtUiSrc > uses absolute public base when provided
+[ext-ui][buildExtUiSrc] {
+  extensionId: 'ext-1',
+  mode: 'rust',
+  clientPath: '/settings',
+  tenantId: undefined,
+  overrideBase: null,
+  runnerBase: 'https://runner.dev/alga',
+  publicBase: 'https://runner.dev/alga'
+}
+
+stdout | ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts > buildExtUiSrc > honors public base override
+[ext-ui][buildExtUiSrc] {
+  extensionId: 'ext-1',
+  mode: 'rust',
+  clientPath: '/',
+  tenantId: 'tenant-123',
+  overrideBase: 'http://localhost:8085',
+  runnerBase: undefined,
+  publicBase: 'http://localhost:8085'
+}
+
+stdout | ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts > buildExtUiSrc > falls back to /runner when no public base is set
+[ext-ui][buildExtUiSrc] {
+  extensionId: 'ext-1',
+  mode: 'rust',
+  clientPath: '/',
+  tenantId: undefined,
+  overrideBase: null,
+  runnerBase: undefined,
+  publicBase: '/runner'
+}
+
+ ✓ ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts (5 tests) 1ms 204 MB heap used
+ ❯ shared/workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts (6 tests | 5 failed) 15ms 214 MB heap used
+   × createCommentFromEmail response source metadata > T002: persists metadata.responseSource=inbound_email 0ms
+     → trx is not a function
+   × createCommentFromEmail response source metadata > T003: includes normalized provider type when available 0ms
+     → trx is not a function
+   × createCommentFromEmail response source metadata > google inbound flow resolves to inbound_email metadata source (T017) 0ms
+     → trx is not a function
+   × createCommentFromEmail response source metadata > microsoft inbound flow resolves to inbound_email metadata source (T018) 0ms
+     → trx is not a function
+   × createCommentFromEmail response source metadata > imap inbound flow resolves to inbound_email metadata source (T019) 15ms
+     → trx is not a function
+   ✓ createCommentFromEmail response source metadata > T020: keeps comment response-state semantics unchanged (still non-internal) 0ms
+ ✓ tools/nx-tests/nxWorkspace.test.ts (3 tests) 16520ms 216 MB heap used
+   ✓ nx workspace > initializes and lists projects  423ms
+   ✓ nx workspace > can generate an nx graph html file  15535ms
+   ✓ nx workspace > runs the alga-module generator in dry-run mode  560ms
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts > Internal Notification Preferences (integration)
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/internal-notifications/notificationPreferences.integration.test.ts (5 tests | 5 skipped) 34ms 109 MB heap used
+   ↓ Internal Notification Preferences (integration) > creates a notification when preferences allow it
+   ↓ Internal Notification Preferences (integration) > does not create a notification when category preference is disabled
+   ↓ Internal Notification Preferences (integration) > allows subtype preference to override disabled category
+   ↓ Internal Notification Preferences (integration) > renders notification using user locale when localized template exists
+   ↓ Internal Notification Preferences (integration) > falls back to English template while preserving user locale when translation is missing
+ ↓ server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts (11 tests | 11 skipped)
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Shutdown > should cleanup on shutdown
+[DelayedEmailQueue] Processing loop started { intervalMs: 10000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 10000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Shutdown > should cleanup on shutdown
+[DelayedEmailQueue] Shutting down...
+[DelayedEmailQueue] Shutdown complete
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should not process emails that are not ready yet
+[DelayedEmailQueue] Processing loop started { intervalMs: 100000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 100000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process one email per tenant for fair scheduling
+[DelayedEmailQueue] Processing loop started { intervalMs: 100000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 100000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process one email per tenant for fair scheduling
+[DelayedEmailQueue] Found ready emails { count: 5 }
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process one email per tenant for fair scheduling
+[DelayedEmailQueue] Processing queued email {
+  id: 't1-email-1',
+  tenantId: 'tenant-1',
+  to: 'user1@tenant1.com',
+  retryCount: 1
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process one email per tenant for fair scheduling
+[DelayedEmailQueue] Processing queued email {
+  id: 't2-email-1',
+  tenantId: 'tenant-2',
+  to: 'user1@tenant2.com',
+  retryCount: 1
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process one email per tenant for fair scheduling
+[DelayedEmailQueue] Processing cycle complete { processedCount: 2, durationMs: 0 }
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process emails that are ready
+[DelayedEmailQueue] Processing loop started { intervalMs: 100000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 100000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process emails that are ready
+[DelayedEmailQueue] Found ready emails { count: 1 }
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process emails that are ready
+[DelayedEmailQueue] Processing queued email {
+  id: 'test-id-1',
+  tenantId: 'tenant-1',
+  to: 'test@example.com',
+  retryCount: 1
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Process Ready > should process emails that are ready
+[DelayedEmailQueue] Processing cycle complete { processedCount: 1, durationMs: 0 }
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Stats > should return zero when queue is empty
+[DelayedEmailQueue] Processing loop started { intervalMs: 10000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 10000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Stats > should return pending count
+[DelayedEmailQueue] Processing loop started { intervalMs: 10000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 10000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Retry Count Tracking > should increment retry count on each processing
+[DelayedEmailQueue] Processing loop started { intervalMs: 100000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 100000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Retry Count Tracking > should increment retry count on each processing
+[DelayedEmailQueue] Found ready emails { count: 1 }
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Retry Count Tracking > should increment retry count on each processing
+[DelayedEmailQueue] Processing queued email {
+  id: 'test-id-1',
+  tenantId: 'tenant-1',
+  to: 'test@example.com',
+  retryCount: 3
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Retry Count Tracking > should increment retry count on each processing
+[DelayedEmailQueue] Processing cycle complete { processedCount: 1, durationMs: 1 }
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Enqueue > should enqueue email with correct delay
+[DelayedEmailQueue] Processing loop started { intervalMs: 10000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 10000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Enqueue > should enqueue email with correct delay
+[DelayedEmailQueue] Email enqueued for retry {
+  id: '1770926054867-gxjbfn9vg',
+  tenantId: 'tenant-1',
+  to: 'test@example.com',
+  retryCount: 0,
+  readyAt: '2026-02-12T19:55:19.349Z',
+  delayMs: 64482
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Initialization > should warn if initialized twice
+[DelayedEmailQueue] Processing loop started { intervalMs: 10000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 10000
+}
+
+stdout | server/src/test/unit/notifications/delayedEmailQueue.test.ts > DelayedEmailQueue > Initialization > should initialize with Redis client and callback
+[DelayedEmailQueue] Processing loop started { intervalMs: 10000 }
+[DelayedEmailQueue] Initialized successfully {
+  maxRetries: 5,
+  baseDelayMs: 60000,
+  maxDelayMs: 900000,
+  checkIntervalMs: 10000
+}
+
+ ✓ server/src/test/unit/notifications/delayedEmailQueue.test.ts (18 tests) 3ms 111 MB heap used
+stdout | sdk/samples/component/secrets-demo/tests/handler.test.ts > handler > echoes secrets and config
+[mock logging] [secrets-demo] request start tenant=tenant-123 requestId=req-1 method=GET url=/demo configKeys=1 secrets=1 build=2025-11-11T17:34:00Z
+
+stdout | sdk/samples/component/secrets-demo/tests/handler.test.ts > handler > echoes secrets and config
+[mock logging] [secrets-demo] greeting secret resolved; emitting response
+
+stdout | sdk/samples/component/secrets-demo/tests/handler.test.ts > handler > echoes secrets and config
+[mock logging] [secrets-demo] request complete requestId=req-1 status=200 build=2025-11-11T17:34:00Z
+
+ ✓ sdk/samples/component/secrets-demo/tests/handler.test.ts (1 test) 0ms 113 MB heap used
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts > Asset import integration
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts > Asset import integration
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts > Asset import integration
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/imports/importWorkflow.integration.test.ts > Asset import integration
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/imports/importWorkflow.integration.test.ts (3 tests | 3 skipped) 2ms 132 MB heap used
+   ↓ Asset import integration > registers default CSV/RMM importers in the database
+   ↓ Asset import integration > generates preview summaries with validation and duplicate detection for N-able exports
+   ↓ Asset import integration > detects duplicates via MAC normalization and fuzzy hostname matches
+ ✓ ee/server/extensions/samples/ui-kit-showcase/test/scaffold.test.ts (8 tests) 1ms 134 MB heap used
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/calendar/webhookProcessing.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Initializing event bus
+[EventBus] Creating new Redis client
+[RedisConfig] Using configuration: {
+  url: 'redis://localhost:6379',
+  prefix: 'alga-psa:',
+  eventBus: {
+    streamPrefix: 'event-stream:',
+    consumerGroup: 'event-processors',
+    maxStreamLength: 1000,
+    blockingTimeout: 5000,
+    claimTimeout: 30000,
+    batchSize: 10,
+    reconnectStrategy: { retries: 10, initialDelay: 100, maxDelay: 3000 }
+  }
+}
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+CompositeSecretProvider found app secret 'redis_password' from provider 1
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+Retrieved secret 'redis_password' from configured provider.
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Redis Client Connected
+[EventBus] Redis Client Ready
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_CREATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_UPDATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_CLOSED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_DELETED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_ASSIGNED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_ADDITIONAL_AGENT_ASSIGNED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_COMMENT_ADDED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_COMMENT_UPDATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_RESPONSE_STATE_CHANGED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_STATUS_CHANGED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_PRIORITY_CHANGED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_UNASSIGNED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_REOPENED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_ESCALATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_QUEUE_CHANGED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_MESSAGE_ADDED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_CUSTOMER_REPLIED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_INTERNAL_NOTE_ADDED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_SLA_STAGE_ENTERED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_SLA_STAGE_MET
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TICKET_SLA_STAGE_BREACHED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:PROJECT_CREATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:PROJECT_UPDATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:PROJECT_CLOSED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:PROJECT_ASSIGNED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:PROJECT_TASK_ASSIGNED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TASK_COMMENT_ADDED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TASK_COMMENT_UPDATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TIME_ENTRY_SUBMITTED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:TIME_ENTRY_APPROVED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:INVOICE_GENERATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:INVOICE_FINALIZED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:CUSTOM_EVENT
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:INBOUND_EMAIL_RECEIVED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:ACCOUNTING_EXPORT_COMPLETED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:ACCOUNTING_EXPORT_FAILED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:SCHEDULE_ENTRY_CREATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:SCHEDULE_ENTRY_UPDATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:SCHEDULE_ENTRY_DELETED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:CALENDAR_SYNC_STARTED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:CALENDAR_SYNC_COMPLETED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:CALENDAR_SYNC_FAILED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:CALENDAR_CONFLICT_DETECTED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:MESSAGE_SENT
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:USER_MENTIONED_IN_DOCUMENT
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:APPOINTMENT_REQUEST_CREATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:APPOINTMENT_REQUEST_APPROVED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:APPOINTMENT_REQUEST_DECLINED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:APPOINTMENT_REQUEST_CANCELLED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_DEVICE_CREATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_DEVICE_UPDATED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_DEVICE_DELETED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_DEVICE_ONLINE
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_DEVICE_OFFLINE
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_ALERT_TRIGGERED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_ALERT_RESOLVED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_SYNC_STARTED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_SYNC_COMPLETED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_SYNC_FAILED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Created consumer group for stream: alga-psa:event-stream:global:RMM_WEBHOOK_RECEIVED
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] No active subscriptions, waiting for handlers to be registered
+
+stdout | packages/event-bus/src/index.hardTimeout.test.ts > EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout
+[EventBus] Added handler: {
+  eventType: 'TICKET_CREATED',
+  channel: 'global',
+  handlerName: '',
+  handlersCount: 1
+}
+
+ ❯ packages/event-bus/src/index.hardTimeout.test.ts (1 test | 1 failed) 34ms 209 MB heap used
+   × EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout 34ms
+     → expected 1 to be greater than or equal to 2
+✔ T001: fails with clear error when --test is missing (51.485041ms)
+✔ T002: fails with clear error when bundle.json is missing (48.800541ms)
+✔ T003: fails with clear error when test.cjs is missing (46.599083ms)
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/auditTrail.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/tickets.e2e.test.ts > Ticket API E2E Tests
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/e2e/api/tickets.e2e.test.ts > Ticket API E2E Tests
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/e2e/api/tickets.e2e.test.ts > Ticket API E2E Tests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/tickets.e2e.test.ts > Ticket API E2E Tests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/tickets.e2e.test.ts > Ticket API E2E Tests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/tickets.e2e.test.ts > Ticket API E2E Tests
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/e2e/api/tickets.e2e.test.ts (47 tests | 47 skipped) 2ms 275 MB heap used
+   ↓ Ticket API E2E Tests > Authentication > should require API key for all endpoints
+   ↓ Ticket API E2E Tests > Authentication > should reject invalid API key
+   ↓ Ticket API E2E Tests > CRUD Operations > Create Ticket (POST /api/v1/tickets) > should create a new ticket
+   ↓ Ticket API E2E Tests > CRUD Operations > Create Ticket (POST /api/v1/tickets) > should validate required fields
+   ↓ Ticket API E2E Tests > CRUD Operations > Create Ticket (POST /api/v1/tickets) > should create ticket with all optional fields
+   ↓ Ticket API E2E Tests > CRUD Operations > Get Ticket (GET /api/v1/tickets/:id) > should retrieve a ticket by ID
+   ↓ Ticket API E2E Tests > CRUD Operations > Get Ticket (GET /api/v1/tickets/:id) > should return 404 for non-existent ticket
+   ↓ Ticket API E2E Tests > CRUD Operations > Get Ticket (GET /api/v1/tickets/:id) > should not return tickets from other tenants
+   ↓ Ticket API E2E Tests > CRUD Operations > Update Ticket (PUT /api/v1/tickets/:id) > should update a ticket
+   ↓ Ticket API E2E Tests > CRUD Operations > Update Ticket (PUT /api/v1/tickets/:id) > should return 404 when updating non-existent ticket
+   ↓ Ticket API E2E Tests > CRUD Operations > Update Ticket (PUT /api/v1/tickets/:id) > should validate update data
+   ↓ Ticket API E2E Tests > CRUD Operations > Delete Ticket (DELETE /api/v1/tickets/:id) > should delete a ticket
+   ↓ Ticket API E2E Tests > CRUD Operations > Delete Ticket (DELETE /api/v1/tickets/:id) > should return 404 when deleting non-existent ticket
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should list all tickets with default pagination
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should support pagination parameters
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should filter by client_id
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should filter by status
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should filter by priority
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should filter by assigned user
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should filter overdue tickets
+   ↓ Ticket API E2E Tests > List Tickets (GET /api/v1/tickets) > should sort tickets by created date
+   ↓ Ticket API E2E Tests > Search Tickets (GET /api/v1/tickets/search) > should search tickets by query
+   ↓ Ticket API E2E Tests > Search Tickets (GET /api/v1/tickets/search) > should search in specified fields
+   ↓ Ticket API E2E Tests > Search Tickets (GET /api/v1/tickets/search) > should limit search results
+   ↓ Ticket API E2E Tests > Ticket Comments (POST /api/v1/tickets/:id/comments) > should add a comment to a ticket
+   ↓ Ticket API E2E Tests > Ticket Comments (POST /api/v1/tickets/:id/comments) > should add an internal comment
+   ↓ Ticket API E2E Tests > Ticket Comments (POST /api/v1/tickets/:id/comments) > should list ticket comments
+   ↓ Ticket API E2E Tests > Ticket Comments (POST /api/v1/tickets/:id/comments) > should return 404 when adding comment to non-existent ticket
+   ↓ Ticket API E2E Tests > Ticket Status Updates (PUT /api/v1/tickets/:id/status) > should update ticket status
+   ↓ Ticket API E2E Tests > Ticket Status Updates (PUT /api/v1/tickets/:id/status) > should validate status transitions
+   ↓ Ticket API E2E Tests > Ticket Assignment (PUT /api/v1/tickets/:id/assignment) > should assign ticket to user
+   ↓ Ticket API E2E Tests > Ticket Assignment (PUT /api/v1/tickets/:id/assignment) > should unassign ticket
+   ↓ Ticket API E2E Tests > Ticket Statistics (GET /api/v1/tickets/stats) > should return ticket statistics
+   ↓ Ticket API E2E Tests > Ticket Statistics (GET /api/v1/tickets/stats) > should filter statistics by date range
+   ↓ Ticket API E2E Tests > Ticket Statistics (GET /api/v1/tickets/stats) > should filter statistics by client
+   ↓ Ticket API E2E Tests > Create Ticket from Asset (POST /api/v1/tickets/from-asset) > should create ticket from asset
+   ↓ Ticket API E2E Tests > Error Handling > should handle invalid UUID format
+   ↓ Ticket API E2E Tests > Error Handling > should handle invalid query parameters
+   ↓ Ticket API E2E Tests > Error Handling > should handle missing required fields on create
+   ↓ Ticket API E2E Tests > Error Handling > should handle invalid date formats
+   ↓ Ticket API E2E Tests > Permissions > should enforce read permissions for GET endpoints
+   ↓ Ticket API E2E Tests > Permissions > should enforce write permissions for POST/PUT/DELETE
+   ↓ Ticket API E2E Tests > Permissions > should enforce assignment permissions
+   ↓ Ticket API E2E Tests > Multi-tenancy > should isolate tickets by tenant
+   ↓ Ticket API E2E Tests > Advanced Features > should support bulk operations
+   ↓ Ticket API E2E Tests > Advanced Features > should support ticket templates
+   ↓ Ticket API E2E Tests > Advanced Features > should track ticket history
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/ticketPermissions.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/invoiceTemplates/standardTemplatePoNumber.test.ts > Standard invoice template PO header > T010: default template renders PO number in header only when invoice has po_number
+Input JSON to WASM: {"invoiceNumber":"INV-PO","issueDate":"2025-01-01","dueDate":"2025-02-01","currencyCode":"USD","customer":{"name":"Alpha Co","address":"1 Test St"},"tenantClient":{"name":"Tenant","address":"Tenant Address","logoUrl":null},"items":[{"id":"1","description":"Service","quantity":1,"unitPrice":100,"total":100}],"subtotal":100,"tax":0,"total":100,"poNumber":"PO-XYZ"}
+[Wasm Log]: Wasm (standard-default): Received data string.
+[Wasm Log]: Wasm (standard-default): Deserialized Invoice #: INV-PO
+[Wasm Log]: Wasm (standard-default): Serializing layout...
+[Wasm Log]: Wasm (standard-default): Returning serialized layout.
+Output JSON from WASM: {"type": "Document", "children": [{"type": "Section", "children": [{"type": "Row", "children": [{"type": "Column", "span": 3, "children": [{"type": "Text", "content": "[Tenant Logo]", "variant": "", "id": ""}], "id": ""},{"type": "Column", "span": 5, "children": [{"type": "Text", "content": "Tenant", "variant": "heading3", "id": ""},{"type": "Text", "content": "Tenant Address", "variant": "", "id": ""}], "id": "", "style": {"paddingLeft": "0.5em", "paddingTop": "0.5em"}},{"type": "Column", "span": 4, "children": [{"type": "Text", "content": "Invoice #: INV-PO", "variant": "", "id": ""},{"type": "Text", "content": "Date: 2025-01-01", "variant": "", "id": ""},{"type": "Text", "content": "PO #: PO-XYZ", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right", "paddingRight": "0.5em"}}], "id": ""},{"type": "Row", "children": [{"type": "Column", "span": 6, "children": [{"type": "Text", "content": "Bill To:", "variant": "heading3", "id": ""},{"type": "Text", "content": "Alpha Co", "variant": "", "id": ""},{"type": "Text", "content": "1 Test St", "variant": "", "id": ""}], "id": "", "style": {"paddingLeft": "1em", "paddingTop": "0.5em"}}], "id": ""}], "id": "invoice-header-std-default"},{"type": "Section", "children": [{"type": "Text", "content": "Items", "variant": "heading3", "id": "", "style": {"marginTop": "1em", "paddingLeft": "0.5em", "paddingBottom": "0.2em"}},{"type": "Section", "children": [{"type": "Row", "children": [{"type": "Column", "span": 6, "children": [{"type": "Text", "content": "Description", "variant": "label", "id": ""}], "id": "", "style": {"paddingLeft": "0.5em"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Qty", "variant": "label", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Unit Price", "variant": "label", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Total", "variant": "label", "id": "", "style": {"fontWeight": "bold", "paddingRight": "0.5em"}}], "id": "", "style": {"textAlign": "right"}}], "id": "", "style": {"fontWeight": "bold", "paddingBottom": "0.5em", "borderBottom": "1px solid #ccc"}},{"type": "Row", "children": [{"type": "Column", "span": 6, "children": [{"type": "Text", "content": "Service", "variant": "", "id": ""}], "id": "", "style": {"paddingLeft": "0.5em"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "1.0", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "$1.00", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "$1.00", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right", "paddingRight": "0.5em"}}], "id": "item-row-1", "style": {"paddingTop": "0.3em", "paddingBottom": "0.3em", "borderBottom": "0px"}}], "id": "items-table-section-items", "style": {"paddingLeft": "1em", "paddingRight": "1em", "paddingTop": "1em", "paddingBottom": "1em", "border": "1px solid #ccc", "marginBottom": "1em"}}], "id": "invoice-items-std-default"},{"type": "Section", "children": [{"type": "Row", "children": [{"type": "Column", "span": 7, "children": [], "id": ""},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Subtotal", "variant": "", "id": ""},{"type": "Text", "content": "Tax", "variant": "", "id": ""},{"type": "Text", "content": "Total", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right", "paddingRight": "1em"}},{"type": "Column", "span": 3, "children": [{"type": "Text", "content": "$1.00", "variant": "", "id": ""},{"type": "Text", "content": "$0.00", "variant": "", "id": ""},{"type": "Text", "content": "$1.00", "variant": "", "id": "", "style": {"fontWeight": "bold"}}], "id": "", "style": {"textAlign": "right", "paddingRight": "0.5em"}}], "id": ""}], "id": "invoice-totals-std-default", "style": {"marginTop": "1em", "paddingTop": "1em", "paddingBottom": "1em", "borderTop": "1px solid #eee"}},{"type": "Section", "children": [{"type": "Text", "content": "Thank you for your business!", "variant": "", "id": "", "style": {"marginTop": "1em", "paddingLeft": "0.5em"}}], "id": "invoice-notes-std-default", "style": {"marginTop": "2em"}}], "id": "invoice-document-standard-default"}
+
+stdout | server/src/test/unit/invoiceTemplates/standardTemplatePoNumber.test.ts > Standard invoice template PO header > T010: default template renders PO number in header only when invoice has po_number
+Input JSON to WASM: {"invoiceNumber":"INV-PO","issueDate":"2025-01-01","dueDate":"2025-02-01","currencyCode":"USD","customer":{"name":"Alpha Co","address":"1 Test St"},"tenantClient":{"name":"Tenant","address":"Tenant Address","logoUrl":null},"items":[{"id":"1","description":"Service","quantity":1,"unitPrice":100,"total":100}],"subtotal":100,"tax":0,"total":100,"poNumber":null}
+[Wasm Log]: Wasm (standard-default): Received data string.
+[Wasm Log]: Wasm (standard-default): Deserialized Invoice #: INV-PO
+[Wasm Log]: Wasm (standard-default): Serializing layout...
+[Wasm Log]: Wasm (standard-default): Returning serialized layout.
+Output JSON from WASM: {"type": "Document", "children": [{"type": "Section", "children": [{"type": "Row", "children": [{"type": "Column", "span": 3, "children": [{"type": "Text", "content": "[Tenant Logo]", "variant": "", "id": ""}], "id": ""},{"type": "Column", "span": 5, "children": [{"type": "Text", "content": "Tenant", "variant": "heading3", "id": ""},{"type": "Text", "content": "Tenant Address", "variant": "", "id": ""}], "id": "", "style": {"paddingLeft": "0.5em", "paddingTop": "0.5em"}},{"type": "Column", "span": 4, "children": [{"type": "Text", "content": "Invoice #: INV-PO", "variant": "", "id": ""},{"type": "Text", "content": "Date: 2025-01-01", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right", "paddingRight": "0.5em"}}], "id": ""},{"type": "Row", "children": [{"type": "Column", "span": 6, "children": [{"type": "Text", "content": "Bill To:", "variant": "heading3", "id": ""},{"type": "Text", "content": "Alpha Co", "variant": "", "id": ""},{"type": "Text", "content": "1 Test St", "variant": "", "id": ""}], "id": "", "style": {"paddingLeft": "1em", "paddingTop": "0.5em"}}], "id": ""}], "id": "invoice-header-std-default"},{"type": "Section", "children": [{"type": "Text", "content": "Items", "variant": "heading3", "id": "", "style": {"marginTop": "1em", "paddingLeft": "0.5em", "paddingBottom": "0.2em"}},{"type": "Section", "children": [{"type": "Row", "children": [{"type": "Column", "span": 6, "children": [{"type": "Text", "content": "Description", "variant": "label", "id": ""}], "id": "", "style": {"paddingLeft": "0.5em"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Qty", "variant": "label", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Unit Price", "variant": "label", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Total", "variant": "label", "id": "", "style": {"fontWeight": "bold", "paddingRight": "0.5em"}}], "id": "", "style": {"textAlign": "right"}}], "id": "", "style": {"fontWeight": "bold", "paddingBottom": "0.5em", "borderBottom": "1px solid #ccc"}},{"type": "Row", "children": [{"type": "Column", "span": 6, "children": [{"type": "Text", "content": "Service", "variant": "", "id": ""}], "id": "", "style": {"paddingLeft": "0.5em"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "1.0", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "$1.00", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right"}},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "$1.00", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right", "paddingRight": "0.5em"}}], "id": "item-row-1", "style": {"paddingTop": "0.3em", "paddingBottom": "0.3em", "borderBottom": "0px"}}], "id": "items-table-section-items", "style": {"paddingLeft": "1em", "paddingRight": "1em", "paddingTop": "1em", "paddingBottom": "1em", "border": "1px solid #ccc", "marginBottom": "1em"}}], "id": "invoice-items-std-default"},{"type": "Section", "children": [{"type": "Row", "children": [{"type": "Column", "span": 7, "children": [], "id": ""},{"type": "Column", "span": 2, "children": [{"type": "Text", "content": "Subtotal", "variant": "", "id": ""},{"type": "Text", "content": "Tax", "variant": "", "id": ""},{"type": "Text", "content": "Total", "variant": "", "id": ""}], "id": "", "style": {"textAlign": "right", "paddingRight": "1em"}},{"type": "Column", "span": 3, "children": [{"type": "Text", "content": "$1.00", "variant": "", "id": ""},{"type": "Text", "content": "$0.00", "variant": "", "id": ""},{"type": "Text", "content": "$1.00", "variant": "", "id": "", "style": {"fontWeight": "bold"}}], "id": "", "style": {"textAlign": "right", "paddingRight": "0.5em"}}], "id": ""}], "id": "invoice-totals-std-default", "style": {"marginTop": "1em", "paddingTop": "1em", "paddingBottom": "1em", "borderTop": "1px solid #eee"}},{"type": "Section", "children": [{"type": "Text", "content": "Thank you for your business!", "variant": "", "id": "", "style": {"marginTop": "1em", "paddingLeft": "0.5em"}}], "id": "invoice-notes-std-default", "style": {"marginTop": "2em"}}], "id": "invoice-document-standard-default"}
+
+ ✓ server/src/test/unit/invoiceTemplates/standardTemplatePoNumber.test.ts (1 test) 1436ms 293 MB heap used
+ ✓ server/src/test/unit/email/replyTokenExtraction.test.ts (10 tests) 3ms 263 MB heap used
+ ❯ ee/temporal-workflows/src/activities/__tests__/email-activities-standalone.test.ts (8 tests | 5 failed) 3ms 268 MB heap used
+   × Email Activities - Standalone Tests > Password Generation > should generate secure passwords with default length 0ms
+     → expected Promise{…} to have property 'length'
+   × Email Activities - Standalone Tests > Password Generation > should generate passwords with custom length 0ms
+     → expected Promise{…} to have property 'length'
+   ✓ Email Activities - Standalone Tests > Password Generation > should generate unique passwords 0ms
+   × Email Activities - Standalone Tests > Email Activity > should send welcome email successfully 0ms
+     → expected false to be true // Object.is equality
+   × Email Activities - Standalone Tests > Email Activity > should handle invalid email gracefully 1ms
+     → expected 'Tenant ID must be a UUID with 32 hex …' to contain 'Invalid email address'
+   × Email Activities - Standalone Tests > Email Activity > should work with minimal required fields 0ms
+     → expected false to be true // Object.is equality
+   ✓ Email Activities - Standalone Tests > Mock Email Service Integration > should validate email service templates 0ms
+   ✓ Email Activities - Standalone Tests > Mock Email Service Integration > should handle unknown templates 0ms
+ ✓ packages/tickets/src/lib/timeEntryContext.test.ts (3 tests) 0ms 223 MB heap used
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/timeEntryBillingContractLineSelection.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ packages/core/src/lib/events/publisher.test.ts (1 test) 3ms 266 MB heap used
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/services/chatCompletionsService.streaming.test.ts > ChatCompletionsService (streaming) > passes stream: true to OpenRouter OpenAI client
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ server/src/test/unit/services/chatCompletionsService.streaming.test.ts (1 test) 96ms 278 MB heap used
+ ✓ server/src/test/unit/internal-notifications/mentionParser.test.ts (28 tests) 2ms 283 MB heap used
+ ❯ server/src/test/integration/internal-notifications/mentionNotifications.integration.test.ts (2 tests | 2 skipped) 19ms 286 MB heap used
+   ↓ Mention notifications via TICKET_COMMENT_ADDED > creates notifications for mentioned users and excludes the author
+   ↓ Mention notifications via TICKET_COMMENT_ADDED > does not notify client portal contact for internal comments
+ ✓ server/src/test/unit/services/numberingService.test.ts (5 tests) 2ms 290 MB heap used
+ ✓ ee/extensions/samples/ui-kit-showcase/test/scaffold.test.ts (8 tests) 1ms 293 MB heap used
+ ❯ packages/ui/src/context/SchedulingContext.test.tsx (4 tests | 4 failed) 1ms 297 MB heap used
+   × SchedulingContext > returns default callbacks when no provider is present 0ms
+     → document is not defined
+   × SchedulingContext > renders fallback alert element for agent schedule by default 0ms
+     → document is not defined
+   × SchedulingContext > shows a toast when launching time entry without provider 1ms
+     → document is not defined
+   × SchedulingContext > uses provider callbacks when SchedulingCallbackProvider is present 0ms
+     → document is not defined
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts > BaseEmailService → email_sending_logs
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts > BaseEmailService → email_sending_logs
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts > BaseEmailService → email_sending_logs
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts > BaseEmailService → email_sending_logs
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/email/baseEmailServiceLogging.integration.test.ts (2 tests | 2 skipped) 2ms 243 MB heap used
+   ↓ BaseEmailService → email_sending_logs > successful send creates log entry with status sent
+   ↓ BaseEmailService → email_sending_logs > failed send creates log entry with status failed and error_message
+ ❯ server/src/test/integration/billing/invoiceStatusManagement.integration.test.ts (10 tests | 10 skipped) 1ms 246 MB heap used
+   ↓ Invoice Status Management Integration > Credit Application Status Transitions > should set status to partially_applied when partial credit is applied
+   ↓ Invoice Status Management Integration > Credit Application Status Transitions > should set status to paid when full credit is applied
+   ↓ Invoice Status Management Integration > Credit Application Status Transitions > should accumulate multiple partial credits and update status accordingly
+   ↓ Invoice Status Management Integration > Payment Recording Status Transitions > should set status to partially_applied when partial payment is recorded
+   ↓ Invoice Status Management Integration > Payment Recording Status Transitions > should set status to paid when full payment is recorded
+   ↓ Invoice Status Management Integration > Combined Payment and Credit Scenarios > should correctly calculate status with both payments and credits
+   ↓ Invoice Status Management Integration > Refund Handling and Status Reversals > should transition from paid to partially_applied when partial refund is recorded
+   ↓ Invoice Status Management Integration > Refund Handling and Status Reversals > should transition from paid to sent when full refund is recorded
+   ↓ Invoice Status Management Integration > Status Transition Validation > should not allow payment on cancelled invoice
+   ↓ Invoice Status Management Integration > Status Transition Validation > should not allow credit on draft invoice
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce write permissions for POST/PUT/DELETE
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce write permissions for POST/PUT/DELETE
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce write permissions for POST/PUT/DELETE
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce write permissions for POST/PUT/DELETE
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce read permissions for GET endpoints
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce read permissions for GET endpoints
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce read permissions for GET endpoints
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Permissions > should enforce read permissions for GET endpoints
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Multi-tenancy > should isolate contacts by tenant
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Multi-tenancy > should isolate contacts by tenant
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Multi-tenancy > should isolate contacts by tenant
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Multi-tenancy > should isolate contacts by tenant
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle database errors gracefully
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle database errors gracefully
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle database errors gracefully
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle database errors gracefully
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle invalid query parameters
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle invalid query parameters
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle invalid query parameters
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Error Handling > should handle invalid query parameters
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by is_inactive status
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by is_inactive status
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by is_inactive status
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by is_inactive status
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by client_id
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by client_id
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by client_id
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by client_id
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should support pagination parameters
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should support pagination parameters
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should support pagination parameters
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should support pagination parameters
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should sort contacts by name
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should sort contacts by name
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should sort contacts by name
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should sort contacts by name
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should list all contacts with default pagination
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should list all contacts with default pagination
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should list all contacts with default pagination
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should list all contacts with default pagination
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as JSON
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as JSON
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as JSON
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as JSON
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export only active contacts by default
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export only active contacts by default
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export only active contacts by default
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export only active contacts by default
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as CSV
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as CSV
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as CSV
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as CSV
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search in specified fields
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search in specified fields
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search in specified fields
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search in specified fields
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should limit search results
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should limit search results
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should limit search results
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should limit search results
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search contacts by query
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search contacts by query
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search contacts by query
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search contacts by query
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should return 404 when updating non-existent contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should return 404 when updating non-existent contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should return 404 when updating non-existent contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should return 404 when updating non-existent contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should update a contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should update a contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should update a contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should update a contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should return 404 for non-existent contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should return 404 for non-existent contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should return 404 for non-existent contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should return 404 for non-existent contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should not return contacts from other tenants
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should not return contacts from other tenants
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should not return contacts from other tenants
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should not return contacts from other tenants
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should retrieve a contact by ID
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should retrieve a contact by ID
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should retrieve a contact by ID
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should retrieve a contact by ID
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should return 404 when deleting non-existent contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should return 404 when deleting non-existent contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should return 404 when deleting non-existent contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should return 404 when deleting non-existent contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should delete a contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should delete a contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should delete a contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should delete a contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate required fields
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate required fields
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate required fields
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate required fields
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate email format
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate email format
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate email format
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate email format
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should create a new contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should create a new contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should create a new contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should create a new contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should reject invalid API key
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should reject invalid API key
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should reject invalid API key
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should reject invalid API key
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should require API key for all endpoints
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should require API key for all endpoints
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should require API key for all endpoints
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/api/contacts.e2e.test.ts > Contact API E2E Tests > Authentication > should require API key for all endpoints
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/e2e/api/contacts.e2e.test.ts (29 tests | 29 failed) 22ms 259 MB heap used
+   × Contact API E2E Tests > Authentication > should require API key for all endpoints 1ms
+     → 
+   × Contact API E2E Tests > Authentication > should reject invalid API key 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should create a new contact 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate required fields 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Create Contact (POST /api/v1/contacts) > should validate email format 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should retrieve a contact by ID 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should return 404 for non-existent contact 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Get Contact (GET /api/v1/contacts/:id) > should not return contacts from other tenants 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should update a contact 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Update Contact (PUT /api/v1/contacts/:id) > should return 404 when updating non-existent contact 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should delete a contact 1ms
+     → 
+   × Contact API E2E Tests > CRUD Operations > Delete Contact (DELETE /api/v1/contacts/:id) > should return 404 when deleting non-existent contact 1ms
+     → 
+   × Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should list all contacts with default pagination 1ms
+     → 
+   × Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should support pagination parameters 1ms
+     → 
+   × Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by client_id 1ms
+     → 
+   × Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should filter by is_inactive status 1ms
+     → 
+   × Contact API E2E Tests > List Contacts (GET /api/v1/contacts) > should sort contacts by name 1ms
+     → 
+   × Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search contacts by query 1ms
+     → 
+   × Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should search in specified fields 1ms
+     → 
+   × Contact API E2E Tests > Search Contacts (GET /api/v1/contacts/search) > should limit search results 1ms
+     → 
+   × Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as CSV 1ms
+     → 
+   × Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export contacts as JSON 1ms
+     → 
+   × Contact API E2E Tests > Export Contacts (GET /api/v1/contacts/export) > should export only active contacts by default 1ms
+     → 
+   × Contact API E2E Tests > Contact Statistics (GET /api/v1/contacts/stats) > should return contact statistics 1ms
+     → 
+   × Contact API E2E Tests > Error Handling > should handle invalid query parameters 1ms
+     → 
+   × Contact API E2E Tests > Error Handling > should handle database errors gracefully 1ms
+     → 
+   × Contact API E2E Tests > Permissions > should enforce read permissions for GET endpoints 1ms
+     → 
+   × Contact API E2E Tests > Permissions > should enforce write permissions for POST/PUT/DELETE 1ms
+     → 
+   × Contact API E2E Tests > Multi-tenancy > should isolate contacts by tenant 1ms
+     → 
+ ↓ server/src/test/integration/inboundEmailInApp.featureFlag.integration.test.ts (1 test | 1 skipped)
+ ❯ server/src/lib/eventBus/index.hardTimeout.test.ts (1 test | 1 failed) 4ms 266 MB heap used
+   × EventBus Redis consumer hard-timeout > resets the Redis client if xReadGroup hangs beyond the hard timeout 4ms
+     → Failed to resolve entry for package "@alga-psa/event-schemas". The package may have incorrect main/module/exports specified in its package.json.
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts > Internal notification CRUD (integration)
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/internal-notifications/notificationCrud.integration.test.ts (6 tests | 6 skipped) 8ms 275 MB heap used
+   ↓ Internal notification CRUD (integration) > creates notification with metadata and default locale
+   ↓ Internal notification CRUD (integration) > supports locale preference during creation
+   ↓ Internal notification CRUD (integration) > paginates and filters notifications
+   ↓ Internal notification CRUD (integration) > returns unread counts with category breakdown
+   ↓ Internal notification CRUD (integration) > marks notification as read with timestamp and broadcast
+   ↓ Internal notification CRUD (integration) > marks all notifications as read and soft deletes
+ ✓ server/src/test/unit/workflowBundleCli.unit.test.ts (2 tests) 4ms 279 MB heap used
+ ✓ server/src/test/unit/readAssistantContentFromSse.test.ts (1 test) 1ms 281 MB heap used
+ ✓ packages/billing/tests/draftContractsActions.test.ts (6 tests) 19ms 288 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/preview/previewStatus.test.ts (5 tests) 0ms 291 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/preview/previewSessionState.test.ts (6 tests) 1ms 298 MB heap used
+ ✓ sdk/samples/component/scheduler-demo/tests/handler.test.ts (6 tests) 1ms 302 MB heap used
+ ✓ server/src/test/unit/api/chatExecute.route.gating.test.ts (1 test) 4ms 251 MB heap used
+ ❯ packages/msp-composition/src/scheduling/MspSchedulingProvider.test.tsx (2 tests | 2 failed) 1ms 257 MB heap used
+   × MspSchedulingProvider > provides renderAgentSchedule that returns AgentScheduleView 0ms
+     → document is not defined
+   × MspSchedulingProvider > provides launchTimeEntry that calls launchTimeEntryForWorkItem 0ms
+     → document is not defined
+ ✓ packages/scheduling/tests/scheduleEntry.test.ts (16 tests) 4ms 266 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/DesignerShell.fitSection.test.ts (11 tests) 1ms 276 MB heap used
+2026-02-12T19:54:19.842538Z  WARN temporalio_sdk_core::worker::heartbeat: Worker heartbeating configured for runtime, but server version does not support it.
+2026-02-12T19:54:20.240112Z  WARN temporalio_sdk_core::worker::heartbeat: Worker heartbeating configured for runtime, but server version does not support it.
+2026-02-12T19:54:20.597915Z  WARN temporalio_sdk_core::worker::heartbeat: Worker heartbeating configured for runtime, but server version does not support it.
+ ✓ ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts (3 tests) 1776ms 430 MB heap used
+   ✓ portalDomainRegistrationWorkflow > marks the domain as certificate_failed when ACME registration fails  343ms
+   ✓ portalDomainRegistrationWorkflow > moves the domain to deploying after applying resources  1062ms
+   ✓ portalDomainRegistrationWorkflow > retries after a failure and succeeds on the next attempt  371ms
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/exportDashboard.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ ee/server/src/__tests__/unit/schedulerHostApi.unit.test.ts (72 tests) 6ms 424 MB heap used
+ ✓ ee/server/src/lib/extensions/__tests__/manifest-v2.schema.test.ts (5 tests) 1ms 433 MB heap used
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderCreation.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ packages/billing/src/components/invoice-designer/state/designerStore.size.test.ts (4 tests) 4ms 294 MB heap used
+stdout | shared/lib/utils/contentConversion.test.ts > convertHtmlToBlockNote > should handle linked images (image inside anchor)
+Linked Image Result: {
+  "type": "link",
+  "href": "https://google.com",
+  "content": [
+    {
+      "type": "text",
+      "text": "🖼️ Logo",
+      "styles": {}
+    }
+  ]
+}
+
+ ✓ shared/lib/utils/contentConversion.test.ts (14 tests) 7ms 300 MB heap used
+ ✓ server/src/test/unit/mention-detection.test.ts (12 tests) 1ms 304 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/canvas/DesignCanvas.previewModel.test.ts (5 tests) 1ms 313 MB heap used
+ ❯ server/src/test/infrastructure/billing/invoices/clientBillingCycle.test.ts (1 test | 1 skipped) 2ms 319 MB heap used
+   ↓ Client Billing Cycle Creation > creates a monthly billing cycle if none exists
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts > Email Provider Database Integration Tests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts > Email Provider Database Integration Tests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts > Email Provider Database Integration Tests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderDatabase.test.ts > Email Provider Database Integration Tests
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/emailProviderDatabase.test.ts (6 tests | 6 skipped) 1ms 337 MB heap used
+   ↓ Email Provider Database Integration Tests > Google Provider Database Operations > should create a Google provider record in the database
+   ↓ Email Provider Database Integration Tests > Google Provider Database Operations > should handle Google Workspace email addresses
+   ↓ Email Provider Database Integration Tests > Google Provider Database Operations > should update an existing Google provider
+   ↓ Email Provider Database Integration Tests > Google Provider Database Operations > should list all Google providers for a tenant
+   ↓ Email Provider Database Integration Tests > Google Provider Database Operations > should handle provider creation with all optional fields
+   ↓ Email Provider Database Integration Tests > Google Provider Database Operations > should enforce database constraints
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/surveyEmailTemplates.integration.test.ts > Survey email templates
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/surveyEmailTemplates.integration.test.ts (2 tests | 2 skipped) 2ms 342 MB heap used
+   ↓ Survey email templates > registers system templates for each supported locale
+   ↓ Survey email templates > renders locale-specific content and falls back to English
+ ✓ packages/billing/src/components/invoice-designer/state/designerStore.layoutMode.test.ts (2 tests) 3ms 354 MB heap used
+ ✓ server/src/test/unit/resendWebhookEvents.test.ts (8 tests) 2ms 300 MB heap used
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/invoiceSelection.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ server/src/test/unit/imports/FieldMapper.test.ts (2 tests) 1ms 333 MB heap used
+stdout | server/src/test/unit/db/workDate.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/db/workDate.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/db/workDate.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/db/workDate.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/db/workDate.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/db/workDate.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/db/workDate.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/db/workDate.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ server/src/test/unit/db/workDate.test.ts (1 test) 3ms 339 MB heap used
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts > Email Settings OAuth Flow Tests
+🏗️ Initializing Email Settings Test Fixture (one-time setup)...
+  📊 Setting up database and services...
+🚀 Initializing E2E Test Context...
+🔧 Set E2E environment variables: {
+  DB_HOST: 'localhost',
+  DB_PORT: '5433',
+  DB_NAME_SERVER: 'server_test',
+  DB_USER_ADMIN: 'postgres',
+  PGBOUNCER_HOST: 'localhost',
+  PGBOUNCER_PORT: '6434',
+  REDIS_HOST: 'localhost',
+  REDIS_PORT: '6380',
+  EMAIL_HOST: 'localhost',
+  EMAIL_PORT: '1025'
+}
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts > Email Settings OAuth Flow Tests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts > Email Settings OAuth Flow Tests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts > Email Settings OAuth Flow Tests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts > Email Settings OAuth Flow Tests
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/email-settings/oauth-flow.test.ts > Email Settings OAuth Flow Tests
+🧹 Final test fixture cleanup...
+
+ ❯ server/src/test/e2e/email-settings/oauth-flow.test.ts (7 tests | 7 skipped) 3ms 352 MB heap used
+   ↓ Email Settings OAuth Flow Tests > Microsoft OAuth Flow > should complete OAuth flow and store tokens
+   ↓ Email Settings OAuth Flow Tests > Microsoft OAuth Flow > should handle OAuth error scenarios
+   ↓ Email Settings OAuth Flow Tests > Microsoft OAuth Flow > should handle Microsoft webhook validation token
+   ↓ Email Settings OAuth Flow Tests > Google OAuth Flow > should complete OAuth flow with Pub/Sub setup
+   ↓ Email Settings OAuth Flow Tests > Google OAuth Flow > should handle expired refresh token
+   ↓ Email Settings OAuth Flow Tests > Token Storage and Encryption > should store tokens securely in database
+   ↓ Email Settings OAuth Flow Tests > State Parameter Validation > should validate state parameter in OAuth callback
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ shared/services/email/__tests__/EmailWebhookMaintenanceService.test.ts (3 tests | 1 failed) 2ms 362 MB heap used
+   ✓ EmailWebhookMaintenanceService > should find candidates and renew expired subscription 0ms
+   × EmailWebhookMaintenanceService > should recreate subscription if renewal fails with 404 1ms
+     → expected "spy" to be called with arguments: [ 'https://api.example.com/webhook' ]
+
+Number of calls: 0
+
+   ✓ EmailWebhookMaintenanceService > should handle unexpected errors gracefully 0ms
+ ✓ packages/auth/src/lib/session.test.ts (6 tests) 3ms 350 MB heap used
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts > Email Provider Error Messages
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts > Email Provider Error Messages
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts > Email Provider Error Messages
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/emailProviderErrorMessages.test.ts > Email Provider Error Messages
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/emailProviderErrorMessages.test.ts (10 tests | 10 skipped) 1ms 360 MB heap used
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return clear error when provider name is missing
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return clear error when email is invalid
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return clear error when Google Client ID is missing
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return multiple errors in a clear format
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return helpful error for invalid provider type
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return clear error for provider name that is too long
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return helpful error for invalid Microsoft tenant ID
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return clear error for invalid max emails per sync
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should return helpful hint for Google Client ID format
+   ↓ Email Provider Error Messages > User-Friendly Error Messages > should successfully create provider when all fields are valid
+stdout | server/src/test/unit/templateRenderer.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/templateRenderer.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ tools/nx-tests/nxCache.test.ts (2 tests) 3726ms 356 MB heap used
+   ✓ nx caching > reuses the local computation cache for repeated builds  732ms
+   ✓ nx caching > caches @alga-psa/core builds when unchanged  2994ms
+ ❯ ee/temporal-workflows/src/activities/__tests__/email-activities-simple.test.ts (24 tests | 17 failed) 916ms 365 MB heap used
+   × Email Activities - Simple Tests > generateTemporaryPassword > should generate password with default length of 12 0ms
+     → expected Promise{…} to have property 'length'
+   × Email Activities - Simple Tests > generateTemporaryPassword > should generate password with custom length 0ms
+     → expected Promise{…} to have property 'length'
+   ✓ Email Activities - Simple Tests > generateTemporaryPassword > should generate different passwords each time 0ms
+   × Email Activities - Simple Tests > generateTemporaryPassword > should contain at least one character from each category 0ms
+     → .toMatch() expects to receive a string, but got object
+   × Email Activities - Simple Tests > generateTemporaryPassword > should not contain ambiguous characters 0ms
+     → .toMatch() expects to receive a string, but got object
+   × Email Activities - Simple Tests > generateTemporaryPassword > should handle minimum length of 4 0ms
+     → expected Promise{…} to have property 'length'
+   ✓ Email Activities - Simple Tests > generateTemporaryPassword > should generate secure passwords with high entropy 0ms
+   × Email Activities - Simple Tests > MockEmailService > should send emails successfully 102ms
+     → Cannot read properties of undefined (reading 'info')
+   ✓ Email Activities - Simple Tests > MockEmailService > should validate email addresses correctly 0ms
+   × Email Activities - Simple Tests > MockEmailService > should track sent emails for testing 101ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Simple Tests > MockEmailService > should filter emails by recipient 102ms
+     → Cannot read properties of undefined (reading 'info')
+   ✓ Email Activities - Simple Tests > MockEmailService > should simulate failures when configured 101ms
+   × Email Activities - Simple Tests > MockEmailService > should handle invalid email addresses 101ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Simple Tests > MockEmailService > should handle multiple recipients 101ms
+     → Cannot read properties of undefined (reading 'info')
+   ✓ Email Activities - Simple Tests > MockEmailService > should throw error when no valid recipients 101ms
+   × Email Activities - Simple Tests > MockEmailService > should support email service configuration 0ms
+     → expected Promise{…} to be an instance of MockEmailService
+   ✓ Email Activities - Simple Tests > MockEmailService > should return email templates for testing 0ms
+   ✓ Email Activities - Simple Tests > MockEmailService > should return null for unknown templates 0ms
+   × Email Activities - Simple Tests > MockEmailService > should support clearing sent emails 101ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Simple Tests > MockEmailService > should handle delay configuration 102ms
+     → Cannot read properties of undefined (reading 'info')
+   × Email Activities - Simple Tests > Email Service Factory > should create mock service by default 0ms
+     → expected Promise{…} to be an instance of MockEmailService
+   × Email Activities - Simple Tests > Email Service Factory > should create mock service when explicitly requested 0ms
+     → expected Promise{…} to be an instance of MockEmailService
+   × Email Activities - Simple Tests > Email Service Factory > should throw error for unknown providers 0ms
+     → expected [Function] to throw an error
+   × Email Activities - Simple Tests > Email Service Factory > should pass options to mock service 0ms
+     → expected Promise{…} to be an instance of MockEmailService
+ ✓ tools/nx-tests/moduleBoundaries.test.ts (2 tests) 6ms 382 MB heap used
+ ✓ packages/client-portal/src/actions/client-portal-actions/client-tickets.ticketOrigin.test.ts (4 tests) 15ms 392 MB heap used
+ ❯ packages/core/src/index.test.ts (1 test | 1 failed) 48ms 303 MB heap used
+   × @alga-psa/core public exports > exports logger, secrets, events, and encryption APIs 48ms
+     → expected 'undefined' to be 'function' // Object.is equality
+ ✓ server/src/test/integration/emailProviderIntegration.test.ts (11 tests) 5ms 313 MB heap used
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts > CalendarProviderService encryption helpers > encrypts and decrypts Microsoft provider credentials
+CompositeSecretProvider: app secret 'calendar_oauth_encryption_key' not found in any provider
+
+stdout | server/src/test/unit/calendar/CalendarProviderEncryption.test.ts > CalendarProviderService encryption helpers > encrypts and decrypts Microsoft provider credentials
+Secret 'calendar_oauth_encryption_key' not found via provider, checking env var 'CALENDAR_OAUTH_ENCRYPTION_KEY'.
+
+ ✓ server/src/test/unit/calendar/CalendarProviderEncryption.test.ts (3 tests) 1ms 321 MB heap used
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts > emailLogActions.getEmailLogs
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts > emailLogActions.getEmailLogs
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts > emailLogActions.getEmailLogs
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts > emailLogActions.getEmailLogs
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts (6 tests | 6 skipped) 2ms 334 MB heap used
+   ↓ emailLogActions.getEmailLogs > returns paginated results
+   ↓ emailLogActions.getEmailLogs > filters by date range when provided
+   ↓ emailLogActions.getEmailLogs > treats date-only endDate as inclusive end of day
+   ↓ emailLogActions.getEmailLogs > filters by status when provided
+   ↓ emailLogActions.getEmailLogs > filters by recipient email when provided
+   ↓ emailLogActions.getEmailLogs > supports sorting by sent_at ascending/descending
+ ❯ server/src/test/integration/onboardingProgressSubsteps.integration.test.ts (1 test | 1 failed) 1ms 339 MB heap used
+   × getOnboardingProgressAction (substeps) > returns portal + email steps with substeps 1ms
+     → Cannot find package '@alga-psa/onboarding/actions' imported from '/Users/roberisaacs/alga-psa.worktrees/codex/feature-invoice-designer/server/src/test/integration/onboardingProgressSubsteps.integration.test.ts'
+ ✓ ee/server/src/__tests__/unit/routeParams.resolveInstallId.test.ts (3 tests) 0ms 343 MB heap used
+ ✓ packages/msp-composition/src/packageDependencies.test.ts (1 test) 0ms 347 MB heap used
+ ✓ packages/tickets/src/lib/__tests__/ticketOrigin.test.ts (5 tests) 0ms 354 MB heap used
+ ✓ packages/tickets/src/components/ticket/TicketDetails.originBadge.contract.test.ts (3 tests) 2ms 362 MB heap used
+ ❯ packages/tickets/src/components/ticket/AgentScheduleDrawer.test.tsx (2 tests | 2 failed) 1ms 317 MB heap used
+   × AgentScheduleDrawer > renders calendar when provider is present 0ms
+     → document is not defined
+   × AgentScheduleDrawer > shows fallback alert when no provider is present 1ms
+     → document is not defined
+ ❯ server/src/test/integration/citusTenantFilterEmailProviders.integration.test.ts (2 tests | 2 failed) 2ms 321 MB heap used
+   × Citus safety: tenant-scoped updates on distributed tables > scopes email_providers updates by tenant in Microsoft webhook route 1ms
+     → expected 'export { GET, POST } from \'@alga-psa…' to contain '.where({ id: row.id, tenant: row.tena…'
+   × Citus safety: tenant-scoped updates on distributed tables > scopes email_providers updates by tenant in Google webhook route 1ms
+     → expected 'export { POST } from \'@alga-psa/inte…' to contain '.where({ id: provider.id, tenant: pro…'
+stdout | server/src/test/integration/surveyTokenService.integration.test.ts > Survey Token Service integration
+Initializing composite secret provider system
+Building composite secret provider. Read chain: [env, filesystem], Write provider: filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/surveyTokenService.integration.test.ts > Survey Token Service integration
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/surveyTokenService.integration.test.ts > Survey Token Service integration
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/surveyTokenService.integration.test.ts > Survey Token Service integration
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/surveyTokenService.integration.test.ts > Survey Token Service integration
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/surveyTokenService.integration.test.ts > Survey Token Service integration
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/integration/surveyTokenService.integration.test.ts (2 tests | 2 failed) 2ms 327 MB heap used
+   × Survey Token Service integration > resolves invitation metadata for a valid survey token 0ms
+     → 
+   × Survey Token Service integration > throws when the survey token has expired 0ms
+     → 
+ ✓ packages/projects/src/lib/timeEntryContext.test.ts (1 test) 0ms 336 MB heap used
+ ✓ server/src/test/unit/billing/billingCycleAnchors.validationMessages.test.ts (3 tests) 1ms 341 MB heap used
+ ✓ packages/billing/tests/contractsTabs.test.ts (5 tests) 0ms 345 MB heap used
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Initializing composite secret provider system
+Building composite secret provider. Read chain: [env, filesystem], Write provider: filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/integration/accounting/batchLifecycle.integration.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ ee/server/src/__tests__/unit/invoicingInternalApi.unit.test.ts (1 test) 4ms 375 MB heap used
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+Initializing composite secret provider system
+Building composite secret provider. Read chain: [env, filesystem], Write provider: filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/workflowRuntimeV2.e2e.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert successful responses
+Initializing composite secret provider system
+Building composite secret provider. Read chain: [env, filesystem], Write provider: filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert successful responses
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert successful responses
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert successful responses
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert successful responses
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert successful responses
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert error responses
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert error responses
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert error responses
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should assert error responses
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should build query strings correctly
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should build query strings correctly
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should build query strings correctly
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Test Helpers > should build query strings correctly
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create a single contact
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create a single contact
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create a single contact
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create a single contact
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create multiple contacts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create multiple contacts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create multiple contacts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should create multiple contacts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should generate random contact data
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should generate random contact data
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should generate random contact data
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Contact Test Data Factory > should generate random contact data
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should be able to make requests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should be able to make requests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should be able to make requests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should be able to make requests
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should have API key configured
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should have API key configured
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should have API key configured
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > API Client > should have API key configured
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a user
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a user
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a user
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a user
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a tenant
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a tenant
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a tenant
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created a tenant
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have a valid database connection
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have a valid database connection
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have a valid database connection
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have a valid database connection
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created an API key
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created an API key
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created an API key
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should have created an API key
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should create a complete test environment
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should create a complete test environment
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should create a complete test environment
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/utils/utilities.test.ts > E2E Test Utilities > Test Environment Setup > should create a complete test environment
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/e2e/utils/utilities.test.ts (13 tests | 13 failed) 792ms 381 MB heap used
+   × E2E Test Utilities > Test Environment Setup > should create a complete test environment 39ms
+     → no such database: test_database
+   × E2E Test Utilities > Test Environment Setup > should have a valid database connection 52ms
+     → no such database: test_database
+   × E2E Test Utilities > Test Environment Setup > should have created a tenant 38ms
+     → no such database: test_database
+   × E2E Test Utilities > Test Environment Setup > should have created a user 52ms
+     → no such database: test_database
+   × E2E Test Utilities > Test Environment Setup > should have created an API key 30ms
+     → no such database: test_database
+   × E2E Test Utilities > Contact Test Data Factory > should generate random contact data 42ms
+     → no such database: test_database
+   × E2E Test Utilities > Contact Test Data Factory > should create a single contact 56ms
+     → no such database: test_database
+   × E2E Test Utilities > Contact Test Data Factory > should create multiple contacts 49ms
+     → no such database: test_database
+   × E2E Test Utilities > API Test Helpers > should build query strings correctly 50ms
+     → no such database: test_database
+   × E2E Test Utilities > API Test Helpers > should assert successful responses 215ms
+     → no such database: test_database
+   × E2E Test Utilities > API Test Helpers > should assert error responses 80ms
+     → no such database: test_database
+   × E2E Test Utilities > API Client > should have API key configured 44ms
+     → no such database: test_database
+   × E2E Test Utilities > API Client > should be able to make requests 45ms
+     → no such database: test_database
+ ✓ ee/server/src/lib/extensions/__tests__/runner/backend.test.ts (4 tests) 11ms 388 MB heap used
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+Initializing composite secret provider system
+Building composite secret provider. Read chain: [env, filesystem], Write provider: filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/portalDomainSessionOtt.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ server/src/test/unit/portalDomainSessionOtt.test.ts (5 tests) 3ms 345 MB heap used
+ ✓ packages/projects/tests/packageDependencies.test.ts (1 test) 0ms 350 MB heap used
+stdout | server/src/test/unit/documentPreviewGenerator.test.ts > generateDocumentPreviews > creates thumbnail and preview uploads for large images
+[generateDocumentPreviews] Generating previews for document doc-2 (image/png)
+
+stdout | server/src/test/unit/documentPreviewGenerator.test.ts > generateDocumentPreviews > creates thumbnail and preview uploads for large images
+[generateImagePreviews] Image dimensions: 1200x900
+
+stdout | server/src/test/unit/documentPreviewGenerator.test.ts > generateDocumentPreviews > creates thumbnail and preview uploads for large images
+[generateImagePreviews] Thumbnail generated: thumb-1
+
+stdout | server/src/test/unit/documentPreviewGenerator.test.ts > generateDocumentPreviews > creates thumbnail and preview uploads for large images
+[generateImagePreviews] Preview generated: preview-2
+
+stdout | server/src/test/unit/documentPreviewGenerator.test.ts > generateDocumentPreviews > skips storage uploads for unsupported mime types
+[generateDocumentPreviews] Generating previews for document doc-1 (text/plain)
+[generateDocumentPreviews] Unsupported file type: text/plain
+
+ ✓ server/src/test/unit/documentPreviewGenerator.test.ts (2 tests) 2ms 373 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/canvas/DesignCanvas.selectionState.test.ts (9 tests) 1ms 379 MB heap used
+stdout | server/src/test/e2e/email-processing.test.ts
+Initializing composite secret provider system
+Building composite secret provider. Read chain: [env, filesystem], Write provider: filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/e2e/email-processing.test.ts
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/e2e/email-processing.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/email-processing.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/email-processing.test.ts
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/email-processing.test.ts
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/email-processing.test.ts
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/email-processing.test.ts
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/email-processing.test.ts > Email Processing E2E Tests
+🧪 Initializing persistent E2E test context...
+🚀 Initializing E2E Test Context...
+🔧 Set E2E environment variables: {
+  DB_HOST: 'localhost',
+  DB_PORT: '5433',
+  DB_NAME_SERVER: 'server_test',
+  DB_USER_ADMIN: 'postgres',
+  PGBOUNCER_HOST: 'localhost',
+  PGBOUNCER_PORT: '6434',
+  REDIS_HOST: 'localhost',
+  REDIS_PORT: '6380',
+  EMAIL_HOST: 'localhost',
+  EMAIL_PORT: '1025'
+}
+
+stdout | server/src/test/e2e/email-processing.test.ts > Email Processing E2E Tests
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/e2e/email-processing.test.ts > Email Processing E2E Tests
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/e2e/email-processing.test.ts > Email Processing E2E Tests
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/e2e/email-processing.test.ts > Email Processing E2E Tests
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/e2e/email-processing.test.ts > Email Processing E2E Tests
+🧹 Cleaning up persistent E2E test context...
+
+ ❯ server/src/test/e2e/email-processing.test.ts (5 tests | 5 skipped) 2ms 350 MB heap used
+   ↓ Email Processing E2E Tests > Basic Email Ingestion > should process a simple email and create a ticket
+   ↓ Email Processing E2E Tests > Basic Email Ingestion > should handle emails with attachments
+   ↓ Email Processing E2E Tests > Email Threading > should properly thread email replies
+   ↓ Email Processing E2E Tests > Client Matching > should match emails to existing clients
+   ↓ Email Processing E2E Tests > Client Matching > should handle unknown email addresses with manual fallback
+ ✓ tools/nx-tests/nxAffected.test.ts (2 tests) 621ms 357 MB heap used
+   ✓ nx affected > includes @alga-psa/clients when client code changes  334ms
+ ↓ server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts (1 test | 1 skipped)
+ ✓ server/src/test/unit/enterpriseAliasEnvSwitch.unit.test.ts (2 tests) 197ms 369 MB heap used
+ ❯ server/src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (14 tests | 14 skipped) 2ms 375 MB heap used
+   ↓ internal notification event subscriber registration > subscribes to all expected event types on the internal channel
+   ↓ internal notification event handling > creates notification for ticket assignment events targeting the assignee
+   ↓ internal notification event handling > creates notifications for ticket additional agent assignments (agent, primary assignee, and client)
+   ↓ internal notification event handling > does not invoke notification creation for events without handlers
+   ↓ internal notification event handling > creates notifications for ticket created events for assignee and portal contact
+   ↓ internal notification event handling > creates status change notifications for ticket updated events
+   ↓ internal notification event handling > creates notifications for ticket closed events including client portal user
+   ↓ internal notification event handling > creates project created notifications for assigned user
+   ↓ internal notification event handling > creates project assigned notifications
+   ↓ internal notification event handling > creates project task assigned notifications
+   ↓ internal notification event handling > creates project task additional agent notifications for the new agent and the primary assignee
+   ↓ internal notification event handling > creates invoice generated notifications
+   ↓ internal notification event handling > creates message sent notifications for recipients
+   ↓ internal notification event handling > creates document mention notifications
+ ❯ server/src/test/unit/clientContractActions.overlapExclusive.test.ts (3 tests | 3 failed) 2ms 380 MB heap used
+   × Client contract overlap validation ([start, end) semantics) > does not treat touching boundaries as overlap (start == invoiced period end) 0ms
+     → Missing "./models/clientContract" specifier in "@alga-psa/clients" package
+   × Client contract overlap validation ([start, end) semantics) > does not treat touching boundaries as overlap (end exclusive == invoiced period start) 1ms
+     → Missing "./models/clientContract" specifier in "@alga-psa/clients" package
+   × Client contract overlap validation ([start, end) semantics) > rejects true overlaps with an invoiced period 0ms
+     → Missing "./models/clientContract" specifier in "@alga-psa/clients" package
+ ✓ server/src/test/unit/RightSidebar.streaming.test.tsx (1 test) 486ms 87 MB heap used
+   ✓ RightSidebar (streaming) > renders streaming Chat and posts to the streaming completions endpoint  485ms
+ ❯ packages/billing/tests/contractWizardResume.test.tsx (14 tests | 14 failed) 52ms 118 MB heap used
+   × ContractWizard resume behavior > starts at Step 1 (Contract Basics) when opened (T033) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 1 shows pre-populated client selection from draft (T034) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 1 shows pre-populated contract name from draft (T035) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 1 shows pre-populated dates from draft (T036) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 2 (Fixed Fee) shows pre-populated services from draft (T037) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 3 (Products) shows pre-populated products from draft (T038) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 4 (Hourly) shows pre-populated hourly services from draft (T039) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 5 (Usage) shows pre-populated usage services from draft (T040) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > step 6 (Review) shows complete draft data for review (T041) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > clicking Save Draft in resumed wizard updates existing draft (T042) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > save draft does not create a duplicate contract (T043) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > save draft preserves the original contract_id (T044) 32ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > completing resumed wizard sets contract status to 'active' (T045) 1ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+   × ContractWizard resume behavior > completing resumed wizard sets is_active to true (T046) 2ms
+     → [vitest] No "DialogContent" export is defined on the "@alga-psa/ui/components/Dialog" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+ ✓ packages/projects/tests/projectInfoDrawer.test.tsx (1 test) 43ms 77 MB heap used
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx (9 tests | 7 failed) 4053ms 113 MB heap used
+   × ExperimentalFeaturesSettings > shows 'AI Assistant' name and description 1003ms
+     → Found multiple elements with the text: AI Assistant
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mAI Assistant[0m
+[36m</div>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+   × ExperimentalFeaturesSettings > defaults AI Assistant toggle to off 3ms
+     → expected 'true' to be 'false' // Object.is equality
+   × ExperimentalFeaturesSettings > renders experimental features warning banner 1004ms
+     → Found multiple elements with the text: Experimental
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+Ignored nodes: comments, script, style
+[36m<h5[39m
+  [33mclass[39m=[32m"mb-1 font-medium leading-none tracking-tight"[39m
+[36m>[39m
+  [0mExperimental[0m
+[36m</h5>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+   × ExperimentalFeaturesSettings > calls updateExperimentalFeatures() with current toggle states on save 1007ms
+     → Found multiple elements with the role "button" and name "Save"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+   × ExperimentalFeaturesSettings > shows success feedback after saving 1009ms
+     → Found multiple elements with the role "button" and name "Save"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+Ignored nodes: comments, script, style
+[36m<button[39m
+  [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] h-10 py-2 px-4 group"[39m
+  [33mdisabled[39m=[32m""[39m
+  [33mtype[39m=[32m"button"[39m
+[36m>[39m
+  [0mSave[0m
+[36m</button>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"space-y-2 mb-1"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [0m← Back to Projects[0m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm font-medium text-gray-600"[39m
+          [36m>[39m
+            [0mPRJ-100[0m
+          [36m</span>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold"[39m
+          [36m>[39m
+            [0mTest Project[0m
+          [36m</h1>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"save-as-template-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave as Template[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"project-materials-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [0mMaterials[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mid[39m=[32m"edit-project-button"[39m
+            [33mtype[39m=[32m"button"[39m
+            [33mvariant[39m=[32m"outline"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-pen h-4 w-4 mr-2"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mEdit[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center space-x-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mClient:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mClient One[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mContact:[0m
+          [36m</h5>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-base text-gray-800"[39m
+          [36m>[39m
+            [0mN/A[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center space-x-2 flex-1"[39m
+        [36m>[39m
+          [36m<h5[39m
+            [33mclass[39m=[32m"font-bold text-gray-800"[39m
+          [36m>[39m
+            [0mBudget:[0m
+          [36m</h5>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center space-x-3 flex-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-base text-gray-800 whitespace-nowrap"[39m
+            [36m>[39m
+              [0m0.0[0m
+              [0m of [0m
+              [0m0.0[0m
+              [0m hours[0m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex-1"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm "[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 undefined"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+        [36m>[39m
+          [0mExperimental Features[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground undefined"[39m
+        [36m>[39m
+          [0mEnable or disable experimental features for your tenant.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 space-y-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-warning/10"[39m
+          [33mrole[39m=[32m"alert"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mclass[39m=[32m"lucide lucide-triangle-alert h-4 w-4"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke...
+   ✓ ExperimentalFeaturesSettings > updates local state when toggled 11ms
+   ✓ ExperimentalFeaturesSettings > loads current settings on mount 3ms
+   × ExperimentalFeaturesSettings > renders list of features with toggles 8ms
+     → expected [ <button …(8)>…(1)</button>, …(3) ] to have a length of 2 but got 4
+   × ExperimentalFeaturesSettings > disables AI Assistant toggle when not allowed 4ms
+     → expected 'true' to be 'false' // Object.is equality
+ ✓ packages/projects/src/components/__tests__/TaskQuickAddPrefill.test.tsx (1 test) 1ms 116 MB heap used
+ ✓ packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.previewWorkspace.test.tsx (11 tests) 115ms 129 MB heap used
+ ✓ server/src/test/unit/email/EmailLogsClient.ui.test.tsx (6 tests) 960ms 113 MB heap used
+   ✓ EmailLogsClient > updates results when date range filter changes  308ms
+   ✓ EmailLogsClient > updates results when recipient search changes  308ms
+   ✓ EmailLogsClient > updates results when ticket filter changes  310ms
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/BillingCyclesDashboardSummary.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ packages/projects/tests/projectMaterialsDrawer.test.tsx (16 tests) 166ms 140 MB heap used
+ ✓ packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx (2 tests) 249ms 294 MB heap used
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | packages/tickets/src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ✓ packages/billing/tests/contractsActivationFlow.test.tsx (2 tests) 219ms 308 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/canvas/DesignCanvas.previewMode.test.tsx (15 tests) 35ms 342 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/canvas/DesignCanvas.constraintHighlights.test.tsx (2 tests) 3ms 347 MB heap used
+ ✓ server/src/test/unit/components/AssetNotesPanel.test.tsx (1 test) 2ms 331 MB heap used
+ ✓ packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx (28 tests) 1559ms 376 MB heap used
+   ✓ DesignerVisualWorkspace > calls paginated invoice search with status=all and query filters  316ms
+   ✓ DesignerVisualWorkspace > renders loading, empty, and error states for existing invoice list  619ms
+ ✓ packages/billing/tests/draftContractsTable.test.tsx (30 tests) 1264ms 271 MB heap used
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client
+iframeBridge: received message { type: 'apiproxy', origin: 'http://localhost:3000' }
+iframeBridge: handling apiproxy { requestId: 'req-error', route: '/error-route' }
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client
+iframeBridge: fetch completed {
+  status: 500,
+  ok: false,
+  url: '/api/ext-proxy/test-extension-id/error-route'
+}
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client
+iframeBridge: posting apiproxy_response { requestId: 'req-error', targetOrigin: '*' }
+
+stdout | ee/server/src/__tests__/integration/extensionProxyFlow.test.ts > Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should forward "apiproxy" message to Gateway and return response to Client
+iframeBridge: received message { type: 'apiproxy', origin: 'http://localhost:3000' }
+iframeBridge: handling apiproxy { requestId: 'req-123', route: '/tickets' }
+iframeBridge: posting apiproxy_response { requestId: 'req-123', targetOrigin: '*' }
+
+ ❯ ee/server/src/__tests__/integration/extensionProxyFlow.test.ts (4 tests | 3 failed) 141ms 254 MB heap used
+   × Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should forward "apiproxy" message to Gateway and return response to Client 58ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, …(1) ]
+
+Number of calls: 0
+
+   ✓ Extension Proxy Flow Integration > Host Bridge (Client -> Host) > should handle Gateway errors and return error message to Client 57ms
+   × Extension Proxy Flow Integration > Gateway Handler (Host -> Runner) > should forward request to RunnerBackend and propagate response headers/body 3ms
+     → Failed to resolve import "@alga-psa/db/models/UserSession" from "packages/auth/src/lib/nextAuthOptions.ts". Does the file exist?
+   × Extension Proxy Flow Integration > Gateway Handler (Host -> Runner) > should handle Runner errors gracefully 24ms
+     → Failed to resolve import "@alga-psa/db/models/UserSession" from "packages/auth/src/lib/nextAuthOptions.ts". Does the file exist?
+ ❯ server/src/test/unit/tickets/TicketEmailNotifications.ui.test.tsx (7 tests | 3 failed) 92ms 264 MB heap used
+   ✓ TicketEmailNotifications > renders without errors 1ms
+   ✓ TicketEmailNotifications > is collapsed by default and expands on click 10ms
+   ✓ TicketEmailNotifications > shows loading state while fetching 11ms
+   × TicketEmailNotifications > displays timestamp, recipient, subject, and status for each log entry 12ms
+     → Found multiple elements with the text: /2026/
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"min-w-0"[39m
+[36m>[39m
+  [0m1/1/2026[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<td>[39m
+  [0mJan 01, 2026, 7:00 AM[0m
+[36m</td>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   ✓ TicketEmailNotifications > shows error message for failed notifications 9ms
+   × TicketEmailNotifications > shows maximum 20 entries initially with Load more when more exist 16ms
+     → Found multiple elements with the role "table"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+[36m>[39m
+  [36m<thead[39m
+    [33mclass[39m=[32m"bg-background"[39m
+  [36m>[39m
+    [36m<tr>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mContract Name[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mClient[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mCreated[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-updated_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mLast Modified[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m>[39m
+            [0m ↓[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mActions[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+    [36m</tr>[39m
+  [36m</thead>[39m
+  [36m<tbody[39m
+    [33mclass[39m=[32m"divide-y divide-gray-100"[39m
+  [36m>[39m
+    [36m<tr[39m
+      [33mclass[39m=[32m"
+                    bg-[rgb(var(--color-border-50))]
+                    cursor-default
+                    transition-colors
+                    
+                  "[39m
+    [36m>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mDraft Alpha[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mAcme Co[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-created_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m12/31/2025[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-updated_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m1/1/2026[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"menu"[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-8 w-8 p-0 group"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"sr-only"[39m
+              [36m>[39m
+                [0mOpen menu[0m
+              [36m</span>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-ellipsis-vertical h-4 w-4"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"12"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"5"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"19"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mdata-automation-id[39m=[32m"ticket-email-notifications-table"[39m
+[36m>[39m
+  [36m<tbody>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser0@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS0[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser1@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS1[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser2@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS2[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser3@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS3[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser4@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS4[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser5@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS5[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser6@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS6[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser7@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS7[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser8@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS8[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser9@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS9[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser10@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS10[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser11@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS11[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser12@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS12[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser13@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS13[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser14@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS14[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser15@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS15[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser16@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS16[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser17@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS17[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser18@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS18[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser19@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS19[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × TicketEmailNotifications > Load more fetches additional entries 33ms
+     → Found multiple elements with the role "table"
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+[36m>[39m
+  [36m<thead[39m
+    [33mclass[39m=[32m"bg-background"[39m
+  [36m>[39m
+    [36m<tr>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mContract Name[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mClient[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mCreated[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-updated_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mLast Modified[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m>[39m
+            [0m ↓[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+      [36m<th[39m
+        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+        [33mid[39m=[32m"draft-contracts-table-header-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mActions[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-muted-foreground"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</th>[39m
+    [36m</tr>[39m
+  [36m</thead>[39m
+  [36m<tbody[39m
+    [33mclass[39m=[32m"divide-y divide-gray-100"[39m
+  [36m>[39m
+    [36m<tr[39m
+      [33mclass[39m=[32m"
+                    bg-[rgb(var(--color-border-50))]
+                    cursor-default
+                    transition-colors
+                    
+                  "[39m
+    [36m>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-contract_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mDraft Alpha[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-client_name"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0mAcme Co[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-created_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m12/31/2025[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-updated_at"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [0m1/1/2026[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+      [36m<td[39m
+        [33mclass[39m=[32m"px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top "[39m
+        [33mdata-automation-id[39m=[32m"draft-contracts-table-cell-0-contract_id"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"menu"[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] h-8 w-8 p-0 group"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"sr-only"[39m
+              [36m>[39m
+                [0mOpen menu[0m
+              [36m</span>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-ellipsis-vertical h-4 w-4"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"12"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"5"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"19"[39m
+                  [33mr[39m=[32m"1"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+Ignored nodes: comments, script, style
+[36m<table[39m
+  [33mdata-automation-id[39m=[32m"ticket-email-notifications-table"[39m
+[36m>[39m
+  [36m<tbody>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser0@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS0[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser1@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS1[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser2@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS2[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser3@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS3[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser4@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS4[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser5@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS5[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser6@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS6[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser7@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS7[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser8@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS8[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser9@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS9[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser10@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS10[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser11@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS11[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser12@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS12[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser13@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS13[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser14@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS14[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser15@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS15[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser16@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS16[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser17@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS17[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser18@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS18[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser19@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS19[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser20@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS20[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser21@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS21[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser22@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS22[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser23@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS23[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+    [36m<tr>[39m
+      [36m<td>[39m
+        [0mJan 01, 2026, 7:00 AM[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0muser24@example.com[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0mS24[0m
+      [36m</td>[39m
+      [36m<td>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"inline-flex items-center gap-2"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"h-2 w-2 rounded-full bg-emerald-500"[39m
+          [36m/>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"capitalize"[39m
+          [36m>[39m
+            [0msent[0m
+          [36m</span>[39m
+        [36m</span>[39m
+      [36m</td>[39m
+      [36m<td>[39m
+        [0m—[0m
+      [36m</td>[39m
+    [36m</tr>[39m
+  [36m</tbody>[39m
+[36m</table>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border bg-card text-card-foreground shadow-sm bg-white"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 pb-2"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-row items-center justify-between"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"text-lg font-semibold leading-none tracking-tight undefined"[39m
+          [36m>[39m
+            [0mNotes & Quick Info[0m
+          [36m</h3>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative px-3 rounded-md h-8 gap-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 group"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"lucide lucide-save"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"14"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"14"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M7 3v4a1 1 0 0 0 1 1h7"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mSave[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0 undefined"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"min-h-[200px]"[39m
+        [36m/>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                ...
+ ✓ server/src/test/unit/QuickAskOverlay.streaming.test.tsx (1 test) 13ms 282 MB heap used
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Initializing secret provider (legacy mode with composite fallback). Using read chain [env, filesystem] with write provider filesystem
+EnvSecretProvider initialized without prefix
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider initialized with 2 read providers and 1 write provider
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider found app secret 'postgres_password' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Retrieved secret 'postgres_password' from configured provider.
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+CompositeSecretProvider found app secret 'db_password_server' from provider 1
+
+stdout | server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx
+Retrieved secret 'db_password_server' from configured provider.
+
+ ❯ server/src/test/unit/Chat.streamingIncrementalState.test.tsx (9 tests | 9 failed) 31ms 266 MB heap used
+   × EE Chat (streaming state) > updates the in-progress assistant message as tokens arrive 4ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l6_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l7_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l8_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > aborts the streaming request when Stop is clicked 4ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l6_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l7_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > stops updating token display and ends generation state after Stop 3ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > shows a streaming cursor while receiving tokens 3ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l6_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > removes the streaming cursor when done is received 5ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l4_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l5_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > shows the partial response when a network error occurs mid-stream 3ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > shows an interruption indicator when the stream ends without done=true 3ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l3_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > persists the assistant message after streaming completes 3ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+   × EE Chat (streaming state) > persists assistant content matching the final streamed tokens 3ms
+     → Found multiple elements with the placeholder text of: Send a message
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_kv_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l0_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l1_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<textarea[39m
+  [33maria-busy[39m=[32m"false"[39m
+  [33maria-label[39m=[32m"Message Alga"[39m
+  [33mclass[39m=[32m"chat-input"[39m
+  [33mdata-automation-id[39m=[32m"chat-input"[39m
+  [33mid[39m=[32m"_r_l2_"[39m
+  [33mplaceholder[39m=[32m"Send a message"[39m
+  [33mrows[39m=[32m"3"[39m
+  [33mstyle[39m=[32m"height: 0px;"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rt-reset rt-BaseCard rt-Card rt-r-size-2 rt-variant-surface"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rt-Box rt-r-p-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex justify-between items-center mb-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"rt-Heading rt-r-size-4"[39m
+          [36m>[39m
+            [0mContracts[0m
+          [36m</h3>[39m
+        [36m</div>[39m
+        [36m<div>[39m
+          [36m<div>[39m
+            [36m<span>[39m
+              [0mTemplates[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Templates"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mClient Contracts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Client Contracts"[39m
+              [36m/>[39m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0mDrafts[0m
+              [36m<span[39m
+                [33mdata-testid[39m=[32m"tab-icon-Drafts"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"inline-flex items-center rounded-full border font-semibold transition-colors text-xs px-2.5 py-0.5 border-border ml-2 order-last bg-gray-100 text-gray-800"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</div>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative max-w-md w-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<circle[39m
+                    [33mcx[39m=[32m"11"[39m
+                    [33mcy[39m=[32m"11"[39m
+                    [33mr[39m=[32m"8"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m21 21-4.3-4.3"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-0"[39m
+                [36m>[39m
+                  [36m<input[39m
+                    [33maria-label[39m=[32m"Search draft contracts"[39m
+                    [33mclass[39m=[32m"w-full py-2 px-3 h-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))] pl-10"[39m
+                    [33mplaceholder[39m=[32m"Search drafts..."[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m""[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"datatable-container overflow-hidden bg-background rounded-lg border border-border"[39m
+              [33mdata-automation-id[39m=[32m"draft-contracts-table"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"overflow-x-auto"[39m
+              [36m>[39m
+                [36m<table[39m
+                  [33mclass[39m=[32m"w-full divide-y divide-[rgb(var(--color-border-200))]"[39m
+                [36m>[39m
+                  [36m<thead[39m
+                    [33mclass[39m=[32m"bg-background"[39m
+                  [36m>[39m
+                    [36m<tr>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-contract_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mContract Name[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-client_name"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-center"[39m
+                        [36m>[39m
+                          [36m<span>[39m
+                            [0mClient[0m
+                          [36m</span>[39m
+                          [36m<span[39m
+                            [33mclass[39m=[32m"text-muted-foreground"[39m
+                          [36m/>[39m
+                        [36m</div>[39m
+                      [36m</th>[39m
+                      [36m<th[39m
+                        [33mclass[39m=[32m"px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors cursor-pointer hover:bg-muted text-left"[39m
+                        [33mid[39m=[32m"draft-contracts-table-header-created_at"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"flex space-x-1  items-cen...
+ ✓ packages/billing/src/components/invoice-designer/DesignerShell.constraints.test.tsx (23 tests) 461ms 330 MB heap used
+
+ Test Files  511 failed | 86 passed | 4 skipped (601)
+      Tests  144 failed | 562 passed | 195 skipped (901)
+   Start at  14:53:51
+   Duration  53.99s (transform 2.69s, setup 344ms, collect 2.87s, tests 40.94s, environment 244ms, prepare 47ms) (pass).
