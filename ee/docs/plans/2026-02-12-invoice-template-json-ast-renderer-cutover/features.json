@@ -196,7 +196,7 @@
   {
     "id": "F023",
     "description": "Ensure preview and PDF paths use identical renderer/evaluator modules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Non-functional Requirements"

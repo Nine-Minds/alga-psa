@@ -552,3 +552,26 @@ Commands run:
 
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
 - `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).
+
+### 2026-02-12 — F023 implemented
+
+- Aligned preview and PDF/server render paths onto shared AST evaluator/renderer modules.
+- Updated template server-render action in:
+  - `packages/billing/src/actions/invoiceTemplates.ts`
+  - `renderTemplateOnServer` no longer executes Wasm; it now:
+    - resolves template from tenant+standard template set,
+    - requires canonical `templateAst`,
+    - evaluates via `evaluateInvoiceTemplateAst`,
+    - renders via `renderEvaluatedInvoiceTemplateAst`.
+- Extended parity wiring assertions in:
+  - `packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts`
+  - verifies preview action, PDF service, and `renderTemplateOnServer` all use AST evaluator/renderer stack.
+
+Rationale:
+
+- This ensures preview and both server-side rendering entry points share the same rendering core and reduces parity drift risk.
+
+Commands run:
+
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts` (pass).
+- `pnpm vitest --coverage.enabled=false packages/billing/src/actions/invoiceTemplateAstPersistenceWiring.test.ts packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts` (pass).

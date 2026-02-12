@@ -10,6 +10,14 @@ const readServerPdfServiceSource = (): string => {
   return fs.readFileSync(servicePath, 'utf8');
 };
 
+const readInvoiceTemplateActionsSource = (): string => {
+  const actionsPath = path.resolve(
+    process.cwd(),
+    'packages/billing/src/actions/invoiceTemplates.ts'
+  );
+  return fs.readFileSync(actionsPath, 'utf8');
+};
+
 describe('invoice PDF generation AST wiring', () => {
   it('uses shared AST evaluator and renderer helpers for invoice HTML generation', () => {
     const source = readServerPdfServiceSource();
@@ -25,5 +33,25 @@ describe('invoice PDF generation AST wiring', () => {
     expect(source).not.toContain('getCompiledWasm');
     expect(source).not.toContain('executeWasmTemplate');
     expect(source).not.toContain('renderLayout');
+  });
+
+  it('keeps preview and PDF server rendering paths on the same evaluator/renderer modules', () => {
+    const previewSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'packages/billing/src/actions/invoiceTemplatePreview.ts'),
+      'utf8'
+    );
+    const serverPdfSource = readServerPdfServiceSource();
+    const templateActionsSource = readInvoiceTemplateActionsSource();
+
+    expect(previewSource).toContain('evaluateInvoiceTemplateAst');
+    expect(previewSource).toContain('renderEvaluatedInvoiceTemplateAst');
+
+    expect(serverPdfSource).toContain('evaluateInvoiceTemplateAst');
+    expect(serverPdfSource).toContain('renderInvoiceTemplateAstHtmlDocument');
+
+    expect(templateActionsSource).toContain('evaluateInvoiceTemplateAst');
+    expect(templateActionsSource).toContain('renderEvaluatedInvoiceTemplateAst');
+    expect(templateActionsSource).not.toContain('executeWasmTemplate(');
+    expect(templateActionsSource).not.toContain('renderLayout(');
   });
 });

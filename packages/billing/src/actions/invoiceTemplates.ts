@@ -818,18 +818,18 @@ export const getCompiledWasm = withAuth(async (
 });
 // --- Server-Side Rendering Action ---
 
-import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
-import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import type { WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
+import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import type { InvoiceTemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 
 /**
  * Renders an invoice template entirely on the server-side.
- * Fetches Wasm, executes it, and renders the resulting layout to HTML/CSS.
+ * Evaluates template AST and renders the resulting output to HTML/CSS.
  *
  * @param templateId The ID of the template (standard or tenant).
  * @param invoiceData The data to populate the template with.
  * @returns A promise resolving to an object containing the rendered HTML and CSS.
- * @throws If any step (fetching Wasm, executing Wasm, rendering layout) fails.
+ * @throws If template lookup, AST evaluation, or rendering fails.
  */
 export const renderTemplateOnServer = withAuth(async (
     user,
@@ -844,19 +844,24 @@ export const renderTemplateOnServer = withAuth(async (
     }
 
     try {
-        // 1. Get the compiled Wasm Buffer (handles standard vs tenant automatically)
-        console.log(`[Server Action] Fetching Wasm for template: ${templateId}`);
-        const wasmBuffer = await getCompiledWasm(templateId);
+        const { knex } = await createTenantKnex();
+        const templates = await withTransaction(knex, async (trx: Knex.Transaction) =>
+          Invoice.getAllTemplates(trx, tenant)
+        );
+        const template = templates.find((entry) => entry.template_id === templateId);
+        if (!template) {
+          throw new Error(`Template ${templateId} not found for tenant ${tenant}.`);
+        }
+        const templateAst = (template.templateAst ?? null) as InvoiceTemplateAst | null;
+        if (!templateAst) {
+          throw new Error(`Template ${templateId} does not have a canonical templateAst payload.`);
+        }
 
-        // 2. Execute the Wasm template to get the layout structure
-        console.log(`[Server Action] Preparing to execute Wasm for template: ${templateId} with invoice number: ${invoiceData.invoiceNumber}`); // Log invoice number
-        console.log(`[Server Action] Invoice Data for Wasm: ${JSON.stringify(invoiceData, null, 2)}`); // Log the full data
-        console.log(`[Server Action] Executing Wasm for template: ${templateId}`);
-        const layout = await executeWasmTemplate(invoiceData, wasmBuffer);
-
-        // 3. Render the layout structure to HTML and CSS
-        console.log(`[Server Action] Rendering layout for template: ${templateId}`);
-        const { html, css } = renderLayout(layout);
+        const evaluation = evaluateInvoiceTemplateAst(
+          templateAst,
+          invoiceData as unknown as Record<string, unknown>
+        );
+        const { html, css } = renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
 
         console.log(`[Server Action] Successfully rendered template: ${templateId}`);
         return { html, css };
