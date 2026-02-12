@@ -379,7 +379,7 @@
   {
     "id": "T046",
     "description": "Changing default language persists to tenant_settings (mspPortal.defaultLocale)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
