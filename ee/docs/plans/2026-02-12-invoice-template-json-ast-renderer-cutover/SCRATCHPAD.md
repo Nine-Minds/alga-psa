@@ -279,3 +279,26 @@ Rationale:
 Commands run:
 
 - `npx vitest run packages/billing/src/lib/invoice-template-ast/evaluator.test.ts` (pass).
+
+### 2026-02-12 — F010 implemented
+
+- Added shared React renderer module in `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`.
+- Implemented renderer component + server-safe static markup helper:
+  - `InvoiceTemplateAstRenderer`
+  - `renderEvaluatedInvoiceTemplateAst(ast, evaluation) -> { html, css }`
+- Supported node rendering for:
+  - `document`, `section`, `stack`, `text`, `field`, `image`, `divider`, `table`, `dynamic-table`, `totals`.
+- Implemented expression/value resolution against evaluator bindings and row scope.
+- Implemented class/token CSS generation from AST style catalog.
+- Added renderer tests in `packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx` for:
+  - static text/field/table/totals rendering,
+  - style/class consistency,
+  - unsafe content escaping in output HTML.
+
+Rationale:
+
+- This is the shared rendering surface required for both interactive preview and backend PDF paths.
+
+Commands run:
+
+- `npx vitest run packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx packages/billing/src/lib/invoice-template-ast/evaluator.test.ts packages/billing/src/lib/invoice-template-ast/schema.test.ts packages/billing/src/lib/invoice-template-ast/strategies.test.ts` (pass).

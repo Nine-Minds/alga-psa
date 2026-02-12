@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Implement shared React invoice renderer that consumes evaluated AST context and emits HTML/CSS",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Requirements"]
   },
   {
