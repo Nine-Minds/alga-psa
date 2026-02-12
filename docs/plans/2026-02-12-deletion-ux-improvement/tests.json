@@ -428,7 +428,7 @@
   {
     "id": "T072",
     "description": "ClientDetails.tsx passes onAlternativeAction that calls markClientInactiveWithContacts for 'deactivate'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F051"]
   },
   {
