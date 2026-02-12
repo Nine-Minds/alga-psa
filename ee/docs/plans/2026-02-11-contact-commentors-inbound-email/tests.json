@@ -303,7 +303,7 @@
   {
     "id": "T037",
     "description": "Inbound email integration (Microsoft): matched contact without user stores comment with contact_id and client author type",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025"

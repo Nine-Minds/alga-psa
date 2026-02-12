@@ -626,6 +626,87 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it("Contact match (Microsoft): sender email matches existing contact and ticket stores contact-authored initial comment", async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-ms-contact-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    const contactEmail = `ms-contact-${uuidv4().slice(0, 6)}@example.com`;
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `MS Contact Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: contactClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Inbound Microsoft Contact',
+      email: contactEmail,
+      client_id: contactClientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+    });
+
+    const subject = `Microsoft contact matched subject ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: contactEmail, name: 'Inbound Microsoft Contact' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: { text: 'Hello from microsoft contact', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(contactClientId);
+    expect(ticket.contact_name_id).toBe(contactId);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('client');
+    expect(comments[0].contact_id).toBe(contactId);
+    expect(comments[0].user_id ?? null).toBeNull();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
   it('Contact match: initial comment is associated with matched client user', async () => {
     const providerId = uuidv4();
     const mailbox = `support-contact-user-${uuidv4().slice(0, 6)}@example.com`;
