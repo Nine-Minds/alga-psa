@@ -350,7 +350,7 @@
   {
     "id": "T059",
     "description": "useDeletionValidation returns isValidating=true during validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F043"]
   },
   {
