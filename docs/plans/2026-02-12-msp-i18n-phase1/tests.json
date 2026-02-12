@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "With flag ON: standard MSP layout calls getHierarchicalLocaleAction and passes locale to MspLayoutClient",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003"
