@@ -338,7 +338,7 @@
   {
     "id": "T041",
     "description": "Selecting 'Not set' clears user preference and falls back to org/system default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

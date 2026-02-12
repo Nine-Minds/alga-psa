@@ -151,3 +151,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T038: Selecting a language in Profile updates user_preferences table (setting_name='locale') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T039: Selecting a language in Profile updates the locale cookie (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T040: After selecting a language and reloading, the selected language persists (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T041: Selecting 'Not set' clears user preference and falls back to org/system default (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
