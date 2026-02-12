@@ -458,7 +458,7 @@
   {
     "id": "T077",
     "description": "Team deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F055"]
   },
   {
