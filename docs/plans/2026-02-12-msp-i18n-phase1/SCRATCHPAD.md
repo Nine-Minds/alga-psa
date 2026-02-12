@@ -161,3 +161,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - T048: getTenantMspLocaleSettings server action reads mspPortal locale settings from tenant_settings (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T049: updateTenantMspLocaleSettings server action writes mspPortal locale settings to tenant_settings (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T050: Locale resolution for internal users: user preference takes priority over org default (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T051: Locale resolution for internal users: org default takes priority over system default when no user preference set (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).

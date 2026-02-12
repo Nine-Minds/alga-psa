@@ -419,7 +419,7 @@
   {
     "id": "T051",
     "description": "Locale resolution for internal users: org default takes priority over system default when no user preference set",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
