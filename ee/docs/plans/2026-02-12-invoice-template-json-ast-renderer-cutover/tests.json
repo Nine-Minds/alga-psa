@@ -383,7 +383,7 @@
   {
     "id": "T040",
     "description": "Build/test pass without AssemblyScript compile helper module",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ],
