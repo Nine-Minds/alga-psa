@@ -151,7 +151,7 @@
   {
     "id": "T016",
     "description": "Renderer applies style declarations and class tokens consistently",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
