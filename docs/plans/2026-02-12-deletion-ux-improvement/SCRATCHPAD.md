@@ -68,3 +68,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-02-12) Added DeleteEntityDialog component with validation states, dependency list, alternatives, and loading states; exported from @alga-psa/ui.
 - (2026-02-12) Refactored client deletion to use deleteEntityWithValidation, added validateClientDeletion precheck, removed manual tag cleanup, and swapped ClientDetails delete dialog to DeleteEntityDialog with preview + alternative action wiring.
 - (2026-02-12) Refactored contact deletion to use deleteEntityWithValidation and DeleteEntityDialog; removed manual tag cleanup in contactActions.
+- (2026-02-12) Updated user deletion action to use deleteEntityWithValidation and wired UserManagementSettings to DeleteEntityDialog with dependency preview and deactivate alternative.
