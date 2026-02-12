@@ -92,7 +92,7 @@
   {
     "id": "T010",
     "description": "Evaluator computes aggregate totals (sum/count/avg) accurately",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F004"
