@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "Contact config has correct foreign keys: tickets.contact_name_id, interactions.contact_name_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
