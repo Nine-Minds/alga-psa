@@ -13,7 +13,9 @@ import type { IClientContractLine } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 
 export default function ClientAccount() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal/profile');
+  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tBilling } = useTranslation('features/billing');
   const [isLoading, setIsLoading] = useState(true);
   const [client, setClient] = useState<IClient | null>(null);
   const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
@@ -75,7 +77,7 @@ export default function ClientAccount() {
         }
       } catch (e) {
         if (!mounted) return;
-        setError(t('clientSettings.messages.failedToLoad'));
+        setError(tProfile('clientSettings.messages.failedToLoad'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -93,7 +95,7 @@ export default function ClientAccount() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text={t('common.loading')}
+          text={tCore('common.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -113,22 +115,22 @@ export default function ClientAccount() {
       {/* Client Details */}
       <Card id="client-details-card" className="bg-white">
         <CardHeader>
-          <CardTitle>{t('clientSettings.tabs.clientDetails')}</CardTitle>
+          <CardTitle>{tProfile('clientSettings.tabs.clientDetails')}</CardTitle>
         </CardHeader>
         <CardContent>
           {client ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-600">{t('clientSettings.fields.clientName')}</div>
+                <div className="text-sm text-gray-600">{tProfile('clientSettings.fields.clientName')}</div>
                 <div className="text-base font-medium">{client.client_name}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">{t('clientSettings.fields.website')}</div>
+                <div className="text-sm text-gray-600">{tProfile('clientSettings.fields.website')}</div>
                 <div className="text-base font-medium">{client.properties?.website || client.url || '—'}</div>
               </div>
             </div>
           ) : (
-            <div>{t('common.noData')}</div>
+            <div>{tCore('common.noData')}</div>
           )}
         </CardContent>
       </Card>
@@ -136,7 +138,7 @@ export default function ClientAccount() {
       {/* Contract Line */}
       <Card id="contract-line-card" className="bg-white">
         <CardHeader>
-          <CardTitle>{t('billing.currentContractLine')}</CardTitle>
+          <CardTitle>{tBilling('currentContractLine')}</CardTitle>
         </CardHeader>
         <CardContent>
           {contractLine ? (
@@ -152,7 +154,7 @@ export default function ClientAccount() {
               </div> */}
             </div>
           ) : (
-            <div className="text-gray-600">{t('common.noData')}</div>
+            <div className="text-gray-600">{tCore('common.noData')}</div>
           )}
         </CardContent>
       </Card>
@@ -160,25 +162,25 @@ export default function ClientAccount() {
       {/* Invoices */}
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>{t('billing.invoices')}</CardTitle>
+          <CardTitle>{tBilling('invoices')}</CardTitle>
         </CardHeader>
         <CardContent>
           {!hasInvoiceAccess ? (
-            <div className="text-sm text-gray-600">{t('billing.messages.noInvoices')}</div>
+            <div className="text-sm text-gray-600">{tBilling('messages.noInvoices')}</div>
           ) : (
             <Table id="invoices-table">
               <thead>
                 <tr>
-                  <th>{t('billing.invoice.number')}</th>
-                  <th>{t('billing.invoice.date')}</th>
-                  <th>{t('billing.invoice.amount')}</th>
-                  <th>{t('billing.invoice.status')}</th>
+                  <th>{tBilling('invoice.number')}</th>
+                  <th>{tBilling('invoice.date')}</th>
+                  <th>{tBilling('invoice.amount')}</th>
+                  <th>{tBilling('invoice.status')}</th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-4 text-gray-500">{t('billing.messages.noInvoices')}</td>
+                    <td colSpan={4} className="text-center py-4 text-gray-500">{tBilling('messages.noInvoices')}</td>
                   </tr>
                 ) : (
                   invoices.slice(0, 10).map((inv) => (

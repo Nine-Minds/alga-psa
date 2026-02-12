@@ -42,7 +42,7 @@ export default function ProjectTasksSection({
   showServices,
   allowUploads
 }: ProjectTasksSectionProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/projects');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -109,8 +109,8 @@ export default function ProjectTasksSection({
   if (tasks.length === 0) {
     return (
       <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">{t('projects.tasks.title', 'Tasks')}</h3>
-        <p className="text-gray-600 text-sm">{t('projects.tasks.noTasks', 'No tasks to display')}</p>
+        <h3 className="text-lg font-semibold mb-2">{t('tasks.title', 'Tasks')}</h3>
+        <p className="text-gray-600 text-sm">{t('tasks.noTasks', 'No tasks to display')}</p>
       </div>
     );
   }
@@ -126,7 +126,7 @@ export default function ProjectTasksSection({
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg mb-6">
-      <h3 className="text-lg font-semibold mb-4">{t('projects.tasks.title', 'Tasks')}</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('tasks.title', 'Tasks')}</h3>
       <div className="space-y-3">
         {phases.map((phase) => {
           const phaseTasks = tasksByPhase[phase.phase_id] || [];
@@ -177,7 +177,7 @@ export default function ProjectTasksSection({
                           {visibleFields.includes('status') && task.status_name && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.tasks.status', 'Status')}:
+                                {t('tasks.status', 'Status')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.status_name}</span>
                             </div>
@@ -187,7 +187,7 @@ export default function ProjectTasksSection({
                           {visibleFields.includes('assigned_to') && task.assigned_to_name && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.tasks.assignedTo', 'Assigned To')}:
+                                {t('tasks.assignedTo', 'Assigned To')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.assigned_to_name}</span>
                             </div>
@@ -197,7 +197,7 @@ export default function ProjectTasksSection({
                           {visibleFields.includes('due_date') && task.due_date && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.tasks.dueDate', 'Due Date')}:
+                                {t('tasks.dueDate', 'Due Date')}:
                               </span>{' '}
                               <span className="text-gray-600">
                                 {format(new Date(task.due_date), 'PPP', { locale: dateLocale })}
@@ -209,7 +209,7 @@ export default function ProjectTasksSection({
                           {visibleFields.includes('estimated_hours') && task.estimated_hours != null && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.tasks.estimatedHours', 'Estimated Hours')}:
+                                {t('tasks.estimatedHours', 'Estimated Hours')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.estimated_hours}</span>
                             </div>
@@ -219,7 +219,7 @@ export default function ProjectTasksSection({
                           {visibleFields.includes('actual_hours') && task.actual_hours != null && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.fields.hoursLogged', 'Actual Hours')}:
+                                {t('fields.hoursLogged', 'Actual Hours')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.actual_hours}</span>
                             </div>
@@ -229,7 +229,7 @@ export default function ProjectTasksSection({
                           {visibleFields.includes('priority') && task.priority_id && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.tasks.priority', 'Priority')}:
+                                {t('tasks.priority', 'Priority')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.priority_id}</span>
                             </div>
@@ -239,7 +239,7 @@ export default function ProjectTasksSection({
                           {showServices && task.service_name && (
                             <div>
                               <span className="font-medium text-gray-700">
-                                {t('projects.tasks.services', 'Service')}:
+                                {t('tasks.services', 'Service')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.service_name}</span>
                             </div>

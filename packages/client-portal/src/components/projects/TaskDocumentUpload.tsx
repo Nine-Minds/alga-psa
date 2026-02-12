@@ -81,7 +81,8 @@ function getFileExtension(fileName: string, mimeType: string): string {
 }
 
 export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocumentUploadProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/documents');
+  const { t: tCore } = useTranslation('client-portal/core');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,11 +150,11 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
         // Refresh documents list
         await fetchDocuments();
       } else {
-        setError(result.error || t('projects.documents.uploadError', 'Failed to upload document'));
+        setError(result.error || t('uploadError', 'Failed to upload document'));
       }
     } catch (err) {
       console.error('Error uploading document:', err);
-      setError(t('projects.documents.uploadError', 'Failed to upload document'));
+      setError(t('uploadError', 'Failed to upload document'));
     } finally {
       setUploading(false);
       setPendingFile(null);
@@ -183,7 +184,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
       console.error('Download failed:', err);
-      setError(t('projects.documents.downloadError', 'Failed to download document'));
+      setError(t('downloadError', 'Failed to download document'));
     }
   };
 
@@ -197,7 +198,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
       console.error('Download failed:', err);
-      setError(t('projects.documents.downloadError', 'Failed to download document'));
+      setError(t('downloadError', 'Failed to download document'));
     }
   };
 
@@ -264,7 +265,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                 handleDocumentClick(doc);
               }}
               className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-              title={t('projects.documents.view', 'View')}
+              title={t('view', 'View')}
             >
               <Eye className="w-4 h-4" />
             </button>
@@ -275,7 +276,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
             type="button"
             onClick={(e) => handleDownload(doc, e)}
             className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-            title={t('projects.documents.download', 'Download')}
+            title={t('download', 'Download')}
           >
             <Download className="w-4 h-4" />
           </button>
@@ -311,7 +312,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           <button
             className="absolute top-4 right-16 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
             onClick={(e) => handleDownload(previewDocument, e)}
-            title={t('projects.documents.download', 'Download')}
+            title={t('download', 'Download')}
           >
             <Download className="w-6 h-6" />
           </button>
@@ -360,7 +361,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               onClick={() => documents.length > 0 && setExpanded(!expanded)}
               disabled={loading || documents.length === 0}
               className="text-gray-500 hover:text-gray-700 flex items-center gap-1 disabled:cursor-default disabled:hover:text-gray-500 p-1 rounded hover:bg-gray-100 transition-colors"
-              title={loading ? '' : `${documents.length} ${documents.length === 1 ? t('projects.documents.file', 'file') : t('projects.documents.files', 'files')}`}
+              title={loading ? '' : `${documents.length} ${documents.length === 1 ? t('file', 'file') : t('files', 'files')}`}
             >
               <Paperclip className="w-4 h-4" />
               {!loading && documents.length > 0 && (
@@ -384,7 +385,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="text-purple-600 hover:text-purple-700 p-1 rounded hover:bg-purple-50 transition-colors"
-              title={uploading ? t('common.uploading', 'Uploading...') : t('projects.documents.upload', 'Upload')}
+              title={uploading ? tCore('common.uploading', 'Uploading...') : t('upload', 'Upload')}
             >
               {uploading ? (
                 <Spinner size="xs" />
@@ -452,7 +453,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                       type="button"
                       onClick={(e) => handleDownload(doc, e)}
                       className="p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors flex-shrink-0"
-                      title={t('projects.documents.download', 'Download')}
+                      title={t('download', 'Download')}
                     >
                       <Download className="w-3.5 h-3.5" />
                     </button>
@@ -486,7 +487,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
         <div className="flex items-center justify-between">
           <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
             <Paperclip className="w-4 h-4" />
-            {t('projects.documents.title', 'Attachments')}
+            {t('title', 'Attachments')}
             {!loading && documents.length > 0 && (
               <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
                 {documents.length}
@@ -513,12 +514,12 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               {uploading ? (
                 <>
                   <Spinner size="xs" className="mr-1" />
-                  {t('common.uploading', 'Uploading...')}
+                  {tCore('common.uploading', 'Uploading...')}
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-1" />
-                  {t('projects.documents.upload', 'Upload')}
+                  {t('upload', 'Upload')}
                 </>
               )}
             </Button>
@@ -540,10 +541,10 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-200">
             <Paperclip className="w-8 h-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500">
-              {t('projects.documents.noDocuments', 'No documents attached')}
+              {t('noDocuments', 'No documents attached')}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              {t('projects.documents.uploadHint', 'Upload files to share with this task')}
+              {t('uploadHint', 'Upload files to share with this task')}
             </p>
           </div>
         ) : (

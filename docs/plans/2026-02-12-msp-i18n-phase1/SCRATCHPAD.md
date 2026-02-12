@@ -90,3 +90,4 @@ Batch into ~4 meaningful commits (not one-liners):
 - Added `client-portal/core.json` with nav/dashboard/common/pagination/time keys for all locales.
 - Added `client-portal/auth.json` with auth/account translations for all locales.
 - Added `client-portal/profile.json` with profile/clientSettings/notifications translations for all locales.
+- Migrated client portal tickets usage to `features/tickets` namespace and adjusted common key usage via `client-portal/core`.

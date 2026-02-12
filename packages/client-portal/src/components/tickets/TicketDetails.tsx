@@ -49,14 +49,15 @@ export function TicketDetails({
   initialDocuments,
   initialStatusOptions
 }: TicketDetailsProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/tickets');
+  const { t: tCore } = useTranslation('client-portal/core');
   const dateLocale = getDateFnsLocale(i18n.language);
   // Use pre-fetched data from server component
   const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
-  const [activeTab, setActiveTab] = useState(t('tickets.messages.comments', 'Comments'));
+  const [activeTab, setActiveTab] = useState(t('messages.comments', 'Comments'));
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -86,11 +87,11 @@ export function TicketDetails({
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
   const ticketOriginLabels = useMemo(() => ({
-    internal: t('tickets.origin.internal', 'Created Internally'),
-    clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal'),
-    inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email'),
-    api: t('tickets.origin.api', 'Created via API'),
-    other: t('tickets.origin.other', 'Created via Other'),
+    internal: t('origin.internal', 'Created Internally'),
+    clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
+    inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email'),
+    api: t('origin.api', 'Created via API'),
+    other: t('origin.other', 'Created via Other'),
   }), [t]);
 
   // Fetch appointment requests for this ticket
@@ -184,7 +185,7 @@ export function TicketDetails({
 
     if (!hasContent) {
       console.log("Cannot add empty comment");
-      toast.error(t('tickets.messages.emptyComment', 'Cannot add empty comment'));
+      toast.error(t('messages.emptyComment', 'Cannot add empty comment'));
       return false;
     }
 
@@ -216,8 +217,8 @@ export function TicketDetails({
       return true;
     } catch (error) {
       console.error('Failed to add comment:', error);
-      setError(t('tickets.messages.commentError', 'Failed to add comment'));
-      toast.error(t('tickets.messages.commentError', 'Failed to add comment'));
+      setError(t('messages.commentError', 'Failed to add comment'));
+      toast.error(t('messages.commentError', 'Failed to add comment'));
       return false;
     }
   };
@@ -244,7 +245,7 @@ export function TicketDetails({
                parsedContent[0].content[0].text === '')));
           
           if (isEmpty) {
-            toast.error(t('tickets.messages.emptyNote', 'Cannot save empty note'));
+            toast.error(t('messages.emptyNote', 'Cannot save empty note'));
             return;
           }
         } catch (e) {
@@ -347,8 +348,8 @@ export function TicketDetails({
       });
     } catch (error) {
       console.error('Failed to update comment:', error);
-      setError(t('tickets.messages.failedToUpdateComment', 'Failed to update comment'));
-      toast.error(t('tickets.messages.failedToUpdateComment', 'Failed to update comment'));
+      setError(t('messages.failedToUpdateComment', 'Failed to update comment'));
+      toast.error(t('messages.failedToUpdateComment', 'Failed to update comment'));
     }
   };
 
@@ -363,8 +364,8 @@ export function TicketDetails({
       
       // Check if the comment belongs to the current user
       if (comment.user_id !== currentUser?.id) {
-        setError(t('tickets.messages.deleteOwnCommentError', 'You can only delete your own comments'));
-        toast.error(t('tickets.messages.deleteOwnCommentError', 'You can only delete your own comments'));
+        setError(t('messages.deleteOwnCommentError', 'You can only delete your own comments'));
+        toast.error(t('messages.deleteOwnCommentError', 'You can only delete your own comments'));
         return;
       }
       
@@ -372,11 +373,11 @@ export function TicketDetails({
       // Refresh ticket details to remove deleted comment
       const details = await getClientTicketDetails(ticketId);
       setTicket(details);
-      toast.success(t('tickets.messages.commentDeleteSuccess', 'Comment deleted successfully'));
+      toast.success(t('messages.commentDeleteSuccess', 'Comment deleted successfully'));
     } catch (error) {
       console.error('Failed to delete comment:', error);
-      setError(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
-      toast.error(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
+      setError(t('messages.failedToDeleteComment', 'Failed to delete comment'));
+      toast.error(t('messages.failedToDeleteComment', 'Failed to delete comment'));
     }
   };
 
@@ -396,13 +397,13 @@ export function TicketDetails({
 
     try {
       await updateTicketStatus(ticketId, newStatusId);
-      toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusName }));
+      toast.success(t('messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusName }));
 
       setTicket(prevTicket => ({ ...prevTicket, status_id: newStatusId, status_name: newStatusName }));
 
     } catch (error) {
       console.error('Failed to update ticket status:', error);
-      toast.error(t('tickets.messages.statusUpdateError', 'Failed to update ticket status.'));
+      toast.error(t('messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }
@@ -425,11 +426,11 @@ export function TicketDetails({
             </div>
             <div className="text-right text-xs text-gray-500 ml-4">
               <div className="whitespace-nowrap">
-                {t('tickets.fields.created', 'Created')} {format(new Date(ticket.entered_at || ''), 'MMM d, yyyy h:mm a', { locale: dateLocale })} ({formatDistanceToNow(new Date(ticket.entered_at || ''), { addSuffix: true, locale: dateLocale })})
+                {t('fields.created', 'Created')} {format(new Date(ticket.entered_at || ''), 'MMM d, yyyy h:mm a', { locale: dateLocale })} ({formatDistanceToNow(new Date(ticket.entered_at || ''), { addSuffix: true, locale: dateLocale })})
               </div>
               {ticket.updated_at && (
                 <div className="whitespace-nowrap">
-                  {t('tickets.fields.lastUpdated', 'Last Updated')} {format(new Date(ticket.updated_at), 'MMM d, yyyy h:mm a', { locale: dateLocale })} ({formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true, locale: dateLocale })})
+                  {t('fields.lastUpdated', 'Last Updated')} {format(new Date(ticket.updated_at), 'MMM d, yyyy h:mm a', { locale: dateLocale })} ({formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true, locale: dateLocale })})
                 </div>
               )}
             </div>
@@ -440,14 +441,14 @@ export function TicketDetails({
             {/* Title */}
             <div>
               <div className="text-2xl font-semibold text-gray-900">
-                {ticket.title || t('tickets.messages.noTitle', 'No title')}
+                {ticket.title || t('messages.noTitle', 'No title')}
               </div>
             </div>
 
             {/* Status */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">
-                {t('tickets.fields.status', 'Status')}
+                {t('fields.status', 'Status')}
               </label>
               <div className="flex items-center gap-3">
                 <CustomSelect
@@ -478,10 +479,10 @@ export function TicketDetails({
                     isClientPortal={true}
                     size="md"
                     labels={{
-                      awaitingClient: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response'),
-                      awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
-                      awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
-                      awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                      awaitingClient: t('responseState.awaitingYourResponse', 'Awaiting Your Response'),
+                      awaitingInternal: t('responseState.awaitingSupportResponse', 'Awaiting Support Response'),
+                      awaitingClientTooltip: t('responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
+                      awaitingInternalTooltip: t('responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
                     }}
                   />
                 )}
@@ -496,7 +497,7 @@ export function TicketDetails({
             {/* Assigned To */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">
-                {t('tickets.fields.assignedTo', 'Assigned To')}
+                {t('fields.assignedTo', 'Assigned To')}
               </label>
               <div className="flex items-center gap-2">
                 {ticket.assigned_to && ticket.userMap?.[ticket.assigned_to] ? (
@@ -520,7 +521,7 @@ export function TicketDetails({
             {/* Priority */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">
-                {t('tickets.fields.priority', 'Priority')}
+                {t('fields.priority', 'Priority')}
               </label>
               <div className="inline-flex items-center gap-2">
                 <div
@@ -528,7 +529,7 @@ export function TicketDetails({
                   style={ticket.priority_color ? { backgroundColor: ticket.priority_color } : undefined}
                 />
                 <span className="text-sm text-gray-700">
-                  {ticket.priority_name || t('tickets.priority.unknown', 'Unknown Priority')}
+                  {ticket.priority_name || t('priority.unknown', 'Unknown Priority')}
                 </span>
               </div>
             </div>
@@ -536,7 +537,7 @@ export function TicketDetails({
             {/* Due Date */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">
-                {t('tickets.fields.dueDate', 'Due Date')}
+                {t('fields.dueDate', 'Due Date')}
               </label>
               {ticket.due_date ? (() => {
                 const dueDate = new Date(ticket.due_date);
@@ -572,7 +573,7 @@ export function TicketDetails({
             {/* Description */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">
-                {t('tickets.fields.description', 'Description')}
+                {t('fields.description', 'Description')}
               </label>
               <div className="flex-1">
                 <div className="font-bold text-gray-700 break-words">
@@ -603,7 +604,7 @@ export function TicketDetails({
                       className="break-words max-w-full"
                     />
                   ) : (
-                    t('tickets.messages.noDescription', 'No description found.')
+                    t('messages.noDescription', 'No description found.')
                   )}
                 </div>
               </div>
@@ -621,7 +622,7 @@ export function TicketDetails({
                 userMap={ticket.userMap || {}}
                 contactMap={ticket.contactMap || {}}
                 currentUser={currentUser}
-                activeTab={activeTab === 'Internal' ? t('tickets.messages.comments', 'Comments') : activeTab}
+                activeTab={activeTab === 'Internal' ? t('messages.comments', 'Comments') : activeTab}
                 hideInternalTab={true}
                 isEditing={isEditing}
                 currentComment={currentComment}
@@ -688,10 +689,10 @@ export function TicketDetails({
           isOpen={!!ticketToUpdateStatus}
           onClose={() => setTicketToUpdateStatus(null)}
           onConfirm={handleStatusChangeConfirm}
-          title={t('tickets.actions.changeStatus', 'Change Status')}
-          message={t('tickets.actions.confirmStatusChange', 'Are you sure you want to change the status of this ticket?')}
-          confirmLabel={t('common.update', 'Update')}
-          cancelLabel={t('common.cancel', 'Cancel')}
+          title={t('actions.changeStatus', 'Change Status')}
+          message={t('actions.confirmStatusChange', 'Are you sure you want to change the status of this ticket?')}
+          confirmLabel={tCore('common.update', 'Update')}
+          cancelLabel={tCore('common.cancel', 'Cancel')}
         />
       </>
     );
@@ -711,10 +712,10 @@ export function TicketDetails({
         isOpen={!!ticketToUpdateStatus}
         onClose={() => setTicketToUpdateStatus(null)}
         onConfirm={handleStatusChangeConfirm}
-        title={t('tickets.actions.changeStatus', 'Change Status')}
-        message={t('tickets.actions.confirmStatusChange', 'Are you sure you want to change the status of this ticket?')}
-        confirmLabel={t('common.update', 'Update')}
-        cancelLabel={t('common.cancel', 'Cancel')}
+        title={t('actions.changeStatus', 'Change Status')}
+        message={t('actions.confirmStatusChange', 'Are you sure you want to change the status of this ticket?')}
+        confirmLabel={tCore('common.update', 'Update')}
+        cancelLabel={tCore('common.cancel', 'Cancel')}
       />
     </>
   );

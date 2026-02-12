@@ -31,14 +31,15 @@ const TAB_KEY_TO_SLUG: Record<string, string> = {
 };
 
 export function ClientNotificationsList() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal/profile');
+  const { t: tCore } = useTranslation('client-portal/core');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
   // Get translated tab labels
-  const unreadTabLabel = t('notifications.tabs.unread', 'Unread');
-  const allTabLabel = t('notifications.tabs.all', 'All');
-  const readTabLabel = t('notifications.tabs.read', 'Read');
+  const unreadTabLabel = tProfile('notifications.tabs.unread', 'Unread');
+  const allTabLabel = tProfile('notifications.tabs.all', 'All');
+  const readTabLabel = tProfile('notifications.tabs.read', 'Read');
 
   // Map tab keys to translated labels
   const tabKeyToLabel: Record<string, string> = useMemo(() => ({
@@ -126,7 +127,7 @@ export function ClientNotificationsList() {
       setActivities(sortedActivities);
     } catch (err) {
       console.error('Error loading notification activities:', err);
-      setError(t('notifications.preferences.loadError', 'Failed to load notifications'));
+      setError(tProfile('notifications.preferences.loadError', 'Failed to load notifications'));
     } finally {
       setLoading(false);
     }
@@ -227,7 +228,7 @@ export function ClientNotificationsList() {
     if (loading) {
       return (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">{t('common.loading')}</p>
+          <p className="text-gray-500">{tCore('common.loading')}</p>
         </div>
       );
     }
@@ -243,7 +244,7 @@ export function ClientNotificationsList() {
     if (activities.length === 0) {
       return (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">{t('notifications.noNotifications')}</p>
+          <p className="text-gray-500">{tProfile('notifications.noNotifications')}</p>
         </div>
       );
     }
@@ -288,7 +289,7 @@ export function ClientNotificationsList() {
         {/* Header with filters */}
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{t('notifications.title')}</h3>
+            <h3 className="text-lg font-semibold">{tProfile('notifications.title')}</h3>
             {unreadCount > 0 && (
               <Badge variant="default" className="bg-blue-500">
                 {unreadCount}
@@ -302,9 +303,9 @@ export function ClientNotificationsList() {
               size="sm"
               onClick={handleRefresh}
               disabled={loading}
-              aria-label={t('common.refresh', 'Refresh')}
+              aria-label={tCore('common.refresh', 'Refresh')}
             >
-              {t('common.refresh', 'Refresh')}
+              {tCore('common.refresh', 'Refresh')}
             </Button>
             {isFiltersActive() ? (
               <Button
@@ -316,7 +317,7 @@ export function ClientNotificationsList() {
                 className="gap-1"
               >
                 <XCircleIcon className="h-4 w-4" />
-                {t('common.resetFilters', 'Reset Filters')}
+                {tCore('common.resetFilters', 'Reset Filters')}
               </Button>
             ) : (
               <Button
@@ -325,9 +326,9 @@ export function ClientNotificationsList() {
                 size="sm"
                 onClick={() => setIsFilterDialogOpen(true)}
                 disabled={loading}
-                aria-label={t('common.filter', 'Filter')}
+                aria-label={tCore('common.filter', 'Filter')}
               >
-                <Filter size={16} className="mr-1" /> {t('common.filter', 'Filter')}
+                <Filter size={16} className="mr-1" /> {tCore('common.filter', 'Filter')}
               </Button>
             )}
           </div>

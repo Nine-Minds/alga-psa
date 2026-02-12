@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Migrate all client portal components using tickets.* keys to useTranslation('features/tickets')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {

@@ -61,6 +61,8 @@ const DOCUMENT_VIEW_MODE_SETTING = 'documents_view_mode';
 const DOCUMENT_GRID_PAGE_SIZE_SETTING = 'documents_grid_page_size';
 const DOCUMENT_LIST_PAGE_SIZE_SETTING = 'documents_list_page_size';
 
+type DocumentsNamespace = 'common' | 'features/documents';
+
 interface DocumentsProps {
   id?: string;
   documents: IDocument[];
@@ -74,7 +76,7 @@ interface DocumentsProps {
   isInDrawer?: boolean;
   uploadFormRef?: React.RefObject<HTMLDivElement | null>;
   filters?: DocumentFilters;
-  namespace?: 'common' | 'clientPortal';
+  namespace?: DocumentsNamespace;
 }
 
 const Documents = ({
@@ -92,7 +94,10 @@ const Documents = ({
   filters,
   namespace = 'common'
 }: DocumentsProps): React.JSX.Element => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(namespace);
+  const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
+  const tDoc = (key: string, options?: Record<string, any>) =>
+    t(`${documentKeyPrefix}${key}`, options);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
@@ -269,7 +274,7 @@ const Documents = ({
       } catch (err) {
         if (!cancelled) {
           console.error('Error fetching documents by folder:', err);
-          setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
+          setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
           setDocumentsToDisplay([]);
           setTotalPages(1);
         }
@@ -313,7 +318,7 @@ const Documents = ({
         setTotalPages(Math.ceil(response.total / pageSize));
       } catch (err) {
         console.error('Error refreshing documents:', err);
-        setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
+        setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
       }
     } else {
       // Entity mode: trigger parent to refresh via router.refresh()
@@ -340,10 +345,10 @@ const Documents = ({
   // Page size options for grid view (list view uses DataTable defaults)
   const gridPageSizeOptions = useMemo(
     () => [
-      { value: '9', label: t('documents.pagination.perPage', { count: 9, defaultValue: '9 per page' }) },
-      { value: '18', label: t('documents.pagination.perPage', { count: 18, defaultValue: '18 per page' }) },
-      { value: '27', label: t('documents.pagination.perPage', { count: 27, defaultValue: '27 per page' }) },
-      { value: '36', label: t('documents.pagination.perPage', { count: 36, defaultValue: '36 per page' }) }
+      { value: '9', label: tDoc('pagination.perPage', { count: 9, defaultValue: '9 per page' }) },
+      { value: '18', label: tDoc('pagination.perPage', { count: 18, defaultValue: '18 per page' }) },
+      { value: '27', label: tDoc('pagination.perPage', { count: 27, defaultValue: '27 per page' }) },
+      { value: '36', label: tDoc('pagination.perPage', { count: 36, defaultValue: '36 per page' }) }
     ],
     [t]
   );
@@ -373,7 +378,7 @@ const Documents = ({
 
       // Show success toast
       toast.success(
-        t('documents.messages.folderCreated', {
+        tDoc('messages.folderCreated', {
           name: folderPath,
           defaultValue: `Folder "${folderPath}" created successfully`
         })
@@ -390,7 +395,7 @@ const Documents = ({
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
-          : t('documents.messages.folderCreateFailed', 'Failed to create folder');
+          : tDoc('messages.folderCreateFailed', 'Failed to create folder');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -407,9 +412,9 @@ const Documents = ({
 
       const count = selectedDocumentsForMove.size;
       const folderName =
-        targetFolder || t('documents.folders.root', 'Root');
+        targetFolder || tDoc('folders.root', 'Root');
       toast.success(
-        t('documents.messages.moveDocumentsSuccess', {
+        tDoc('messages.moveDocumentsSuccess', {
           count,
           destination: folderName,
           defaultValue: `${count} document${count !== 1 ? 's' : ''} moved to ${folderName}`
@@ -427,7 +432,7 @@ const Documents = ({
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
-          : t('documents.messages.moveDocumentsFailed', 'Failed to move documents');
+          : tDoc('messages.moveDocumentsFailed', 'Failed to move documents');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -520,14 +525,15 @@ const Documents = ({
 
     if (!result.success) {
       const errorMessage =
-        result.message || t('documents.messages.deleteFailed', 'Failed to delete document');
+        result.message || tDoc('messages.deleteFailed', 'Failed to delete document');
+      toast.error(errorMessage);
       setError(errorMessage);
       return result;
     }
 
     setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
     toast.success(
-      t('documents.messages.deleteSuccess', {
+      tDoc('messages.deleteSuccess', {
         name: document.document_name,
         defaultValue: `Document "${document.document_name}" deleted successfully`
       })
@@ -551,7 +557,7 @@ const Documents = ({
     } catch (error) {
       console.error('Error disassociating document:', error);
       setError(
-        t('documents.messages.removeAssociationFailed', 'Failed to remove document association')
+        tDoc('messages.removeAssociationFailed', 'Failed to remove document association')
       );
     }
   }, [entityId, entityType, onDocumentCreated]);
@@ -568,7 +574,7 @@ const Documents = ({
       await moveDocumentsToFolder([documentToMove.document_id], folderPath);
 
       toast.success(
-        t('documents.messages.moveDocumentSuccess', {
+        tDoc('messages.moveDocumentSuccess', {
           name: documentToMove.document_name,
           defaultValue: `Document "${documentToMove.document_name}" moved successfully`
         })
@@ -590,7 +596,7 @@ const Documents = ({
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
-          : t('documents.messages.moveDocumentFailed', 'Failed to move document');
+          : tDoc('messages.moveDocumentFailed', 'Failed to move document');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -600,7 +606,7 @@ const Documents = ({
     try {
       if (!newDocumentName.trim()) {
         setDrawerError(
-          t('documents.validation.nameRequired', 'Document name is required')
+          tDoc('validation.nameRequired', 'Document name is required')
         );
         return;
       }
@@ -627,7 +633,7 @@ const Documents = ({
     } catch (error) {
       console.error('Error creating document:', error);
       setDrawerError(
-        t('documents.messages.createFailed', 'Failed to create document')
+        tDoc('messages.createFailed', 'Failed to create document')
       );
     } finally {
       setIsSaving(false);
@@ -666,7 +672,7 @@ const Documents = ({
     } catch (error) {
       console.error('Error saving document:', error);
       setDrawerError(
-        t('documents.messages.saveFailed', 'Failed to save document')
+        tDoc('messages.saveFailed', 'Failed to save document')
       );
     } finally {
       setIsSaving(false);
@@ -696,7 +702,7 @@ const Documents = ({
         } catch (error) {
           console.error('Error loading document content:', error);
           setError(
-            t('documents.messages.loadContentFailed', 'Failed to load document content')
+            tDoc('messages.loadContentFailed', 'Failed to load document content')
           );
           setCurrentContent(DEFAULT_BLOCKS);
         } finally {
@@ -749,7 +755,7 @@ const Documents = ({
     } catch (error) {
       console.error('Download failed:', error);
       toast.error(
-        t('documents.messages.downloadFailed', 'Failed to download document')
+        tDoc('messages.downloadFailed', 'Failed to download document')
       );
     }
   };
@@ -932,7 +938,7 @@ const Documents = ({
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <span className="text-sm font-medium text-blue-900">
-                          {t('documents.bulkActions.selected', {
+                          {tDoc('bulkActions.selected', {
                             count: selectedDocumentsForMove.size,
                             defaultValue: `${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''} selected`
                           })}
@@ -946,7 +952,7 @@ const Documents = ({
                               onClick={() => setShowBulkMoveFolderModal(true)}
                             >
                               <FolderInput className="w-4 h-4 mr-2" />
-                              {t('documents.bulkActions.moveToFolder', 'Move to Folder')}
+                              {tDoc('bulkActions.moveToFolder', 'Move to Folder')}
                             </Button>
                           )}
                           <Button
@@ -957,7 +963,7 @@ const Documents = ({
                               const count = selectedDocumentsForMove.size;
                               if (
                                 !confirm(
-                                  t('documents.prompts.confirmBulkDelete', {
+                                  tDoc('prompts.confirmBulkDelete', {
                                     count,
                                     defaultValue: `Are you sure you want to delete ${count} document${count !== 1 ? 's' : ''}?`
                                   })
@@ -976,11 +982,11 @@ const Documents = ({
                                 );
                                 if (failed.length > 0) {
                                   toast.error(
-                                    t('documents.messages.bulkDeleteFailed', 'Failed to delete some documents')
+                                    tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents')
                                   );
                                 } else {
                                   toast.success(
-                                    t('documents.messages.bulkDeleteSuccess', {
+                                    tDoc('messages.bulkDeleteSuccess', {
                                       count,
                                       defaultValue: `${count} document${count !== 1 ? 's' : ''} deleted successfully`
                                     })
@@ -991,13 +997,13 @@ const Documents = ({
                               } catch (error) {
                                 console.error('Error deleting documents:', error);
                                 toast.error(
-                                  t('documents.messages.bulkDeleteFailed', 'Failed to delete some documents')
+                                  tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents')
                                 );
                               }
                             }}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            {t('documents.bulkActions.deleteSelected', 'Delete Selected')}
+                            {tDoc('bulkActions.deleteSelected', 'Delete Selected')}
                           </Button>
                         </div>
                       </div>
@@ -1008,7 +1014,7 @@ const Documents = ({
                         onClick={() => setSelectedDocumentsForMove(new Set())}
                       >
                         <X className="w-4 h-4 mr-2" />
-                        {t('documents.bulkActions.clearSelection', 'Clear Selection')}
+                        {tDoc('bulkActions.clearSelection', 'Clear Selection')}
                       </Button>
                     </div>
                   )}
@@ -1028,7 +1034,7 @@ const Documents = ({
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-                        {t('documents.empty.folder', 'No documents found in this folder')}
+                        {tDoc('empty.folder', 'No documents found in this folder')}
                       </div>
                     )
                   )}
@@ -1065,8 +1071,8 @@ const Documents = ({
             isOpen={showDocumentFolderModal}
             onClose={() => setShowDocumentFolderModal(false)}
             onSelectFolder={handleDocumentFolderSelected}
-            title={t('documents.folderSelector.newDocumentTitle', 'Select Folder for New Document')}
-            description={t('documents.folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+            title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+            description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
             namespace={namespace}
           />
 
@@ -1078,14 +1084,14 @@ const Documents = ({
               setDocumentToMove(null);
             }}
             onSelectFolder={handleMoveFolderSelected}
-            title={t('documents.folderSelector.moveTitle', 'Move Document')}
+            title={tDoc('folderSelector.moveTitle', 'Move Document')}
             description={
               documentToMove
-                ? t('documents.folderSelector.moveDescriptionWithName', {
+                ? tDoc('folderSelector.moveDescriptionWithName', {
                     name: documentToMove.document_name,
                     defaultValue: `Select destination folder for "${documentToMove.document_name}"`
                   })
-                : t('documents.folderSelector.moveDescription', 'Select destination folder')
+                : tDoc('folderSelector.moveDescription', 'Select destination folder')
             }
             namespace={namespace}
           />
@@ -1097,8 +1103,8 @@ const Documents = ({
               setShowBulkMoveFolderModal(false);
             }}
             onSelectFolder={handleMoveDocuments}
-            title={t('documents.folderSelector.bulkMoveTitle', 'Move Selected Documents')}
-            description={t('documents.folderSelector.bulkMoveDescription', {
+            title={tDoc('folderSelector.bulkMoveTitle', 'Move Selected Documents')}
+            description={tDoc('folderSelector.bulkMoveDescription', {
               count: selectedDocumentsForMove.size,
               defaultValue: `Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''}`
             })}
@@ -1157,7 +1163,7 @@ const Documents = ({
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 pb-4">
               <h2 className="text-lg font-semibold">
-                {isCreatingNew ? t('documents.newDocument', 'New Document') : (isEditModeInDrawer ? t('documents.editDocument', 'Edit Document') : t('documents.viewDocument', 'View Document'))}
+                {isCreatingNew ? tDoc('newDocument', 'New Document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
               </h2>
               <div className="flex items-center space-x-2">
                 {selectedDocument &&
@@ -1316,7 +1322,7 @@ const Documents = ({
               variant="default"
             >
               <FileText className="w-4 h-4 mr-2" />
-              {t('documents.newDocument', 'New Document')}
+              {tDoc('newDocument', 'New Document')}
             </Button>
             <Button
               id={`${id}-upload-btn`}
@@ -1330,7 +1336,7 @@ const Documents = ({
               variant="default"
             >
               <Plus className="w-4 h-4 mr-2" />
-              {t('documents.uploadFile', 'Upload File')}
+              {tDoc('uploadFile', 'Upload File')}
             </Button>
             {entityId && entityType && (
               <Button
@@ -1340,7 +1346,7 @@ const Documents = ({
                 data-testid="link-documents-button"
               >
                 <Link className="w-4 h-4 mr-2" />
-                {t('documents.linkDocuments', 'Link Documents')}
+                {tDoc('linkDocuments', 'Link Documents')}
               </Button>
             )}
           </div>
@@ -1392,7 +1398,7 @@ const Documents = ({
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-            {t('documents.empty.default', 'No documents found')}
+            {tDoc('empty.default', 'No documents found')}
           </div>
         )}
 
@@ -1415,8 +1421,8 @@ const Documents = ({
           isOpen={showDocumentFolderModal}
           onClose={() => setShowDocumentFolderModal(false)}
           onSelectFolder={handleDocumentFolderSelected}
-          title={t('documents.folderSelector.newDocumentTitle', 'Select Folder for New Document')}
-          description={t('documents.folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
           namespace={namespace}
         />
 
@@ -1428,14 +1434,14 @@ const Documents = ({
             setDocumentToMove(null);
           }}
           onSelectFolder={handleMoveFolderSelected}
-          title={t('documents.folderSelector.moveTitle', 'Move Document')}
+          title={tDoc('folderSelector.moveTitle', 'Move Document')}
           description={
             documentToMove
-              ? t('documents.folderSelector.moveDescriptionWithName', {
+              ? tDoc('folderSelector.moveDescriptionWithName', {
                   name: documentToMove.document_name,
                   defaultValue: `Select destination folder for "${documentToMove.document_name}"`
                 })
-              : t('documents.folderSelector.moveDescription', 'Select destination folder')
+              : tDoc('folderSelector.moveDescription', 'Select destination folder')
           }
           namespace={namespace}
         />
@@ -1490,7 +1496,7 @@ const Documents = ({
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 pb-4">
               <h2 className="text-lg font-semibold">
-                {isCreatingNew ? t('documents.newDocument', 'New Document') : (isEditModeInDrawer ? t('documents.editDocument', 'Edit Document') : t('documents.viewDocument', 'View Document'))}
+                {isCreatingNew ? tDoc('newDocument', 'New Document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
               </h2>
               <div className="flex items-center space-x-2">
                 {selectedDocument &&

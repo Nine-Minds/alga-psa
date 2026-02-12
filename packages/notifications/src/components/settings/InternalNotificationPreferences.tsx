@@ -21,7 +21,7 @@ import {
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 export function InternalNotificationPreferences() {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('client-portal/profile');
   const { data: session } = useSession();
   const [categories, setCategories] = useState<InternalNotificationCategory[]>([]);
   const [subtypes, setSubtypes] = useState<Record<number, InternalNotificationSubtype[]>>({});

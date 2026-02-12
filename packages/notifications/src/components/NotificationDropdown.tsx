@@ -40,7 +40,7 @@ export function NotificationDropdown({
   const tenant = useTenant();
 
   // Load both translation namespaces
-  const { t: tClient } = useTranslation('clientPortal');
+  const { t: tClient } = useTranslation('client-portal/profile');
   const { t: tCommon } = useTranslation('common');
 
   const userType = (session?.user as any)?.user_type as 'client' | 'internal' | undefined;

@@ -16,7 +16,7 @@ interface TicketDetailsContainerProps {
 
 export default function TicketDetailsContainer({ ticketId, ticketData, statuses }: TicketDetailsContainerProps) {
   const router = useRouter();
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/tickets');
 
   const handleClose = () => {
     router.push('/client-portal/tickets');
@@ -25,7 +25,7 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
   if (!ticketData || (!ticketData.ticket_id && !ticketId)) {
     return (
       <div id="ticket-invalid-data" className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">{t('tickets.invalidTicketData', 'Invalid ticket data')}</p>
+        <p className="text-red-700">{t('invalidTicketData', 'Invalid ticket data')}</p>
       </div>
     );
   }
@@ -34,7 +34,7 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
     <div className="w-full">
       <Button id="back-to-tickets-button" variant="soft" onClick={handleClose} className="mb-2">
         <ArrowLeft className="h-4 w-4 mr-2" />
-        {t('tickets.backToTickets', 'Back to Tickets')}
+        {t('backToTickets', 'Back to Tickets')}
       </Button>
 
       <TicketDetails

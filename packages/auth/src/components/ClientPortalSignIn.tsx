@@ -23,7 +23,7 @@ interface ClientPortalSignInProps {
 }
 
 export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal/auth');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);

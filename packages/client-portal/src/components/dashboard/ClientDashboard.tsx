@@ -28,7 +28,8 @@ interface AppointmentRequest {
 
 export function ClientDashboard() {
   const router = useRouter();
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal/core');
+  const { t: tAppointments } = useTranslation('features/appointments');
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
@@ -248,9 +249,9 @@ export function ClientDashboard() {
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="font-medium text-gray-900">{appointment.service_name}</h4>
                         {appointment.status === 'approved' ? (
-                          <Badge variant="success">{t('appointments.status.approved')}</Badge>
+                          <Badge variant="success">{tAppointments('status.approved')}</Badge>
                         ) : appointment.status === 'pending' ? (
-                          <Badge variant="warning">{t('appointments.status.pending')}</Badge>
+                          <Badge variant="warning">{tAppointments('status.pending')}</Badge>
                         ) : (
                           <Badge variant="default">{t(`appointments.status.${appointment.status}`)}</Badge>
                         )}

@@ -14,7 +14,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 export default function LicenseManagementPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal/auth');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

@@ -33,7 +33,8 @@ import { ClientNotificationsList } from '../notifications/ClientNotificationsLis
 type NotificationView = 'email' | 'internal';
 
 export function ClientProfile() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal/profile');
+  const { t: tCore } = useTranslation('client-portal/core');
   const searchParams = useSearchParams();
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +62,7 @@ export function ClientProfile() {
         setLoading(true);
         // Get user data
         const currentUser = await getCurrentUser();
-        if (!currentUser) throw new Error(t('profile.messages.userNotFound', 'User not found'));
+        if (!currentUser) throw new Error(tProfile('profile.messages.userNotFound', 'User not found'));
         setUser(currentUser);
         
         // Set form fields
@@ -97,7 +98,7 @@ export function ClientProfile() {
 
       } catch (err) {
         console.error('Error initializing profile:', err);
-        setError(err instanceof Error ? err.message : t('profile.messages.loadError', 'Failed to load profile'));
+        setError(err instanceof Error ? err.message : tProfile('profile.messages.loadError', 'Failed to load profile'));
       } finally {
         setLoading(false);
       }
@@ -108,7 +109,7 @@ export function ClientProfile() {
 
   const handleSave = async () => {
     if (!user) {
-      setError(t('profile.messages.userNotFound', 'User not found'));
+      setError(tProfile('profile.messages.userNotFound', 'User not found'));
       return;
     }
 
@@ -123,7 +124,7 @@ export function ClientProfile() {
       });
 
       // Show success toast
-      toast.success(t('profile.messages.updateSuccess'));
+      toast.success(tProfile('profile.messages.updateSuccess'));
 
       // Note: Notification preferences are managed separately through their own UI components:
       // - InternalNotificationPreferences handles internal notification settings
@@ -131,7 +132,7 @@ export function ClientProfile() {
 
     } catch (err) {
       console.error('Error saving profile:', err);
-      const errorMessage = err instanceof Error ? err.message : t('profile.messages.updateError', 'Failed to save profile');
+      const errorMessage = err instanceof Error ? err.message : tProfile('profile.messages.updateError', 'Failed to save profile');
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -155,8 +156,8 @@ export function ClientProfile() {
   };
 
   // Define tab labels (must be before early returns to maintain hook order)
-  const profileTabLabel = t('nav.profile');
-  const activityTabLabel = t('profile.activity', 'Activity');
+  const profileTabLabel = tCore('nav.profile');
+  const activityTabLabel = tProfile('profile.activity', 'Activity');
 
   // Determine the default tab based on URL parameter
   const defaultTab = useMemo(() => {
@@ -170,7 +171,7 @@ export function ClientProfile() {
   if (loading) {
     return (
       <Card className="p-6">
-        <div>{t('common.loading')}</div>
+        <div>{tCore('common.loading')}</div>
       </Card>
     );
   }
@@ -178,7 +179,7 @@ export function ClientProfile() {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-red-500">{t('common.error')}: {error}</div>
+        <div className="text-red-500">{tCore('common.error')}: {error}</div>
       </Card>
     );
   }
@@ -186,7 +187,7 @@ export function ClientProfile() {
   if (!user) {
     return (
       <Card className="p-6">
-        <div>{t('profile.messages.userNotFound', 'User not found')}</div>
+        <div>{tProfile('profile.messages.userNotFound', 'User not found')}</div>
       </Card>
     );
   }
@@ -197,15 +198,15 @@ export function ClientProfile() {
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>{t('profile.personalInfo')}</CardTitle>
+            <CardTitle>{tProfile('profile.personalInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Contact Avatar Upload - only shown for client users with a linked contact */}
             {user.user_type === 'client' && user.contact_id && (
               <div>
-                <h3 className="text-lg font-medium mb-2">{t('profile.fields.avatar')}</h3>
+                <h3 className="text-lg font-medium mb-2">{tProfile('profile.fields.avatar')}</h3>
                 <p className="text-sm text-gray-500 mb-2">
-                  {t('profile.messages.avatarDescription', 'This avatar is shown to MSP staff when they view your contact information.')}
+                  {tProfile('profile.messages.avatarDescription', 'This avatar is shown to MSP staff when they view your contact information.')}
                 </p>
                 <ContactAvatarUpload
                   contactId={user.contact_id}
@@ -221,7 +222,7 @@ export function ClientProfile() {
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">
               <div>
-                <Label htmlFor="firstName">{t('profile.fields.firstName')}</Label>
+                <Label htmlFor="firstName">{tProfile('profile.fields.firstName')}</Label>
                 <Input
                   id="firstName"
                   value={firstName}
@@ -229,7 +230,7 @@ export function ClientProfile() {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">{t('profile.fields.lastName')}</Label>
+                <Label htmlFor="lastName">{tProfile('profile.fields.lastName')}</Label>
                 <Input
                   id="lastName"
                   value={lastName}
@@ -238,7 +239,7 @@ export function ClientProfile() {
               </div>
             </div>
             <div>
-              <Label htmlFor="email">{t('profile.fields.email')}</Label>
+              <Label htmlFor="email">{tProfile('profile.fields.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -247,7 +248,7 @@ export function ClientProfile() {
               />
             </div>
             <div>
-              <Label htmlFor="phone">{t('profile.fields.phone')}</Label>
+              <Label htmlFor="phone">{tProfile('profile.fields.phone')}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -256,7 +257,7 @@ export function ClientProfile() {
               />
             </div>
             <div>
-              <Label htmlFor="timezone">{t('profile.fields.timezone')}</Label>
+              <Label htmlFor="timezone">{tProfile('profile.fields.timezone')}</Label>
               <TimezonePicker
                 value={timezone}
                 onValueChange={setTimezone}
@@ -283,7 +284,7 @@ export function ClientProfile() {
       ),
     },
     {
-      label: t('profile.security'),
+      label: tProfile('profile.security'),
       content: (
         <div className="space-y-6">
           <PasswordChangeForm />
@@ -292,22 +293,22 @@ export function ClientProfile() {
       ),
     },
     {
-      label: t('profile.activity', 'Activity'),
+      label: tProfile('profile.activity', 'Activity'),
       content: <ClientNotificationsList />,
     },
     {
-      label: t('profile.notificationSettings', 'Notification Settings'),
+      label: tProfile('profile.notificationSettings', 'Notification Settings'),
       content: (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>{t('profile.notifications.title')}</CardTitle>
+              <CardTitle>{tProfile('profile.notifications.title')}</CardTitle>
               <ViewSwitcher
                 currentView={notificationView}
                 onChange={setNotificationView}
                 options={[
-                  { value: 'email', label: t('profile.notifications.emailPreferences', 'Email') },
-                  { value: 'internal', label: t('profile.notifications.internalPreferences', 'Internal') },
+                  { value: 'email', label: tProfile('profile.notifications.emailPreferences', 'Email') },
+                  { value: 'internal', label: tProfile('profile.notifications.internalPreferences', 'Internal') },
                 ] as ViewSwitcherOption<NotificationView>[]}
               />
             </div>
@@ -361,7 +362,7 @@ export function ClientProfile() {
           id="save-profile-button"
           onClick={handleSave}
         >
-          {t('profile.actions.save')}
+          {tProfile('profile.actions.save')}
         </Button>
       </div>
     </div>
