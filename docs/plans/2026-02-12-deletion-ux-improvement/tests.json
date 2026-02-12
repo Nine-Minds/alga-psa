@@ -566,7 +566,7 @@
   {
     "id": "T095",
     "description": "Workflow deletion uses deleteEntityWithValidation + DeleteEntityDialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F073"]
   },
   {
