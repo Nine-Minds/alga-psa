@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "With flag OFF: EE MSP layout does NOT call getHierarchicalLocaleAction",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
