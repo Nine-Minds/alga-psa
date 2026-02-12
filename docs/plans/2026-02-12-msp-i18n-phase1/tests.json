@@ -225,7 +225,7 @@
   {
     "id": "T028",
     "description": "All client portal components using profile/clientSettings/notifications keys migrated to useTranslation('client-portal/profile')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
