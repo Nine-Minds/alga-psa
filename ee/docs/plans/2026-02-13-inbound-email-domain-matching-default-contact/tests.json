@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "Integration: inbound email new-ticket path uses exact contact match when sender email matches an existing contact (baseline behavior)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006"]
   },
   {

@@ -67,6 +67,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` (`resolve_inbound_ticket_context`)
 - `packages/clients/src/components/clients/ClientDetails.tsx` (client screen)
 - `packages/types/src/interfaces/client.interfaces.ts` (`IClient.properties.primary_contact_id`)
+- `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` (inbound email integration coverage)
 
 ## Open Questions
 
