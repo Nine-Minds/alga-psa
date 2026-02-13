@@ -247,6 +247,7 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.alignment.integration.test.tsx`
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.sizing.integration.test.tsx`
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.flexItem.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.grid.integration.test.tsx`
 
 ## Repo/Test Gotchas (Discovered 2026-02-13)
 
