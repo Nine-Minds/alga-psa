@@ -105,6 +105,11 @@ function createFakeKnex(state: DbState) {
       const rows = tableRows(this.table);
       const toInsert = { ...row };
 
+      // Unwrap knex.raw('?::uuid', [id]) used by the sync engine for extension inserts.
+      if (toInsert.asset_id && typeof toInsert.asset_id === 'object' && 'bindings' in toInsert.asset_id) {
+        toInsert.asset_id = String((toInsert.asset_id as any).bindings?.[0] ?? '');
+      }
+
       if (this.table === 'tenant_external_entity_mappings') {
         toInsert.id = toInsert.id ?? `mapping_${++nextMappingId}`;
       }
@@ -287,5 +292,62 @@ describe('Tactical device sync (full sync)', () => {
       })
     );
   });
-});
 
+  it('updates existing assets when agent fields change and refreshes last_seen/agent_status', async () => {
+    // Seed an existing asset + mapping for agent a1.
+    state.assets.push({
+      tenant: 'tenant_1',
+      asset_id: 'asset_existing',
+      asset_type: 'workstation',
+      name: 'old-name',
+      rmm_provider: 'tacticalrmm',
+      rmm_device_id: 'a1',
+      rmm_organization_id: '100',
+      agent_status: 'offline',
+      last_seen_at: null,
+      last_rmm_sync_at: null,
+    });
+    state.tenant_external_entity_mappings.push({
+      tenant: 'tenant_1',
+      id: 'mapping_existing',
+      integration_type: 'tacticalrmm',
+      alga_entity_type: 'asset',
+      alga_entity_id: 'asset_existing',
+      external_entity_id: 'a1',
+      external_realm_id: '100',
+      sync_status: 'synced',
+      last_synced_at: null,
+      metadata: {},
+    });
+
+    tacticalAgentsByClientId['100'] = [
+      {
+        agent_id: 'a1',
+        hostname: 'pc-1-renamed',
+        site_id: 's1',
+        operating_system: 'Windows Server 2022',
+        agent_version: '9.9.9',
+        last_seen: new Date('2026-02-13T11:00:00.000Z').toISOString(),
+        offline_time: 5,
+        overdue_time: 30,
+      },
+    ];
+
+    const { syncTacticalRmmDevices } = await import(
+      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+    );
+
+    const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    expect(res.success).toBe(true);
+    expect(res.items_processed).toBe(1);
+    expect(res.items_created).toBe(0);
+    expect(res.items_updated).toBe(1);
+    expect(res.items_failed).toBe(0);
+
+    const asset = state.assets.find((a) => a.asset_id === 'asset_existing');
+    expect(asset?.name).toBe('pc-1-renamed');
+    expect(asset?.agent_status).toBe('overdue');
+    expect(asset?.last_seen_at).toBeInstanceOf(Date);
+    expect(asset?.last_rmm_sync_at).toBeInstanceOf(Date);
+  });
+});
