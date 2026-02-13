@@ -129,6 +129,10 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - New media nodes default to `objectFit: contain` (and `qr` defaults to `aspectRatio: 1 / 1`) without any JS measurement loops:
     - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 
+- 2026-02-13: `F016` Resize handles (limited types)
+  - Resize handles are now limited to `image/logo/qr` and container blocks (`section`, `container`) per PRD; resizing continues to write pixel `width/height` into `node.style` via `updateNodeSize` (no constraint solver):
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

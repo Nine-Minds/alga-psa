@@ -830,6 +830,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike;
+  const isResizeHandleSupported =
+    node.type === 'image' ||
+    node.type === 'logo' ||
+    node.type === 'qr' ||
+    node.type === 'section' ||
+    node.type === 'container';
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -1046,7 +1052,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           </>
         )
       )}
-      {!readOnly && node.allowResize !== false && (
+      {!readOnly && node.allowResize !== false && isResizeHandleSupported && (
         <div
           role="button"
           tabIndex={0}
