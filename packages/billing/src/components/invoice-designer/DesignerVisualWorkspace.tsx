@@ -82,6 +82,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const showRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
+  const rootId = useInvoiceDesignerStore((state) => state.rootId);
 
   const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
   const [authoritativePreview, setAuthoritativePreview] = useState<
@@ -231,7 +232,13 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
     runAuthoritativeInvoiceTemplatePreview({
       workspace: {
-        nodes: debouncedNodes,
+        rootId,
+        nodesById: Object.fromEntries(
+          debouncedNodes.map((node) => [
+            node.id,
+            { id: node.id, type: node.type, props: node.props, children: node.children },
+          ])
+        ),
         snapToGrid,
         gridSize,
         showGuides,
@@ -281,6 +288,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     canvasScale,
     debouncedNodes,
     gridSize,
+    rootId,
     manualRunNonce,
     previewData,
     previewState.isInvoiceDetailLoading,

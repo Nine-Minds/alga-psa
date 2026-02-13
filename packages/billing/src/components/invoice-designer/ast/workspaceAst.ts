@@ -1,16 +1,16 @@
 import type { InvoiceTemplateAst, InvoiceTemplateNode, InvoiceTemplateTableColumn } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type {
+  DesignerComponentType,
   DesignerContainerLayout,
-  DesignerNode,
   DesignerNodeStyle,
   DesignerWorkspaceSnapshot,
 } from '../state/designerStore';
 import { DOCUMENT_NODE_ID } from '../state/designerStore';
-import { getAllowedChildrenForType } from '../state/hierarchy';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
-import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
+
+type WorkspaceNode = DesignerWorkspaceSnapshot['nodesById'][string];
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -47,8 +47,28 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
   return aliases[normalized] ?? normalized;
 };
 
-const resolveFieldBindingPath = (node: DesignerNode): string => {
-  const metadata = getNodeMetadata(node);
+const getWorkspaceNodeName = (node: WorkspaceNode): string => {
+  const props = isRecord(node.props) ? node.props : {};
+  return typeof props.name === 'string' ? props.name : node.id;
+};
+
+const getWorkspaceNodeMetadata = (node: WorkspaceNode): UnknownRecord => {
+  const props = isRecord(node.props) ? node.props : {};
+  return isRecord(props.metadata) ? (props.metadata as UnknownRecord) : {};
+};
+
+const getWorkspaceNodeStyle = (node: WorkspaceNode): Partial<DesignerNodeStyle> => {
+  const props = isRecord(node.props) ? node.props : {};
+  return isRecord(props.style) ? (props.style as Partial<DesignerNodeStyle>) : {};
+};
+
+const getWorkspaceNodeLayout = (node: WorkspaceNode): Partial<DesignerContainerLayout> | undefined => {
+  const props = isRecord(node.props) ? node.props : {};
+  return isRecord(props.layout) ? (props.layout as Partial<DesignerContainerLayout>) : undefined;
+};
+
+const resolveFieldBindingPath = (node: WorkspaceNode): string => {
+  const metadata = getWorkspaceNodeMetadata(node);
   const fromMetadata =
     asTrimmedString(metadata.bindingKey) ||
     asTrimmedString(metadata.binding) ||
@@ -58,7 +78,7 @@ const resolveFieldBindingPath = (node: DesignerNode): string => {
     return normalizeInvoiceBindingPath(fromMetadata);
   }
 
-  switch (node.type) {
+  switch (node.type as DesignerComponentType) {
     case 'subtotal':
       return 'subtotal';
     case 'tax':
@@ -72,8 +92,8 @@ const resolveFieldBindingPath = (node: DesignerNode): string => {
   }
 };
 
-const resolveCollectionPath = (node: DesignerNode): string => {
-  const metadata = getNodeMetadata(node);
+const resolveCollectionPath = (node: WorkspaceNode): string => {
+  const metadata = getWorkspaceNodeMetadata(node);
   const rawPath =
     asTrimmedString(metadata.collectionBindingKey) ||
     asTrimmedString(metadata.collectionPath) ||
@@ -83,23 +103,27 @@ const resolveCollectionPath = (node: DesignerNode): string => {
   return normalized.length > 0 && normalized !== 'invoiceNumber' ? normalized : 'items';
 };
 
-const resolveNodeTextContent = (node: DesignerNode): string => {
-  const metadata = getNodeMetadata(node);
+const resolveNodeTextContent = (node: WorkspaceNode): string => {
+  const metadata = getWorkspaceNodeMetadata(node);
   return (
     asTrimmedString(metadata.text) ||
     asTrimmedString(metadata.label) ||
     asTrimmedString(metadata.content) ||
-    getNodeName(node)
+    getWorkspaceNodeName(node)
   );
 };
 
-const createNodeStyle = (node: DesignerNode) => {
+const createNodeStyle = (node: WorkspaceNode) => {
   const inline: Record<string, unknown> = {};
-  const style = getNodeStyle(node) ?? {};
-  const layout = getNodeLayout(node);
+  const style = getWorkspaceNodeStyle(node);
+  const layout = getWorkspaceNodeLayout(node);
+  const props = isRecord(node.props) ? node.props : {};
+  const sizeFromProps = isRecord(props.size) ? (props.size as UnknownRecord) : null;
+  const widthFromSize = sizeFromProps && typeof sizeFromProps.width === 'number' ? `${sizeFromProps.width}px` : undefined;
+  const heightFromSize = sizeFromProps && typeof sizeFromProps.height === 'number' ? `${sizeFromProps.height}px` : undefined;
 
-  inline.width = style.width ?? `${Math.max(1, Math.round(node.size.width))}px`;
-  inline.height = style.height ?? `${Math.max(1, Math.round(node.size.height))}px`;
+  inline.width = style.width ?? widthFromSize ?? '1px';
+  inline.height = style.height ?? heightFromSize ?? '1px';
 
   if (style.minWidth) inline.minWidth = style.minWidth;
   if (style.minHeight) inline.minHeight = style.minHeight;
@@ -262,8 +286,8 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
-const mapTableColumns = (node: DesignerNode): InvoiceTemplateTableColumn[] => {
-  const metadata = getNodeMetadata(node);
+const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
+  const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
   const mappedColumns = columns
@@ -295,23 +319,20 @@ const mapTableColumns = (node: DesignerNode): InvoiceTemplateTableColumn[] => {
   ];
 };
 
-const createBaseNode = (node: DesignerNode): Pick<InvoiceTemplateNode, 'id' | 'style'> => ({
+const createBaseNode = (node: WorkspaceNode): Pick<InvoiceTemplateNode, 'id' | 'style'> => ({
   id: node.id,
   style: createNodeStyle(node),
 });
 
-const getDesignerChildIds = (node: DesignerNode): string[] =>
-  Array.isArray((node as { children?: unknown }).children) ? (node as { children: string[] }).children : node.childIds;
-
 const mapDesignerNodeToAstNode = (
-  node: DesignerNode,
-  nodesById: Map<string, DesignerNode>,
+  node: WorkspaceNode,
+  nodesById: Map<string, WorkspaceNode>,
   registerValueBinding: (path: string) => string,
   registerCollectionBinding: (path: string) => string
 ): InvoiceTemplateNode | null => {
-  const children = getDesignerChildIds(node)
+  const children = node.children
     .map((childId) => nodesById.get(childId))
-    .filter((child): child is DesignerNode => Boolean(child))
+    .filter((child): child is WorkspaceNode => Boolean(child))
     .map((child) => mapDesignerNodeToAstNode(child, nodesById, registerValueBinding, registerCollectionBinding))
     .filter((child): child is InvoiceTemplateNode => Boolean(child));
 
@@ -328,7 +349,7 @@ const mapDesignerNodeToAstNode = (
 	      return {
 	        ...createBaseNode(node),
 	        type: 'section',
-	        title: node.type === 'section' ? getNodeName(node) : undefined,
+	        title: node.type === 'section' ? getWorkspaceNodeName(node) : undefined,
 	        children,
 	      };
 	    case 'container':
@@ -393,13 +414,13 @@ const mapDesignerNodeToAstNode = (
     case 'image':
     case 'logo':
     case 'qr': {
-      const metadata = getNodeMetadata(node);
+      const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
       return {
         ...createBaseNode(node),
         type: 'image',
         src: { type: 'literal', value: src },
-        alt: { type: 'literal', value: getNodeName(node) },
+        alt: { type: 'literal', value: getWorkspaceNodeName(node) },
       };
     }
     case 'signature':
@@ -418,8 +439,12 @@ const mapDesignerNodeToAstNode = (
 export const exportWorkspaceToInvoiceTemplateAst = (
   workspace: DesignerWorkspaceSnapshot
 ): InvoiceTemplateAst => {
-  const nodesById = new Map(workspace.nodes.map((node) => [node.id, node]));
-  const root = workspace.nodes.find((node) => node.type === 'document') ?? workspace.nodes[0];
+  const entries = Object.entries(workspace.nodesById ?? {});
+  const nodesById = new Map(entries.map(([id, node]) => [id, node as WorkspaceNode]));
+  const root =
+    (typeof workspace.rootId === 'string' ? (workspace.nodesById?.[workspace.rootId] as WorkspaceNode | undefined) : undefined) ??
+    (entries.find(([, node]) => (node as WorkspaceNode).type === 'document')?.[1] as WorkspaceNode | undefined) ??
+    (entries[0]?.[1] as WorkspaceNode | undefined);
   const valueBindings: Record<string, { id: string; kind: 'value'; path: string }> = {};
   const collectionBindings: Record<string, { id: string; kind: 'collection'; path: string }> = {};
 
@@ -514,184 +539,6 @@ const parseSizeFromStyle = (node: InvoiceTemplateNode): { width: number; height:
   };
 };
 
-const buildDesignerNode = (
-  node: InvoiceTemplateNode,
-  designerType: DesignerNode['type'],
-  parentId: string,
-  index: number,
-  depth: number
-): DesignerNode => {
-  const def = getDefinition(designerType);
-  const size = parseSizeFromStyle(node);
-  const inline = isRecord(node.style?.inline) ? (node.style?.inline as Record<string, unknown>) : undefined;
-  const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
-  const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline);
-  const baseMetadata = { ...(def?.defaultMetadata ?? {}) };
-
-  const isFixedFrame = designerType === 'document' || designerType === 'page';
-  const defaultContainerLayout: DesignerContainerLayout | undefined =
-    designerType === 'page'
-      ? {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '32px',
-          padding: '40px',
-          justifyContent: 'flex-start',
-          alignItems: 'stretch',
-        }
-      : designerType === 'document'
-        ? {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0px',
-            padding: '0px',
-            justifyContent: 'flex-start',
-            alignItems: 'stretch',
-          }
-        : designerType === 'section' || designerType === 'container'
-          ? {
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              padding: '16px',
-              justifyContent: 'flex-start',
-              alignItems: 'stretch',
-            }
-          : undefined;
-
-  const resolvedLayout =
-    designerType === 'document' || designerType === 'page' || designerType === 'section' || designerType === 'container'
-      ? layoutFromInline ?? defaultContainerLayout
-      : undefined;
-
-  return {
-    id: node.id,
-    type: designerType,
-    name: node.id,
-    props: {
-      name: node.id,
-      metadata: baseMetadata,
-      layout: resolvedLayout,
-      style: styleFromInline,
-    },
-    position: isFixedFrame
-      ? { x: 0, y: 0 }
-      : depth <= 1
-        ? { x: 0, y: 0 }
-        : { x: 24, y: 24 + index * (size.height + 12) },
-    size: {
-      width: Number.isFinite(size.width) ? size.width : def?.defaultSize.width ?? 220,
-      height: Number.isFinite(size.height) ? size.height : def?.defaultSize.height ?? 56,
-    },
-    baseSize: undefined,
-    canRotate: false,
-    allowResize: !isFixedFrame,
-    rotation: 0,
-    metadata: baseMetadata,
-    layoutPresetId: undefined,
-    parentId,
-    children: [],
-    childIds: [],
-    allowedChildren: getAllowedChildrenForType(designerType),
-    layout: resolvedLayout,
-    style: styleFromInline,
-  };
-};
-
-const importAstNode = (
-  node: InvoiceTemplateNode,
-  parentId: string,
-  nodes: DesignerNode[],
-  ast: InvoiceTemplateAst,
-  depthIndex: number,
-  depth: number
-) => {
-  const typeMap: Partial<Record<InvoiceTemplateNode['type'], DesignerNode['type']>> = {
-    section: 'section',
-    stack: 'container',
-    text: 'text',
-    field: 'field',
-    image: 'image',
-    divider: 'divider',
-    table: 'table',
-    'dynamic-table': 'dynamic-table',
-    totals: 'totals',
-  };
-
-  // The designer always has an explicit page node; AST nodes map directly without "first section becomes page"
-  // heuristics. This avoids accidentally shrinking the canvas when importing AST that starts with a section.
-  const designerType = typeMap[node.type];
-  if (!designerType) {
-    return;
-  }
-
-  const nextNode = buildDesignerNode(node, designerType, parentId, depthIndex, depth);
-
-  if (node.type === 'text') {
-    if (node.content.type === 'literal') {
-      nextNode.metadata = {
-        ...(nextNode.metadata ?? {}),
-        text: String(node.content.value ?? ''),
-      };
-      nextNode.name = String(node.content.value ?? nextNode.name);
-      nextNode.props = {
-        ...nextNode.props,
-        name: nextNode.name,
-        metadata: nextNode.metadata ?? {},
-      };
-    }
-  } else if (node.type === 'field') {
-    const bindingPath =
-      ast.bindings?.values?.[node.binding.bindingId]?.path ??
-      ast.bindings?.collections?.[node.binding.bindingId]?.path ??
-      node.binding.bindingId;
-    nextNode.metadata = {
-      ...(nextNode.metadata ?? {}),
-      bindingKey: denormalizeBindingPath(bindingPath),
-    };
-    nextNode.props = {
-      ...nextNode.props,
-      metadata: nextNode.metadata ?? {},
-    };
-    if (node.label) {
-      nextNode.name = node.label;
-      nextNode.metadata.label = node.label;
-      nextNode.props = {
-        ...nextNode.props,
-        name: nextNode.name,
-        metadata: nextNode.metadata ?? {},
-      };
-    }
-  } else if (node.type === 'dynamic-table' || node.type === 'table') {
-    const collectionPath =
-      ast.bindings?.collections?.[node.type === 'dynamic-table'
-        ? node.repeat.sourceBinding.bindingId
-        : node.sourceBinding.bindingId]?.path ?? 'items';
-    nextNode.metadata = {
-      ...(nextNode.metadata ?? {}),
-      collectionBindingKey: denormalizeBindingPath(collectionPath),
-      columns: node.columns.map((column) => ({
-        id: column.id,
-        header: column.header,
-        key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
-      })),
-    };
-    nextNode.props = {
-      ...nextNode.props,
-      metadata: nextNode.metadata ?? {},
-    };
-  }
-
-  nodes.push(nextNode);
-
-  const childNodes = node.type === 'section' || node.type === 'stack' ? node.children : [];
-  childNodes.forEach((child, index) => {
-    importAstNode(child, nextNode.id, nodes, ast, index, depth + 1);
-    nextNode.childIds.push(child.id);
-    nextNode.children.push(child.id);
-  });
-};
-
 export const importInvoiceTemplateAstToWorkspace = (
   ast: InvoiceTemplateAst
 ): DesignerWorkspaceSnapshot => {
@@ -700,14 +547,12 @@ export const importInvoiceTemplateAstToWorkspace = (
     ? (astDocument.style?.inline as Record<string, unknown>)
     : undefined;
 
-  const documentNode: DesignerNode = {
-    id: DOCUMENT_NODE_ID,
-    type: 'document',
-    name: 'Document',
-    props: {
-      name: 'Document',
-      metadata: {},
-      layout:
+  return {
+    rootId: DOCUMENT_NODE_ID,
+    nodesById: (() => {
+      const nodesById: DesignerWorkspaceSnapshot['nodesById'] = {};
+
+      const documentLayout =
         coerceContainerLayoutFromInlineStyle(documentInline) ?? {
           display: 'flex',
           flexDirection: 'column',
@@ -715,88 +560,200 @@ export const importInvoiceTemplateAstToWorkspace = (
           padding: '0px',
           justifyContent: 'flex-start',
           alignItems: 'stretch',
+        };
+      const documentStyle = coerceNodeStyleFromInlineStyle(documentInline);
+
+      const documentNode: WorkspaceNode = {
+        id: DOCUMENT_NODE_ID,
+        type: 'document',
+        props: {
+          name: 'Document',
+          metadata: {},
+          layout: documentLayout,
+          style: documentStyle,
+          size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+          position: { x: 0, y: 0 },
         },
-      style: coerceNodeStyleFromInlineStyle(documentInline),
-    },
-    position: { x: 0, y: 0 },
-    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    canRotate: false,
-    allowResize: false,
-    rotation: 0,
-    metadata: {},
-    layoutPresetId: undefined,
-    parentId: null,
-    children: [],
-    childIds: [],
-    allowedChildren: getAllowedChildrenForType('document'),
-    layout:
-      coerceContainerLayoutFromInlineStyle(documentInline) ?? {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0px',
-        padding: '0px',
-        justifyContent: 'flex-start',
-        alignItems: 'stretch',
-      },
-    style: coerceNodeStyleFromInlineStyle(documentInline),
-  };
+        children: [],
+      };
 
-  // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
-  const pageNode: DesignerNode = {
-    id: 'page-root',
-    type: 'page',
-    name: 'Page 1',
-    props: {
-      name: 'Page 1',
-      metadata: {},
-      layout: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '32px',
-        padding: '40px', // Page margins
-        justifyContent: 'flex-start',
-        alignItems: 'stretch',
-      },
-      style: undefined,
-    },
-    position: { x: 0, y: 0 },
-    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    canRotate: false,
-    allowResize: false,
-    rotation: 0,
-    metadata: {},
-    layoutPresetId: undefined,
-    parentId: documentNode.id,
-    children: [],
-    childIds: [],
-    allowedChildren: getAllowedChildrenForType('page'),
-    layout: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '32px',
-      padding: '40px', // Page margins
-      justifyContent: 'flex-start',
-      alignItems: 'stretch',
-    },
-    style: undefined,
-  };
+      // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
+      const pageNode: WorkspaceNode = {
+        id: 'page-root',
+        type: 'page',
+        props: {
+          name: 'Page 1',
+          metadata: {},
+          layout: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '32px',
+            padding: '40px', // Page margins
+            justifyContent: 'flex-start',
+            alignItems: 'stretch',
+          },
+          style: undefined,
+          size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+          position: { x: 0, y: 0 },
+        },
+        children: [],
+      };
 
-  documentNode.childIds = [pageNode.id];
-  documentNode.children = [pageNode.id];
-  pageNode.children = [];
+      nodesById[documentNode.id] = documentNode;
+      nodesById[pageNode.id] = pageNode;
+      documentNode.children.push(pageNode.id);
 
-  const nodes: DesignerNode[] = [documentNode, pageNode];
-  const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
-  rootChildren.forEach((child, index) => {
-    importAstNode(child, pageNode.id, nodes, ast, index, 0);
-    pageNode.childIds.push(child.id);
-    pageNode.children.push(child.id);
-  });
+      const buildWorkspaceNode = (
+        inputNode: InvoiceTemplateNode,
+        designerType: DesignerComponentType,
+        depthIndex: number,
+        depth: number
+      ): WorkspaceNode => {
+        const def = getDefinition(designerType);
+        const size = parseSizeFromStyle(inputNode);
+        const inline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
+        const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline);
 
-  return {
-    nodes,
+        const isFixedFrame = designerType === 'document' || designerType === 'page';
+        const defaultContainerLayout: DesignerContainerLayout | undefined =
+          designerType === 'page'
+            ? {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '32px',
+                padding: '40px',
+                justifyContent: 'flex-start',
+                alignItems: 'stretch',
+              }
+            : designerType === 'document'
+              ? {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0px',
+                  padding: '0px',
+                  justifyContent: 'flex-start',
+                  alignItems: 'stretch',
+                }
+              : designerType === 'section' || designerType === 'container'
+                ? {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    padding: '16px',
+                    justifyContent: 'flex-start',
+                    alignItems: 'stretch',
+                  }
+                : undefined;
+
+        const resolvedLayout =
+          designerType === 'document' ||
+          designerType === 'page' ||
+          designerType === 'section' ||
+          designerType === 'container'
+            ? layoutFromInline ?? defaultContainerLayout
+            : undefined;
+
+        const resolvedSize = {
+          width: Number.isFinite(size.width) ? size.width : def?.defaultSize.width ?? 220,
+          height: Number.isFinite(size.height) ? size.height : def?.defaultSize.height ?? 56,
+        };
+
+        const resolvedPosition = isFixedFrame
+          ? { x: 0, y: 0 }
+          : depth <= 1
+            ? { x: 0, y: 0 }
+            : { x: 24, y: 24 + depthIndex * (resolvedSize.height + 12) };
+
+        return {
+          id: inputNode.id,
+          type: designerType,
+          props: {
+            name: inputNode.id,
+            metadata: { ...(def?.defaultMetadata ?? {}) },
+            layout: resolvedLayout,
+            style: styleFromInline,
+            size: resolvedSize,
+            position: resolvedPosition,
+          },
+          children: [],
+        };
+      };
+
+      const importAstNode = (
+        inputNode: InvoiceTemplateNode,
+        parent: WorkspaceNode,
+        astInput: InvoiceTemplateAst,
+        depthIndex: number,
+        depth: number
+      ) => {
+        const typeMap: Partial<Record<InvoiceTemplateNode['type'], DesignerComponentType>> = {
+          section: 'section',
+          stack: 'container',
+          text: 'text',
+          field: 'field',
+          image: 'image',
+          divider: 'divider',
+          table: 'table',
+          'dynamic-table': 'dynamic-table',
+          totals: 'totals',
+        };
+
+        const designerType = typeMap[inputNode.type];
+        if (!designerType) return;
+
+        const nextNode = buildWorkspaceNode(inputNode, designerType, depthIndex, depth);
+
+        const props = isRecord(nextNode.props) ? nextNode.props : {};
+        const metadata = isRecord(props.metadata) ? (props.metadata as UnknownRecord) : {};
+
+        if (inputNode.type === 'text') {
+          if (inputNode.content.type === 'literal') {
+            metadata.text = String(inputNode.content.value ?? '');
+            props.name = String(inputNode.content.value ?? inputNode.id);
+          }
+        } else if (inputNode.type === 'field') {
+          const bindingPath =
+            astInput.bindings?.values?.[inputNode.binding.bindingId]?.path ??
+            astInput.bindings?.collections?.[inputNode.binding.bindingId]?.path ??
+            inputNode.binding.bindingId;
+          metadata.bindingKey = denormalizeBindingPath(bindingPath);
+          if (inputNode.label) {
+            metadata.label = inputNode.label;
+            props.name = inputNode.label;
+          }
+        } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
+          const collectionPath =
+            astInput.bindings?.collections?.[
+              inputNode.type === 'dynamic-table'
+                ? inputNode.repeat.sourceBinding.bindingId
+                : inputNode.sourceBinding.bindingId
+            ]?.path ?? 'items';
+          metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
+          metadata.columns = inputNode.columns.map((column) => ({
+            id: column.id,
+            header: column.header,
+            key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+          }));
+        }
+
+        nextNode.props = {
+          ...props,
+          metadata,
+        };
+
+        nodesById[nextNode.id] = nextNode;
+        parent.children.push(nextNode.id);
+
+        const childNodes = inputNode.type === 'section' || inputNode.type === 'stack' ? inputNode.children : [];
+        childNodes.forEach((child, index) => importAstNode(child, nextNode, astInput, index, depth + 1));
+      };
+
+      const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
+      rootChildren.forEach((child, index) => importAstNode(child, pageNode, ast, index, 0));
+
+      return nodesById;
+    })(),
     snapToGrid: true,
     gridSize: 8,
     showGuides: true,

@@ -81,38 +81,29 @@ const installLocalStorageMock = () => {
 
 const createWorkspaceWithField = (fieldId: string): DesignerWorkspaceSnapshot => {
   const base = useInvoiceDesignerStore.getState().exportWorkspace();
-  const pageNode = base.nodes.find((node) => node.type === 'page');
+  const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
   if (!pageNode) {
     return base;
   }
 
-  const fieldNode = {
-    id: fieldId,
-    type: 'field' as const,
-    name: 'Invoice Number',
-    position: { x: 24, y: 24 },
-    size: { width: 220, height: 48 },
-    canRotate: false,
-    allowResize: true,
-    rotation: 0,
-    metadata: { bindingKey: 'invoice.number', format: 'text' },
-    parentId: pageNode.id,
-    childIds: [],
-    allowedChildren: [],
-  };
-
   return {
     ...base,
-    nodes: base.nodes
-      .map((node) =>
-        node.id === pageNode.id
-          ? {
-              ...node,
-              childIds: [...node.childIds, fieldId],
-            }
-          : node
-      )
-      .concat(fieldNode),
+    nodesById: {
+      ...base.nodesById,
+      [pageNode.id]: {
+        ...base.nodesById[pageNode.id],
+        children: [...(base.nodesById[pageNode.id]?.children ?? []), fieldId],
+      },
+      [fieldId]: {
+        id: fieldId,
+        type: 'field',
+        props: {
+          name: 'Invoice Number',
+          metadata: { bindingKey: 'invoice.number', format: 'text' },
+        },
+        children: [],
+      },
+    },
   };
 };
 
@@ -208,7 +199,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     await waitFor(() => {
       expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselinePreviewCalls);
       const hasUpdatedWorkspaceCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.some((call) =>
-        call[0].workspace.nodes.some((node: { id: string }) => node.id === 'field-flow')
+        Boolean(call[0].workspace.nodesById?.['field-flow'])
       );
       expect(hasUpdatedWorkspaceCall).toBe(true);
     }, { timeout: 2500 });

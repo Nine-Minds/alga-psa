@@ -53,7 +53,12 @@ type AuthoritativePreviewResult = {
 
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
   async (_user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
-    if (!input?.workspace || !Array.isArray(input.workspace.nodes) || input.workspace.nodes.length === 0) {
+    const hasWorkspaceNodes =
+      Boolean(input?.workspace?.nodesById) &&
+      typeof input.workspace.nodesById === 'object' &&
+      Object.keys(input.workspace.nodesById).length > 0;
+
+    if (!hasWorkspaceNodes) {
       return {
         success: false,
         sourceHash: null,

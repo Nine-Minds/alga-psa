@@ -7,8 +7,7 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
 }));
 
-const workspace: DesignerWorkspaceSnapshot = {
-  nodes: [
+const legacyNodes = [
     {
       id: 'designer-document-root',
       type: 'document',
@@ -284,8 +283,72 @@ const workspace: DesignerWorkspaceSnapshot = {
       childIds: [],
       allowedChildren: [],
     },
-  ],
-  constraints: [],
+];
+
+const mapLegacyLayoutToCss = (layout: any) => {
+  if (!layout || typeof layout !== 'object') return undefined;
+  if (layout.display === 'flex' || layout.display === 'grid') return layout;
+  if (layout.mode !== 'flex' && layout.mode !== 'grid') return undefined;
+
+  const asPx = (value: any) => (typeof value === 'number' && Number.isFinite(value) ? `${value}px` : undefined);
+  const justify =
+    layout.justify === 'center'
+      ? 'center'
+      : layout.justify === 'end'
+        ? 'flex-end'
+        : layout.justify === 'between'
+          ? 'space-between'
+          : 'flex-start';
+  const align =
+    layout.align === 'center'
+      ? 'center'
+      : layout.align === 'end'
+        ? 'flex-end'
+        : layout.align === 'start'
+          ? 'flex-start'
+          : 'stretch';
+
+  if (layout.mode === 'flex') {
+    return {
+      display: 'flex',
+      flexDirection: layout.direction === 'row' ? 'row' : 'column',
+      gap: asPx(layout.gap) ?? '0px',
+      padding: asPx(layout.padding) ?? '0px',
+      justifyContent: justify,
+      alignItems: align,
+    };
+  }
+
+  return {
+    display: 'grid',
+    gridTemplateColumns: layout.gridTemplateColumns,
+    gridTemplateRows: layout.gridTemplateRows,
+    gridAutoFlow: layout.gridAutoFlow,
+    gap: asPx(layout.gap) ?? '0px',
+    padding: asPx(layout.padding) ?? '0px',
+  };
+};
+
+const workspace: DesignerWorkspaceSnapshot = {
+  rootId: legacyNodes.find((node: any) => node?.parentId === null)?.id ?? 'designer-document-root',
+  nodesById: Object.fromEntries(
+    legacyNodes.map((node: any) => [
+      node.id,
+      {
+        id: node.id,
+        type: node.type,
+        props: {
+          name: node.name,
+          metadata: node.metadata ?? {},
+          layout: mapLegacyLayoutToCss(node.layout),
+          style: node.style,
+          size: node.size,
+          position: node.position,
+        },
+        children: Array.isArray(node.children) ? node.children : Array.isArray(node.childIds) ? node.childIds : [],
+      },
+    ])
+  ),
   snapToGrid: true,
   gridSize: 8,
   showGuides: true,
