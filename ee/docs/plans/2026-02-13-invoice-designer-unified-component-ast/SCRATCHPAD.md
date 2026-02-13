@@ -78,3 +78,6 @@ This plan intentionally continues the simplification arc:
   - `setNodeProp` / `unsetNodeProp` for dot-path updates (immutable deep updates with empty-object cleanup).
   - `insertChild` / `removeChild` / `moveNode` / `deleteNode` for hierarchy mutations (cycle prevention in `moveNode`).
   - Renamed legacy coordinate nudge API to `moveNodeByDelta` to free `moveNode` for tree moves.
+- 2026-02-13: Refined undo/redo history behavior in `packages/billing/src/components/invoice-designer/state/designerStore.ts`:
+  - Store now initializes history with a baseline snapshot so the first committed mutation can be undone.
+  - `setNodeProp` / `unsetNodeProp` now commit to history by default to match existing property-edit behavior.

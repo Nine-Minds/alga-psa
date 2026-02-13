@@ -2,7 +2,7 @@
   { "id": "F001", "description": "Define the unified Designer AST node shape: { id, type, props, children } and workspace root container contract.", "implemented": true },
   { "id": "F002", "description": "Define a canonical store state: { rootId, nodesById } plus UI state (selection, hover, canvas settings, history).", "implemented": true },
   { "id": "F003", "description": "Implement generic immutable patch operations: setNodeProp(path), unsetNodeProp(path), insertChild, removeChild, moveNode, deleteNode(subtree).", "implemented": true },
-  { "id": "F004", "description": "Refactor undo/redo history to snapshot or replay unified-tree patches deterministically with bounded history length.", "implemented": false },
+  { "id": "F004", "description": "Refactor undo/redo history to snapshot or replay unified-tree patches deterministically with bounded history length.", "implemented": true },
   { "id": "F005", "description": "Introduce component schema definitions as the single source of truth for: label, description, category, defaults, editable props schema, and hierarchy rules.", "implemented": false },
   { "id": "F006", "description": "Move nesting allowlists (allowed parents/children) out of state/hierarchy.ts into the component schema module.", "implemented": false },
   { "id": "F007", "description": "Update palette insertion to create nodes using schema defaults and attach them via insertChild (no bespoke per-type defaults in the store).", "implemented": false },

@@ -468,8 +468,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     showGuides: true,
     showRulers: true,
     canvasScale: 1,
-    history: [],
-    historyIndex: -1,
+    history: [createHistoryEntry(initialNodes)],
+    historyIndex: 0,
     metrics: {
       totalDrags: 0,
       completedDrops: 0,
@@ -714,28 +714,24 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/moveNodeByDelta');
     },
 
-    setNodeProp: (nodeId, path, value, commit = false) => {
+    setNodeProp: (nodeId, path, value, commit = true) => {
       setWithIndex((state) => {
         const nodes = patchSetNodeProp(state.nodes, nodeId, path, value);
         if (nodes === state.nodes) return state;
 
-        if (!commit) {
-          return { nodes };
-        }
+        if (!commit) return { nodes };
 
         const { history, historyIndex } = appendHistory(state, nodes);
         return { nodes, history, historyIndex };
       }, false, 'designer/setNodeProp');
     },
 
-    unsetNodeProp: (nodeId, path, commit = false) => {
+    unsetNodeProp: (nodeId, path, commit = true) => {
       setWithIndex((state) => {
         const nodes = patchUnsetNodeProp(state.nodes, nodeId, path);
         if (nodes === state.nodes) return state;
 
-        if (!commit) {
-          return { nodes };
-        }
+        if (!commit) return { nodes };
 
         const { history, historyIndex } = appendHistory(state, nodes);
         return { nodes, history, historyIndex };
@@ -1000,23 +996,23 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     resetWorkspace: () => {
+      const nodes = createInitialNodes();
       setWithIndex(() => ({
-        nodes: createInitialNodes(),
+        nodes,
         selectedNodeId: null,
         hoverNodeId: null,
-        history: [],
-        historyIndex: -1,
+        history: [createHistoryEntry(nodes)],
+        historyIndex: 0,
       }));
     },
 
     loadNodes: (nodes) => {
       setWithIndex((state) => {
         const nextNodes = snapshotNodes(nodes);
-        const { history, historyIndex } = appendHistory(state, nextNodes);
         return {
           nodes: nextNodes,
-          history,
-          historyIndex,
+          history: [createHistoryEntry(nextNodes)],
+          historyIndex: 0,
           selectedNodeId: null,
         };
       }, false, 'designer/loadNodes');
