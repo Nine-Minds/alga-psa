@@ -14,7 +14,7 @@ export const OutlineView: React.FC = () => {
     const visit = (id: string) => {
       const node = nodesById[id];
       if (!node) return;
-      node.childIds.forEach((childId) => {
+      node.children.forEach((childId) => {
         if (!parentMap.has(childId)) {
           parentMap.set(childId, id);
           visit(childId);
@@ -61,8 +61,8 @@ export const OutlineView: React.FC = () => {
   }, [parentById, selectedNodeId]);
 
   const renderNode = (node: DesignerNode, depth: number = 0) => {
-    const children = node.childIds.map((childId) => nodesById[childId]).filter(Boolean);
-    const hasChildren = node.childIds.length > 0;
+    const children = node.children.map((childId) => nodesById[childId]).filter(Boolean);
+    const hasChildren = node.children.length > 0;
     const isExpanded = expanded.has(node.id);
     const isSelected = node.id === selectedNodeId;
 

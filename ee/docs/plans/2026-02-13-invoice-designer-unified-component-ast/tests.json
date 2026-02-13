@@ -20,5 +20,5 @@
   { "id": "T019", "featureIds": ["F015"], "description": "Integration: table columns editor updates metadata.columns via schema widget and updates are reflected in preview/canvas representation.", "implemented": true },
   { "id": "T020", "featureIds": ["F016"], "description": "Integration: workspace export -> import roundtrips unified node props deterministically and template AST output remains stable.", "implemented": true },
   { "id": "T021", "featureIds": ["F017"], "description": "Unit: serialized workspace snapshot contains only the unified tree format + UI settings and omits legacy per-node typed fields.", "implemented": true },
-  { "id": "T022", "featureIds": ["F019"], "description": "Repo: no references remain to removed per-property store actions and legacy typed node fields after refactor.", "implemented": false }
+  { "id": "T022", "featureIds": ["F019"], "description": "Repo: no references remain to removed per-property store actions and legacy typed node fields after refactor.", "implemented": true }
 ]

@@ -170,7 +170,7 @@ const getSectionFitSizeFromChildren = (
   section: DesignerNode,
   nodesById: Map<string, DesignerNode>
 ): Size | null => {
-  const sectionChildren = section.childIds
+  const sectionChildren = section.children
     .map((childId) => nodesById.get(childId))
     .filter((node): node is DesignerNode => Boolean(node));
 
@@ -427,7 +427,7 @@ export const DesignerShell: React.FC = () => {
     }
 
     return (
-      documentNode.childIds
+      documentNode.children
         .map((childId) => nodesById.get(childId))
         .find((node): node is DesignerNode => Boolean(node && node.type === 'page')) ??
       nodesForDrop.find((node) => node.type === 'page') ??
@@ -1001,8 +1001,8 @@ export const DesignerShell: React.FC = () => {
               return;
             }
             targetParentId = overNode.parentId;
-            const overIndex = parent.childIds.indexOf(overNode.id);
-            let index = overIndex >= 0 ? overIndex : parent.childIds.length;
+            const overIndex = parent.children.indexOf(overNode.id);
+            let index = overIndex >= 0 ? overIndex : parent.children.length;
 
             if (parent.layout?.display === 'flex' && event.active.rect.current && over.rect) {
               const axis = parent.layout.flexDirection === 'row' ? 'x' : 'y';
@@ -1026,7 +1026,7 @@ export const DesignerShell: React.FC = () => {
               return;
             }
             targetParentId = overData.nodeId;
-            targetIndex = parent.childIds.length;
+            targetIndex = parent.children.length;
           } else {
             return;
           }
@@ -1528,7 +1528,7 @@ const computeBreadcrumbNodes = (nodes: DesignerNode[], selectedNodeId: string | 
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
   const parentById = new Map<string, string | null>();
   nodes.forEach((node) => {
-    node.childIds.forEach((childId) => {
+    node.children.forEach((childId) => {
       if (!parentById.has(childId)) {
         parentById.set(childId, node.id);
       }

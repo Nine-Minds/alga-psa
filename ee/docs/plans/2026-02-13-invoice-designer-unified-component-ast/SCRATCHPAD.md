@@ -244,3 +244,6 @@ This plan intentionally continues the simplification arc:
   - Added `export -> import -> export` deterministic roundtrip assertion in `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`.
 - 2026-02-13: Added persisted workspace snapshot format coverage:
   - Added `packages/billing/src/components/invoice-designer/state/designerStore.exportWorkspace.test.ts` to ensure `exportWorkspace()` returns only `{ rootId, nodesById, snapToGrid, gridSize, showGuides, showRulers, canvasScale }` and strips runtime/editor-only `props` keys (`position`, `size`, `baseSize`, `layoutPresetId`).
+- 2026-02-13: Added repo guards for refactor completeness:
+  - Added `packages/billing/src/components/invoice-designer/state/noLegacyApis.guard.test.ts` to enforce removed per-property store action names stay gone, and to keep hierarchy traversal using `children` (no `childIds` usage outside `state/`).
+  - Updated `packages/billing/src/components/invoice-designer/palette/OutlineView.tsx`, `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`, and `packages/billing/src/components/invoice-designer/DesignerShell.tsx` to traverse `children` rather than `childIds`.

@@ -1193,9 +1193,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       const parentLayout = getNodeLayout(parent);
       const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
       if (!parentUsesFlowLayout) return;
-      if (!parent.childIds.length) return;
+      if (!parent.children.length) return;
 
-      const ordered = parent.childIds
+      const ordered = parent.children
         .map((childId) => nodesById.get(childId))
         .filter((node): node is DesignerNode => Boolean(node));
 
