@@ -103,6 +103,9 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
 - 2026-02-13: `F010` Reorder within container (sortable)
   - Dragging a flow-layout node (inside a `display:flex|grid` parent) now reorders by updating the parent's `childIds` using dnd-kit sortable `over` resolution (no position math).
 
+- 2026-02-13: `F011` Cross-container moves (flow layout)
+  - Flow-layout nodes can be dragged into another eligible container (or onto a child within it) and are reparented by updating `parentId` + `childIds` insertion index (DOM-measured `over` target).
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
