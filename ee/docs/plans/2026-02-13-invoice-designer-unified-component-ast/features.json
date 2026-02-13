@@ -12,7 +12,7 @@
   { "id": "F011", "description": "Refactor drag-drop reorder and reparent actions to call moveNode/insertChild/removeChild on the unified tree only.", "implemented": true },
   { "id": "F012", "description": "Refactor resizing to write sizing-related values via setNodeProp (for example style.width/style.height/flexBasis) and remove updateNodeSize API.", "implemented": true },
   { "id": "F013", "description": "Implement a schema-driven Inspector that renders editable controls by reading the selected node’s component schema.", "implemented": true },
-  { "id": "F014", "description": "Implement Inspector field types and normalizers: string, number, boolean, enum, css-length, css-color; support grouped panels and conditional visibility.", "implemented": false },
+  { "id": "F014", "description": "Implement Inspector field types and normalizers: string, number, boolean, enum, css-length, css-color; support grouped panels and conditional visibility.", "implemented": true },
   { "id": "F015", "description": "Add schema widgets for complex metadata editing (table columns, dynamic-table, totals rows) replacing hardcoded inspectors where present.", "implemented": false },
   { "id": "F016", "description": "Update workspace import/export (designer <-> invoice-template AST) to map to/from unified props while preserving deterministic roundtrips.", "implemented": false },
   { "id": "F017", "description": "Remove legacy typed node fields from the persisted workspace format (position/size/allowedChildren/parentId/etc.) where no longer needed.", "implemented": false },

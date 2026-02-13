@@ -33,6 +33,191 @@ export interface DesignerComponentSchema {
   inspector?: DesignerInspectorSchema;
 }
 
+const mergeInspectorSchemas = (...schemas: Array<DesignerInspectorSchema | undefined>): DesignerInspectorSchema => ({
+  panels: schemas.flatMap((schema) => schema?.panels ?? []),
+});
+
+const COMMON_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'layout',
+      title: 'Layout',
+      visibleWhen: { kind: 'nodeIsContainer' },
+      fields: [
+        {
+          kind: 'enum',
+          id: 'display',
+          label: 'Mode',
+          path: 'layout.display',
+          options: [
+            { value: 'flex', label: 'Stack (Flex)' },
+            { value: 'grid', label: 'Grid' },
+          ],
+        },
+        {
+          kind: 'css-length',
+          id: 'gap',
+          label: 'Gap',
+          path: 'layout.gap',
+          placeholder: '0px',
+        },
+        {
+          kind: 'css-length',
+          id: 'padding',
+          label: 'Padding',
+          path: 'layout.padding',
+          placeholder: '0px',
+        },
+        {
+          kind: 'enum',
+          id: 'flexDirection',
+          label: 'Direction',
+          path: 'layout.flexDirection',
+          visibleWhen: { kind: 'pathEquals', path: 'layout.display', value: 'flex' },
+          options: [
+            { value: 'column', label: 'Vertical' },
+            { value: 'row', label: 'Horizontal' },
+          ],
+        },
+        {
+          kind: 'enum',
+          id: 'alignItems',
+          label: 'Align Items',
+          path: 'layout.alignItems',
+          visibleWhen: { kind: 'pathEquals', path: 'layout.display', value: 'flex' },
+          options: [
+            { value: 'stretch', label: 'Stretch' },
+            { value: 'flex-start', label: 'Start' },
+            { value: 'center', label: 'Center' },
+            { value: 'flex-end', label: 'End' },
+          ],
+        },
+        {
+          kind: 'enum',
+          id: 'justifyContent',
+          label: 'Justify Content',
+          path: 'layout.justifyContent',
+          visibleWhen: { kind: 'pathEquals', path: 'layout.display', value: 'flex' },
+          options: [
+            { value: 'flex-start', label: 'Start' },
+            { value: 'center', label: 'Center' },
+            { value: 'flex-end', label: 'End' },
+            { value: 'space-between', label: 'Space Between' },
+            { value: 'space-around', label: 'Space Around' },
+            { value: 'space-evenly', label: 'Space Evenly' },
+          ],
+        },
+        {
+          kind: 'enum',
+          id: 'gridAutoFlow',
+          label: 'Auto Flow',
+          path: 'layout.gridAutoFlow',
+          visibleWhen: { kind: 'pathEquals', path: 'layout.display', value: 'grid' },
+          options: [
+            { value: 'row', label: 'row' },
+            { value: 'column', label: 'column' },
+            { value: 'dense', label: 'dense' },
+            { value: 'row dense', label: 'row dense' },
+            { value: 'column dense', label: 'column dense' },
+          ],
+        },
+        {
+          kind: 'string',
+          id: 'gridTemplateColumns',
+          label: 'Template Columns',
+          path: 'layout.gridTemplateColumns',
+          visibleWhen: { kind: 'pathEquals', path: 'layout.display', value: 'grid' },
+          placeholder: 'repeat(2, minmax(0, 1fr))',
+        },
+        {
+          kind: 'string',
+          id: 'gridTemplateRows',
+          label: 'Template Rows',
+          path: 'layout.gridTemplateRows',
+          visibleWhen: { kind: 'pathEquals', path: 'layout.display', value: 'grid' },
+          placeholder: 'auto',
+        },
+      ],
+    },
+    {
+      id: 'sizing-css',
+      title: 'Sizing (CSS)',
+      fields: [
+        {
+          kind: 'css-length',
+          id: 'width',
+          label: 'width',
+          path: 'style.width',
+          placeholder: 'auto | 320px | 50% | 10rem',
+        },
+        {
+          kind: 'css-length',
+          id: 'height',
+          label: 'height',
+          path: 'style.height',
+          placeholder: 'auto | 180px | 12rem',
+        },
+        {
+          kind: 'css-length',
+          id: 'minWidth',
+          label: 'min-width',
+          path: 'style.minWidth',
+          placeholder: '0 | 200px',
+        },
+        {
+          kind: 'css-length',
+          id: 'minHeight',
+          label: 'min-height',
+          path: 'style.minHeight',
+          placeholder: '0 | 120px',
+        },
+        {
+          kind: 'css-length',
+          id: 'maxWidth',
+          label: 'max-width',
+          path: 'style.maxWidth',
+          placeholder: 'none | 600px',
+        },
+        {
+          kind: 'css-length',
+          id: 'maxHeight',
+          label: 'max-height',
+          path: 'style.maxHeight',
+          placeholder: 'none | 400px',
+        },
+      ],
+    },
+    {
+      id: 'flex-item',
+      title: 'Flex Item',
+      visibleWhen: { kind: 'parentPathEquals', path: 'layout.display', value: 'flex' },
+      fields: [
+        {
+          kind: 'number',
+          id: 'flexGrow',
+          label: 'flex-grow',
+          path: 'style.flexGrow',
+          placeholder: '0',
+        },
+        {
+          kind: 'number',
+          id: 'flexShrink',
+          label: 'flex-shrink',
+          path: 'style.flexShrink',
+          placeholder: '1',
+        },
+        {
+          kind: 'css-length',
+          id: 'flexBasis',
+          label: 'flex-basis',
+          path: 'style.flexBasis',
+          placeholder: 'auto | 240px | 50%',
+        },
+      ],
+    },
+  ],
+};
+
 const SECTION_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
@@ -269,6 +454,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: ['page'],
       allowedParents: [],
     },
+    inspector: COMMON_INSPECTOR,
   },
   page: {
     type: 'page',
@@ -291,6 +477,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: ['section'],
       allowedParents: ['document'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   section: {
     type: 'section',
@@ -336,7 +523,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['page'],
     },
-    inspector: SECTION_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, SECTION_INSPECTOR),
   },
   column: {
     type: 'column',
@@ -370,6 +557,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   text: {
     type: 'text',
@@ -386,6 +574,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   totals: {
     type: 'totals',
@@ -400,6 +589,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   table: {
     type: 'table',
@@ -426,6 +616,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   'dynamic-table': {
     type: 'dynamic-table',
@@ -446,6 +637,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   field: {
     type: 'field',
@@ -465,7 +657,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: FIELD_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, FIELD_INSPECTOR),
   },
   label: {
     type: 'label',
@@ -483,7 +675,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: LABEL_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, LABEL_INSPECTOR),
   },
   subtotal: {
     type: 'subtotal',
@@ -502,7 +694,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: TOTALS_ROW_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROW_INSPECTOR),
   },
   tax: {
     type: 'tax',
@@ -521,7 +713,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: TOTALS_ROW_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROW_INSPECTOR),
   },
   discount: {
     type: 'discount',
@@ -540,7 +732,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: TOTALS_ROW_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROW_INSPECTOR),
   },
   'custom-total': {
     type: 'custom-total',
@@ -559,7 +751,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: CUSTOM_TOTAL_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, CUSTOM_TOTAL_INSPECTOR),
   },
   image: {
     type: 'image',
@@ -577,6 +769,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   logo: {
     type: 'logo',
@@ -594,6 +787,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   qr: {
     type: 'qr',
@@ -612,6 +806,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   signature: {
     type: 'signature',
@@ -629,7 +824,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: SIGNATURE_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, SIGNATURE_INSPECTOR),
   },
   'action-button': {
     type: 'action-button',
@@ -648,7 +843,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: ACTION_BUTTON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, ACTION_BUTTON_INSPECTOR),
   },
   'attachment-list': {
     type: 'attachment-list',
@@ -666,6 +861,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   divider: {
     type: 'divider',
@@ -680,6 +876,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   spacer: {
     type: 'spacer',
@@ -694,6 +891,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
   container: {
     type: 'container',
@@ -736,6 +934,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: COMMON_INSPECTOR,
   },
 };
 
