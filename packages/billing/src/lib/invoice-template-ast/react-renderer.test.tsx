@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import type { InvoiceTemplateEvaluationResult } from './evaluator';
 import { evaluateInvoiceTemplateAst } from './evaluator';
 import { renderEvaluatedInvoiceTemplateAst } from './react-renderer';
 
@@ -150,7 +151,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
 
     expect(rendered.css).toContain('.ast-heading');
     expect(rendered.css).toContain('--brand-color');
-    expect(rendered.html).toContain('class="ast-heading"');
+    expect(rendered.html).toMatch(/class="[^"]*ast-heading[^"]*"/);
     expect(rendered.html).toContain('font-size:20px');
   });
 
@@ -176,5 +177,54 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
 
     expect(rendered.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
     expect(rendered.html).not.toContain('<script>alert("xss")</script>');
+  });
+
+  it('sanitizes unexpected style identifiers (defense-in-depth) to avoid malformed CSS output', async () => {
+    const ast = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      styles: {
+        tokens: {
+          // Both the record key and token.id are "unexpected" identifiers; renderer must still emit safe CSS.
+          'token.bad': { id: 'token.bad', value: '#ff0000' },
+        },
+        classes: {
+          'bad.class': {
+            color: 'var(--token-bad)',
+          },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'headline',
+            type: 'text',
+            style: {
+              tokenIds: ['bad.class'],
+            },
+            content: { type: 'literal', value: 'Styled title' },
+          },
+        ],
+      },
+    } as any;
+
+    const evaluation: InvoiceTemplateEvaluationResult = {
+      sourceCollection: [],
+      output: [],
+      groups: null,
+      aggregates: {},
+      totals: {},
+      bindings: {},
+    };
+
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+
+    expect(rendered.css).toContain('.ast-bad-class');
+    expect(rendered.css).not.toContain('.ast-bad.class');
+    expect(rendered.css).toContain('--token-bad:');
+    expect(rendered.css).not.toContain('--token.bad:');
+    expect(rendered.html).toMatch(/class="[^"]*ast-bad-class[^"]*"/);
   });
 });

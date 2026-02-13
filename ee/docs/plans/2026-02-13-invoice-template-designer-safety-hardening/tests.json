@@ -227,7 +227,7 @@
   {
     "id": "T028",
     "description": "Invoice template AST renderer: does not output malformed selectors/vars even if given unexpected identifiers (defense-in-depth).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

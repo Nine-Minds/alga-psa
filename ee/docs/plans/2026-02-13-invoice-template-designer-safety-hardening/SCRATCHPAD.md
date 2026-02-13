@@ -93,6 +93,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/lib/invoice-template-ast/schema.test.ts`
 - (2026-02-13) Added authoritative preview coverage: schema validation failures return compile diagnostics and do not proceed to render HTML/CSS output.
   - Test: `packages/billing/src/actions/invoiceTemplatePreview.schemaFailure.test.ts`
+- (2026-02-13) Added renderer defense-in-depth coverage: even if invalid identifiers bypass schema validation, CSS selectors/vars and HTML class names are sanitized.
+  - Test: `packages/billing/src/lib/invoice-template-ast/react-renderer.test.tsx`
 
 ## Commands / Runbooks
 
