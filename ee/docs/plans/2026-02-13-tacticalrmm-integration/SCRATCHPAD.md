@@ -63,6 +63,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/tacticalrmm/tacticalWebhook.upsertAlert.test.ts`
 - (2026-02-13) T094: Added unit coverage that `TacticalRmmClient.listAllBeta` accepts a non-paginated (array) response body for `/api/beta/v1/client/` and does not attempt to page further. File:
   - `server/src/test/unit/tacticalrmm/tacticalApiClient.pagination.test.ts`
+- (2026-02-13) T093: Added paging smoke test for Tactical device sync verifying multi-page beta responses are iterated (sites + agents) and all agents across pages are processed. File:
+  - `server/src/test/unit/tacticalrmm/tacticalDeviceSync.paginationSmoke.test.ts`
 
 ## Open Questions
 
