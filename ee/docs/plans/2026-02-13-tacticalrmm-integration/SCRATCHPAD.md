@@ -59,6 +59,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Files:
     - `packages/integrations/src/actions/integrations/tacticalRmmActions.ts`
     - `server/src/test/unit/tacticalrmm/tacticalEvents.published.test.ts`
+- (2026-02-13) T092: Webhook route behavior for unknown/unmapped `agent_id` is explicitly covered: returns 200 and persists `rmm_alerts` with `asset_id=null` when no mapping exists. File:
+  - `server/src/test/unit/tacticalrmm/tacticalWebhook.upsertAlert.test.ts`
 
 ## Open Questions
 
