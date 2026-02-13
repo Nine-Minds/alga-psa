@@ -15,7 +15,7 @@
 
   { "id": "F020", "description": "Implement server actions for Tactical settings: save/get credential status with masking, and clear credentials on disconnect.", "implemented": true, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
   { "id": "F021", "description": "Implement server action to test Tactical connection (using current auth mode) with actionable error messages.", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F022", "description": "Implement server actions for Tactical integration record management in `rmm_integrations` (create/update is_active, instance_url, settings JSON).", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F022", "description": "Implement server actions for Tactical integration record management in `rmm_integrations` (create/update is_active, instance_url, settings JSON).", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F023", "description": "Implement server action to return Tactical connection status summary (counts of mapped orgs/devices/active alerts).", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F030", "description": "Create Tactical API client wrapper with base URL normalization and shared request helpers.", "implemented": false, "prdRefs": ["Data / API / Integrations"] },

@@ -69,3 +69,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F018: Added UI + server action to ingest Tactical bulk cached software inventory into `software_catalog` + `asset_software` using external mappings (no per-agent refresh).
 - (2026-02-13) F020: Added server actions to save/read Tactical settings and credential status with masking; disconnect clears tenant secrets.
 - (2026-02-13) F021: Implemented Tactical connection test for both API key and Knox modes, including TOTP-required detection.
+- (2026-02-13) F022: Implemented Tactical `rmm_integrations` upsert/update flows (instance URL, is_active, auth_mode in settings).
