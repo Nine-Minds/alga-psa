@@ -53,6 +53,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Should Tactical “overdue” be first-class everywhere (recommended) or mapped to offline?
 - What is the best heuristic for workstation vs server classification from Tactical agent fields?
 
+## Deletion Policy
+
+- (2026-02-13) F055: Device deletion handling is currently **skipped** (no auto-inactivation on missing agents). Rationale: avoid accidental deactivation without a complete snapshot + explicit user confirmation.
+
 ## Progress Log
 
 - (2026-02-13) F001: Added `tacticalrmm` to `RmmProvider` unions in `packages/types`, `server` (CE), and `ee/server` (EE) so it can be persisted/rendered consistently.

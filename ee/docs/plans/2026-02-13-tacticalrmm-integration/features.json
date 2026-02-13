@@ -32,7 +32,7 @@
   { "id": "F052", "description": "Implement mapping from Tactical agent fields into Alga asset base fields (name/serial/os/version/provider IDs, last seen, last sync).", "implemented": true, "prdRefs": ["Goals", "Data / API / Integrations"] },
   { "id": "F053", "description": "Implement mapping from Tactical agent fields into cached RMM vitals fields (current_user, uptime_seconds, lan_ip, wan_ip) where possible.", "implemented": true, "prdRefs": ["Goals"] },
   { "id": "F054", "description": "Upsert `tenant_external_entity_mappings` for Tactical agents using `external_entity_id=agent_id`, `external_realm_id=tactical_client_pk`, and include site id/name in metadata.", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F055", "description": "Implement device deletion handling policy for Tactical sync (either mark inactive when missing or explicitly skip; choose and document behavior).", "implemented": false, "prdRefs": ["Open Questions"] },
+  { "id": "F055", "description": "Implement device deletion handling policy for Tactical sync (either mark inactive when missing or explicitly skip; choose and document behavior).", "implemented": true, "prdRefs": ["Open Questions"] },
   { "id": "F056", "description": "Implement targeted 'sync single agent' server action by `agent_id` (used by webhook and manual refresh).", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F060", "description": "Add Tactical webhook endpoint `POST /api/webhooks/tacticalrmm` (CE + EE) and skip API-key auth middleware for this path.", "implemented": false, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
