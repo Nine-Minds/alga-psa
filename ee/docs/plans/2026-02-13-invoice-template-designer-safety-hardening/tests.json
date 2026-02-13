@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "PatchOps: `unsetNodeProp` rejects `prototype`/`constructor` segments and performs a safe no-op.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004"
