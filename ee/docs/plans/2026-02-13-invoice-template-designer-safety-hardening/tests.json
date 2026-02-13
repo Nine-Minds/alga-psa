@@ -129,7 +129,7 @@
   {
     "id": "T016",
     "description": "Hierarchy: `deleteNode` removes descendants based on canonical `children` traversal.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

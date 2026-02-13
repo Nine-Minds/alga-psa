@@ -42,5 +42,26 @@ describe('patchOps.deleteNode', () => {
     const nextIds = next.map((n) => n.id).sort();
     expect(nextIds).toEqual(['b', 'p']);
     expect(next.find((n) => n.id === 'p')?.children).toEqual(['b']);
+    // Legacy `childIds` is not canonical and must not be written during mutations.
+    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['a', 'b']);
+  });
+
+  it('removes descendants based on canonical `children` traversal (does not rely on legacy `childIds`)', () => {
+    const parent = createNode({ id: 'p', type: 'container', children: ['a'], childIds: ['a'] });
+    const a = createNode({
+      id: 'a',
+      type: 'container',
+      parentId: 'p',
+      // Deliberately inconsistent legacy vs canonical fields.
+      children: ['a1'],
+      childIds: [],
+    });
+    const a1 = createNode({ id: 'a1', type: 'text', parentId: 'a' });
+
+    const nodes = [parent, a, a1];
+    const next = deleteNode(nodes, 'a');
+
+    expect(next.map((n) => n.id).sort()).toEqual(['p']);
+    expect(next.find((n) => n.id === 'p')?.children).toEqual([]);
   });
 });

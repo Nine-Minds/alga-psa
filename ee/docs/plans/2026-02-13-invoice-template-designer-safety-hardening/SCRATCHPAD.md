@@ -69,6 +69,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.insertChild.test.ts`
 - (2026-02-13) Extended hierarchy unit coverage for `moveNode` to assert ordering adjustments, cycle prevention, and canonical `children` authority (no legacy `childIds` writes).
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.moveNode.test.ts`
+- (2026-02-13) Extended hierarchy unit coverage for `deleteNode` to ensure subtree traversal keys off canonical `children` and does not mutate legacy `childIds`.
+  - Test: `packages/billing/src/components/invoice-designer/state/patchOps.deleteNode.test.ts`
 
 ## Commands / Runbooks
 
