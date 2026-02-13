@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Ensure continuous interactions use `commit=false` for interim updates and do not spam history snapshots.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Non-functional Requirements > 4"]
   },
   {

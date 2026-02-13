@@ -41,6 +41,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/billing/src/components/invoice-designer/palette/OutlineView.tsx`
   - `packages/billing/src/components/invoice-designer/labelText.ts`
   - Removed stale `layout.mode`/`layout.sizing` references from section-fit messaging; CSS-first layout now keys off `layout.display`.
+- (2026-02-13) Continuous typing interactions in the metadata inspector now use `commit=false` on `onChange` and `commit=true` on `onBlur` to avoid history spam.
+  - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
 - (2026-02-13) Patch ops currently allow arbitrary object keys and could write `__proto__` unless guarded:
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
 - (2026-02-13) Patch ops now reject prototype-pollution path segments (`__proto__`, `prototype`, `constructor`) at any depth (safe no-op):
@@ -63,6 +65,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `git ls-files | rg "\\.env\\.local\\.bak\\.|\\.env\\.bak\\."`
 - (2026-02-13) Run invoice-designer unit tests (Vitest config root is `server/`):
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts`
+- (2026-02-13) Gotcha: Vitest can fail with `ENOSPC` (no space left on device) when Vite attempts to write `.vite-temp` config bundles.
 
 ## Links / References
 

@@ -683,31 +683,34 @@ export const DesignerShell: React.FC = () => {
       return null;
     }
     const metadata = getNodeMetadata(selectedNode) as Record<string, any>;
-    const applyMetadata = (patch: Record<string, unknown>) => {
+    const applyMetadata = (patch: Record<string, unknown>, commit: boolean) => {
       const entries = Object.entries(patch);
       if (entries.length === 0) return;
       entries.forEach(([key, value], index) => {
-        setNodeProp(selectedNode.id, `metadata.${key}`, value, index === entries.length - 1);
+        setNodeProp(selectedNode.id, `metadata.${key}`, value, index === entries.length - 1 ? commit : false);
       });
     };
 
     if (selectedNode.type === 'attachment-list') {
       const items: Array<Record<string, any>> = Array.isArray(metadata.items) ? metadata.items : [];
-      const updateItems = (next: Array<Record<string, any>>) => applyMetadata({ items: next });
-      const updateItem = (itemId: string, patch: Record<string, unknown>) => {
-        updateItems(items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
+      const updateItems = (next: Array<Record<string, any>>, commit: boolean) => applyMetadata({ items: next }, commit);
+      const updateItem = (itemId: string, patch: Record<string, unknown>, commit: boolean) => {
+        updateItems(items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)), commit);
       };
       const addItem = () => {
-        updateItems([
+        updateItems(
+          [
           ...items,
           {
             id: createLocalId(),
             label: 'Attachment',
             url: 'https://example.com',
           },
-        ]);
+          ],
+          true
+        );
       };
-      const removeItem = (itemId: string) => updateItems(items.filter((item) => item.id !== itemId));
+      const removeItem = (itemId: string) => updateItems(items.filter((item) => item.id !== itemId), true);
 
       return (
         <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
@@ -717,7 +720,8 @@ export const DesignerShell: React.FC = () => {
             <Input
               id="designer-attachments-title"
               value={metadata.title ?? 'Attachments'}
-              onChange={(event) => applyMetadata({ title: event.target.value })}
+              onChange={(event) => applyMetadata({ title: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ title: event.target.value }, true)}
             />
           </div>
           <div className="flex items-center justify-between text-xs text-slate-600">
@@ -733,7 +737,8 @@ export const DesignerShell: React.FC = () => {
                 <Input
                   id={`attachment-label-${item.id}`}
                   value={item.label ?? ''}
-                  onChange={(event) => updateItem(item.id, { label: event.target.value })}
+                  onChange={(event) => updateItem(item.id, { label: event.target.value }, false)}
+                  onBlur={(event) => updateItem(item.id, { label: event.target.value }, true)}
                   className="text-xs"
                 />
                 <Button
@@ -748,7 +753,8 @@ export const DesignerShell: React.FC = () => {
               <Input
                 id={`attachment-url-${item.id}`}
                 value={item.url ?? ''}
-                onChange={(event) => updateItem(item.id, { url: event.target.value })}
+                onChange={(event) => updateItem(item.id, { url: event.target.value }, false)}
+                onBlur={(event) => updateItem(item.id, { url: event.target.value }, true)}
                 className="text-xs"
               />
             </div>
@@ -760,6 +766,14 @@ export const DesignerShell: React.FC = () => {
 		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
 		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
         const objectFit = getNodeStyle(selectedNode)?.objectFit ?? fitMode;
+        const applyAspectRatio = (raw: string, commit: boolean) => {
+          const normalized = normalizeCssValue(raw);
+          if (normalized === undefined) {
+            unsetNodeProp(selectedNode.id, 'style.aspectRatio', commit);
+            return;
+          }
+          setNodeProp(selectedNode.id, 'style.aspectRatio', normalized, commit);
+        };
 		      return (
 		        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
 		          <p className="text-xs font-semibold text-slate-700">Media</p>
@@ -768,7 +782,8 @@ export const DesignerShell: React.FC = () => {
             <Input
               id="designer-media-src"
               value={metadata.src ?? metadata.url ?? ''}
-              onChange={(event) => applyMetadata({ src: event.target.value, url: event.target.value })}
+              onChange={(event) => applyMetadata({ src: event.target.value, url: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ src: event.target.value, url: event.target.value }, true)}
             />
           </div>
           <div>
@@ -776,7 +791,8 @@ export const DesignerShell: React.FC = () => {
             <Input
               id="designer-media-alt"
               value={metadata.alt ?? ''}
-              onChange={(event) => applyMetadata({ alt: event.target.value })}
+              onChange={(event) => applyMetadata({ alt: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ alt: event.target.value }, true)}
             />
 	          </div>
 	          <div>
@@ -788,7 +804,7 @@ export const DesignerShell: React.FC = () => {
 	                  const next = event.target.value;
 	                  setNodeProp(selectedNode.id, 'style.objectFit', next, true);
 	                  if (next === 'contain' || next === 'cover' || next === 'fill') {
-	                    applyMetadata({ fitMode: next, fit: next });
+	                    applyMetadata({ fitMode: next, fit: next }, true);
 	                  }
 	                }}
 		            >
@@ -805,14 +821,8 @@ export const DesignerShell: React.FC = () => {
 	                id="designer-media-aspect-ratio"
 	                value={getNodeStyle(selectedNode)?.aspectRatio ?? ''}
 	                placeholder="e.g. 16 / 9 or 1 / 1"
-	                onChange={(event) => {
-                    const normalized = normalizeCssValue(event.target.value);
-                    if (normalized === undefined) {
-                      unsetNodeProp(selectedNode.id, 'style.aspectRatio', true);
-                      return;
-                    }
-                    setNodeProp(selectedNode.id, 'style.aspectRatio', normalized, true);
-                  }}
+	                onChange={(event) => applyAspectRatio(event.target.value, false)}
+	                onBlur={(event) => applyAspectRatio(event.target.value, true)}
 	              />
 	            </div>
 		          <div className="pt-2 border-t border-slate-100 space-y-1">
