@@ -89,3 +89,6 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Palette insertion now uses schema defaults and generic tree ops:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `addNodeFromPalette` now pulls size/layout/style/metadata defaults from `getComponentSchema(type).defaults` and attaches nodes using `insertChild` semantics (`patchOps.insertChild`).
   - Default metadata normalization for repeated insertions (table columns, attachment items) moved into the store (`normalizeDefaultMetadataForNewNode`), removing hardcoded defaults from `DesignerShell.tsx`.
+- 2026-02-13: Outline + breadcrumbs now traverse the tree via children arrays:
+  - `packages/billing/src/components/invoice-designer/palette/OutlineView.tsx` now renders from `rootId` and `nodesById`, deriving parent lookup only for expand behavior.
+  - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` breadcrumbs now derive parent links from `childIds` instead of relying on persisted `parentId`.

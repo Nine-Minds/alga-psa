@@ -6,7 +6,7 @@
   { "id": "F005", "description": "Introduce component schema definitions as the single source of truth for: label, description, category, defaults, editable props schema, and hierarchy rules.", "implemented": true },
   { "id": "F006", "description": "Move nesting allowlists (allowed parents/children) out of state/hierarchy.ts into the component schema module.", "implemented": true },
   { "id": "F007", "description": "Update palette insertion to create nodes using schema defaults and attach them via insertChild (no bespoke per-type defaults in the store).", "implemented": true },
-  { "id": "F008", "description": "Refactor outline view and breadcrumbs to traverse children using nodesById/rootId (no reliance on parentId persistence).", "implemented": false },
+  { "id": "F008", "description": "Refactor outline view and breadcrumbs to traverse children using nodesById/rootId (no reliance on parentId persistence).", "implemented": true },
   { "id": "F009", "description": "Refactor selection and hover logic to use nodesById (including derived parent lookup when needed).", "implemented": false },
   { "id": "F010", "description": "Refactor canvas rendering to consume unified nodes (resolve props.style/props.layout/props.metadata) without referencing legacy typed fields.", "implemented": false },
   { "id": "F011", "description": "Refactor drag-drop reorder and reparent actions to call moveNode/insertChild/removeChild on the unified tree only.", "implemented": false },

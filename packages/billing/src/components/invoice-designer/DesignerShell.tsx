@@ -2246,6 +2246,14 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
   const breadcrumbs = React.useMemo(() => {
     if (!selectedNodeId) return [];
     const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const parentById = new Map<string, string | null>();
+    nodes.forEach((node) => {
+      node.childIds.forEach((childId) => {
+        if (!parentById.has(childId)) {
+          parentById.set(childId, node.id);
+        }
+      });
+    });
     const path: DesignerNode[] = [];
     let currentId: string | null = selectedNodeId;
     while (currentId) {
@@ -2254,7 +2262,7 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
       if (current.type !== 'document') {
         path.push(current);
       }
-      currentId = current.parentId ?? null;
+      currentId = parentById.get(currentId) ?? null;
     }
     return path.reverse();
   }, [nodes, selectedNodeId]);
