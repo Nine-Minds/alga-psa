@@ -22,7 +22,7 @@
   { "id": "T017D", "featureIds": ["F016B"], "description": "E2E: edge snapping chooses before/after insertion index consistently near sibling boundaries in flex containers.", "implemented": true },
   { "id": "T017E", "featureIds": ["F016B"], "description": "E2E: grid snapping aligns drop indicator/insertion to deterministic cell/index when parent is grid.", "implemented": true },
   { "id": "T017F", "featureIds": ["F016C"], "description": "Unit: drag-drop state updates persist only container + insertion index; no coordinate fields are written.", "implemented": true },
-  { "id": "T018", "featureIds": ["F017"], "description": "Repo: no imports/references remain to deleted geometry utilities after removal.", "implemented": false },
+  { "id": "T018", "featureIds": ["F017"], "description": "Repo: no imports/references remain to deleted geometry utilities after removal.", "implemented": true },
   { "id": "T019", "featureIds": ["F018"], "description": "Unit: utils/layout.ts contains no coordinate math helpers (assert via snapshot/grep-based test).", "implemented": false },
   { "id": "T020", "featureIds": ["F019"], "description": "Integration: exporting workspace snapshot includes layout props and re-import preserves them.", "implemented": false },
   { "id": "T021", "featureIds": ["F020"], "description": "Integration: preview output matches renderer semantics for layout-related properties (spacing/alignment/aspect ratio).", "implemented": false }
