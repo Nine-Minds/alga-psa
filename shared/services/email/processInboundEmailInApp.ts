@@ -1,6 +1,6 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
-import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -211,6 +211,8 @@ export async function processInboundEmailInApp(
     findTicketByEmailThread,
     resolveInboundTicketDefaults,
     findContactByEmail,
+    findUniqueClientIdByContactEmailDomain,
+    findValidClientPrimaryContactId,
     createTicketFromEmail,
     createCommentFromEmail,
   } = await import('../../workflow/actions/emailWorkflowActions');
@@ -445,8 +447,20 @@ export async function processInboundEmailInApp(
     ? await findContactByEmail(senderEmail, tenantId)
     : null;
 
-  const targetClientId = matchedContact?.client_id ?? defaults.client_id;
-  const targetContactId = matchedContact?.contact_id;
+  let targetClientId = matchedContact?.client_id ?? defaults.client_id;
+  let targetContactId = matchedContact?.contact_id;
+
+  // Domain fallback: if no exact contact match, try to infer a client from the sender email domain.
+  if (!matchedContact && senderEmail) {
+    const senderDomain = extractEmailDomain(senderEmail);
+    if (senderDomain) {
+      const domainMatchedClientId = await findUniqueClientIdByContactEmailDomain(senderDomain, tenantId);
+      if (domainMatchedClientId) {
+        targetClientId = domainMatchedClientId;
+        targetContactId = (await findValidClientPrimaryContactId(domainMatchedClientId, tenantId)) ?? undefined;
+      }
+    }
+  }
 
   // New-ticket idempotency: ticket could have been created in another parallel process.
   const existingTicketAfterDefaults = await findExistingEmailTicket({
@@ -498,7 +512,8 @@ export async function processInboundEmailInApp(
       ticket_id: ticketResult.ticket_id,
       content: JSON.stringify(blocks),
       source: 'email',
-      author_type: targetContactId ? 'contact' : 'system',
+      // Only treat the email as authored by a contact when we have an exact sender email match.
+      author_type: matchedContact?.contact_id ? 'contact' : 'system',
       metadata: {
         email: {
           messageId: emailData.id,
@@ -518,7 +533,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !targetContactId,
+        unmatchedSender: !matchedContact?.contact_id,
       },
     },
     tenantId

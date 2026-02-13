@@ -22,12 +22,12 @@
   {
     "id": "F005",
     "description": "Inbound email (new ticket path): if no exact contact match, attempt domain match to set target client; apply default contact if configured",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "description": "Inbound email: preserve precedence (exact contact match overrides domain match; domain match overrides defaults client)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
