@@ -18,7 +18,7 @@
 
   { "id": "T030", "description": "Unit: Base URL normalization produces correct API root for inputs with/without trailing slashes and with/without /api segments.", "implemented": true, "featureIds": ["F030"] },
   { "id": "T031", "description": "Unit: Beta pagination helper iterates pages until `next` is null and honors `page_size=1000` cap.", "implemented": true, "featureIds": ["F034"] },
-  { "id": "T032", "description": "Unit: Knox flow: checkcreds returns `{totp:true}` triggers login with twofactor; `{totp:false}` still proceeds to login for normal token.", "implemented": false, "featureIds": ["F032"] },
+  { "id": "T032", "description": "Unit: Knox flow: checkcreds returns `{totp:true}` triggers login with twofactor; `{totp:false}` still proceeds to login for normal token.", "implemented": true, "featureIds": ["F032"] },
   { "id": "T033", "description": "Unit: Knox 401 retry occurs at most once per request to avoid infinite loops.", "implemented": false, "featureIds": ["F033"] },
 
   { "id": "T040", "description": "Integration: Sync clients upserts `rmm_organization_mappings` rows for Tactical and updates names/metadata on rerun.", "implemented": false, "featureIds": ["F040"] },
