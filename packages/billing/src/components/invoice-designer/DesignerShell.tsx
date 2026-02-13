@@ -10,8 +10,6 @@ import {
   KeyboardSensor,
   MeasuringStrategy,
   PointerSensor,
-  closestCenter,
-  pointerWithin,
   type CollisionDetection,
   useDndMonitor,
   useSensor,
@@ -31,6 +29,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
+import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -322,20 +321,7 @@ export const DesignerShell: React.FC = () => {
     useSensor(KeyboardSensor)
   );
 
-  const collisionDetection = useCallback<CollisionDetection>((args) => {
-    const pointerCollisions = pointerWithin(args);
-    if (pointerCollisions.length > 0) {
-      // Prefer the smallest rect under the pointer as a proxy for "deepest" nesting.
-      return [...pointerCollisions].sort((a, b) => {
-        const rectA = args.droppableRects.get(a.id);
-        const rectB = args.droppableRects.get(b.id);
-        const areaA = rectA ? rectA.width * rectA.height : Number.POSITIVE_INFINITY;
-        const areaB = rectB ? rectB.width * rectB.height : Number.POSITIVE_INFINITY;
-        return areaA - areaB;
-      });
-    }
-    return closestCenter(args);
-  }, []);
+  const collisionDetection = useCallback<CollisionDetection>(invoiceDesignerCollisionDetection, []);
 
   const [propertyDraft, setPropertyDraft] = useState(() => ({
     x: 0,

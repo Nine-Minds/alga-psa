@@ -8,7 +8,7 @@
   { "id": "T007", "featureIds": ["F006"], "description": "Integration: width/height/min/max settings apply as CSS constraints without runtime geometry math.", "implemented": true },
   { "id": "T008", "featureIds": ["F007"], "description": "Integration: flex grow/shrink/basis settings affect layout as expected for sibling items.", "implemented": true },
   { "id": "T009", "featureIds": ["F008"], "description": "Integration: grid container renders children using CSS grid template columns/rows and gap.", "implemented": true },
-  { "id": "T010", "featureIds": ["F009"], "description": "Unit: collision detection uses pointerWithin-first with closestCenter fallback and yields consistent 'over' targets for simple container setups.", "implemented": false },
+  { "id": "T010", "featureIds": ["F009"], "description": "Unit: collision detection uses pointerWithin-first with closestCenter fallback and yields consistent 'over' targets for simple container setups.", "implemented": true },
   { "id": "T011", "featureIds": ["F010"], "description": "E2E: drag to reorder within the same container updates node order deterministically.", "implemented": false },
   { "id": "T012", "featureIds": ["F011"], "description": "E2E: drag a node from container A to container B inserts at expected index.", "implemented": false },
   { "id": "T013", "featureIds": ["F012"], "description": "E2E: nesting a node into an eligible container succeeds; nesting into an ineligible container is rejected.", "implemented": false },
