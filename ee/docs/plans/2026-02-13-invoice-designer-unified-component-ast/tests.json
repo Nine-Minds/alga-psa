@@ -1,7 +1,7 @@
 [
   { "id": "T001", "featureIds": ["F001", "F002"], "description": "Type/unit: unified node model supports props + children and a rootId with a deterministic tree traversal.", "implemented": true },
   { "id": "T002", "featureIds": ["F003"], "description": "Unit: setNodeProp updates deep paths (dot-notation) immutably and does not mutate previous state references.", "implemented": true },
-  { "id": "T003", "featureIds": ["F003"], "description": "Unit: unsetNodeProp removes deep paths and cleans up empty objects where required by conventions.", "implemented": false },
+  { "id": "T003", "featureIds": ["F003"], "description": "Unit: unsetNodeProp removes deep paths and cleans up empty objects where required by conventions.", "implemented": true },
   { "id": "T004", "featureIds": ["F003"], "description": "Unit: insertChild inserts at index and preserves existing child order deterministically.", "implemented": false },
   { "id": "T005", "featureIds": ["F003"], "description": "Unit: moveNode reorders within same parent and re-parents across parents while preventing cycles.", "implemented": false },
   { "id": "T006", "featureIds": ["F003"], "description": "Unit: deleteNode removes subtree and removes the node id from its parent's children list.", "implemented": false },

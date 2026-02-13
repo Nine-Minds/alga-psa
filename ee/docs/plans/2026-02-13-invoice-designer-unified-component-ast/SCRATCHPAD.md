@@ -208,3 +208,4 @@ This plan intentionally continues the simplification arc:
   - Added `packages/billing/src/components/invoice-designer/state/designerAst.test.ts`.
 - 2026-02-13: Added patch ops unit coverage:
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts` to validate immutable deep dot-path updates.
+  - Added `packages/billing/src/components/invoice-designer/state/patchOps.unsetNodeProp.test.ts` to validate cleanup behavior for empty objects.
