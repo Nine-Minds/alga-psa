@@ -237,3 +237,5 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Extracted Inspector input normalizers and added unit coverage:
   - Added `packages/billing/src/components/invoice-designer/inspector/normalizers.ts` (+ `normalizeString`, `normalizeCssLength`, `normalizeCssColor`, `normalizeNumber`) and wired `DesignerSchemaInspector` to use them.
   - Added `packages/billing/src/components/invoice-designer/inspector/normalizers.test.ts` to validate canonicalization behavior (for example unitless CSS lengths become `px`, empty strings unset).
+- 2026-02-13: Added table editor schema widget integration coverage:
+  - Added `packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx` to assert the `table-editor` widget updates `metadata.columns` and the canvas preview header reacts to the updated columns list.

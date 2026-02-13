@@ -17,7 +17,7 @@
   { "id": "T016", "featureIds": ["F012"], "description": "Integration: resizing a supported node writes sizing props via setNodeProp (style.width/style.height or flexBasis) and the DOM updates.", "implemented": true },
   { "id": "T017", "featureIds": ["F013", "F014"], "description": "Integration: Inspector renders controls for a selected node from schema and updates the tree via generic patch operations.", "implemented": true },
   { "id": "T018", "featureIds": ["F014"], "description": "Unit: Inspector normalizers convert input strings into canonical forms (for example css-length normalization) before writing props.", "implemented": true },
-  { "id": "T019", "featureIds": ["F015"], "description": "Integration: table columns editor updates metadata.columns via schema widget and updates are reflected in preview/canvas representation.", "implemented": false },
+  { "id": "T019", "featureIds": ["F015"], "description": "Integration: table columns editor updates metadata.columns via schema widget and updates are reflected in preview/canvas representation.", "implemented": true },
   { "id": "T020", "featureIds": ["F016"], "description": "Integration: workspace export -> import roundtrips unified node props deterministically and template AST output remains stable.", "implemented": false },
   { "id": "T021", "featureIds": ["F017"], "description": "Unit: serialized workspace snapshot contains only the unified tree format + UI settings and omits legacy per-node typed fields.", "implemented": false },
   { "id": "T022", "featureIds": ["F019"], "description": "Repo: no references remain to removed per-property store actions and legacy typed node fields after refactor.", "implemented": false }
