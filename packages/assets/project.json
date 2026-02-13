@@ -9,9 +9,10 @@
       "executor": "nx:noop"
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "@nx/vitest:test",
       "outputs": ["{workspaceRoot}/coverage/packages/assets"],
       "options": {
+        "configFile": "packages/assets/vitest.config.ts",
         "passWithNoTests": true
       }
     },
