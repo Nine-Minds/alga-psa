@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import { getAllowedChildrenForType, getAllowedParentsForType, canNestWithinParent } from './hierarchy';
 import {
   deleteNode as patchDeleteNode,
   insertChild as patchInsertChild,
@@ -12,7 +11,12 @@ import {
 } from './patchOps';
 import { getPresetById, LegacyLayoutPresetLayout } from '../constants/presets';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
-import { getComponentSchema } from '../schema/componentSchema';
+import {
+  canNestWithinParent,
+  getAllowedChildrenForType,
+  getAllowedParentsForType,
+  getComponentSchema,
+} from '../schema/componentSchema';
 
 export type DesignerComponentType =
   | 'document'

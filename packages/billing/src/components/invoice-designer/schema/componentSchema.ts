@@ -956,3 +956,12 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
 
 export const getComponentSchema = (type: DesignerComponentType): DesignerComponentSchema =>
   DESIGNER_COMPONENT_SCHEMAS[type];
+
+export const getAllowedChildrenForType = (type: DesignerComponentType): DesignerComponentType[] =>
+  getComponentSchema(type).hierarchy.allowedChildren;
+
+export const getAllowedParentsForType = (type: DesignerComponentType): DesignerComponentType[] =>
+  getComponentSchema(type).hierarchy.allowedParents;
+
+export const canNestWithinParent = (childType: DesignerComponentType, parentType: DesignerComponentType): boolean =>
+  getAllowedParentsForType(childType).includes(parentType);

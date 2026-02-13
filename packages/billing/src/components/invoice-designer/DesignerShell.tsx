@@ -28,7 +28,7 @@ import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
-import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
+import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
 import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';

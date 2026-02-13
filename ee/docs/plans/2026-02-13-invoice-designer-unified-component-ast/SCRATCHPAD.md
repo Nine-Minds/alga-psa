@@ -125,3 +125,6 @@ This plan intentionally continues the simplification arc:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
   - Updated `packages/billing/src/components/invoice-designer/state/designerStore.constraints.test.ts` assertions to validate unified snapshots.
+- 2026-02-13: Removed legacy hierarchy module:
+  - Deleted `packages/billing/src/components/invoice-designer/state/hierarchy.ts`.
+  - Moved `getAllowedChildrenForType` / `getAllowedParentsForType` / `canNestWithinParent` helpers into `packages/billing/src/components/invoice-designer/schema/componentSchema.ts` and updated call sites to import from schema.
