@@ -73,6 +73,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.deleteNode.test.ts`
 - (2026-02-13) Added UI integration coverage to ensure Outline/tree rendering prefers canonical `props.name` over legacy top-level `name`.
   - Test: `packages/billing/src/components/invoice-designer/palette/OutlineView.integration.test.tsx`
+- (2026-02-13) Added a focused DesignerShell UI test to ensure the selected-node header uses `getNodeName` (canonical `props.name` takes precedence over legacy `name`).
+  - Test: `packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
 
 ## Commands / Runbooks
 

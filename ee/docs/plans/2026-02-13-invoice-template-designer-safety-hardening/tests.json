@@ -145,7 +145,7 @@
   {
     "id": "T018",
     "description": "UI: DesignerShell selected-node header uses canonical props helpers for display (no direct legacy field reads).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
