@@ -109,12 +109,14 @@ export {
   listTacticalRmmOrganizationMappings,
   updateTacticalRmmOrganizationMapping,
   getTacticalRmmWebhookInfo,
-  TACTICAL_WEBHOOK_HEADER_NAME,
   backfillTacticalRmmAlerts,
   ingestTacticalRmmSoftwareInventory,
   syncTacticalRmmSingleAgent,
-  type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
+export {
+  TACTICAL_WEBHOOK_HEADER_NAME,
+  type TacticalRmmAuthMode,
+} from '../lib/rmm/tacticalrmm/shared';
 export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,

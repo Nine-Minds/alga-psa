@@ -11,6 +11,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
+import { TACTICAL_WEBHOOK_HEADER_NAME, type TacticalRmmAuthMode } from '../../lib/rmm/tacticalrmm/shared';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -20,9 +21,6 @@ const TACTICAL_KNOX_USERNAME_SECRET = 'tacticalrmm_username';
 const TACTICAL_KNOX_PASSWORD_SECRET = 'tacticalrmm_password';
 const TACTICAL_KNOX_TOKEN_SECRET = 'tacticalrmm_knox_token';
 const TACTICAL_WEBHOOK_SECRET = 'tacticalrmm_webhook_secret';
-
-export type TacticalRmmAuthMode = 'api_key' | 'knox';
-export const TACTICAL_WEBHOOK_HEADER_NAME = 'X-Alga-Webhook-Secret';
 
 async function publishRmmSyncEvent(args: {
   eventType: 'RMM_SYNC_STARTED' | 'RMM_SYNC_COMPLETED' | 'RMM_SYNC_FAILED';

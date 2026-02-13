@@ -3,7 +3,7 @@
   { "id": "T002", "description": "Unit: Provider display helper renders Tactical as \"Tactical RMM\" (no raw slug in UI).", "implemented": true, "featureIds": ["F002"] },
   { "id": "T003", "description": "Unit: Agent status typing + filter options include `overdue` and do not break existing online/offline/unknown behavior.", "implemented": true, "featureIds": ["F003"] },
 
-  { "id": "T010", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in CE build.", "implemented": false, "featureIds": ["F010"] },
+  { "id": "T010", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in CE build.", "implemented": true, "featureIds": ["F010"] },
   { "id": "T011", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in EE build.", "implemented": false, "featureIds": ["F010"] },
   { "id": "T012", "description": "E2E: Tactical settings panel can save instance URL + API key and shows \"credentials saved\" masked status.", "implemented": false, "featureIds": ["F011", "F020"] },
   { "id": "T013", "description": "E2E: Tactical settings panel can save username/password and completes login when no TOTP is required.", "implemented": false, "featureIds": ["F011", "F032", "F020"] },
