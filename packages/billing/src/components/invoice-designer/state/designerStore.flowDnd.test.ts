@@ -514,4 +514,76 @@ describe('designerStore (flow drag-drop state updates)', () => {
     const section = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
     expect(section?.childIds).toEqual(['b', 'a', 'c']);
   });
+
+  it('does not write coordinate-based layout during drag-drop moves (positions remain unchanged)', () => {
+    const nodes: DesignerNode[] = [
+      {
+        id: 'doc-1',
+        type: 'document',
+        name: 'Document',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: null,
+        childIds: ['page-1'],
+        allowedChildren: ['page'],
+      },
+      {
+        id: 'page-1',
+        type: 'page',
+        name: 'Page 1',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: 'doc-1',
+        childIds: ['section-a', 'section-b'],
+        allowedChildren: ['section'],
+      },
+      {
+        id: 'section-a',
+        type: 'section',
+        name: 'Section A',
+        position: { x: 24, y: 24 },
+        size: { width: 400, height: 240 },
+        parentId: 'page-1',
+        childIds: ['text-1'],
+        allowedChildren: ['text'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' },
+      },
+      {
+        id: 'section-b',
+        type: 'section',
+        name: 'Section B',
+        position: { x: 24, y: 300 },
+        size: { width: 400, height: 240 },
+        parentId: 'page-1',
+        childIds: [],
+        allowedChildren: ['text'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' },
+      },
+      {
+        id: 'text-1',
+        type: 'text',
+        name: 'Text 1',
+        position: { x: 123, y: 456 },
+        size: { width: 100, height: 32 },
+        parentId: 'section-a',
+        childIds: [],
+        allowedChildren: [],
+      },
+    ];
+
+    const store = useInvoiceDesignerStore.getState();
+    store.loadWorkspace({
+      nodes,
+      snapToGrid: false,
+      gridSize: 8,
+      showGuides: false,
+      showRulers: false,
+      canvasScale: 1,
+    });
+
+    store.moveNodeToParentAtIndex('text-1', 'section-b', 0);
+
+    const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'text-1');
+    expect(updated?.position).toEqual({ x: 123, y: 456 });
+  });
 });
