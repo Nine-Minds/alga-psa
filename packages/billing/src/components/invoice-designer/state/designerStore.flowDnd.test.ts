@@ -433,4 +433,85 @@ describe('designerStore (flow drag-drop state updates)', () => {
     expect(afterState.nodes).toEqual(beforeNodes);
     expect(afterState.historyIndex).toBe(beforeHistoryIndex);
   });
+
+  it('adjusts insertion index correctly when reordering within the same parent (before/after midpoint semantics)', () => {
+    const nodes: DesignerNode[] = [
+      {
+        id: 'doc-1',
+        type: 'document',
+        name: 'Document',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: null,
+        childIds: ['page-1'],
+        allowedChildren: ['page'],
+      },
+      {
+        id: 'page-1',
+        type: 'page',
+        name: 'Page 1',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: 'doc-1',
+        childIds: ['section-1'],
+        allowedChildren: ['section'],
+      },
+      {
+        id: 'section-1',
+        type: 'section',
+        name: 'Section',
+        position: { x: 24, y: 24 },
+        size: { width: 400, height: 240 },
+        parentId: 'page-1',
+        childIds: ['a', 'b', 'c'],
+        allowedChildren: ['text'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' },
+      },
+      {
+        id: 'a',
+        type: 'text',
+        name: 'A',
+        position: { x: 0, y: 0 },
+        size: { width: 100, height: 32 },
+        parentId: 'section-1',
+        childIds: [],
+        allowedChildren: [],
+      },
+      {
+        id: 'b',
+        type: 'text',
+        name: 'B',
+        position: { x: 0, y: 40 },
+        size: { width: 100, height: 32 },
+        parentId: 'section-1',
+        childIds: [],
+        allowedChildren: [],
+      },
+      {
+        id: 'c',
+        type: 'text',
+        name: 'C',
+        position: { x: 0, y: 80 },
+        size: { width: 100, height: 32 },
+        parentId: 'section-1',
+        childIds: [],
+        allowedChildren: [],
+      },
+    ];
+
+    const store = useInvoiceDesignerStore.getState();
+    store.loadWorkspace({
+      nodes,
+      snapToGrid: false,
+      gridSize: 8,
+      showGuides: false,
+      showRulers: false,
+      canvasScale: 1,
+    });
+
+    // Simulate inserting "a" at index 2 (drop after "b"). This should become ["b","a","c"] after adjustment.
+    store.moveNodeToParentAtIndex('a', 'section-1', 2);
+    const section = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
+    expect(section?.childIds).toEqual(['b', 'a', 'c']);
+  });
 });
