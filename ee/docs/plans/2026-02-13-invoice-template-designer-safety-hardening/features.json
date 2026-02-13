@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Ensure undo/redo restores the exact committed canonical JSON state (no `undefined`/`null` conversion surprises).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 4"]
   },
   {

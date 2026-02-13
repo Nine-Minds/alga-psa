@@ -8,16 +8,57 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 // Patch path grammar: dot-separated, with non-negative integer segments indicating array indices.
 const isIntegerKey = (key: string): boolean => key !== '' && /^[0-9]+$/.test(key);
 
+const isPlainRecord = (value: unknown): value is Record<string, unknown> => {
+  if (!isPlainObject(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
+
+const isJsonSerializable = (value: unknown, seen: Set<object> = new Set()): boolean => {
+  if (value === null) return true;
+
+  const type = typeof value;
+  if (type === 'string' || type === 'boolean') return true;
+  if (type === 'number') return Number.isFinite(value);
+  if (type === 'undefined' || type === 'function' || type === 'symbol' || type === 'bigint') return false;
+
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return false;
+    seen.add(value);
+    for (let i = 0; i < value.length; i += 1) {
+      // Avoid sparse arrays (JSON stringification will convert holes to null).
+      if (!(i in value)) return false;
+      if (!isJsonSerializable(value[i], seen)) return false;
+    }
+    seen.delete(value);
+    return true;
+  }
+
+  if (!isPlainRecord(value)) return false;
+  if (seen.has(value)) return false;
+  seen.add(value);
+  for (const entry of Object.entries(value)) {
+    if (!isJsonSerializable(entry[1], seen)) return false;
+  }
+  seen.delete(value);
+  return true;
+};
+
 const getUnsafePatchPathSegment = (parts: string[]): string | null =>
   parts.find((part) => RESERVED_PATCH_PATH_SEGMENTS.has(part)) ?? null;
 
-const warnRejectedPatchPath = (op: 'setNodeProp' | 'unsetNodeProp', nodeId: string, path: string, segment: string) => {
+const warnRejectedPatch = (
+  op: 'setNodeProp' | 'unsetNodeProp',
+  nodeId: string,
+  path: string,
+  reason: string
+) => {
   // This is developer-facing feedback only; state updates must remain safe no-ops.
   // Guard in case this runs in a non-Next browser context where `process` might be absent.
   const isProd = typeof process !== 'undefined' && process?.env?.NODE_ENV === 'production';
   if (isProd) return;
   // eslint-disable-next-line no-console
-  console.warn(`[invoice-designer] ${op} rejected unsafe patch path segment`, { nodeId, path, segment });
+  console.warn(`[invoice-designer] ${op} rejected patch`, { nodeId, path, reason });
 };
 
 const setIn = (value: unknown, path: string[], nextLeafValue: unknown): unknown => {
@@ -28,6 +69,10 @@ const setIn = (value: unknown, path: string[], nextLeafValue: unknown): unknown 
     const index = Number.parseInt(head, 10);
     const base = Array.isArray(value) ? value : [];
     const next = base.slice();
+    // Avoid sparse arrays in canonical JSON state; fill missing entries with `null`.
+    while (next.length < index) {
+      next.push(null);
+    }
     next[index] = setIn(base[index], tail, nextLeafValue);
     return next;
   }
@@ -88,7 +133,12 @@ export const setNodeProp = (nodes: DesignerNode[], nodeId: string, path: string,
   // Safe no-op: do not attempt any updates for paths that could cause prototype pollution.
   const unsafeSegment = getUnsafePatchPathSegment(parts);
   if (unsafeSegment) {
-    warnRejectedPatchPath('setNodeProp', nodeId, path, unsafeSegment);
+    warnRejectedPatch('setNodeProp', nodeId, path, `unsafe-path-segment:${unsafeSegment}`);
+    return nodes;
+  }
+  // Canonical designer state must remain JSON-serializable (history snapshots rely on it).
+  if (!isJsonSerializable(propValue)) {
+    warnRejectedPatch('setNodeProp', nodeId, path, 'non-json-value');
     return nodes;
   }
 
@@ -110,7 +160,7 @@ export const unsetNodeProp = (nodes: DesignerNode[], nodeId: string, path: strin
   // Safe no-op: do not attempt any updates for paths that could cause prototype pollution.
   const unsafeSegment = getUnsafePatchPathSegment(parts);
   if (unsafeSegment) {
-    warnRejectedPatchPath('unsetNodeProp', nodeId, path, unsafeSegment);
+    warnRejectedPatch('unsetNodeProp', nodeId, path, `unsafe-path-segment:${unsafeSegment}`);
     return nodes;
   }
 

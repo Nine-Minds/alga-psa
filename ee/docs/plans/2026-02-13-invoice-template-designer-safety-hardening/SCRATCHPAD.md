@@ -50,6 +50,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Patch ops `unset` for leaf array indices now splices the array (removes element, no `undefined` holes).
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
   - Nested unsets inside array elements keep the element in place; if the element becomes empty it is left as `{}` to remain JSON-serializable.
+- (2026-02-13) Patch ops now reject non-JSON values in `setNodeProp` (e.g. `undefined`, `NaN`, `Infinity`, functions, class instances) to keep history snapshots deterministic.
+  - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
+  - Array `set` fills missing indices with `null` to avoid sparse arrays (JSON stringification would otherwise introduce `null` implicitly).
 - (2026-02-13) Invoice template AST renderer emits CSS selectors/vars based on unvalidated identifiers:
   - `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
   - `packages/billing/src/lib/invoice-template-ast/schema.ts`
