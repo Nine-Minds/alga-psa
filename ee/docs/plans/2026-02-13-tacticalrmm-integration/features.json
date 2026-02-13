@@ -25,7 +25,7 @@
   { "id": "F034", "description": "Implement beta pagination helpers (PageNumberPagination with `page_size` up to 1000).", "implemented": true, "prdRefs": ["Non-functional Requirements"] },
 
   { "id": "F040", "description": "Implement Tactical inventory sync: fetch clients (`/beta/v1/client/`) and upsert into `rmm_organization_mappings` for provider `tacticalrmm`.", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F041", "description": "Implement Tactical org mappings API: list and update mappings (client_id assignment, auto_sync_assets).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F041", "description": "Implement Tactical org mappings API: list and update mappings (client_id assignment, auto_sync_assets).", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F050", "description": "Implement Tactical device sync engine (full sync): fetch sites and agents (paged) for mapped Tactical clients and upsert into Assets.", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F051", "description": "Compute Tactical agent status as `online|offline|overdue` from last_seen/offline_time/overdue_time (list endpoint compatible).", "implemented": false, "prdRefs": ["Functional Requirements"] },
