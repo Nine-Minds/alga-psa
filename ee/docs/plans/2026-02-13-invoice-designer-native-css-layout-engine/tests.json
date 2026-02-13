@@ -20,7 +20,7 @@
   { "id": "T017B", "featureIds": ["F016A"], "description": "Integration: property-panel can set width/height as CSS strings (%, rem, auto) and the canvas reflects the change.", "implemented": true },
   { "id": "T017C", "featureIds": ["F016A"], "description": "Unit: drag-resize always writes pixel values (px) even when the property panel was last set to non-px sizing.", "implemented": true },
   { "id": "T017D", "featureIds": ["F016B"], "description": "E2E: edge snapping chooses before/after insertion index consistently near sibling boundaries in flex containers.", "implemented": true },
-  { "id": "T017E", "featureIds": ["F016B"], "description": "E2E: grid snapping aligns drop indicator/insertion to deterministic cell/index when parent is grid.", "implemented": false },
+  { "id": "T017E", "featureIds": ["F016B"], "description": "E2E: grid snapping aligns drop indicator/insertion to deterministic cell/index when parent is grid.", "implemented": true },
   { "id": "T017F", "featureIds": ["F016C"], "description": "Unit: drag-drop state updates persist only container + insertion index; no coordinate fields are written.", "implemented": false },
   { "id": "T018", "featureIds": ["F017"], "description": "Repo: no imports/references remain to deleted geometry utilities after removal.", "implemented": false },
   { "id": "T019", "featureIds": ["F018"], "description": "Unit: utils/layout.ts contains no coordinate math helpers (assert via snapshot/grep-based test).", "implemented": false },

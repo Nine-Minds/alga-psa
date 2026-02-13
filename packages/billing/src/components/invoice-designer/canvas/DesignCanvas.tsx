@@ -2,9 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import {
   SortableContext,
-  rectSortingStrategy,
-  horizontalListSortingStrategy,
-  verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -15,6 +12,7 @@ import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
 import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
+import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
   normalizeFieldFormat,
@@ -1263,12 +1261,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       ));
     if (!readOnly && parentUsesFlowLayout) {
       const items = children.filter((child) => child.type !== 'document' && child.type !== 'page').map((child) => child.id);
-      const strategy =
-        parent?.layout?.display === 'grid'
-          ? rectSortingStrategy
-          : parent?.layout?.flexDirection === 'row'
-            ? horizontalListSortingStrategy
-            : verticalListSortingStrategy;
+      const strategy = resolveSortableStrategy(parent?.layout);
       return (
         <SortableContext items={items} strategy={strategy}>
           {renderedChildren}
