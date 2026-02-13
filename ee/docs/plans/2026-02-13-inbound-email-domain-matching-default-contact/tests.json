@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "UI: client details screen can set default contact and persists it to client.properties.primary_contact_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
