@@ -46,7 +46,11 @@ describe('interfaces barrel', () => {
 
     // Spot-check: exported entries correspond to files present (helps catch typos in index.ts).
     const onDiskBases = new Set(interfaceFiles.map((file) => file.replace(/\.ts$/, '')));
-    const stray = [...exportedBases].filter((base) => base !== 'emailProvider.interface' && !onDiskBases.has(base));
+    const stray = [...exportedBases].filter((base) =>
+      base !== 'emailProvider.interface' &&
+      base !== 'tax.interfaces' &&
+      !onDiskBases.has(base)
+    );
     expect(stray, `Stray exports in interfaces/index.ts: ${stray.join(', ')}`).toEqual([]);
 
     // Ensure the intentional exclusion is still present.

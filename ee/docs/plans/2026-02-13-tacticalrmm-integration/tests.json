@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "description": "Unit: Provider unions accept `tacticalrmm` and compile for both UI and server codepaths.", "implemented": false, "featureIds": ["F001"] },
+  { "id": "T001", "description": "Unit: Provider unions accept `tacticalrmm` and compile for both UI and server codepaths.", "implemented": true, "featureIds": ["F001"] },
   { "id": "T002", "description": "Unit: Provider display helper renders Tactical as \"Tactical RMM\" (no raw slug in UI).", "implemented": false, "featureIds": ["F002"] },
   { "id": "T003", "description": "Unit: Agent status typing + filter options include `overdue` and do not break existing online/offline/unknown behavior.", "implemented": false, "featureIds": ["F003"] },
 
