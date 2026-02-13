@@ -1786,17 +1786,6 @@ export const DesignerShell: React.FC = () => {
     }
     if (isNodeDragData(data)) {
       setActiveDrag({ kind: 'node', nodeId: data.nodeId });
-      if (data.layoutKind === 'absolute') {
-        const node = nodes.find((candidate) => candidate.id === data.nodeId);
-        if (node) {
-          dragSessionRef.current = {
-            nodeId: data.nodeId,
-            origin: { ...node.position },
-            originalPositions: buildDescendantPositionMap(data.nodeId, nodes),
-            lastDelta: { x: 0, y: 0 },
-          };
-        }
-      }
     }
   };
 
@@ -1969,7 +1958,7 @@ export const DesignerShell: React.FC = () => {
       }
       if (activeDrag?.kind === 'node') {
         const activeData = event.active.data.current;
-        if (isNodeDragData(activeData) && activeData.layoutKind === 'flow') {
+        if (isNodeDragData(activeData)) {
           const over = event.over;
           if (!over) {
             return;
@@ -2048,19 +2037,6 @@ export const DesignerShell: React.FC = () => {
           moveNodeToParentAtIndex(activeNode.id, targetParentId, targetIndex);
           recordDropResult(true);
           return;
-        }
-
-        if (dragSessionRef.current) {
-          const session = dragSessionRef.current;
-          const activeNode = nodes.find((node) => node.id === session.nodeId);
-          if (activeNode) {
-            const desiredPosition = {
-              x: session.origin.x + session.lastDelta.x,
-              y: session.origin.y + session.lastDelta.y,
-            };
-            const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
-            setNodePosition(session.nodeId, boundedPosition, true);
-          }
         }
       }
     } finally {

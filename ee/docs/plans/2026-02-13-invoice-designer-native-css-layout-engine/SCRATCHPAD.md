@@ -142,6 +142,11 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Flex parents now resolve insertion as before/after based on DOM rect midpoint along the main axis; grid uses the sortable `over` cell/index deterministically (no pixel snapping math):
     - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
 
+- 2026-02-13: `F016C` Drag-drop persistence (no coordinates)
+  - Dragging nodes no longer writes `position.x/y` during drop; drag-drop mutations are limited to `targetParentId + insertionIndex` updates (`parentId` + `childIds`):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
