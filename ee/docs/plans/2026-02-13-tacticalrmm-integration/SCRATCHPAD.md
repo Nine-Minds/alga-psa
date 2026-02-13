@@ -62,3 +62,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F011: Implemented Tactical RMM settings panel UI (instance URL, auth mode, credential inputs, save/test/disconnect flows) in `packages/integrations`.
 - (2026-02-13) F012: Added Tactical connection status panel (connected/disconnected, last sync, counts, last error) backed by a server action summary query.
 - (2026-02-13) F013: Added "Sync Clients" UI + server action to pull Tactical `/api/beta/v1/client/` and upsert `rmm_organization_mappings` with created/updated/failed counts.
+- (2026-02-13) F014: Added "Sync Devices" UI + server action to fetch Tactical agents for mapped orgs and upsert Alga assets + external entity mappings with summary counts.

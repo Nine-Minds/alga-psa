@@ -15,6 +15,7 @@ import {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
   syncTacticalRmmOrganizations,
+  syncTacticalRmmDevices,
   testTacticalRmmConnection,
   type TacticalRmmAuthMode,
 } from '@alga-psa/integrations/actions';
@@ -27,6 +28,7 @@ export function TacticalRmmIntegrationSettings() {
   const [testing, setTesting] = React.useState(false);
   const [disconnecting, setDisconnecting] = React.useState(false);
   const [syncingOrgs, setSyncingOrgs] = React.useState(false);
+  const [syncingDevices, setSyncingDevices] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
@@ -194,6 +196,30 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
+  const handleSyncDevices = async () => {
+    setSyncingDevices(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await syncTacticalRmmDevices();
+      if (!res.success) {
+        setError(res.error || 'Device sync failed');
+        toast({ title: 'Sync failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        return;
+      }
+      setSuccess(
+        `Device sync completed. Processed: ${res.items_processed}, Created: ${res.items_created}, Updated: ${res.items_updated}, Deleted: ${res.items_deleted}, Failed: ${res.items_failed}`
+      );
+      if (res.errors?.length) {
+        setError(`Some devices failed to sync: ${res.errors.slice(0, 3).join('; ')}`);
+      }
+      toast({ title: 'Devices synced', description: 'Tactical agents have been synced into assets.' });
+      await load();
+    } finally {
+      setSyncingDevices(false);
+    }
+  };
+
   return (
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
@@ -299,6 +325,26 @@ export function TacticalRmmIntegrationSettings() {
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncingOrgs ? 'animate-spin' : ''}`} />
                 {syncingOrgs ? 'Syncing...' : 'Sync Clients'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-md border bg-background p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Devices</div>
+                <div className="text-xs text-muted-foreground">
+                  Sync Tactical Agents into Alga Assets for mapped organizations.
+                </div>
+              </div>
+              <Button
+                id="tacticalrmm-sync-devices"
+                type="button"
+                onClick={handleSyncDevices}
+                disabled={syncingDevices || loading || saving || testing || disconnecting}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncingDevices ? 'animate-spin' : ''}`} />
+                {syncingDevices ? 'Syncing...' : 'Sync Devices'}
               </Button>
             </div>
           </div>

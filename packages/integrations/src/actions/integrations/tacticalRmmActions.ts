@@ -5,7 +5,9 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
+import { createAsset } from '@alga-psa/assets/actions/assetActions';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
+import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -567,6 +569,204 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       items_processed: remoteClients.length,
       items_created: created,
       items_updated: updated,
+      items_failed: errors.length,
+      errors: errors.length ? errors : undefined,
+    };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
+
+function inferAssetTypeFromTacticalAgent(agent: any): 'workstation' | 'server' {
+  const os = String(agent?.operating_system || agent?.os || agent?.platform || agent?.os_name || '').toLowerCase();
+  if (os.includes('server')) return 'server';
+  return 'workstation';
+}
+
+export const syncTacticalRmmDevices = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  items_processed?: number;
+  items_created?: number;
+  items_updated?: number;
+  items_deleted?: number;
+  items_failed?: number;
+  errors?: string[];
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  const errors: string[] = [];
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first(['integration_id', 'instance_url', 'settings']);
+
+    if (!integration?.integration_id) {
+      return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
+    }
+
+    const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
+    const client = await buildConfiguredTacticalClient({
+      tenant,
+      instanceUrl: integration.instance_url,
+      authMode,
+    });
+
+    const mappedOrgs = await knex('rmm_organization_mappings')
+      .where({ tenant, integration_id: integration.integration_id })
+      .whereNotNull('client_id')
+      .andWhere('auto_sync_assets', true)
+      .select(['external_organization_id', 'client_id']);
+
+    const sites = await client.listAllBeta<any>({ path: '/api/beta/v1/site/' });
+    const siteById = new Map<string, any>();
+    for (const s of sites) {
+      const id = String((s as any).id ?? (s as any).pk ?? '');
+      if (id) siteById.set(id, s);
+    }
+
+    let processed = 0;
+    let created = 0;
+    let updated = 0;
+
+    for (const org of mappedOrgs) {
+      const externalOrgId = String((org as any).external_organization_id);
+      const algaClientId = String((org as any).client_id);
+
+      const agents = await client.listAllBeta<any>({
+        path: '/api/beta/v1/agent/',
+        params: { client_id: externalOrgId },
+      });
+
+      for (const agent of agents) {
+        processed += 1;
+        try {
+          const agentId = String((agent as any).agent_id ?? (agent as any).id ?? (agent as any).pk ?? '');
+          if (!agentId) {
+            errors.push(`Agent record missing id (org=${externalOrgId})`);
+            continue;
+          }
+
+          const siteId = String((agent as any).site_id ?? (agent as any).site ?? '');
+          const site = siteId ? siteById.get(siteId) : undefined;
+          const siteName = site ? String((site as any).name ?? (site as any).site_name ?? '') : undefined;
+
+          const mapping = await knex('tenant_external_entity_mappings')
+            .where({
+              tenant,
+              integration_type: PROVIDER,
+              alga_entity_type: 'asset',
+              external_entity_id: agentId,
+              external_realm_id: externalOrgId,
+            })
+            .first(['id', 'alga_entity_id']);
+
+          const lastSeen = (agent as any).last_seen || (agent as any).lastSeen || null;
+          const offlineTime = (agent as any).offline_time ?? (agent as any).offlineTime ?? null;
+          const overdueTime = (agent as any).overdue_time ?? (agent as any).overdueTime ?? null;
+          const status = computeTacticalAgentStatus({
+            lastSeen,
+            offlineTimeMinutes: offlineTime,
+            overdueTimeMinutes: overdueTime,
+          });
+
+          const deviceName = String((agent as any).hostname || (agent as any).name || (agent as any).computer_name || agentId);
+
+          if (!mapping?.alga_entity_id) {
+            const assetType = inferAssetTypeFromTacticalAgent(agent);
+            const asset = await createAsset({
+              asset_type: assetType,
+              client_id: algaClientId,
+              asset_tag: `tactical:${agentId}`,
+              name: deviceName,
+              status: 'active',
+              serial_number: String((agent as any).serial_number || (agent as any).serial || ''),
+              location: siteName || '',
+            } as any);
+
+            await knex('assets')
+              .where({ tenant })
+              .whereRaw('assets.asset_id::text = ?', [String(asset.asset_id)])
+              .update({
+                rmm_provider: PROVIDER,
+                rmm_device_id: agentId,
+                rmm_organization_id: externalOrgId,
+                agent_status: status,
+                last_seen_at: lastSeen ? new Date(lastSeen) : null,
+                last_rmm_sync_at: knex.fn.now(),
+              });
+
+            await knex('tenant_external_entity_mappings').insert({
+              tenant,
+              integration_type: PROVIDER,
+              alga_entity_type: 'asset',
+              alga_entity_id: String(asset.asset_id),
+              external_entity_id: agentId,
+              external_realm_id: externalOrgId,
+              sync_status: 'synced',
+              last_synced_at: knex.fn.now(),
+              metadata: {
+                site_id: siteId || undefined,
+                site_name: siteName || undefined,
+                raw: agent,
+              },
+            });
+
+            created += 1;
+          } else {
+            const assetIdText = String(mapping.alga_entity_id);
+
+            await knex('assets')
+              .where({ tenant })
+              .whereRaw('assets.asset_id::text = ?', [assetIdText])
+              .update({
+                name: deviceName,
+                rmm_provider: PROVIDER,
+                rmm_device_id: agentId,
+                rmm_organization_id: externalOrgId,
+                agent_status: status,
+                last_seen_at: lastSeen ? new Date(lastSeen) : null,
+                last_rmm_sync_at: knex.fn.now(),
+              });
+
+            await knex('tenant_external_entity_mappings')
+              .where({ tenant, id: mapping.id })
+              .update({
+                external_realm_id: externalOrgId,
+                external_entity_id: agentId,
+                sync_status: 'synced',
+                last_synced_at: knex.fn.now(),
+                metadata: {
+                  site_id: siteId || undefined,
+                  site_name: siteName || undefined,
+                  raw: agent,
+                },
+              });
+
+            updated += 1;
+          }
+        } catch (e) {
+          errors.push(e instanceof Error ? e.message : 'Unknown error syncing agent');
+        }
+      }
+    }
+
+    await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+
+    return {
+      success: true,
+      items_processed: processed,
+      items_created: created,
+      items_updated: updated,
+      items_deleted: 0,
       items_failed: errors.length,
       errors: errors.length ? errors : undefined,
     };
