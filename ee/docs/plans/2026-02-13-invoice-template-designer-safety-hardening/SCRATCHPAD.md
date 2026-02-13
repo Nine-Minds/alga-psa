@@ -87,6 +87,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/state/designerStore.historyCommit.test.ts`
 - (2026-02-13) Added DesignCanvas pointer-driven resize integration test asserting `onResize(..., commit=false)` during motion and a final `commit=true` on pointer-up.
   - Test: `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.resizeProps.integration.test.tsx`
+- (2026-02-13) Added schema coverage ensuring invoice-template AST style class keys must pass safe CSS identifier validation.
+  - Test: `packages/billing/src/lib/invoice-template-ast/schema.test.ts`
 
 ## Commands / Runbooks
 

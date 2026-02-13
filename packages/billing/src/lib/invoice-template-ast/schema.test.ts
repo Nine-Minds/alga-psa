@@ -236,4 +236,26 @@ describe('invoiceTemplateAstSchema', () => {
 
     expect(result.success).toBe(true);
   });
+
+  it('rejects invalid CSS identifiers in styles.classes keys', () => {
+    const result = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      styles: {
+        classes: {
+          // `.` is not allowed by the safe identifier rule.
+          'bad.class': { color: 'red' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [],
+      },
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.errors.some((error) => error.message.includes('Invalid CSS identifier'))).toBe(true);
+  });
 });

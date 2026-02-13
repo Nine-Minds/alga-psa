@@ -202,7 +202,7 @@
   {
     "id": "T025",
     "description": "Invoice template AST schema: rejects invalid `styles.classes` keys (unsafe CSS identifiers).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
