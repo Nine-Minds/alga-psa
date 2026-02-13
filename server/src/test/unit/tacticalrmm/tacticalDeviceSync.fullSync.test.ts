@@ -354,4 +354,44 @@ describe('Tactical device sync (full sync)', () => {
     expect(asset?.last_seen_at).toBeInstanceOf(Date);
     expect(asset?.last_rmm_sync_at).toBeInstanceOf(Date);
   });
+
+  it('does not inactivate or delete assets when agents disappear (deletion policy = skip)', async () => {
+    // Seed an existing asset + mapping for an agent that will not be returned by Tactical.
+    state.assets.push({
+      tenant: 'tenant_1',
+      asset_id: 'asset_missing',
+      asset_type: 'workstation',
+      name: 'missing-agent-asset',
+      status: 'active',
+      rmm_provider: 'tacticalrmm',
+      rmm_device_id: 'a_missing',
+      rmm_organization_id: '100',
+      agent_status: 'online',
+    });
+    state.tenant_external_entity_mappings.push({
+      tenant: 'tenant_1',
+      id: 'mapping_missing',
+      integration_type: 'tacticalrmm',
+      alga_entity_type: 'asset',
+      alga_entity_id: 'asset_missing',
+      external_entity_id: 'a_missing',
+      external_realm_id: '100',
+      sync_status: 'synced',
+      metadata: {},
+    });
+
+    tacticalAgentsByClientId['100'] = []; // agent disappeared
+
+    const { syncTacticalRmmDevices } = await import(
+      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+    );
+
+    const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    expect(res.success).toBe(true);
+    expect(res.items_processed).toBe(0);
+    expect(res.items_deleted).toBe(0);
+
+    const stillThere = state.assets.find((a) => a.asset_id === 'asset_missing');
+    expect(stillThere?.status).toBe('active');
+  });
 });
