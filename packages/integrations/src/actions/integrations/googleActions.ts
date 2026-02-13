@@ -76,8 +76,9 @@ export const getGoogleIntegrationStatus = withAuth(async (
   };
 }> => {
   try {
-    const permitted = await hasPermission(user as any, 'system_settings', 'read');
-    if (!permitted) return { success: false, error: 'Forbidden' };
+    // This endpoint intentionally returns only masked/derived configuration.
+    // Any MSP user may view it so they can complete their own OAuth flows (e.g. calendar connect).
+    if ((user as any)?.user_type === 'client') return { success: false, error: 'Forbidden' };
 
     const secretProvider = await getSecretProviderInstance();
 
