@@ -31,6 +31,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 - (2026-02-13) Patch ops currently allow arbitrary object keys and could write `__proto__` unless guarded:
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
+- (2026-02-13) Patch ops now reject prototype-pollution path segments (`__proto__`, `prototype`, `constructor`) at any depth (safe no-op):
+  - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
 - (2026-02-13) Invoice template AST renderer emits CSS selectors/vars based on unvalidated identifiers:
   - `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
   - `packages/billing/src/lib/invoice-template-ast/schema.ts`
@@ -39,6 +41,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-02-13) Check for tracked env backups:
   - `git ls-files | rg "\\.env\\.local\\.bak\\.|\\.env\\.bak\\."`
+- (2026-02-13) Run invoice-designer unit tests (Vitest config root is `server/`):
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts`
 
 ## Links / References
 

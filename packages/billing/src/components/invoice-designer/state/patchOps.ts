@@ -1,9 +1,13 @@
 import type { DesignerNode } from './designerStore';
 
+const RESERVED_PATCH_PATH_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor']);
+
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isIntegerKey = (key: string): boolean => key !== '' && String(Number.parseInt(key, 10)) === key;
+
+const isSafePatchPath = (parts: string[]): boolean => !parts.some((part) => RESERVED_PATCH_PATH_SEGMENTS.has(part));
 
 const setIn = (value: unknown, path: string[], nextLeafValue: unknown): unknown => {
   if (path.length === 0) return nextLeafValue;
@@ -62,6 +66,7 @@ const splitDotPath = (path: string): string[] => path.split('.').map((segment) =
 export const setNodeProp = (nodes: DesignerNode[], nodeId: string, path: string, propValue: unknown): DesignerNode[] => {
   const parts = splitDotPath(path);
   if (parts.length === 0) return nodes;
+  if (!isSafePatchPath(parts)) return nodes;
 
   const index = nodes.findIndex((node) => node.id === nodeId);
   if (index === -1) return nodes;
@@ -78,6 +83,7 @@ export const setNodeProp = (nodes: DesignerNode[], nodeId: string, path: string,
 export const unsetNodeProp = (nodes: DesignerNode[], nodeId: string, path: string): DesignerNode[] => {
   const parts = splitDotPath(path);
   if (parts.length === 0) return nodes;
+  if (!isSafePatchPath(parts)) return nodes;
 
   const index = nodes.findIndex((node) => node.id === nodeId);
   if (index === -1) return nodes;

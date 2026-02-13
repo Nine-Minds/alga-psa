@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Harden patch path parsing to reject reserved keys (`__proto__`, `prototype`, `constructor`) for all patch operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 2"]
   },
   {
