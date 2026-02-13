@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Make `node.props` the single source of truth for name/layout/style/metadata (stop separately mutating legacy top-level fields during cutover).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 3"]
   },
   {
