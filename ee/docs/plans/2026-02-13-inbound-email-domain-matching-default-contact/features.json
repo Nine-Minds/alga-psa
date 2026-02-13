@@ -7,7 +7,7 @@
   {
     "id": "F002",
     "description": "Implement domain-to-client lookup derived from existing contacts (unique client only; ignore inactive contacts)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",

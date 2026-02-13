@@ -150,6 +150,42 @@ export async function findContactByEmail(
 }
 
 /**
+ * Find a unique client_id for an email domain by scanning existing (active) contacts.
+ *
+ * Returns null when:
+ * - the domain is blank/invalid
+ * - no contacts exist for the domain
+ * - multiple unique clients have contacts in the domain (ambiguous)
+ */
+export async function findUniqueClientIdByContactEmailDomain(
+  domain: string,
+  tenant: string
+): Promise<string | null> {
+  const normalizedDomain = (domain ?? '').trim().toLowerCase();
+  if (!normalizedDomain) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const rows = await trx('contacts')
+      .distinct('contacts.client_id as client_id')
+      .where('contacts.tenant', tenant)
+      .andWhere('contacts.is_inactive', false)
+      .whereNotNull('contacts.email')
+      .andWhereRaw('lower(contacts.email) like ?', [`%@${normalizedDomain}`]);
+
+    if (rows.length !== 1) {
+      return null;
+    }
+
+    const clientId = (rows[0] as any)?.client_id;
+    return typeof clientId === 'string' && clientId ? clientId : null;
+  });
+}
+
+/**
  * Create or find contact by email and client
  */
 export async function createOrFindContact(
