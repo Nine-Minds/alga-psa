@@ -99,6 +99,13 @@ export {
   resetGoogleProvidersToDisconnected
 } from './integrations/googleActions';
 export {
+  getTacticalRmmSettings,
+  saveTacticalRmmConfiguration,
+  testTacticalRmmConnection,
+  disconnectTacticalRmmIntegration,
+  type TacticalRmmAuthMode,
+} from './integrations/tacticalRmmActions';
+export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,
   disconnectXero,
