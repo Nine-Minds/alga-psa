@@ -285,6 +285,7 @@ export const DesignerShell: React.FC = () => {
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
   const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
+  const updateNodeLayout = useInvoiceDesignerStore((state) => state.updateNodeLayout);
   const toggleSnap = useInvoiceDesignerStore((state) => state.toggleSnap);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const toggleGuides = useInvoiceDesignerStore((state) => state.toggleGuides);
@@ -301,7 +302,6 @@ export const DesignerShell: React.FC = () => {
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
 
   const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
-  const setLayoutMode = useInvoiceDesignerStore((state) => state.setLayoutMode);
 
   // Constraints were removed as part of the CSS-first layout cutover.
   const referenceNodeId = null;
@@ -910,136 +910,95 @@ export const DesignerShell: React.FC = () => {
 
   const renderLayoutInspector = () => {
     if (!selectedNode) return null;
-    
-    // Show layout controls for containers (sections, columns, pages)
-    const isContainer = ['section', 'column', 'page', 'container'].includes(selectedNode.type);
-    // Also show sizing controls for children of flex containers
-    const parent = nodes.find(n => n.id === selectedNode.parentId);
-    const isFlexChild = parent?.layout?.mode === 'flex';
 
-    if (!isContainer && !isFlexChild) return null;
+    const isContainer = selectedNode.allowedChildren.length > 0;
+    if (!isContainer) return null;
 
     const layout = selectedNode.layout ?? {
-      mode: 'canvas',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'start',
-      sizing: 'fixed'
+      display: 'flex' as const,
+      flexDirection: 'column' as const,
+      gap: '0px',
+      padding: '0px',
+      justifyContent: 'flex-start' as const,
+      alignItems: 'stretch' as const,
     };
+
+    const parsePx = (value: unknown, fallback = 0) => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value !== 'string') return fallback;
+      const trimmed = value.trim();
+      if (!trimmed.endsWith('px')) return fallback;
+      const parsed = Number.parseFloat(trimmed.slice(0, -2));
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const gapPx = parsePx(layout.gap, 0);
+    const paddingPx = parsePx(layout.padding, 0);
 
     return (
       <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-3">
         <p className="text-xs font-semibold text-slate-700">Layout</p>
-        
-        {isContainer && (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500">Mode</span>
-              <div className="flex bg-slate-100 rounded p-0.5">
-                <button
-                  className={`px-2 py-0.5 text-[10px] rounded ${layout.mode === 'canvas' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                  onClick={() => setLayoutMode(selectedNode.id, 'canvas')}
-                >
-                  Canvas
-                </button>
-                <button
-                  className={`px-2 py-0.5 text-[10px] rounded ${layout.mode === 'flex' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                  onClick={() => setLayoutMode(selectedNode.id, 'flex')}
-                >
-                  Stack
-                </button>
-              </div>
-            </div>
 
-            {layout.mode === 'flex' && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Direction</label>
-                    <select
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.direction}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { direction: e.target.value as 'row' | 'column' })}
-                    >
-                      <option value="column">Vertical ↓</option>
-                      <option value="row">Horizontal →</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Gap (px)</label>
-                    <input
-                      type="number"
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.gap}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { gap: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Padding</label>
-                    <input
-                      type="number"
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.padding}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { padding: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Align Items</label>
-                    <select
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.align}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { align: e.target.value as any })}
-                    >
-                      <option value="start">Start</option>
-                      <option value="center">Center</option>
-                      <option value="end">End</option>
-                      <option value="stretch">Stretch</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Justify Content</label>
-                    <select
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.justify}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { justify: e.target.value as any })}
-                    >
-                      <option value="start">Start</option>
-                      <option value="center">Center</option>
-                      <option value="end">End</option>
-                      <option value="space-between">Space Between</option>
-                    </select>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-1">Direction</label>
+            <select
+              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+              value={layout.flexDirection ?? 'column'}
+              onChange={(e) => updateNodeLayout(selectedNode.id, { display: 'flex', flexDirection: e.target.value as 'row' | 'column' })}
+            >
+              <option value="column">Vertical ↓</option>
+              <option value="row">Horizontal →</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-1">Gap (px)</label>
+            <input
+              type="number"
+              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+              value={gapPx}
+              onChange={(e) => updateNodeLayout(selectedNode.id, { gap: `${Number(e.target.value) || 0}px` })}
+            />
+          </div>
+        </div>
 
-        <div className="pt-2 border-t border-slate-100">
-          <label className="text-[10px] text-slate-500 block mb-1">Sizing</label>
-          <div className="flex gap-1">
-            {(['fixed', 'hug', 'fill'] as const).map((mode) => (
-              <button
-                key={mode}
-                className={`flex-1 py-1 text-[10px] border rounded ${
-                  layout.sizing === mode
-                    ? 'bg-blue-50 border-blue-200 text-blue-700 font-medium'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-                onClick={() => setLayoutMode(selectedNode.id, layout.mode ?? 'canvas', { sizing: mode })}
-                title={
-                  mode === 'fixed' ? 'Fixed dimensions' :
-                  mode === 'hug' ? 'Hug contents' :
-                  'Fill available space'
-                }
-              >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </button>
-            ))}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-1">Padding (px)</label>
+            <input
+              type="number"
+              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+              value={paddingPx}
+              onChange={(e) => updateNodeLayout(selectedNode.id, { padding: `${Number(e.target.value) || 0}px` })}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-1">Align Items</label>
+            <select
+              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+              value={layout.alignItems ?? 'stretch'}
+              onChange={(e) => updateNodeLayout(selectedNode.id, { alignItems: e.target.value as any })}
+            >
+              <option value="flex-start">Start</option>
+              <option value="center">Center</option>
+              <option value="flex-end">End</option>
+              <option value="stretch">Stretch</option>
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="text-[10px] text-slate-500 block mb-1">Justify Content</label>
+            <select
+              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+              value={layout.justifyContent ?? 'flex-start'}
+              onChange={(e) => updateNodeLayout(selectedNode.id, { justifyContent: e.target.value as any })}
+            >
+              <option value="flex-start">Start</option>
+              <option value="center">Center</option>
+              <option value="flex-end">End</option>
+              <option value="space-between">Space Between</option>
+              <option value="space-around">Space Around</option>
+              <option value="space-evenly">Space Evenly</option>
+            </select>
           </div>
         </div>
       </div>
@@ -1796,7 +1755,6 @@ export const DesignerShell: React.FC = () => {
       options?: { missingSectionMessage?: string; autoSwitchFillToFixed?: boolean }
     ) => {
       const missingSectionMessage = options?.missingSectionMessage ?? 'Select a section to fit.';
-      const autoSwitchFillToFixed = options?.autoSwitchFillToFixed ?? true;
       if (!sectionId) {
         showDropFeedback('info', missingSectionMessage);
         return;
@@ -1810,17 +1768,9 @@ export const DesignerShell: React.FC = () => {
         return;
       }
 
-      let switchedFromFill = false;
-      if (autoSwitchFillToFixed && section.layout?.mode === 'flex' && section.layout.sizing === 'fill') {
-        setLayoutMode(section.id, 'flex', { sizing: 'fixed' });
-        switchedFromFill = true;
-        state = useInvoiceDesignerStore.getState();
-        nodesById = new Map(state.nodes.map((node) => [node.id, node]));
-        const refreshed = nodesById.get(section.id);
-        if (refreshed && refreshed.type === 'section') {
-          section = refreshed;
-        }
-      }
+      // Legacy behavior used to auto-switch sizing modes before fitting.
+      // In the CSS-first model, section sizing is controlled via CSS props instead.
+      const switchedFromFill = false;
 
       const intent = getSectionFitIntent(section, nodesById);
       if (intent.status === 'no-children') {
@@ -1846,7 +1796,7 @@ export const DesignerShell: React.FC = () => {
           : 'Section fitted to contents.'
       );
     },
-    [setLayoutMode, showDropFeedback, updateNodeSize]
+    [showDropFeedback, updateNodeSize]
   );
 
   const commitPropertyChanges = () => {
@@ -1855,16 +1805,6 @@ export const DesignerShell: React.FC = () => {
     const liveSelectedNode = liveNodes.find((node) => node.id === selectedNodeId) ?? null;
     const liveParentNode =
       liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
-
-    if (
-      shouldPromoteParentToCanvasForManualPosition(liveSelectedNode, liveParentNode, {
-        x: propertyDraft.x,
-        y: propertyDraft.y,
-      }) &&
-      liveParentNode
-    ) {
-      setLayoutMode(liveParentNode.id, 'canvas');
-    }
 
     setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
     updateNodeSize(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);

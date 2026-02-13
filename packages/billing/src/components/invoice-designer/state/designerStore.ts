@@ -160,6 +160,7 @@ interface DesignerState {
   updateNodeMetadata: (id: string, metadata: Record<string, unknown>) => void;
   updateNodeLayout: (id: string, layout: Partial<DesignerContainerLayout>) => void;
   updateNodeStyle: (id: string, style: Partial<DesignerNodeStyle>) => void;
+  clearLayoutPreset: (nodeId: string) => void;
   selectNode: (id: string | null) => void;
   setHoverNode: (id: string | null) => void;
   deleteSelectedNode: () => void;
@@ -771,6 +772,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     updateNodeStyle: (id, style) => {
       set((state) => ({
         nodes: state.nodes.map((node) => (node.id === id ? { ...node, style: { ...node.style, ...style } } : node)),
+      }));
+    },
+
+    clearLayoutPreset: (nodeId) => {
+      set((state) => ({
+        nodes: state.nodes.map((node) =>
+          node.id === nodeId ? { ...node, layoutPresetId: undefined } : node
+        ),
       }));
     },
 

@@ -1048,7 +1048,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     // Legacy fallback: collect children by parentId and sort by canvas position.
     nodes.forEach((node) => {
       if (!node.parentId) return;
-      if (map.has(node.parentId)) return;
+      const parent = nodesById.get(node.parentId);
+      const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
+      if (parentUsesFlowLayout) return;
       if (!map.has(node.parentId)) {
         map.set(node.parentId, []);
       }

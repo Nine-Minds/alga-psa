@@ -63,6 +63,12 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
   - Child ordering uses `parent.childIds` when parent is `display:flex|grid` (stable authored order); legacy canvas containers remain position-sorted for now.
 
+- 2026-02-13: `F004` Spacing controls (gap/padding + border via existing presets)
+  - Updated Inspector layout panel to edit `gap` and `padding` (px) and flex alignment using CSS semantics:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - `resolveFlexPadding` updated to support both legacy numeric padding and CSS `padding: \"Npx\"` during cutover:
+    - `packages/billing/src/components/invoice-designer/utils/layout.ts`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

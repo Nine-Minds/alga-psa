@@ -19,7 +19,31 @@ const ALIGN_THRESHOLD = 6;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 export const resolveFlexPadding = (node: Pick<DesignerNode, 'layout'>): number =>
-  node.layout?.mode === 'flex' ? Math.max(0, node.layout.padding ?? 0) : 0;
+  (() => {
+    const layout = node.layout as unknown as Record<string, unknown> | undefined;
+    if (!layout) return 0;
+
+    // Legacy (pre CSS-cutover) shape.
+    if (layout.mode === 'flex') {
+      const padding = Number(layout.padding);
+      return Number.isFinite(padding) ? Math.max(0, padding) : 0;
+    }
+
+    // CSS-first shape.
+    const paddingValue = layout.padding;
+    if (typeof paddingValue === 'number') {
+      return Number.isFinite(paddingValue) ? Math.max(0, paddingValue) : 0;
+    }
+    if (typeof paddingValue === 'string') {
+      const trimmed = paddingValue.trim();
+      if (trimmed.endsWith('px')) {
+        const parsed = Number.parseFloat(trimmed.slice(0, -2));
+        return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+      }
+    }
+
+    return 0;
+  })();
 
 export const getNodeInnerFrame = (node: Pick<DesignerNode, 'size' | 'layout'>): {
   width: number;
