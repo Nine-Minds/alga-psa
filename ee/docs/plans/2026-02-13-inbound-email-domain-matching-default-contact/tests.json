@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Unit: sender email normalization extracts the correct domain (display-name formats, uppercase emails)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {

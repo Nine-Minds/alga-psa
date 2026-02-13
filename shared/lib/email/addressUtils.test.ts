@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  extractEmailDomain,
   normalizeEmailAddress,
   parseEmailAddress,
   parseEmailAddressList,
@@ -18,6 +19,13 @@ describe('addressUtils', () => {
   it('normalizes bare and mailto addresses', () => {
     expect(normalizeEmailAddress(' MAILTO:Support@Example.com ')).toBe('support@example.com');
     expect(normalizeEmailAddress('alerts@example.com')).toBe('alerts@example.com');
+  });
+
+  it('extracts domains from sender addresses (display-name formats, uppercase emails)', () => {
+    expect(extractEmailDomain('  "Jane Doe" <JANE.DOE+tag@Example.COM>  ')).toBe('example.com');
+    expect(extractEmailDomain(' MAILTO:Support@Sub.Example.com ')).toBe('sub.example.com');
+    expect(extractEmailDomain('alerts@example.com')).toBe('example.com');
+    expect(extractEmailDomain('not an email')).toBeNull();
   });
 
   it('parses recipient lists with quoted commas and mixed delimiters', () => {
