@@ -32,6 +32,7 @@ import { canNestWithinParent, getAllowedParentsForType } from './schema/componen
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
 import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
+import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from './utils/nodeProps';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -178,7 +179,7 @@ const getSectionFitSizeFromChildren = (
     return null;
   }
 
-  const padding = resolveFlexPadding(section);
+  const padding = resolveFlexPadding(getNodeLayout(section));
   const furthestRight = sectionChildren.reduce((max, child) => {
     const right = Math.max(0, child.position.x) + Math.max(0, child.size.width);
     return right > max ? right : max;
@@ -233,10 +234,7 @@ const resolveNearestAncestorSection = (
 
 const wasSizeConstrainedFromDraft = (draft: Size, resolved: Size) => !sizesAreEffectivelyEqual(draft, resolved);
 
-const getSectionFitNoopMessage = (section: DesignerNode) =>
-  section.layout?.sizing === 'fill'
-    ? 'Section is already fitted in Fill mode. Switch section sizing to Fixed to shrink dimensions.'
-    : 'Section is already fitted.';
+const getSectionFitNoopMessage = (_section: DesignerNode) => 'Section is already fitted.';
 
 const shouldPromoteParentToCanvasForManualPosition = (
   node: DesignerNode | null,
@@ -246,7 +244,7 @@ const shouldPromoteParentToCanvasForManualPosition = (
   if (!node || node.type !== 'label') {
     return false;
   }
-  if (!parent || parent.layout?.mode !== 'flex') {
+  if (!parent || getNodeLayout(parent)?.display !== 'flex') {
     return false;
   }
   if (!Number.isFinite(draft.x) || !Number.isFinite(draft.y)) {
@@ -684,7 +682,7 @@ export const DesignerShell: React.FC = () => {
     if (!selectedNode) {
       return null;
     }
-    const metadata = (selectedNode.metadata ?? {}) as Record<string, any>;
+    const metadata = getNodeMetadata(selectedNode) as Record<string, any>;
     const applyMetadata = (patch: Record<string, unknown>) => {
       const entries = Object.entries(patch);
       if (entries.length === 0) return;
@@ -761,7 +759,7 @@ export const DesignerShell: React.FC = () => {
 
 		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
 		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
-        const objectFit = selectedNode.style?.objectFit ?? fitMode;
+        const objectFit = getNodeStyle(selectedNode)?.objectFit ?? fitMode;
 		      return (
 		        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
 		          <p className="text-xs font-semibold text-slate-700">Media</p>
@@ -805,7 +803,7 @@ export const DesignerShell: React.FC = () => {
               <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
 	              <Input
 	                id="designer-media-aspect-ratio"
-	                value={selectedNode.style?.aspectRatio ?? ''}
+	                value={getNodeStyle(selectedNode)?.aspectRatio ?? ''}
 	                placeholder="e.g. 16 / 9 or 1 / 1"
 	                onChange={(event) => {
                     const normalized = normalizeCssValue(event.target.value);
@@ -828,10 +826,7 @@ export const DesignerShell: React.FC = () => {
             </Button>
             {selectedMediaParentSection ? (
               <p className="text-[11px] text-slate-500">
-                Reflows <span className="font-medium text-slate-600">{selectedMediaParentSection.name}</span> to remove extra whitespace.
-                {selectedMediaParentSection.layout?.sizing === 'fill' && (
-                  <> In Fill mode, this will switch section sizing to Fixed before fitting.</>
-                )}
+                Reflows <span className="font-medium text-slate-600">{getNodeName(selectedMediaParentSection)}</span> to remove extra whitespace.
               </p>
             ) : (
               <p className="text-[11px] text-slate-500">This media block is not inside a section.</p>
@@ -920,7 +915,8 @@ export const DesignerShell: React.FC = () => {
 
       const isValid =
         canNestWithinParent(activeNode.type, parent.type) && !wouldCreateCycle(parent.id);
-      const axis = parent.layout?.display === 'flex' && parent.layout.flexDirection === 'row' ? 'x' : 'y';
+      const parentLayout = getNodeLayout(parent);
+      const axis = parentLayout?.display === 'flex' && parentLayout.flexDirection === 'row' ? 'x' : 'y';
 
       const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
       const overRect = over.rect;
@@ -1004,8 +1000,9 @@ export const DesignerShell: React.FC = () => {
             const overIndex = parent.children.indexOf(overNode.id);
             let index = overIndex >= 0 ? overIndex : parent.children.length;
 
-            if (parent.layout?.display === 'flex' && event.active.rect.current && over.rect) {
-              const axis = parent.layout.flexDirection === 'row' ? 'x' : 'y';
+            const parentLayout = getNodeLayout(parent);
+            if (parentLayout?.display === 'flex' && event.active.rect.current && over.rect) {
+              const axis = parentLayout.flexDirection === 'row' ? 'x' : 'y';
               const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
               const overRect = over.rect;
               if (activeRect && overRect) {
@@ -1262,7 +1259,7 @@ export const DesignerShell: React.FC = () => {
         <span className="font-semibold text-slate-700">Selected:</span>{' '}
         {selectedNode ? (
           <span data-automation-id="designer-selected-context">
-            {selectedNode.name} <span className="text-slate-500">({selectedNode.type})</span>
+            {getNodeName(selectedNode)} <span className="text-slate-500">({selectedNode.type})</span>
           </span>
         ) : (
           <>
@@ -1344,7 +1341,7 @@ export const DesignerShell: React.FC = () => {
 		                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
 		                <Input
 	                  id="selected-name"
-	                  value={selectedNode.name}
+	                  value={getNodeName(selectedNode)}
 	                  onChange={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, false)}
 	                  onBlur={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, true)}
 	                />
@@ -1509,7 +1506,10 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
 	              ? getDefinition(activeDrag.componentType)?.label ?? 'Component'
 	              : activeDrag.kind === 'preset'
 	                ? getPresetById(activeDrag.presetId)?.label ?? 'Preset'
-	                : nodes.find((node) => node.id === activeDrag.nodeId)?.name ?? 'Component'}
+	                : (() => {
+                      const draggedNode = nodes.find((node) => node.id === activeDrag.nodeId);
+                      return draggedNode ? getNodeName(draggedNode) : 'Component';
+                    })()}
 	          </div>
 	        )}
 	      </DragOverlay>
@@ -1581,7 +1581,7 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
               aria-current={isActive ? 'page' : undefined}
               disabled={isActive}
             >
-              {node.name}
+              {getNodeName(node)}
             </button>
           </React.Fragment>
         );

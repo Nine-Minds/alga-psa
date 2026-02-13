@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { DesignerNode } from './state/designerStore';
 import { __designerShellTestUtils } from './DesignerShell';
+import { getNodeName } from './utils/nodeProps';
 
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
@@ -40,15 +41,14 @@ describe('DesignerShell breadcrumbs', () => {
 
     const nodes = [doc, page, section, container, text];
 
-    expect(__designerShellTestUtils.computeBreadcrumbNodes(nodes, 'text').map((node) => node.name)).toEqual([
+    expect(__designerShellTestUtils.computeBreadcrumbNodes(nodes, 'text').map((node) => getNodeName(node))).toEqual([
       'Page 1',
       'Section',
       'Container',
       'Text',
     ]);
 
-    expect(__designerShellTestUtils.computeBreadcrumbNodes(nodes, 'page').map((node) => node.name)).toEqual(['Page 1']);
+    expect(__designerShellTestUtils.computeBreadcrumbNodes(nodes, 'page').map((node) => getNodeName(node))).toEqual(['Page 1']);
     expect(__designerShellTestUtils.computeBreadcrumbNodes(nodes, 'doc')).toEqual([]);
   });
 });
-

@@ -1,5 +1,3 @@
-import type { DesignerNode } from '../state/designerStore';
-
 // Layout helpers should map designer state to CSS-like semantics.
 // Any bespoke geometry/constraint math belongs outside this module (or is eliminated during cutover).
 
@@ -9,8 +7,8 @@ export interface AlignmentGuide {
   description: string;
 }
 
-export const resolveFlexPadding = (node: Pick<DesignerNode, 'layout'>): number => {
-  const layout = node.layout as unknown as Record<string, unknown> | undefined;
+export const resolveFlexPadding = (layoutInput: unknown): number => {
+  const layout = layoutInput as Record<string, unknown> | undefined;
   if (!layout) return 0;
 
   // Legacy (pre CSS-cutover) shape.
@@ -34,4 +32,3 @@ export const resolveFlexPadding = (node: Pick<DesignerNode, 'layout'>): number =
 
   return 0;
 };
-

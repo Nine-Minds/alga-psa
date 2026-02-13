@@ -36,6 +36,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Hierarchy mutations now treat `node.children` as canonical and no longer rely on or update `childIds`.
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+- (2026-02-13) UI call sites now use canonical `props` reads via `getNodeName/getNodeMetadata/getNodeLayout/getNodeStyle` (no direct legacy field reads in UI components touched).
+  - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - `packages/billing/src/components/invoice-designer/palette/OutlineView.tsx`
+  - `packages/billing/src/components/invoice-designer/labelText.ts`
+  - Removed stale `layout.mode`/`layout.sizing` references from section-fit messaging; CSS-first layout now keys off `layout.display`.
 - (2026-02-13) Patch ops currently allow arbitrary object keys and could write `__proto__` unless guarded:
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
 - (2026-02-13) Patch ops now reject prototype-pollution path segments (`__proto__`, `prototype`, `constructor`) at any depth (safe no-op):

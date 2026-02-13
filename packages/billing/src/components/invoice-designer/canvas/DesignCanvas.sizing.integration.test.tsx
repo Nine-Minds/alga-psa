@@ -13,15 +13,22 @@ afterEach(() => cleanup());
 const noop = () => {};
 
 describe('DesignCanvas (sizing integration)', () => {
-  it('applies width/height/min/max sizing from node.style to the node DOM element', () => {
+  it('applies width/height/min/max sizing from node.props.style to the node DOM element', () => {
     const nodes: DesignerNode[] = [
       {
         id: 'doc-1',
         type: 'document',
         name: 'Document',
+        props: {
+          name: 'Document',
+          metadata: {},
+          layout: { display: 'flex', flexDirection: 'column', gap: '0px', padding: '0px' },
+          style: { width: '816px', height: '1056px' },
+        },
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: null,
+        children: ['page-1'],
         childIds: ['page-1'],
         allowedChildren: ['page'],
       },
@@ -29,9 +36,16 @@ describe('DesignCanvas (sizing integration)', () => {
         id: 'page-1',
         type: 'page',
         name: 'Page 1',
+        props: {
+          name: 'Page 1',
+          metadata: {},
+          layout: { display: 'flex', flexDirection: 'column', gap: '32px', padding: '40px' },
+          style: { width: '816px', height: '1056px' },
+        },
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: 'doc-1',
+        children: ['section-1'],
         childIds: ['section-1'],
         allowedChildren: ['section'],
       },
@@ -39,30 +53,41 @@ describe('DesignCanvas (sizing integration)', () => {
         id: 'section-1',
         type: 'section',
         name: 'Section',
+        props: {
+          name: 'Section',
+          metadata: {},
+          layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' },
+          style: { width: '400px', height: '240px' },
+        },
         position: { x: 24, y: 24 },
         size: { width: 400, height: 240 },
         parentId: 'page-1',
+        children: ['text-1'],
         childIds: ['text-1'],
         allowedChildren: ['text'],
-        layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' },
       },
       {
         id: 'text-1',
         type: 'text',
         name: 'Text 1',
+        props: {
+          name: 'Text 1',
+          metadata: {},
+          style: {
+            width: '320px',
+            height: 'auto',
+            minWidth: '12rem',
+            minHeight: '40px',
+            maxWidth: '100%',
+            maxHeight: '480px',
+          },
+        },
         position: { x: 0, y: 0 },
         size: { width: 100, height: 32 },
         parentId: 'section-1',
+        children: [],
         childIds: [],
         allowedChildren: [],
-        style: {
-          width: '320px',
-          height: 'auto',
-          minWidth: '12rem',
-          minHeight: '40px',
-          maxWidth: '100%',
-          maxHeight: '480px',
-        },
       },
     ];
 
@@ -100,4 +125,3 @@ describe('DesignCanvas (sizing integration)', () => {
     expect(textEl.style.maxHeight).toBe('480px');
   });
 });
-

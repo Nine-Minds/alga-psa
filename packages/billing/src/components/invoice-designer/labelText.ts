@@ -1,4 +1,8 @@
+import type { DesignerNode } from './state/designerStore';
+import { getNodeMetadata, getNodeName } from './utils/nodeProps';
+
 type LabelTextNode = {
+  props?: Record<string, unknown>;
   name: string;
   metadata?: unknown;
 };
@@ -24,14 +28,14 @@ export const resolveLabelText = (
   node: LabelTextNode,
   options: ResolveLabelTextOptions = {}
 ): ResolvedLabelText => {
-  const metadata = asRecord(node.metadata);
+  const metadata = asRecord(getNodeMetadata(node as DesignerNode));
   const candidates: Array<{ source: LabelTextSource; value: string }> = [
     { source: 'metadata.text', value: asTrimmedString(metadata.text) },
     { source: 'metadata.label', value: asTrimmedString(metadata.label) },
   ];
 
   if (options.includeNameFallback !== false) {
-    candidates.push({ source: 'name', value: asTrimmedString(node.name) });
+    candidates.push({ source: 'name', value: asTrimmedString(getNodeName(node as DesignerNode)) });
   }
 
   for (const candidate of candidates) {

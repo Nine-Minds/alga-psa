@@ -6,6 +6,13 @@ describe('resolveLabelText', () => {
   it('prefers metadata.text over metadata.label and node name', () => {
     const resolved = resolveLabelText({
       name: 'Name Fallback',
+      props: {
+        name: 'Name Fallback',
+        metadata: {
+          text: 'Metadata Text',
+          label: 'Metadata Label',
+        },
+      },
       metadata: {
         text: 'Metadata Text',
         label: 'Metadata Label',
@@ -21,6 +28,13 @@ describe('resolveLabelText', () => {
   it('falls back to metadata.label when metadata.text is empty', () => {
     const resolved = resolveLabelText({
       name: 'Name Fallback',
+      props: {
+        name: 'Name Fallback',
+        metadata: {
+          text: '   ',
+          label: 'Metadata Label',
+        },
+      },
       metadata: {
         text: '   ',
         label: 'Metadata Label',
@@ -36,6 +50,13 @@ describe('resolveLabelText', () => {
   it('falls back to node name when metadata text fields are empty', () => {
     const resolved = resolveLabelText({
       name: 'Name Fallback',
+      props: {
+        name: 'Name Fallback',
+        metadata: {
+          text: '',
+          label: '',
+        },
+      },
       metadata: {
         text: '',
         label: '',
@@ -52,6 +73,7 @@ describe('resolveLabelText', () => {
     const resolved = resolveLabelText(
       {
         name: 'Name Fallback',
+        props: { name: 'Name Fallback', metadata: {} },
         metadata: {},
       },
       { includeNameFallback: false }
@@ -67,6 +89,13 @@ describe('resolveLabelText', () => {
     const resolved = resolveLabelText(
       {
         name: 'Invoice Number Label',
+        props: {
+          name: 'Invoice Number Label',
+          metadata: {
+            text: 'Label',
+            label: 'Invoice #',
+          },
+        },
         metadata: {
           text: 'Label',
           label: 'Invoice #',

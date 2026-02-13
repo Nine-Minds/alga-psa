@@ -13,15 +13,22 @@ afterEach(() => cleanup());
 const noop = () => {};
 
 describe('DesignCanvas (flex item integration)', () => {
-  it('applies flex grow/shrink/basis from node.style on flex children', () => {
+  it('applies flex grow/shrink/basis from node.props.style on flex children', () => {
     const nodes: DesignerNode[] = [
       {
         id: 'doc-1',
         type: 'document',
         name: 'Document',
+        props: {
+          name: 'Document',
+          metadata: {},
+          layout: { display: 'flex', flexDirection: 'column', gap: '0px', padding: '0px' },
+          style: { width: '816px', height: '1056px' },
+        },
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: null,
+        children: ['page-1'],
         childIds: ['page-1'],
         allowedChildren: ['page'],
       },
@@ -29,9 +36,16 @@ describe('DesignCanvas (flex item integration)', () => {
         id: 'page-1',
         type: 'page',
         name: 'Page 1',
+        props: {
+          name: 'Page 1',
+          metadata: {},
+          layout: { display: 'flex', flexDirection: 'column', gap: '32px', padding: '40px' },
+          style: { width: '816px', height: '1056px' },
+        },
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: 'doc-1',
+        children: ['section-1'],
         childIds: ['section-1'],
         allowedChildren: ['section'],
       },
@@ -39,34 +53,50 @@ describe('DesignCanvas (flex item integration)', () => {
         id: 'section-1',
         type: 'section',
         name: 'Section',
+        props: {
+          name: 'Section',
+          metadata: {},
+          layout: { display: 'flex', flexDirection: 'row', gap: '6px', padding: '6px' },
+          style: { width: '400px', height: '240px' },
+        },
         position: { x: 24, y: 24 },
         size: { width: 400, height: 240 },
         parentId: 'page-1',
+        children: ['text-1', 'text-2'],
         childIds: ['text-1', 'text-2'],
         allowedChildren: ['text'],
-        layout: { display: 'flex', flexDirection: 'row', gap: '6px', padding: '6px' },
       },
       {
         id: 'text-1',
         type: 'text',
         name: 'Text 1',
+        props: {
+          name: 'Text 1',
+          metadata: {},
+          style: { flexGrow: 1, flexShrink: 0, flexBasis: '240px' },
+        },
         position: { x: 0, y: 0 },
         size: { width: 100, height: 32 },
         parentId: 'section-1',
+        children: [],
         childIds: [],
         allowedChildren: [],
-        style: { flexGrow: 1, flexShrink: 0, flexBasis: '240px' },
       },
       {
         id: 'text-2',
         type: 'text',
         name: 'Text 2',
+        props: {
+          name: 'Text 2',
+          metadata: {},
+          style: { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' },
+        },
         position: { x: 140, y: 0 },
         size: { width: 100, height: 32 },
         parentId: 'section-1',
+        children: [],
         childIds: [],
         allowedChildren: [],
-        style: { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' },
       },
     ];
 
@@ -107,4 +137,3 @@ describe('DesignCanvas (flex item integration)', () => {
     expect(text2.style.flexBasis).toBe('auto');
   });
 });
-

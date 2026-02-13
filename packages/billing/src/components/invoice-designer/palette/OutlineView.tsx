@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useInvoiceDesignerStore, DesignerNode } from '../state/designerStore';
 import clsx from 'clsx';
+import { getNodeName } from '../utils/nodeProps';
 
 export const OutlineView: React.FC = () => {
   const nodesById = useInvoiceDesignerStore((state) => state.nodesById);
@@ -86,7 +87,7 @@ export const OutlineView: React.FC = () => {
             {hasChildren && (isExpanded ? '▼' : '▶')}
           </span>
           <span className="truncate flex-1">
-             {node.name || node.type}
+             {getNodeName(node) || node.type}
           </span>
         </div>
         {hasChildren && isExpanded && (

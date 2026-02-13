@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Update UI call sites to read node properties via canonical `props` helpers (e.g. `getNodeName`, `getNodeMetadata`) instead of legacy fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 3"]
   },
   {
