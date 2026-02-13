@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "PatchOps: `setNodeProp` rejects `__proto__` segments and cannot pollute `Object.prototype`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004"

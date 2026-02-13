@@ -73,7 +73,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `node scripts/test-guard-no-tracked-env-backups.mjs`
 - (2026-02-13) Run invoice-designer unit tests (Vitest config root is `server/`):
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts`
-- (2026-02-13) Gotcha: Vitest can fail with `ENOSPC` (no space left on device) when Vite attempts to write `.vite-temp` config bundles.
+- (2026-02-13) Gotcha: Vitest can fail with `ENOSPC` (no space left on device); running with `--coverage=false` reduces temp output and avoided the issue locally.
 
 ## Links / References
 
