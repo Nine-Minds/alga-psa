@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Integration: workflow action `resolve_inbound_ticket_context` returns targetClientId/targetContactId consistent with in-app domain fallback logic",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

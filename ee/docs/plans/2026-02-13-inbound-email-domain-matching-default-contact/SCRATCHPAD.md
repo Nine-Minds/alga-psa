@@ -68,6 +68,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - `packages/clients/src/components/clients/ClientDetails.tsx` (client screen)
 - `packages/types/src/interfaces/client.interfaces.ts` (`IClient.properties.primary_contact_id`)
 - `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` (inbound email integration coverage)
+- `server/src/test/integration/resolveInboundTicketContext.domainFallback.integration.test.ts` (workflow action parity coverage)
 
 ## Open Questions
 
