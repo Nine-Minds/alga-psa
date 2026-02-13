@@ -18,5 +18,5 @@
   { "id": "F017", "description": "Remove legacy typed node fields from the persisted workspace format (position/size/allowedChildren/parentId/etc.) where no longer needed.", "implemented": true },
   { "id": "F018", "description": "Delete packages/billing/src/components/invoice-designer/state/hierarchy.ts and migrate all call sites to schema-based hierarchy rules.", "implemented": true },
   { "id": "F019", "description": "Delete unused per-property store helpers/actions and update all tests to target unified tree patch semantics.", "implemented": true },
-  { "id": "F020", "description": "Add developer docs in SCRATCHPAD.md: schema format, patch semantics, and conventions for adding new properties/components.", "implemented": false }
+  { "id": "F020", "description": "Add developer docs in SCRATCHPAD.md: schema format, patch semantics, and conventions for adding new properties/components.", "implemented": true }
 ]

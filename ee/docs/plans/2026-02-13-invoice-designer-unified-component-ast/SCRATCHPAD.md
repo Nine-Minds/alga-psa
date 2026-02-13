@@ -65,6 +65,76 @@ This plan intentionally continues the simplification arc:
 - Quick grep for legacy references:
   - `rg -n "parentId|allowedChildren|updateNodeStyle\\(|updateNodeLayout\\(|updateNodeMetadata\\(" packages/billing/src/components/invoice-designer -S`
 
+## Developer Guide (Adding Props / Components)
+
+### Component Schema Source Of Truth
+
+- File: `packages/billing/src/components/invoice-designer/schema/componentSchema.ts`
+- Each component defines:
+  - `label`/`description`/`category` (palette + inspector display metadata)
+  - `defaults`: initial `name`, `layout`, `style`, `metadata`, `size`
+  - `hierarchy`: `allowedParents` + `allowedChildren`
+  - `inspector`: panels/fields (schema-driven Inspector)
+- Helpers now live on the schema module:
+  - `getAllowedChildrenForType(type)`
+  - `getAllowedParentsForType(type)`
+  - `canNestWithinParent(childType, parentType)`
+
+### Inspector Schema Format
+
+- Files:
+  - `packages/billing/src/components/invoice-designer/schema/inspectorSchema.ts` (field/panel types)
+  - `packages/billing/src/components/invoice-designer/inspector/DesignerSchemaInspector.tsx` (renderer)
+- Field kinds supported:
+  - primitives: `string`, `number`, `boolean`, `enum`
+  - CSS-ish: `css-length`, `css-color`
+  - complex: `widget` (custom React editor for component-specific metadata)
+- Visibility rules:
+  - `visibleWhen` supports `nodeIsContainer`, `pathEquals`, `parentPathEquals`
+- Widgets:
+  - Implement widgets in `packages/billing/src/components/invoice-designer/inspector/widgets/`
+  - Register by referencing the widget `id` in schema (example: `table-editor` for `metadata.columns`)
+
+### Patch API (How To Mutate State)
+
+- File: `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+- Only supported mutation surface (for anything persistent/undoable):
+  - `setNodeProp(nodeId, path, value, commit?)`
+  - `unsetNodeProp(nodeId, path, commit?)`
+  - `insertChild(parentId, childId, index)`
+  - `removeChild(parentId, childId)`
+  - `moveNode(nodeId, nextParentId, nextIndex)`
+  - `deleteNode(nodeId)`
+- Dot-path conventions (recommended):
+  - `name`
+  - `style.*` (sizing/typography/media CSS-like props)
+  - `layout.*` (container layout props)
+  - `metadata.*` (component-specific config)
+- History/undo semantics:
+  - `commit` defaults to `true`
+  - For multi-step edits that should be a single undo step: use `commit=false` for intermediate writes and `commit=true` for the final write.
+
+### Persistence Rules (What Gets Serialized)
+
+- Persisted workspace snapshot is `{ rootId, nodesById, canvas settings }`.
+- `exportWorkspace()` sanitizes node `props` to drop runtime/editor-only keys:
+  - `position`, `size`, `baseSize`, `layoutPresetId`
+- If a prop should survive reload and affect output, it should live under:
+  - `props.style`, `props.layout`, or `props.metadata` (and be surfaced via schema).
+
+### Conventions For Adding A New Property
+
+1. Add/extend the schema field in `componentSchema.ts` (usually via `COMMON_INSPECTOR` or component-specific `inspector`).
+2. Provide a default in `defaults.style` / `defaults.layout` / `defaults.metadata` only if it must exist on insertion.
+3. Avoid adding store actions/reducers: use `setNodeProp`/`unsetNodeProp` from inspector and other UI.
+
+### Conventions For Adding A New Component
+
+1. Add a `DesignerComponentSchema` entry in `DESIGNER_COMPONENT_SCHEMAS`.
+2. Define `hierarchy.allowedParents` and `hierarchy.allowedChildren` (the only authority for nesting rules).
+3. Define `defaults` and `inspector` panels/fields.
+4. Canvas/palette/outline should not need bespoke wiring if schema is complete.
+
 ## Progress Log
 
 - 2026-02-13: Implemented unified AST type definitions in `packages/billing/src/components/invoice-designer/state/designerAst.ts`:
