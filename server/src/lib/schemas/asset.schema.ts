@@ -249,7 +249,7 @@ export const assetQuerySchema = z.object({
   asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']).optional(),
   status: z.string().optional(),
   search: z.string().optional(),
-  agent_status: z.enum(['online', 'offline', 'unknown']).optional(),
+  agent_status: z.enum(['online', 'offline', 'overdue', 'unknown']).optional(),
   rmm_managed: z.boolean().optional(),
   maintenance_status: z.enum(['due', 'overdue', 'upcoming', 'completed']).optional(),
   maintenance_type: maintenanceTypeSchema.optional(),

@@ -5,7 +5,6 @@ import { RefreshCw, WifiOff } from 'lucide-react';
 import type { RmmCachedData } from '@alga-psa/types';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '@alga-psa/core';
-import { cn } from '@alga-psa/ui';
 
 interface RmmVitalsPanelProps {
   data: RmmCachedData | null | undefined;
@@ -85,7 +84,7 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             label="Agent Status" 
             value={
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-900">{data.agent_status === 'online' ? 'Online' : 'Offline'}</span>
+                <StatusBadge status={(data.agent_status as any) || 'unknown'} size="sm" showIcon={false} />
                 {data.last_check_in && (
                   <span className="text-sm text-gray-500">
                     (Last check-in: {formatRelativeDateTime(new Date(data.last_check_in), Intl.DateTimeFormat().resolvedOptions().timeZone)})

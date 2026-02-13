@@ -70,6 +70,7 @@ const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobi
 const AGENT_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'online', label: 'Online' },
   { value: 'offline', label: 'Offline' },
+  { value: 'overdue', label: 'Overdue' },
   { value: 'unknown', label: 'Unknown' },
 ];
 const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [

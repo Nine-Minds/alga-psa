@@ -1,7 +1,7 @@
 [
   { "id": "F001", "description": "Add `tacticalrmm` to RMM provider unions/types (assets + rmm interfaces) so the provider can be persisted and rendered.", "implemented": true, "prdRefs": ["Goals", "Data / API / Integrations"] },
   { "id": "F002", "description": "Update UI provider display helpers (e.g., status badge/indicator) to show a friendly name for `tacticalrmm`.", "implemented": true, "prdRefs": ["Goals", "UX / UI Notes"] },
-  { "id": "F003", "description": "Support a third agent status value `overdue` end-to-end (types, filters, badges) for Tactical’s computed status.", "implemented": false, "prdRefs": ["Goals", "Functional Requirements"] },
+  { "id": "F003", "description": "Support a third agent status value `overdue` end-to-end (types, filters, badges) for Tactical’s computed status.", "implemented": true, "prdRefs": ["Goals", "Functional Requirements"] },
 
   { "id": "F010", "description": "Add Tactical RMM entry to Integrations Settings -> RMM tab (CE + EE, not enterprise-gated).", "implemented": false, "prdRefs": ["Goals", "UX / UI Notes"] },
   { "id": "F011", "description": "Create Tactical RMM settings panel UI with: instance URL input, auth mode selector, credential form, save/test/connect, and disconnect.", "implemented": false, "prdRefs": ["Users and Primary Flows", "UX / UI Notes"] },

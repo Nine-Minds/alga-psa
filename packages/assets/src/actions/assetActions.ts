@@ -2055,7 +2055,9 @@ function calculateHealthStatus(asset: {
     }
 
     // Check agent status
-    if (asset.agent_status === 'offline') {
+    if (asset.agent_status === 'offline' || asset.agent_status === 'overdue') {
+        const stateLabel = asset.agent_status === 'overdue' ? 'overdue' : 'offline';
+
         // Check how long it's been offline
         if (asset.last_seen_at) {
             const lastSeen = new Date(asset.last_seen_at);
@@ -2065,16 +2067,16 @@ function calculateHealthStatus(asset: {
             if (hoursSinceLastSeen > 72) {
                 return {
                     health_status: 'critical',
-                    health_reason: `Device offline for ${Math.floor(hoursSinceLastSeen / 24)} days`,
+                    health_reason: `Device ${stateLabel} for ${Math.floor(hoursSinceLastSeen / 24)} days`,
                 };
             } else if (hoursSinceLastSeen > 24) {
                 return {
                     health_status: 'warning',
-                    health_reason: `Device offline for ${Math.floor(hoursSinceLastSeen)} hours`,
+                    health_reason: `Device ${stateLabel} for ${Math.floor(hoursSinceLastSeen)} hours`,
                 };
             }
         }
-        return { health_status: 'warning', health_reason: 'Device offline' };
+        return { health_status: 'warning', health_reason: `Device ${stateLabel}` };
     }
 
     // Agent is online - consider healthy
