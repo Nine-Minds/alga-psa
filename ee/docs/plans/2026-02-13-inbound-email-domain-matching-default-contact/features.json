@@ -57,6 +57,6 @@
   {
     "id": "F012",
     "description": "Add automated coverage for client default contact UI persistence (unit/integration test)",
-    "implemented": false
+    "implemented": true
   }
 ]
