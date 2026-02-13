@@ -133,6 +133,11 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Resize handles are now limited to `image/logo/qr` and container blocks (`section`, `container`) per PRD; resizing continues to write pixel `width/height` into `node.style` via `updateNodeSize` (no constraint solver):
     - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
 
+- 2026-02-13: `F016A` Property-panel sizing strings
+  - Inspector "Sizing (CSS)" panel accepts arbitrary CSS strings (`%`, `rem`, `auto`, `calc(...)`, etc.) for size/min/max while drag-resize continues to write pixel values (px):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
