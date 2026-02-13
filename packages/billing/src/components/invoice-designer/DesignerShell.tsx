@@ -27,13 +27,6 @@ import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerSt
 import { AlignmentGuide, calculateGuides, clampPositionToParent, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
-import {
-  findNearestSectionAncestor,
-  planSelectedPathInsertion,
-  planForceSelectedInsertion,
-  resolvePreferredParentFromSelection,
-  resolveSectionParentForInsertion,
-} from './utils/dropParentResolution';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
@@ -79,15 +72,9 @@ type DropIndicator =
   | { kind: 'container'; containerId: string; tone: 'invalid' }
   | null;
 
-type InsertBlockCallout = {
-  sectionId: string;
-  message: string;
-  nextAction: string;
-};
-
 type ComponentDropResolution =
-  | { ok: true; parentId: string; notice?: string; reflowAdjustments?: Array<{ nodeId: string; width: number }> }
-  | { ok: false; message: string; reason?: 'selected-section-no-room'; sectionId?: string; nextAction?: string };
+  | { ok: true; parentId: string }
+  | { ok: false; message: string };
 
 type ComponentInsertOptions = {
   dropMeta?: DropTargetMeta;
@@ -269,12 +256,17 @@ const resolveNearestAncestorSection = (
   nodeId: string | null,
   nodesById: Map<string, DesignerNode>
 ): DesignerNode | null => {
-  const sectionId = findNearestSectionAncestor(nodeId, nodesById);
-  if (!sectionId) {
+  if (!nodeId) {
     return null;
   }
-  const sectionNode = nodesById.get(sectionId);
-  return sectionNode?.type === 'section' ? sectionNode : null;
+  let current: DesignerNode | null = nodesById.get(nodeId) ?? null;
+  while (current) {
+    if (current.type === 'section') {
+      return current;
+    }
+    current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+  }
+  return null;
 };
 
 const wasSizeConstrainedFromDraft = (draft: Size, resolved: Size) => !sizesAreEffectivelyEqual(draft, resolved);
@@ -358,14 +350,7 @@ export const DesignerShell: React.FC = () => {
   const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
   const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
-  const [insertBlockCallout, setInsertBlockCallout] = useState<InsertBlockCallout | null>(null);
   const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
-  const blockedSectionName = useMemo(() => {
-    if (!insertBlockCallout) {
-      return null;
-    }
-    return nodes.find((node) => node.id === insertBlockCallout.sectionId)?.name ?? null;
-  }, [insertBlockCallout, nodes]);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -442,14 +427,6 @@ export const DesignerShell: React.FC = () => {
     setDropFeedback(null);
   }, []);
 
-  const clearInsertBlockCallout = useCallback(() => {
-    setInsertBlockCallout(null);
-  }, []);
-
-  const showInsertBlockCallout = useCallback((callout: InsertBlockCallout) => {
-    setInsertBlockCallout(callout);
-  }, []);
-
   const showDropFeedback = useCallback((tone: DropFeedback['tone'], message: string) => {
     if (dropFeedbackTimeoutRef.current) {
       clearTimeout(dropFeedbackTimeoutRef.current);
@@ -468,17 +445,6 @@ export const DesignerShell: React.FC = () => {
       }
     };
   }, []);
-
-  React.useEffect(() => {
-    if (!insertBlockCallout) {
-      return;
-    }
-    const nodesById = new Map(nodes.map((node) => [node.id, node]));
-    const selectedSectionId = findNearestSectionAncestor(selectedNodeId, nodesById);
-    if (!selectedSectionId || selectedSectionId !== insertBlockCallout.sectionId) {
-      setInsertBlockCallout(null);
-    }
-  }, [insertBlockCallout, nodes, selectedNodeId]);
 
   const snapModifier = useMemo<Modifier | null>(() => {
     if (!snapToGrid) {
@@ -573,179 +539,52 @@ export const DesignerShell: React.FC = () => {
     (
       componentType: DesignerComponentType,
       dropMeta: DropTargetMeta | undefined,
-      dropPoint: Point,
+      _dropPoint: Point,
       options: { strictSelectionPath?: boolean; selectedNodeIdOverride?: string | null } = {}
     ): ComponentDropResolution => {
       const state = useInvoiceDesignerStore.getState();
       const nodesForDrop = state.nodes;
       const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
       const dropNode = dropMeta?.nodeId ? nodesById.get(dropMeta.nodeId) : undefined;
+      const selectedNodeIdForResolution = options.selectedNodeIdOverride ?? state.selectedNodeId;
+
+      const resolveFromNode = (start: DesignerNode | null | undefined): string | null => {
+        let current = start ?? null;
+        while (current) {
+          if (canNestWithinParent(componentType, current.type)) {
+            return current.id;
+          }
+          current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+        }
+        return null;
+      };
+
+      const resolvedFromDrop = resolveFromNode(dropNode);
+      if (resolvedFromDrop) {
+        return { ok: true, parentId: resolvedFromDrop };
+      }
+
+      const resolvedFromSelection = selectedNodeIdForResolution
+        ? resolveFromNode(nodesById.get(selectedNodeIdForResolution))
+        : null;
+      if (resolvedFromSelection) {
+        return { ok: true, parentId: resolvedFromSelection };
+      }
+
+      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id ?? selectedNodeIdForResolution ?? undefined);
+      if (pageNode && canNestWithinParent(componentType, pageNode.type)) {
+        return { ok: true, parentId: pageNode.id };
+      }
+
       const allowedParents = getAllowedParentsForType(componentType);
-      const componentDefinition = getDefinition(componentType);
-      const liveSelectedNodeId = options.selectedNodeIdOverride ?? state.selectedNodeId;
-      const selectedSectionId = findNearestSectionAncestor(liveSelectedNodeId, nodesById);
-
-      if (dropNode && canNestWithinParent(componentType, dropNode.type)) {
-        return { ok: true, parentId: dropNode.id };
-      }
-
-      let ancestor = dropNode;
-      while (ancestor?.parentId) {
-        const parent = nodesById.get(ancestor.parentId);
-        if (!parent) {
-          break;
-        }
-        if (canNestWithinParent(componentType, parent.type)) {
-          return { ok: true, parentId: parent.id };
-        }
-        ancestor = parent;
-      }
-
-      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id ?? selectedSectionId ?? undefined);
-      if (componentType === 'section') {
-        if (pageNode && canNestWithinParent('section', pageNode.type)) {
-          return { ok: true, parentId: pageNode.id };
-        }
-        return { ok: false, message: 'Unable to place section here.' };
-      }
-
-      if (!dropNode && pageNode) {
-        if (options.strictSelectionPath) {
-          const selectedPathPlan = planSelectedPathInsertion({
-            selectedNodeId: liveSelectedNodeId,
-            nodesById,
-            componentType,
-            desiredSize: componentDefinition?.defaultSize,
-          });
-          if (!selectedPathPlan) {
-            return {
-              ok: false,
-              message: 'Select a parent in OUTLINE before using quick insert.',
-            };
-          }
-          if (!selectedPathPlan.ok) {
-            const failedPlan = selectedPathPlan as { message: string; sectionId?: string; nextAction?: string };
-            return {
-              ok: false,
-              message: failedPlan.message,
-              reason: 'selected-section-no-room',
-              sectionId: failedPlan.sectionId,
-              nextAction: failedPlan.nextAction,
-            };
-          }
-          return {
-            ok: true,
-            parentId: selectedPathPlan.parentId,
-            reflowAdjustments: selectedPathPlan.reflowAdjustments,
-            notice:
-              selectedPathPlan.reflowAdjustments.length > 0
-                ? 'Inserted in selected parent with local reflow.'
-                : undefined,
-          };
-        }
-
-        const forcePlan = planForceSelectedInsertion({
-          selectedNodeId: liveSelectedNodeId,
-          pageNode,
-          nodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-        });
-        if (forcePlan) {
-          if (!forcePlan.ok) {
-            const failedPlan = forcePlan as { message: string; sectionId?: string; nextAction?: string };
-            return {
-              ok: false,
-              message: failedPlan.message,
-              reason: 'selected-section-no-room',
-              sectionId: failedPlan.sectionId,
-              nextAction: failedPlan.nextAction,
-            };
-          }
-          return {
-            ok: true,
-            parentId: forcePlan.parentId,
-            reflowAdjustments: forcePlan.reflowAdjustments,
-            notice:
-              forcePlan.reflowAdjustments.length > 0
-                ? 'Inserted in selected section with local reflow.'
-                : undefined,
-          };
-        }
-
-        const preferredParent = resolvePreferredParentFromSelection({
-          selectedNodeId: liveSelectedNodeId,
-          pageNode,
-          nodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-        });
-        if (preferredParent) {
-          return { ok: true, parentId: preferredParent.id };
-        }
-      }
-
-      if (allowedParents.includes('section') && pageNode) {
-        const existingSection = resolveSectionParentForInsertion({
-          pageNode,
-          nodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-          preferredSectionId: selectedSectionId,
-        });
-        if (existingSection) {
-          return { ok: true, parentId: existingSection.id };
-        }
-
-        const existingNodeIds = new Set(nodesForDrop.map((node) => node.id));
-        const sectionDefinition = getDefinition('section');
-        addNode(
-          'section',
-          dropPoint,
-          sectionDefinition
-            ? {
-                parentId: pageNode.id,
-                defaults: {
-                  size: sectionDefinition.defaultSize,
-                  layout: {
-                    mode: 'flex',
-                    direction: 'column',
-                    gap: 12,
-                    padding: 12,
-                    justify: 'start',
-                    align: 'stretch',
-                    sizing: 'fixed',
-                  },
-                },
-              }
-            : { parentId: pageNode.id }
-        );
-
-        const nodesAfterScaffold = useInvoiceDesignerStore.getState().nodes;
-        const createdSection = nodesAfterScaffold.find(
-          (node) => node.type === 'section' && node.parentId === pageNode.id && !existingNodeIds.has(node.id)
-        );
-        if (createdSection) {
-          return { ok: true, parentId: createdSection.id, notice: 'Added a section scaffold for this drop.' };
-        }
-
-        const fallbackNodesById = new Map(nodesAfterScaffold.map((node) => [node.id, node]));
-        const nextPageNode = fallbackNodesById.get(pageNode.id) ?? pageNode;
-        const fallbackSection = resolveSectionParentForInsertion({
-          pageNode: nextPageNode,
-          nodesById: fallbackNodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-          preferredSectionId: selectedSectionId,
-        });
-        if (fallbackSection) {
-          return { ok: true, parentId: fallbackSection.id };
-        }
+      const fallback = nodesForDrop.find((node) => allowedParents.includes(node.type)) ?? null;
+      if (fallback) {
+        return { ok: true, parentId: fallback.id };
       }
 
       return { ok: false, message: 'Drop target is not compatible for this component.' };
     },
-    [addNode, resolvePageForDrop]
+    [resolvePageForDrop]
   );
 
   const getDefaultInsertionPoint = useCallback((options?: { preferSelectionAnchor?: boolean; selectionAnchorId?: string | null }): Point => {
@@ -799,38 +638,9 @@ export const DesignerShell: React.FC = () => {
         selectedNodeIdOverride: selectedNodeIdForResolution,
       });
       if (!resolution.ok) {
-        const failedResolution = resolution as Extract<ComponentDropResolution, { ok: false }>;
         recordDropResult(false);
-        showDropFeedback('error', failedResolution.message);
-        if (failedResolution.reason === 'selected-section-no-room' && failedResolution.sectionId) {
-          showInsertBlockCallout({
-            sectionId: failedResolution.sectionId,
-            message: failedResolution.message,
-            nextAction: failedResolution.nextAction ?? 'Resize the selected section or choose another section.',
-          });
-        }
+        showDropFeedback('error', resolution.message);
         return false;
-      }
-
-      clearInsertBlockCallout();
-
-      if (resolution.reflowAdjustments && resolution.reflowAdjustments.length > 0) {
-        const nodesById = new Map(useInvoiceDesignerStore.getState().nodes.map((node) => [node.id, node]));
-        resolution.reflowAdjustments.forEach((adjustment) => {
-          const node = nodesById.get(adjustment.nodeId);
-          if (!node) {
-            return;
-          }
-          const minimum = getPracticalMinimumSizeForType(node.type);
-          updateNodeSize(
-            adjustment.nodeId,
-            {
-              width: Math.max(minimum.width, adjustment.width),
-              height: Math.max(minimum.height, node.size.height),
-            },
-            false
-          );
-        });
       }
 
       const def = getDefinition(componentType);
@@ -862,21 +672,15 @@ export const DesignerShell: React.FC = () => {
           selectNode(options.preserveSelectionId);
         }
       }
-      if (resolution.notice) {
-        showDropFeedback('info', resolution.notice);
-      }
       return true;
     },
     [
       addNode,
-      clearInsertBlockCallout,
       getDefaultInsertionPoint,
       recordDropResult,
       resolveComponentDropParent,
       selectNode,
       showDropFeedback,
-      showInsertBlockCallout,
-      updateNodeSize,
     ]
   );
 
@@ -888,8 +692,6 @@ export const DesignerShell: React.FC = () => {
         showDropFeedback('error', 'Preset definition is unavailable.');
         return false;
       }
-
-      clearInsertBlockCallout();
 
       const dropPoint = options.dropPoint ?? getDefaultInsertionPoint();
       const dropMeta = options.dropMeta;
@@ -933,13 +735,12 @@ export const DesignerShell: React.FC = () => {
         return false;
       }
       return true;
-    },
-    [
-      clearInsertBlockCallout,
-      getDefaultInsertionPoint,
-      insertPreset,
-      recordDropResult,
-      resolvePageForDrop,
+	    },
+	    [
+	      getDefaultInsertionPoint,
+	      insertPreset,
+	      recordDropResult,
+	      resolvePageForDrop,
       selectedNodeId,
       showDropFeedback,
     ]
@@ -2260,23 +2061,11 @@ export const DesignerShell: React.FC = () => {
             </span>
           </>
         )}
-      </div>
-      {insertBlockCallout && (
-        <div
-          className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800"
-          data-automation-id="designer-insert-blocked-callout"
-        >
-          <span className="font-semibold">
-            {blockedSectionName ? `${blockedSectionName}: ` : ''}
-            {insertBlockCallout.message}
-          </span>{' '}
-          <span className="text-amber-700/90">{insertBlockCallout.nextAction}</span>
-        </div>
-      )}
-      <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
-      {dropFeedback && (
-        <div
-          className={clsx(
+	      </div>
+	      <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
+	      {dropFeedback && (
+	        <div
+	          className={clsx(
             'border-b px-4 py-2 text-xs',
             dropFeedback.tone === 'error'
               ? 'border-red-200 bg-red-50 text-red-700'

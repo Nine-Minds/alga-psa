@@ -147,6 +147,14 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
     - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 
+- 2026-02-13: `F017` Delete legacy geometry utilities
+  - Deleted legacy solver + geometry/drop-parent modules and their tests (removed from runtime graph):
+    - `packages/billing/src/components/invoice-designer/utils/constraintSolver.ts`
+    - `packages/billing/src/components/invoice-designer/utils/constraints.ts`
+    - `packages/billing/src/components/invoice-designer/utils/dropParentResolution.ts`
+    - `packages/billing/src/components/invoice-designer/utils/aspectRatio.ts`
+  - Simplified component insertion parent resolution in the designer to no longer depend on `dropParentResolution`.
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
