@@ -202,6 +202,8 @@ This plan intentionally continues the simplification arc:
   - Verifies outline order matches `childIds` ordering and selection state drives highlight styling.
 - 2026-02-13: Added breadcrumbs hierarchy integration coverage in `packages/billing/src/components/invoice-designer/DesignerShell.breadcrumbs.test.ts`:
   - Validates breadcrumb path is derived from `childIds` (children-only hierarchy) and does not depend on persisted `parentId`.
+- 2026-02-13: Added unified props rendering integration test in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.unifiedProps.integration.test.tsx`:
+  - Ensures `node.props.layout` and `node.props.style` are sufficient to drive DOM styles (without relying on `node.layout` / `node.style`).
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
