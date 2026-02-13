@@ -49,6 +49,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Added "Default contact" picker to the client details screen: `packages/clients/src/components/clients/ClientDetails.tsx` persists `properties.primary_contact_id` and `properties.primary_contact_name`.
 - (2026-02-13) Client default contact picker supports clearing by selecting "None" (empties both `primary_contact_id` and `primary_contact_name`).
 - (2026-02-13) Added Playwright coverage for default contact persistence: `ee/server/src/__tests__/integration/client-default-contact.playwright.test.ts`.
+- (2026-02-13) Added Playwright coverage for clearing the default contact: `ee/server/src/__tests__/integration/client-default-contact.playwright.test.ts`.
 
 ## Commands / Runbooks
 

@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "UI: clearing the client default contact removes/empties client.properties.primary_contact_id and primary_contact_name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   }
 ]
