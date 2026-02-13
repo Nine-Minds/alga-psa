@@ -117,3 +117,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) T040: Added an integration-style unit test for `syncTacticalRmmOrganizations` using a mocked Tactical API client and an in-memory `rmm_organization_mappings` store to verify upsert/merge behavior and created/updated counters across reruns.
 - (2026-02-13) T041: Added CE Playwright E2E coverage for Tactical org mapping assignment using `ClientPicker` option ids; asserts `rmm_organization_mappings.client_id` persists after selecting an Alga Client.
 - (2026-02-13) T042: Added CE Playwright E2E coverage for toggling `auto_sync_assets` via the org mapping switch; test forces a mapping refresh after toggles to ensure the UI reflects persisted DB state before asserting DB values.
+- (2026-02-13) T050-T053: Added unit tests for `computeTacticalAgentStatus` covering online/offline/overdue/null-last_seen rules using a fixed `now` timestamp.
