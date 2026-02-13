@@ -6,6 +6,10 @@ vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: async (fn: any) => fn(trxImpl),
 }));
 
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
 import { findUniqueClientIdByContactEmailDomain } from './emailWorkflowActions';
 
 function makeContactsDomainLookupTrx(params: { rows: Array<{ client_id: string }> }) {
