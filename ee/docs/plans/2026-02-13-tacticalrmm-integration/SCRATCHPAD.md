@@ -120,3 +120,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) T050-T053: Added unit tests for `computeTacticalAgentStatus` covering online/offline/overdue/null-last_seen rules using a fixed `now` timestamp.
 - (2026-02-13) T054: Added an integration-style unit test for `syncTacticalRmmDevices` using a fake Knex + mocked Tactical beta API client to validate it creates a new asset for an unmapped agent and writes `tenant_external_entity_mappings` with `external_entity_id=agent_id`.
 - (2026-02-13) T055: Extended the full device sync test to cover the update path when a mapping exists, asserting asset fields (name/status/last_seen/last_rmm_sync) are refreshed on rerun.
+- (2026-02-13) T056: Extended the full device sync create-path assertion to validate site id/name are stored in `tenant_external_entity_mappings.metadata` and the Tactical client id is stored as `external_realm_id`.

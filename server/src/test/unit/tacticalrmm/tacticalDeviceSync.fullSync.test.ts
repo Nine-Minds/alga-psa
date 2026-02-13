@@ -289,6 +289,10 @@ describe('Tactical device sync (full sync)', () => {
         alga_entity_type: 'asset',
         external_entity_id: 'a1',
         external_realm_id: '100',
+        metadata: expect.objectContaining({
+          site_id: 's1',
+          site_name: 'HQ',
+        }),
       })
     );
   });
