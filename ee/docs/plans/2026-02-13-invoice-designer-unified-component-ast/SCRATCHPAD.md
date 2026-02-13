@@ -206,6 +206,8 @@ This plan intentionally continues the simplification arc:
   - Ensures `node.props.layout` and `node.props.style` are sufficient to drive DOM styles (without relying on `node.layout` / `node.style`).
 - 2026-02-13: Added drag-drop reorder integration test in `packages/billing/src/components/invoice-designer/state/designerStore.dragDropReorder.integration.test.ts`:
   - Uses `loadWorkspace({ rootId, nodesById })` to validate `moveNode(...)` reorders `children` for flow (flex) containers in the unified snapshot format.
+- 2026-02-13: Added drag-drop reparent integration test in `packages/billing/src/components/invoice-designer/state/designerStore.dragDropMoveAcross.integration.test.ts`:
+  - Validates moving across containers updates only the unified `children` arrays in the exported workspace snapshot and rejects invalid parent targets via schema nesting rules.
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
