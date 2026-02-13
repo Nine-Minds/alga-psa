@@ -111,6 +111,23 @@ const getDefaultPriorityId = (availablePriorities: IPriority[], priorityType?: '
   return customPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
 };
 
+const getBoardDefaultPriorityId = (board: IBoard | undefined, availablePriorities: IPriority[]): string => {
+  if (!availablePriorities.length) return '';
+
+  const boardDefault = board?.default_priority_id || '';
+  if (boardDefault) {
+    const match = availablePriorities.find(p => p.priority_id === boardDefault);
+    if (match) {
+      // Guard against misconfiguration: only use ITIL defaults for ITIL boards and vice versa.
+      const priorityType = board?.priority_type || 'custom';
+      if (priorityType === 'itil' && match.is_from_itil_standard) return boardDefault;
+      if (priorityType !== 'itil' && !match.is_from_itil_standard) return boardDefault;
+    }
+  }
+
+  return getDefaultPriorityId(availablePriorities, board?.priority_type);
+};
+
 interface QuickAddTicketProps {
   id?: string;
   open: boolean;
@@ -269,7 +286,7 @@ export function QuickAddTicket({
         const defaultBoard = getDefaultBoard(availableBoards);
         const defaultStatus = getDefaultStatus(availableStatuses);
         const defaultPriorityType = defaultBoard?.priority_type || 'custom';
-        const defaultPriorityId = getDefaultPriorityId(availablePriorities, defaultPriorityType);
+        const defaultPriorityId = getBoardDefaultPriorityId(defaultBoard || undefined, availablePriorities);
 
         if (defaultBoard?.board_id) {
           setBoardId(defaultBoard.board_id);
@@ -474,7 +491,7 @@ export function QuickAddTicket({
     }
 
     const priorityType = selectedBoard?.priority_type || 'custom';
-    const defaultPriorityId = getDefaultPriorityId(priorities, priorityType);
+    const defaultPriorityId = getBoardDefaultPriorityId(selectedBoard, priorities);
 
     if (defaultPriorityId) {
       setPriorityId(defaultPriorityId);
