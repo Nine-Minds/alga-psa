@@ -8,6 +8,7 @@ import type {
   DesignerInspectorPanel,
   DesignerInspectorVisibleWhen,
 } from '../schema/inspectorSchema';
+import { TableEditorWidget } from './widgets/TableEditorWidget';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -259,6 +260,13 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
           {field.label}
         </label>
       );
+    }
+
+    if (field.kind === 'widget') {
+      if (field.widget === 'table-editor') {
+        return <TableEditorWidget key={field.id} node={node} />;
+      }
+      return null;
     }
 
     return null;

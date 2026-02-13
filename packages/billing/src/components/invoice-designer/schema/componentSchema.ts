@@ -431,6 +431,22 @@ const SIGNATURE_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const TABLE_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'table',
+      title: 'Table',
+      fields: [
+        {
+          kind: 'widget',
+          id: 'tableEditor',
+          widget: 'table-editor',
+        },
+      ],
+    },
+  ],
+};
+
 export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
   document: {
     type: 'document',
@@ -616,7 +632,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
   'dynamic-table': {
     type: 'dynamic-table',
@@ -637,7 +653,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
   field: {
     type: 'field',

@@ -113,3 +113,7 @@ This plan intentionally continues the simplification arc:
   - `packages/billing/src/components/invoice-designer/schema/inspectorSchema.ts` now supports `number`, `css-length`, `css-color` field kinds plus `visibleWhen` rules (`nodeIsContainer`, `pathEquals`, `parentPathEquals`).
   - `packages/billing/src/components/invoice-designer/schema/componentSchema.ts` now defines a `COMMON_INSPECTOR` (Layout, Sizing, Flex Item) and merges it into all component schemas, so layout/style edits are schema-defined rather than hardcoded in the shell.
   - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` removed the hardcoded Layout/Sizing/Flex Item inspector blocks and relies on `DesignerSchemaInspector` for those panels; legacy metadata editors remain only for complex types (table columns, attachment items, media).
+- 2026-02-13: Added first complex schema widget for metadata:
+  - Implemented `packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx` and wired it into the schema via a `widget` inspector field (`table-editor`).
+  - `packages/billing/src/components/invoice-designer/schema/componentSchema.ts` now attaches the table editor widget to both `table` and `dynamic-table` schemas.
+  - Removed the hardcoded table/dynamic-table inspector block from `packages/billing/src/components/invoice-designer/DesignerShell.tsx` (tables now render their metadata editor via schema widget).
