@@ -18,7 +18,7 @@
   { "id": "F022", "description": "Implement server actions for Tactical integration record management in `rmm_integrations` (create/update is_active, instance_url, settings JSON).", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F023", "description": "Implement server action to return Tactical connection status summary (counts of mapped orgs/devices/active alerts).", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F030", "description": "Create Tactical API client wrapper with base URL normalization and shared request helpers.", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F030", "description": "Create Tactical API client wrapper with base URL normalization and shared request helpers.", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F031", "description": "Implement Tactical API key auth mode in the API client (`X-API-KEY`).", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F032", "description": "Implement Tactical Knox auth mode: checkcreds -> login (TOTP-aware), persist token + expiry, and attach `Authorization: Token ...` header.", "implemented": false, "prdRefs": ["Goals", "Data / API / Integrations"] },
   { "id": "F033", "description": "Implement Knox re-auth on 401 for username/password mode (best-effort retry once per request).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },

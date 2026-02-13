@@ -71,3 +71,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F021: Implemented Tactical connection test for both API key and Knox modes, including TOTP-required detection.
 - (2026-02-13) F022: Implemented Tactical `rmm_integrations` upsert/update flows (instance URL, is_active, auth_mode in settings).
 - (2026-02-13) F023: Implemented Tactical connection status summary (mapped orgs, synced devices, active alerts, status counts) for the settings status panel.
+- (2026-02-13) F030: Added Tactical API client wrapper (`TacticalRmmClient`) with base URL normalization + shared request/pagination helpers.
