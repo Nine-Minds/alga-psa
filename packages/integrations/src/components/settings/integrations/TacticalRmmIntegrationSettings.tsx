@@ -13,6 +13,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
+  backfillTacticalRmmAlerts,
   disconnectTacticalRmmIntegration,
   getTacticalRmmConnectionSummary,
   getTacticalRmmSettings,
@@ -37,6 +38,7 @@ export function TacticalRmmIntegrationSettings() {
   const [disconnecting, setDisconnecting] = React.useState(false);
   const [syncingOrgs, setSyncingOrgs] = React.useState(false);
   const [syncingDevices, setSyncingDevices] = React.useState(false);
+  const [backfillingAlerts, setBackfillingAlerts] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
@@ -288,6 +290,30 @@ export function TacticalRmmIntegrationSettings() {
     await loadOrgMappings();
   };
 
+  const handleBackfillAlerts = async () => {
+    setBackfillingAlerts(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await backfillTacticalRmmAlerts();
+      if (!res.success) {
+        setError(res.error || 'Alert backfill failed');
+        toast({ title: 'Backfill failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        return;
+      }
+      setSuccess(
+        `Alert backfill completed. Processed: ${res.items_processed}, Created: ${res.items_created}, Updated: ${res.items_updated}, Failed: ${res.items_failed}`
+      );
+      if (res.errors?.length) {
+        setError(`Some alerts failed to upsert: ${res.errors.slice(0, 3).join('; ')}`);
+      }
+      toast({ title: 'Alerts synced', description: 'Tactical alerts have been backfilled.' });
+      await load();
+    } finally {
+      setBackfillingAlerts(false);
+    }
+  };
+
   return (
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
@@ -479,10 +505,31 @@ export function TacticalRmmIntegrationSettings() {
                 id="tacticalrmm-sync-devices"
                 type="button"
                 onClick={handleSyncDevices}
-                disabled={syncingDevices || loading || saving || testing || disconnecting}
+                disabled={syncingDevices || loading || saving || testing || disconnecting || backfillingAlerts}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncingDevices ? 'animate-spin' : ''}`} />
                 {syncingDevices ? 'Syncing...' : 'Sync Devices'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-md border bg-background p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Alerts</div>
+                <div className="text-xs text-muted-foreground">
+                  Optional: backfill historical or active alerts from Tactical into Alga.
+                </div>
+              </div>
+              <Button
+                id="tacticalrmm-backfill-alerts"
+                type="button"
+                variant="secondary"
+                onClick={handleBackfillAlerts}
+                disabled={backfillingAlerts || loading || saving || testing || disconnecting || syncingOrgs || syncingDevices}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${backfillingAlerts ? 'animate-spin' : ''}`} />
+                {backfillingAlerts ? 'Syncing...' : 'Sync Alerts'}
               </Button>
             </div>
           </div>

@@ -110,6 +110,7 @@ export {
   updateTacticalRmmOrganizationMapping,
   getTacticalRmmWebhookInfo,
   TACTICAL_WEBHOOK_HEADER_NAME,
+  backfillTacticalRmmAlerts,
   type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
 export {

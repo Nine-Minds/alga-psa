@@ -912,3 +912,155 @@ export const getTacticalRmmWebhookInfo = withAuth(async (
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
+
+function mapTacticalSeverity(input: any): 'critical' | 'major' | 'moderate' | 'minor' | 'none' {
+  const raw = String(input || '').toLowerCase();
+  if (!raw) return 'none';
+  if (raw.includes('crit')) return 'critical';
+  if (raw.includes('major') || raw.includes('high')) return 'major';
+  if (raw.includes('moder')) return 'moderate';
+  if (raw.includes('minor') || raw.includes('low')) return 'minor';
+  return 'none';
+}
+
+export const backfillTacticalRmmAlerts = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  items_processed?: number;
+  items_created?: number;
+  items_updated?: number;
+  items_failed?: number;
+  errors?: string[];
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  const errors: string[] = [];
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first(['integration_id', 'instance_url', 'settings']);
+
+    if (!integration?.integration_id) {
+      return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
+    }
+
+    const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
+    const client = await buildConfiguredTacticalClient({
+      tenant,
+      instanceUrl: integration.instance_url,
+      authMode,
+    });
+
+    // Tactical supports a filterable alerts endpoint; prefer PATCH per docs, but be permissive in response shape.
+    const res = await client.request<any>({
+      method: 'PATCH',
+      path: '/api/alerts/',
+      data: {
+        // Conservative default: request active alerts. Tactical may ignore unknown filters.
+        status: 'active',
+      },
+    });
+
+    const alerts: any[] = Array.isArray(res)
+      ? res
+      : Array.isArray((res as any)?.results)
+        ? (res as any).results
+        : Array.isArray((res as any)?.alerts)
+          ? (res as any).alerts
+          : [];
+
+    const existingRows = await knex('rmm_alerts')
+      .where({ tenant, integration_id: integration.integration_id })
+      .select('external_alert_id');
+    const existing = new Set(existingRows.map((r: any) => String(r.external_alert_id)));
+
+    let created = 0;
+    let updated = 0;
+
+    for (const alert of alerts) {
+      try {
+        const externalAlertId = String(alert?.id ?? alert?.alert_id ?? alert?.uid ?? '');
+        if (!externalAlertId) {
+          errors.push('Alert record missing id');
+          continue;
+        }
+
+        const agentId = String(alert?.agent_id ?? alert?.device_id ?? alert?.agent ?? alert?.device ?? '');
+        let assetId: string | undefined;
+        if (agentId) {
+          const mapping = await knex('tenant_external_entity_mappings')
+            .where({
+              tenant,
+              integration_type: PROVIDER,
+              alga_entity_type: 'asset',
+              external_entity_id: agentId,
+            })
+            .first(['alga_entity_id']);
+          assetId = mapping?.alga_entity_id;
+        }
+
+        const status: string =
+          alert?.status ? String(alert.status) :
+          alert?.resolved ? 'resolved' :
+          'active';
+
+        const severity = mapTacticalSeverity(alert?.severity ?? alert?.alert_severity);
+        const message = String(alert?.message ?? alert?.alert_message ?? alert?.description ?? '');
+        const triggeredAt = alert?.alert_time || alert?.triggered_at || alert?.created || new Date().toISOString();
+        const resolvedAt = alert?.resolved_at || alert?.resolved || null;
+
+        const baseRow = {
+          tenant,
+          integration_id: integration.integration_id,
+          external_alert_id: externalAlertId,
+          external_device_id: agentId || null,
+          asset_id: assetId || null,
+          severity,
+          priority: null,
+          activity_type: 'tacticalrmm_alert',
+          status,
+          message: message || null,
+          source_data: JSON.stringify(alert),
+          triggered_at: triggeredAt,
+          resolved_at: resolvedAt,
+          updated_at: knex.fn.now(),
+        };
+
+        if (existing.has(externalAlertId)) {
+          await knex('rmm_alerts')
+            .where({ tenant, integration_id: integration.integration_id, external_alert_id: externalAlertId })
+            .update(baseRow);
+          updated += 1;
+        } else {
+          await knex('rmm_alerts')
+            .insert({ ...baseRow, created_at: knex.fn.now() });
+          created += 1;
+          existing.add(externalAlertId);
+        }
+      } catch (e) {
+        errors.push(e instanceof Error ? e.message : 'Unknown error upserting alert');
+      }
+    }
+
+    await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+
+    return {
+      success: true,
+      items_processed: alerts.length,
+      items_created: created,
+      items_updated: updated,
+      items_failed: errors.length,
+      errors: errors.length ? errors : undefined,
+    };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
