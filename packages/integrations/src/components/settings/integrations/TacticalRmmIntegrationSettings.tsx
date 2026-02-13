@@ -18,6 +18,7 @@ import {
   getTacticalRmmConnectionSummary,
   getTacticalRmmSettings,
   getTacticalRmmWebhookInfo,
+  ingestTacticalRmmSoftwareInventory,
   listTacticalRmmOrganizationMappings,
   saveTacticalRmmConfiguration,
   syncTacticalRmmOrganizations,
@@ -39,6 +40,7 @@ export function TacticalRmmIntegrationSettings() {
   const [syncingOrgs, setSyncingOrgs] = React.useState(false);
   const [syncingDevices, setSyncingDevices] = React.useState(false);
   const [backfillingAlerts, setBackfillingAlerts] = React.useState(false);
+  const [ingestingSoftware, setIngestingSoftware] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
@@ -314,6 +316,30 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
+  const handleIngestSoftware = async () => {
+    setIngestingSoftware(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await ingestTacticalRmmSoftwareInventory();
+      if (!res.success) {
+        setError(res.error || 'Software ingestion failed');
+        toast({ title: 'Ingestion failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        return;
+      }
+      setSuccess(
+        `Software ingestion completed. Processed: ${res.items_processed}, Installed/Updated: ${res.items_created}, Assets Updated: ${res.items_updated}, Failed: ${res.items_failed}`
+      );
+      if (res.errors?.length) {
+        setError(`Some software rows failed to ingest: ${res.errors.slice(0, 3).join('; ')}`);
+      }
+      toast({ title: 'Software ingested', description: 'Cached Tactical software inventory has been ingested.' });
+      await load();
+    } finally {
+      setIngestingSoftware(false);
+    }
+  };
+
   return (
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
@@ -530,6 +556,27 @@ export function TacticalRmmIntegrationSettings() {
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${backfillingAlerts ? 'animate-spin' : ''}`} />
                 {backfillingAlerts ? 'Syncing...' : 'Sync Alerts'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-md border bg-background p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Software Inventory</div>
+                <div className="text-xs text-muted-foreground">
+                  Optional: ingest cached software inventory via Tactical <code>/api/software/</code> (no per-agent refresh calls).
+                </div>
+              </div>
+              <Button
+                id="tacticalrmm-ingest-software"
+                type="button"
+                variant="secondary"
+                onClick={handleIngestSoftware}
+                disabled={ingestingSoftware || loading || saving || testing || disconnecting || syncingOrgs || syncingDevices || backfillingAlerts}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${ingestingSoftware ? 'animate-spin' : ''}`} />
+                {ingestingSoftware ? 'Ingesting...' : 'Ingest Software'}
               </Button>
             </div>
           </div>

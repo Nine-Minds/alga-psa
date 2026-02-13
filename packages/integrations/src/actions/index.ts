@@ -111,6 +111,7 @@ export {
   getTacticalRmmWebhookInfo,
   TACTICAL_WEBHOOK_HEADER_NAME,
   backfillTacticalRmmAlerts,
+  ingestTacticalRmmSoftwareInventory,
   type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
 export {

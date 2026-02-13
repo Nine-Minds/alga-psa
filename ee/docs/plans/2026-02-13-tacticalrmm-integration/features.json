@@ -11,7 +11,7 @@
   { "id": "F015", "description": "Add UI section for org mapping: map Tactical Clients to Alga Clients, toggle auto-sync per org.", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F016", "description": "Add UI section for webhook configuration: show webhook URL, required header name/value, and a copy/paste JSON payload template.", "implemented": true, "prdRefs": ["Functional Requirements", "UX / UI Notes"] },
   { "id": "F017", "description": "Add optional UI action to sync/backfill Tactical alerts and show last backfill status.", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F018", "description": "Add optional UI action to ingest bulk software inventory via Tactical `GET /software/` and show status.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F018", "description": "Add optional UI action to ingest bulk software inventory via Tactical `GET /software/` and show status.", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F020", "description": "Implement server actions for Tactical settings: save/get credential status with masking, and clear credentials on disconnect.", "implemented": false, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
   { "id": "F021", "description": "Implement server action to test Tactical connection (using current auth mode) with actionable error messages.", "implemented": false, "prdRefs": ["Functional Requirements"] },

@@ -1064,3 +1064,218 @@ export const backfillTacticalRmmAlerts = withAuth(async (
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
+
+function normalizeSoftwareName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s.+-]/g, '');
+}
+
+async function findOrCreateSoftwareCatalogEntry(
+  knex: any,
+  tenant: string,
+  input: { name: string; publisher?: string | null }
+): Promise<string> {
+  const normalizedName = normalizeSoftwareName(input.name);
+  const publisher = input.publisher ? String(input.publisher).trim() : null;
+
+  const existing = await knex('software_catalog')
+    .where({ tenant, normalized_name: normalizedName, publisher })
+    .first(['software_id']);
+  if (existing?.software_id) return existing.software_id;
+
+  const [row] = await knex('software_catalog')
+    .insert({
+      tenant,
+      name: input.name.trim(),
+      normalized_name: normalizedName,
+      publisher,
+      category: 'application',
+      software_type: 'application',
+      is_managed: false,
+      is_security_relevant: false,
+    })
+    .returning(['software_id']);
+
+  return row.software_id;
+}
+
+async function syncAssetSoftwareToNormalizedTables(
+  knex: any,
+  tenant: string,
+  assetId: string,
+  softwareList: Array<{ name: string; version?: string | null; publisher?: string | null; installPath?: string | null }>,
+  syncTimestamp: Date
+): Promise<{ installed: number; uninstalled: number; catalogCreated: number }> {
+  const stats = { installed: 0, uninstalled: 0, catalogCreated: 0 };
+
+  const currentSoftware = await knex('asset_software')
+    .where({ tenant, asset_id: assetId, is_current: true })
+    .select('software_id');
+  const currentSoftwareIds = new Set(currentSoftware.map((s: any) => s.software_id));
+
+  const seenSoftwareIds = new Set<string>();
+
+  for (const sw of softwareList) {
+    if (!sw?.name) continue;
+
+    const softwareId = await findOrCreateSoftwareCatalogEntry(knex, tenant, {
+      name: sw.name,
+      publisher: sw.publisher || null,
+    });
+
+    seenSoftwareIds.add(softwareId);
+
+    const existing = await knex('asset_software')
+      .where({ tenant, asset_id: assetId, software_id: softwareId })
+      .first();
+
+    if (existing) {
+      const updateData: Record<string, any> = {
+        last_seen_at: syncTimestamp,
+        version: sw.version || existing.version,
+        install_path: sw.installPath || existing.install_path,
+      };
+
+      if (!existing.is_current) {
+        updateData.is_current = true;
+        updateData.uninstalled_at = null;
+        stats.installed += 1;
+      }
+
+      await knex('asset_software')
+        .where({ tenant, asset_id: assetId, software_id: softwareId })
+        .update(updateData);
+    } else {
+      await knex('asset_software').insert({
+        tenant,
+        asset_id: assetId,
+        software_id: softwareId,
+        version: sw.version || null,
+        install_path: sw.installPath || null,
+        first_seen_at: syncTimestamp,
+        last_seen_at: syncTimestamp,
+        is_current: true,
+      });
+      stats.installed += 1;
+      stats.catalogCreated += 1;
+    }
+  }
+
+  for (const softwareId of currentSoftwareIds) {
+    if (!seenSoftwareIds.has(softwareId)) {
+      await knex('asset_software')
+        .where({ tenant, asset_id: assetId, software_id: softwareId, is_current: true })
+        .update({ is_current: false, uninstalled_at: syncTimestamp });
+      stats.uninstalled += 1;
+    }
+  }
+
+  return stats;
+}
+
+export const ingestTacticalRmmSoftwareInventory = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  items_processed?: number;
+  items_created?: number;
+  items_updated?: number;
+  items_failed?: number;
+  errors?: string[];
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  const errors: string[] = [];
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first(['integration_id', 'instance_url', 'settings']);
+
+    if (!integration?.integration_id) {
+      return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
+    }
+
+    const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
+    const client = await buildConfiguredTacticalClient({
+      tenant,
+      instanceUrl: integration.instance_url,
+      authMode,
+    });
+
+    const res = await client.request<any>({ method: 'GET', path: '/api/software/' });
+
+    const rows: any[] = Array.isArray(res)
+      ? res
+      : Array.isArray((res as any)?.results)
+        ? (res as any).results
+        : [];
+
+    // Build agent_id -> asset_id map
+    const mappings = await knex('tenant_external_entity_mappings')
+      .where({ tenant, integration_type: PROVIDER, alga_entity_type: 'asset' })
+      .select(['external_entity_id', 'alga_entity_id']);
+
+    const assetIdByAgentId = new Map<string, string>();
+    for (const m of mappings) {
+      assetIdByAgentId.set(String((m as any).external_entity_id), String((m as any).alga_entity_id));
+    }
+
+    // Group by agent
+    const softwareByAgent = new Map<string, Array<{ name: string; version?: string | null; publisher?: string | null; installPath?: string | null }>>();
+    for (const r of rows) {
+      const agentId = String(r?.agent_id ?? r?.agent ?? r?.device_id ?? r?.device ?? '');
+      const name = String(r?.name ?? r?.software_name ?? r?.product_name ?? '').trim();
+      if (!agentId || !name) continue;
+
+      const list = softwareByAgent.get(agentId) || [];
+      list.push({
+        name,
+        version: r?.version ? String(r.version) : null,
+        publisher: r?.publisher ? String(r.publisher) : null,
+        installPath: r?.install_path ? String(r.install_path) : (r?.location ? String(r.location) : null),
+      });
+      softwareByAgent.set(agentId, list);
+    }
+
+    const syncTs = new Date();
+    let processed = 0;
+    let updatedAssets = 0;
+    let installed = 0;
+
+    for (const [agentId, softwareList] of softwareByAgent.entries()) {
+      processed += softwareList.length;
+      const assetId = assetIdByAgentId.get(agentId);
+      if (!assetId) continue;
+      try {
+        const stats = await syncAssetSoftwareToNormalizedTables(knex, tenant, assetId, softwareList, syncTs);
+        installed += stats.installed;
+        updatedAssets += 1;
+      } catch (e) {
+        errors.push(e instanceof Error ? e.message : `Failed syncing software for agent ${agentId}`);
+      }
+    }
+
+    await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+
+    return {
+      success: true,
+      items_processed: processed,
+      items_created: installed,
+      items_updated: updatedAssets,
+      items_failed: errors.length,
+      errors: errors.length ? errors : undefined,
+    };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
