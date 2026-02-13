@@ -1,6 +1,6 @@
 [
   { "id": "F001", "description": "Define designer layout model as a direct subset of CSS box model + flex/grid properties (no constraint solver concepts).", "implemented": true },
-  { "id": "F002", "description": "Implement mapping from designer node layout properties to DOM style props (inline styles or class tokens) for canvas rendering.", "implemented": false },
+  { "id": "F002", "description": "Implement mapping from designer node layout properties to DOM style props (inline styles or class tokens) for canvas rendering.", "implemented": true },
   { "id": "F003", "description": "Implement container layout modes: flex column and flex row.", "implemented": false },
   { "id": "F004", "description": "Implement container spacing controls: gap, padding, border (as exposed by the designer UI).", "implemented": false },
   { "id": "F005", "description": "Implement alignment controls for flex containers: justify-content and align-items.", "implemented": false },

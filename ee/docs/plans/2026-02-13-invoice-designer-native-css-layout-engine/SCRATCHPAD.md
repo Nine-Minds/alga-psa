@@ -50,6 +50,14 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
   - Deleted the constraints inspector tests and removed constraints UI from `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
 
+- 2026-02-13: `F002` Layout/style -> DOM style mapping for canvas
+  - New mapping helpers:
+    - `packages/billing/src/components/invoice-designer/utils/cssLayout.ts`
+  - Canvas applies mapped styles:
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+      - outer node: uses `node.style` for width/height/min/max/flex props, still absolute-positioned during cutover
+      - container child wrapper: uses `node.layout` to set `display`, flex/grid rules, `gap`, `padding`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

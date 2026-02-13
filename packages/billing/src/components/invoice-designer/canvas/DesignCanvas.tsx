@@ -6,6 +6,7 @@ import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
+import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
 import {
   formatBoundValue,
   normalizeFieldFormat,
@@ -739,9 +740,13 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     x: node.position.x,
     y: node.position.y,
   };
+  const resolvedBoxStyle = resolveNodeBoxStyle(node.style);
+  const resolvedWidth = resolvedBoxStyle.width ?? inferredWidth;
+  const resolvedHeight = resolvedBoxStyle.height ?? inferredHeight;
   const nodeStyle: React.CSSProperties = {
-    width: inferredWidth,
-    height: inferredHeight,
+    ...resolvedBoxStyle,
+    width: resolvedWidth,
+    height: resolvedHeight,
     top: localPosition.y,
     left: localPosition.x,
     position: 'absolute',
@@ -920,7 +925,10 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
               </span>
             )}
           </div>
-          <div className="relative w-full h-full">
+          <div
+            className="relative w-full h-full"
+            style={resolveContainerLayoutStyle(node.layout)}
+          >
             {renderChildren(node.id)}
           </div>
         </div>
