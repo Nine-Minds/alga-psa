@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "PatchOps: rejection is enforced for reserved keys at any depth (e.g. `props.metadata.__proto__.x`).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
