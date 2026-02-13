@@ -83,6 +83,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/state/designerStore.undoRedo.test.ts`
 - (2026-02-13) Added undo/redo coverage for a mixed sequence of `setNodeProp` + hierarchy ops (move/delete) to ensure history replay is deterministic.
   - Test: `packages/billing/src/components/invoice-designer/state/designerStore.undoRedo.test.ts`
+- (2026-02-13) Added direct store-level tests for `commit=false` vs `commit=true` semantics to prevent history spam during continuous interactions.
+  - Test: `packages/billing/src/components/invoice-designer/state/designerStore.historyCommit.test.ts`
 
 ## Commands / Runbooks
 

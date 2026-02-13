@@ -186,7 +186,7 @@
   {
     "id": "T023",
     "description": "History: `commit=false` updates do not append history entries; `commit=true` updates do append exactly one entry per commit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
