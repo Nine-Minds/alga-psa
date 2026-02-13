@@ -121,7 +121,7 @@
   {
     "id": "T015",
     "description": "Hierarchy: `moveNode` preserves acyclic constraints and updates `children` ordering correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

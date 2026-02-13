@@ -40,6 +40,8 @@ describe('patchOps.moveNode', () => {
     const next = moveNode(nodes, 'b', 'p', 3);
 
     expect(next.find((n) => n.id === 'p')?.children).toEqual(['a', 'c', 'b']);
+    // Legacy `childIds` is not canonical and must not be written during mutations.
+    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['a', 'b', 'c']);
     expect(next.find((n) => n.id === 'b')?.parentId).toBe('p');
   });
 
@@ -54,6 +56,9 @@ describe('patchOps.moveNode', () => {
 
     expect(next.find((n) => n.id === 'p1')?.children).toEqual([]);
     expect(next.find((n) => n.id === 'p2')?.children).toEqual(['a', 'x']);
+    // Legacy `childIds` should remain untouched (canonical `children` only).
+    expect(next.find((n) => n.id === 'p1')?.childIds).toEqual(['a']);
+    expect(next.find((n) => n.id === 'p2')?.childIds).toEqual(['x']);
     expect(next.find((n) => n.id === 'a')?.parentId).toBe('p2');
   });
 
@@ -65,5 +70,24 @@ describe('patchOps.moveNode', () => {
     const next = moveNode(nodes, 'p', 'c', 0);
 
     expect(next).toBe(nodes);
+  });
+
+  it('uses canonical `children` as the source of truth (does not rely on `childIds`)', () => {
+    const p1 = createNode({
+      id: 'p1',
+      type: 'container',
+      // Deliberately inconsistent legacy vs canonical fields.
+      children: ['a'],
+      childIds: [],
+    });
+    const p2 = createNode({ id: 'p2', type: 'container', children: [], childIds: [] });
+    const a = createNode({ id: 'a', type: 'text', parentId: 'p1' });
+
+    const nodes = [p1, p2, a];
+    const next = moveNode(nodes, 'a', 'p2', 0);
+
+    expect(next.find((n) => n.id === 'p1')?.children).toEqual([]);
+    expect(next.find((n) => n.id === 'p2')?.children).toEqual(['a']);
+    expect(next.find((n) => n.id === 'a')?.parentId).toBe('p2');
   });
 });
