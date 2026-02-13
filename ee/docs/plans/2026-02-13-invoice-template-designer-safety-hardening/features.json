@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Ensure the invoice template AST renderer does not emit malformed CSS selectors/variables for style identifiers (defense-in-depth).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 5"]
   }
 ]

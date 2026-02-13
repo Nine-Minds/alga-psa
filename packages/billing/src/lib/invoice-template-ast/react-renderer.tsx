@@ -28,6 +28,11 @@ const joinClassNames = (...values: Array<string | null | undefined | false>): st
 
 const sanitizeCssIdentifier = (value: string): string => value.replace(/[^a-zA-Z0-9_-]/g, '-');
 
+const toSafeCssIdentifier = (value: string): string | null => {
+  const sanitized = sanitizeCssIdentifier(value);
+  return sanitized.length > 0 ? sanitized : null;
+};
+
 const getPathValue = (target: unknown, path: string): unknown => {
   if (!path) {
     return target;
@@ -73,7 +78,11 @@ const resolveStyleRef = (
   }
   const className =
     styleRef.tokenIds && styleRef.tokenIds.length > 0
-      ? styleRef.tokenIds.map((tokenId) => `ast-${tokenId}`).join(' ')
+      ? styleRef.tokenIds
+          .map((tokenId) => toSafeCssIdentifier(tokenId))
+          .filter((tokenId): tokenId is string => Boolean(tokenId))
+          .map((tokenId) => `ast-${tokenId}`)
+          .join(' ')
       : null;
   return { className, style: styleDeclarationToReactStyle(styleRef.inline) };
 };
@@ -164,11 +173,21 @@ const buildAstCss = (ast: InvoiceTemplateAst): string => {
 `.trim();
 
   const classRules = Object.entries(ast.styles?.classes ?? {})
-    .map(([className, declaration]) => `.ast-${className} { ${styleDeclarationToCss(declaration)} }`)
+    .map(([className, declaration]) => {
+      const safeClassName = toSafeCssIdentifier(className);
+      if (!safeClassName) return '';
+      return `.ast-${safeClassName} { ${styleDeclarationToCss(declaration)} }`;
+    })
+    .filter(Boolean)
     .join('\n');
 
   const tokenRules = Object.values(ast.styles?.tokens ?? {})
-    .map((token) => `--${token.id}: ${toCssValue(token.value)};`)
+    .map((token) => {
+      const safeTokenId = toSafeCssIdentifier(token.id);
+      if (!safeTokenId) return '';
+      return `--${safeTokenId}: ${toCssValue(token.value)};`;
+    })
+    .filter(Boolean)
     .join(' ');
 
   const rootRule = tokenRules.length > 0 ? `.invoice-template-root { ${tokenRules} }\n` : '';
@@ -451,4 +470,3 @@ export const renderEvaluatedInvoiceTemplateAst = async (
     css: buildAstCss(ast),
   };
 };
-
