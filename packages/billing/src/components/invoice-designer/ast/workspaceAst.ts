@@ -547,6 +547,17 @@ export const importInvoiceTemplateAstToWorkspace = (
     ? (astDocument.style?.inline as Record<string, unknown>)
     : undefined;
 
+  // Back-compat: older exports wrap all content in a single top-level "page" section.
+  // Prefer treating that as the designer page node so export -> import -> export is deterministic.
+  const astPageSectionCandidate =
+    astDocument && astDocument.children.length === 1 && astDocument.children[0]?.type === 'section'
+      ? astDocument.children[0]
+      : null;
+  const pageSectionInline =
+    astPageSectionCandidate && isRecord(astPageSectionCandidate.style?.inline)
+      ? (astPageSectionCandidate.style?.inline as Record<string, unknown>)
+      : undefined;
+
   return {
     rootId: DOCUMENT_NODE_ID,
     nodesById: (() => {
@@ -578,22 +589,34 @@ export const importInvoiceTemplateAstToWorkspace = (
       };
 
       // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
+      // If the AST uses a single top-level section wrapper, treat it as the page node.
+      const pageLayout =
+        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '32px',
+          padding: '40px', // Page margins
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        };
+      const pageStyle = coerceNodeStyleFromInlineStyle(pageSectionInline);
+      const pageSize = astPageSectionCandidate ? parseSizeFromStyle(astPageSectionCandidate) : null;
+      const resolvedPageSize = pageSize
+        ? {
+            width: Number.isFinite(pageSize.width) ? pageSize.width : DESIGNER_CANVAS_BOUNDS.width,
+            height: Number.isFinite(pageSize.height) ? pageSize.height : DESIGNER_CANVAS_BOUNDS.height,
+          }
+        : { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height };
+
       const pageNode: WorkspaceNode = {
-        id: 'page-root',
+        id: astPageSectionCandidate?.id ?? 'page-root',
         type: 'page',
         props: {
           name: 'Page 1',
           metadata: {},
-          layout: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '32px',
-            padding: '40px', // Page margins
-            justifyContent: 'flex-start',
-            alignItems: 'stretch',
-          },
-          style: undefined,
-          size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+          layout: pageLayout,
+          style: pageStyle,
+          size: resolvedPageSize,
           position: { x: 0, y: 0 },
         },
         children: [],
@@ -750,7 +773,12 @@ export const importInvoiceTemplateAstToWorkspace = (
       };
 
       const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
-      rootChildren.forEach((child, index) => importAstNode(child, pageNode, ast, index, 0));
+      const childrenToImport =
+        astPageSectionCandidate && astPageSectionCandidate.type === 'section'
+          ? astPageSectionCandidate.children
+          : rootChildren;
+
+      childrenToImport.forEach((child, index) => importAstNode(child, pageNode, ast, index, 0));
 
       return nodesById;
     })(),

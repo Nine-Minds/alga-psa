@@ -192,4 +192,12 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       objectFit: 'contain',
     });
   });
+
+  it('roundtrips exported AST deterministically (export -> import -> export)', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const ast1 = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const hydrated = importInvoiceTemplateAstToWorkspace(ast1);
+    const ast2 = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    expect(ast2).toEqual(ast1);
+  });
 });

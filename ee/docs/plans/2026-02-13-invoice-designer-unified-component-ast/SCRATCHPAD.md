@@ -239,3 +239,6 @@ This plan intentionally continues the simplification arc:
   - Added `packages/billing/src/components/invoice-designer/inspector/normalizers.test.ts` to validate canonicalization behavior (for example unitless CSS lengths become `px`, empty strings unset).
 - 2026-02-13: Added table editor schema widget integration coverage:
   - Added `packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx` to assert the `table-editor` widget updates `metadata.columns` and the canvas preview header reacts to the updated columns list.
+- 2026-02-13: Made workspace <-> template AST export/import deterministic:
+  - Updated `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` import to treat a single top-level AST `section` wrapper as the designer `page` node (avoids nested page->section wrapping on roundtrip).
+  - Added `export -> import -> export` deterministic roundtrip assertion in `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`.
