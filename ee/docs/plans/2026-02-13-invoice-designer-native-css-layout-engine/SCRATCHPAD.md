@@ -38,6 +38,18 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Flex: snap to before/after sibling insertion indices.
   - Grid: snap to deterministic cell/index insertion based on grid tracks, not arbitrary pixel coordinates.
 
+## Implemented
+
+- 2026-02-13: `F001` CSS-first layout model
+  - New node model fields in `packages/billing/src/components/invoice-designer/state/designerStore.ts`:
+    - `node.layout`: `display: flex|grid` + flex/grid properties in CSS semantics.
+    - `node.style`: width/height/min/max, flex item props, media props (aspectRatio/objectFit).
+  - Removed constraint-solver state from the store snapshot and APIs (constraints are no longer part of `exportWorkspace()`).
+  - Updated presets to accept legacy layout shapes while mapping them into CSS layout at insertion time:
+    - `packages/billing/src/components/invoice-designer/constants/presets.ts`
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+  - Deleted the constraints inspector tests and removed constraints UI from `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

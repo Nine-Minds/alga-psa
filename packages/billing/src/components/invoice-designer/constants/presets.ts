@@ -1,4 +1,24 @@
-import { DesignerComponentType, DesignerConstraint, ConstraintStrength, Point, Size, DesignerNode } from '../state/designerStore';
+import { DesignerComponentType, Point, Size, DesignerNode } from '../state/designerStore';
+
+// Legacy preset layouts still use the pre-CSS cutover shape. We accept both so presets
+// can be migrated incrementally while the live designer uses CSS-like layout state.
+export type LegacyLayoutPresetLayout = {
+  mode?: 'canvas' | 'flex';
+  direction?: 'row' | 'column';
+  gap?: number;
+  padding?: number;
+  justify?: 'start' | 'center' | 'end' | 'space-between';
+  align?: 'start' | 'center' | 'end' | 'stretch';
+  sizing?: 'fixed' | 'hug' | 'fill';
+};
+
+export type LayoutPresetConstraintDefinition =
+  | {
+      type: 'aspect-ratio';
+      node: string;
+      ratio: number;
+      strength?: 'required' | 'strong' | 'medium' | 'weak';
+    };
 
 export interface LayoutPresetNodeDefinition {
   key: string;
@@ -7,22 +27,10 @@ export interface LayoutPresetNodeDefinition {
   size?: Size;
   name?: string;
   parentKey?: string;
-  layout?: DesignerNode['layout'];
+  layout?: DesignerNode['layout'] | LegacyLayoutPresetLayout;
+  style?: DesignerNode['style'];
   metadata?: Record<string, unknown>;
 }
-
-export type LayoutPresetConstraintDefinition =
-  | {
-      type: 'align-left' | 'align-top' | 'match-width' | 'match-height';
-      nodes: [string, string];
-      strength?: ConstraintStrength;
-    }
-  | {
-      type: 'aspect-ratio';
-      node: string;
-      ratio: number;
-      strength?: ConstraintStrength;
-    };
 
 export interface LayoutPresetDefinition {
   id: string;
@@ -30,7 +38,7 @@ export interface LayoutPresetDefinition {
   description: string;
   category: 'Header' | 'Body' | 'Footer';
   nodes: LayoutPresetNodeDefinition[];
-  constraints: LayoutPresetConstraintDefinition[];
+  constraints?: LayoutPresetConstraintDefinition[];
 }
 
 export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
@@ -47,13 +55,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 640, height: 180 }, 
         name: 'Header Section',
         layout: {
-          mode: 'flex',
-          direction: 'row',
-          gap: 20,
-          padding: 20,
-          justify: 'space-between',
-          align: 'start',
-          sizing: 'hug',
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '20px',
+          padding: '20px',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
         }
       },
       {
@@ -64,13 +71,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 260, height: 160 },
         name: 'Logo Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 10,
-          padding: 0,
-          justify: 'start',
-          align: 'start',
-          sizing: 'fixed', // Logo column usually fixed width
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
         }
       },
       {
@@ -81,13 +87,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 320, height: 160 },
         name: 'Address Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 10,
-          padding: 0,
-          justify: 'start',
-          align: 'end', // Align address text to right
-          sizing: 'fill',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-end',
         }
       },
       {
@@ -97,6 +102,10 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 200, height: 120 },
         name: 'Logo',
+        style: {
+          aspectRatio: '3 / 2',
+          objectFit: 'contain',
+        },
       },
       {
         key: 'address',
@@ -106,9 +115,6 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 260, height: 140 },
         name: 'Billing Address',
       },
-    ],
-    constraints: [
-      { type: 'aspect-ratio', node: 'logo', ratio: 1.5, strength: 'strong' },
     ],
   },
   {
@@ -124,13 +130,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 520, height: 320 }, 
         name: 'Items Section',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 0,
-          padding: 20,
-          justify: 'start',
-          align: 'stretch',
-          sizing: 'hug',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0px',
+          padding: '20px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         }
       },
       {
@@ -141,13 +146,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 520, height: 320 },
         name: 'Items Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 0,
-          padding: 0,
-          justify: 'start',
-          align: 'stretch',
-          sizing: 'fill',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         }
       },
       {
@@ -158,17 +162,15 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 520, height: 260 },
         name: 'Line Items',
         layout: {
-          mode: 'flex', // Tables are leaves but can use flex props for self-sizing context
-          direction: 'column',
-          gap: 0,
-          padding: 0,
-          justify: 'start',
-          align: 'stretch',
-          sizing: 'fill',
+          display: 'flex', // Tables are leaves but can use flex props for self-sizing context
+          flexDirection: 'column',
+          gap: '0px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         }
       },
     ],
-    constraints: [],
   },
   {
     id: 'totals-stack',
@@ -183,13 +185,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 560, height: 200 }, 
         name: 'Totals Section',
         layout: {
-          mode: 'flex',
-          direction: 'row',
-          gap: 40,
-          padding: 20,
-          justify: 'space-between',
-          align: 'start',
-          sizing: 'hug',
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '40px',
+          padding: '20px',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
         }
       },
       {
@@ -200,13 +201,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 260, height: 180 },
         name: 'Notes Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 10,
-          padding: 0,
-          justify: 'start',
-          align: 'stretch',
-          sizing: 'fill',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         }
       },
       {
@@ -217,13 +217,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 280, height: 180 },
         name: 'Totals Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 10,
-          padding: 0,
-          justify: 'start',
-          align: 'end',
-          sizing: 'fixed',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-end',
         }
       },
       {
@@ -243,7 +242,6 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         name: 'Totals',
       },
     ],
-    constraints: [],
   },
   {
     id: 'two-column-summary',
@@ -258,13 +256,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 560, height: 200 }, 
         name: 'Summary Section',
         layout: {
-          mode: 'flex',
-          direction: 'row',
-          gap: 20,
-          padding: 20,
-          justify: 'space-between',
-          align: 'start',
-          sizing: 'hug',
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '20px',
+          padding: '20px',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
         }
       },
       {
@@ -275,13 +272,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 260, height: 180 },
         name: 'Summary Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 10,
-          padding: 0,
-          justify: 'start',
-          align: 'stretch',
-          sizing: 'fill',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         }
       },
       {
@@ -292,13 +288,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         size: { width: 260, height: 180 },
         name: 'Contact Column',
         layout: {
-          mode: 'flex',
-          direction: 'column',
-          gap: 10,
-          padding: 0,
-          justify: 'start',
-          align: 'stretch',
-          sizing: 'fill',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         }
       },
       {
@@ -318,7 +313,6 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         name: 'Contact Info',
       },
     ],
-    constraints: [],
   },
   {
     id: 'header-with-qr',
