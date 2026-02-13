@@ -41,6 +41,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Else unique domain-to-client match and optional validated client default contact.
   - `targetLocationId` is null when resolved client differs from defaults client.
 - (2026-02-13) There is existing “billing contact” (`clients.billing_contact_id`) UI in `packages/clients/src/components/clients/BillingConfigForm.tsx`, but it is billing-specific and not suitable as the inbound-email default contact.
+- (2026-02-13) Added "Default contact" picker to the client details screen: `packages/clients/src/components/clients/ClientDetails.tsx` persists `properties.primary_contact_id` and `properties.primary_contact_name`.
 
 ## Commands / Runbooks
 

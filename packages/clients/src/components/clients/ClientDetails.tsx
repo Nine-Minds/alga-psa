@@ -770,6 +770,42 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter.push(`${pathname}?${params.toString()}`);
   }, [pathname, memoizedRouter, searchParams]);
 
+  const clientActiveContacts = useMemo(() => {
+    return (contacts ?? []).filter((c) => !c?.is_inactive);
+  }, [contacts]);
+
+  const defaultContactOptions: SelectOption[] = useMemo(() => {
+    return clientActiveContacts.map((c) => ({
+      value: c.contact_name_id,
+      label: c.email ? `${c.full_name} (${c.email})` : c.full_name,
+    }));
+  }, [clientActiveContacts]);
+
+  const handleDefaultContactChange = useCallback((contactId: string) => {
+    const selected = clientActiveContacts.find((c) => c.contact_name_id === contactId);
+    const selectedName = selected?.full_name ?? '';
+
+    setEditedClient((prevClient) => {
+      const updatedClient = JSON.parse(JSON.stringify(prevClient)) as IClient;
+      if (!updatedClient.properties) {
+        updatedClient.properties = {};
+      }
+      (updatedClient.properties as any).primary_contact_id = contactId;
+      (updatedClient.properties as any).primary_contact_name = selectedName;
+      return updatedClient;
+    });
+
+    setHasUnsavedChanges(() => {
+      const tempClient = JSON.parse(JSON.stringify(editedClient)) as IClient;
+      if (!tempClient.properties) {
+        tempClient.properties = {};
+      }
+      (tempClient.properties as any).primary_contact_id = contactId;
+      (tempClient.properties as any).primary_contact_name = selectedName;
+      return JSON.stringify(tempClient) !== JSON.stringify(client);
+    });
+  }, [clientActiveContacts, editedClient, client]);
+
   const tabContent = useMemo(() => [
     {
       label: "Details",
@@ -802,6 +838,24 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   disabled={isLoadingUsers}
                   placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
                   buttonWidth="full"
+                />
+              </FieldContainer>
+
+              <FieldContainer
+                label="Default contact"
+                fieldType="select"
+                value={editedClient.properties?.primary_contact_id || ''}
+                helperText="Used when inbound email sender is not a known contact but matches this client by email domain."
+                automationId="default-contact-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">Default contact</Text>
+                <CustomSelect
+                  id="client-default-contact-select"
+                  value={editedClient.properties?.primary_contact_id || ''}
+                  onValueChange={handleDefaultContactChange}
+                  options={defaultContactOptions}
+                  placeholder={defaultContactOptions.length ? "Select default contact" : "No active contacts"}
+                  className="!w-full"
                 />
               </FieldContainer>
               
@@ -1136,6 +1190,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     client.client_name, 
     handleBillingConfigSave, 
     contacts, 
+    defaultContactOptions,
+    handleDefaultContactChange,
     currentUser, 
     documents, 
     memoizedRouter,

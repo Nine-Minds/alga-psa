@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "Client UI: add a 'Default contact' picker on the client screen and persist to `client.properties.primary_contact_id`",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
