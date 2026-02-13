@@ -92,6 +92,14 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
   - Canvas already renders grid containers via `resolveContainerLayoutStyle(node.layout)` + flow children rendering.
 
+- 2026-02-13: `F009` dnd-kit collision detection + sortable plumbing (start of DOM-driven DnD)
+  - Added dnd-kit collision detection strategy (pointer-within preferred; smallest rect under pointer approximates "deepest" target) with closest-center fallback and Always measuring:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Introduced sortable contexts for flow-layout containers (flex/grid) and `useSortable` for flow children, enabling DOM-measured ordering targets (no coordinate math for flow drags):
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Added store action to move/reparent nodes by `parentId + insertionIndex`, with allowlist enforcement and cycle prevention:
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

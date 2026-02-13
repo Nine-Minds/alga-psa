@@ -154,6 +154,7 @@ interface DesignerState {
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
   moveNode: (id: string, delta: Point, commit?: boolean) => void;
+  moveNodeToParentAtIndex: (nodeId: string, parentId: string, index: number) => void;
   setNodePosition: (id: string, position: Point, commit?: boolean) => void;
   updateNodeSize: (id: string, size: Size, commit?: boolean) => void;
   updateNodeName: (id: string, name: string) => void;
@@ -660,6 +661,46 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const { history, historyIndex } = appendHistory(state, nodes);
         return { nodes, history, historyIndex };
       }, false, 'designer/moveNode');
+    },
+
+    moveNodeToParentAtIndex: (nodeId, parentId, index) => {
+      set((state) => {
+        const nodesById = new Map(state.nodes.map((node) => [node.id, node] as const));
+        const node = nodesById.get(nodeId);
+        const nextParent = nodesById.get(parentId);
+        if (!node || !nextParent) {
+          return state;
+        }
+        if (!canNestWithinParent(node.type, nextParent.type)) {
+          return state;
+        }
+        // Prevent cycles (can't move a node into itself or any of its descendants).
+        if (collectDescendants(state.nodes, nodeId).has(parentId)) {
+          return state;
+        }
+
+        const prevParentId = node.parentId;
+        const prevParent = prevParentId ? nodesById.get(prevParentId) ?? null : null;
+        const prevIndex = prevParent ? prevParent.childIds.indexOf(nodeId) : -1;
+        const adjustedIndex =
+          prevParentId === parentId && prevIndex !== -1 && prevIndex < index ? Math.max(0, index - 1) : index;
+
+        let nextNodes = state.nodes;
+        nextNodes = detachChild(nextNodes, prevParentId, nodeId);
+        nextNodes = nextNodes.map((candidate) =>
+          candidate.id === nodeId ? { ...candidate, parentId } : candidate
+        );
+        nextNodes = nextNodes.map((candidate) => {
+          if (candidate.id !== parentId) return candidate;
+          const nextChildIds = candidate.childIds.filter((id) => id !== nodeId);
+          const clampedIndex = Math.max(0, Math.min(adjustedIndex, nextChildIds.length));
+          nextChildIds.splice(clampedIndex, 0, nodeId);
+          return { ...candidate, childIds: nextChildIds };
+        });
+
+        const { history, historyIndex } = appendHistory(state, nextNodes);
+        return { ...state, nodes: nextNodes, history, historyIndex };
+      }, false, 'designer/moveNodeToParentAtIndex');
     },
 
     setNodePosition: (id, position, commit = false) => {

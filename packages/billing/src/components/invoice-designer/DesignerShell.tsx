@@ -7,7 +7,11 @@ import {
   DragOverlay,
   DragStartEvent,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
+  closestCenter,
+  pointerWithin,
+  type CollisionDetection,
   useDndMonitor,
   useSensor,
   useSensors,
@@ -53,7 +57,9 @@ type PaletteDragData =
     };
 
 type NodeDragData = {
+  dragKind: 'node';
   nodeId: string;
+  layoutKind: 'absolute' | 'flow';
 };
 
 type DropTargetMeta = {
@@ -120,8 +126,20 @@ const isPaletteDragData = (value: unknown): value is PaletteDragData =>
 const isNodeDragData = (value: unknown): value is NodeDragData =>
   typeof value === 'object' &&
   value !== null &&
+  'dragKind' in value &&
+  (value as { dragKind?: unknown }).dragKind === 'node' &&
   'nodeId' in value &&
   typeof (value as { nodeId?: unknown }).nodeId === 'string';
+
+const isDropTargetMeta = (value: unknown): value is DropTargetMeta =>
+  typeof value === 'object' &&
+  value !== null &&
+  'nodeId' in value &&
+  typeof (value as { nodeId?: unknown }).nodeId === 'string' &&
+  'nodeType' in value &&
+  typeof (value as { nodeType?: unknown }).nodeType === 'string' &&
+  'allowedChildren' in value &&
+  Array.isArray((value as { allowedChildren?: unknown }).allowedChildren);
 
 const createRestrictToParentBoundsModifier = (nodes: DesignerNode[]): Modifier => ({ active, transform }) => {
   if (!active || !transform) {
@@ -129,6 +147,9 @@ const createRestrictToParentBoundsModifier = (nodes: DesignerNode[]): Modifier =
   }
   const data = active.data?.current;
   if (!isNodeDragData(data)) {
+    return transform;
+  }
+  if (data.layoutKind === 'flow') {
     return transform;
   }
   const node = nodes.find((candidate) => candidate.id === data.nodeId);
@@ -282,6 +303,7 @@ export const DesignerShell: React.FC = () => {
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
   const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
   const updateNodeSize = useInvoiceDesignerStore((state) => state.updateNodeSize);
+  const moveNodeToParentAtIndex = useInvoiceDesignerStore((state) => state.moveNodeToParentAtIndex);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
   const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
@@ -361,6 +383,21 @@ export const DesignerShell: React.FC = () => {
     }),
     useSensor(KeyboardSensor)
   );
+
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      // Prefer the smallest rect under the pointer as a proxy for "deepest" nesting.
+      return [...pointerCollisions].sort((a, b) => {
+        const rectA = args.droppableRects.get(a.id);
+        const rectB = args.droppableRects.get(b.id);
+        const areaA = rectA ? rectA.width * rectA.height : Number.POSITIVE_INFINITY;
+        const areaB = rectB ? rectB.width * rectB.height : Number.POSITIVE_INFINITY;
+        return areaA - areaB;
+      });
+    }
+    return closestCenter(args);
+  }, []);
 
   const [propertyDraft, setPropertyDraft] = useState(() => ({
     x: 0,
@@ -1723,14 +1760,16 @@ export const DesignerShell: React.FC = () => {
     }
     if (isNodeDragData(data)) {
       setActiveDrag({ kind: 'node', nodeId: data.nodeId });
-      const node = nodes.find((candidate) => candidate.id === data.nodeId);
-      if (node) {
-        dragSessionRef.current = {
-          nodeId: data.nodeId,
-          origin: { ...node.position },
-          originalPositions: buildDescendantPositionMap(data.nodeId, nodes),
-          lastDelta: { x: 0, y: 0 },
-        };
+      if (data.layoutKind === 'absolute') {
+        const node = nodes.find((candidate) => candidate.id === data.nodeId);
+        if (node) {
+          dragSessionRef.current = {
+            nodeId: data.nodeId,
+            origin: { ...node.position },
+            originalPositions: buildDescendantPositionMap(data.nodeId, nodes),
+            lastDelta: { x: 0, y: 0 },
+          };
+        }
       }
     }
   };
@@ -1808,16 +1847,63 @@ export const DesignerShell: React.FC = () => {
           });
         }
       }
-      if (activeDrag?.kind === 'node' && dragSessionRef.current) {
-        const session = dragSessionRef.current;
-        const activeNode = nodes.find((node) => node.id === session.nodeId);
-        if (activeNode) {
-          const desiredPosition = {
-            x: session.origin.x + session.lastDelta.x,
-            y: session.origin.y + session.lastDelta.y,
-          };
-          const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
-          setNodePosition(session.nodeId, boundedPosition, true);
+      if (activeDrag?.kind === 'node') {
+        const activeData = event.active.data.current;
+        if (isNodeDragData(activeData) && activeData.layoutKind === 'flow') {
+          const over = event.over;
+          if (!over) {
+            return;
+          }
+          const overData = over.data.current;
+          const activeNode = nodesById.get(activeData.nodeId) ?? null;
+          if (!activeNode) {
+            return;
+          }
+
+          let targetParentId: string | null = null;
+          let targetIndex = 0;
+
+          if (isNodeDragData(overData)) {
+            const overNode = nodesById.get(overData.nodeId) ?? null;
+            if (!overNode || !overNode.parentId) {
+              return;
+            }
+            const parent = nodesById.get(overNode.parentId) ?? null;
+            if (!parent) {
+              return;
+            }
+            targetParentId = overNode.parentId;
+            const index = parent.childIds.indexOf(overNode.id);
+            targetIndex = index >= 0 ? index : parent.childIds.length;
+          } else if (isDropTargetMeta(overData)) {
+            const parent = nodesById.get(overData.nodeId) ?? null;
+            if (!parent) {
+              return;
+            }
+            targetParentId = overData.nodeId;
+            targetIndex = parent.childIds.length;
+          } else {
+            return;
+          }
+
+          if (!targetParentId) {
+            return;
+          }
+          moveNodeToParentAtIndex(activeNode.id, targetParentId, targetIndex);
+          return;
+        }
+
+        if (dragSessionRef.current) {
+          const session = dragSessionRef.current;
+          const activeNode = nodes.find((node) => node.id === session.nodeId);
+          if (activeNode) {
+            const desiredPosition = {
+              x: session.origin.x + session.lastDelta.x,
+              y: session.origin.y + session.lastDelta.y,
+            };
+            const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
+            setNodePosition(session.nodeId, boundedPosition, true);
+          }
         }
       }
     } finally {
@@ -2070,11 +2156,16 @@ export const DesignerShell: React.FC = () => {
           {dropFeedback.message}
         </div>
       )}
-      <DndContext sensors={sensors} modifiers={modifiers}>
-        <div className="flex flex-1 min-h-[560px] bg-white">
-          <div className="w-72">
-            <ComponentPalette
-              onInsertComponent={handleQuickInsertComponent}
+	      <DndContext
+          sensors={sensors}
+          modifiers={modifiers}
+          collisionDetection={collisionDetection}
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        >
+	        <div className="flex flex-1 min-h-[560px] bg-white">
+	          <div className="w-72">
+	            <ComponentPalette
+	              onInsertComponent={handleQuickInsertComponent}
               onInsertPreset={handleQuickInsertPreset}
             />
           </div>

@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { AlignmentGuide } from '../utils/layout';
@@ -56,6 +64,15 @@ interface CanvasNodeProps {
   previewData: WasmInvoiceViewModel | null;
   applySelectionDeemphasis: boolean;
 }
+
+type CanvasNodeDnd = {
+  attributes: Record<string, any>;
+  listeners: Record<string, any> | undefined;
+  setNodeRef: (element: HTMLDivElement | null) => void;
+  transform: any;
+  transition?: string;
+  isDragging: boolean;
+};
 
 type SectionSemanticCue = {
   label: string;
@@ -692,7 +709,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
   }
 };
 
-const CanvasNode: React.FC<CanvasNodeProps> = ({
+const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   node,
   parentUsesFlowLayout,
   isSelected,
@@ -709,14 +726,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   readOnly,
   previewData,
   applySelectionDeemphasis,
+  dnd,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `node-${node.id}`,
-    disabled: readOnly,
-    data: {
-      nodeId: node.id,
-    },
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
   const isContainer = node.allowedChildren.length > 0;
   const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
     id: `droppable-${node.id}`,
@@ -748,7 +760,8 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     top: parentUsesFlowLayout ? undefined : node.position.y,
     left: parentUsesFlowLayout ? undefined : node.position.x,
     position: parentUsesFlowLayout ? undefined : 'absolute',
-    transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transform: transform && !isDragging ? CSS.Transform.toString(transform) : undefined,
+    transition,
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
@@ -978,6 +991,63 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   );
 };
 
+const FlowCanvasNode: React.FC<CanvasNodeProps> = (props) => {
+  const { node, readOnly } = props;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.id,
+    disabled: readOnly,
+    data: {
+      dragKind: 'node',
+      nodeId: node.id,
+      layoutKind: 'flow',
+    },
+  });
+
+  return (
+    <CanvasNodeInner
+      {...props}
+      dnd={{
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+      }}
+    />
+  );
+};
+
+const AbsoluteCanvasNode: React.FC<CanvasNodeProps> = (props) => {
+  const { node, readOnly } = props;
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: node.id,
+    disabled: readOnly,
+    data: {
+      dragKind: 'node',
+      nodeId: node.id,
+      layoutKind: 'absolute',
+    },
+  });
+
+  return (
+    <CanvasNodeInner
+      {...props}
+      dnd={{
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition: undefined,
+        isDragging,
+      }}
+    />
+  );
+};
+
+const CanvasNode: React.FC<CanvasNodeProps> = (props) =>
+  props.parentUsesFlowLayout ? <FlowCanvasNode {...props} /> : <AbsoluteCanvasNode {...props} />;
+
 export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   nodes,
   selectedNodeId,
@@ -1093,7 +1163,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     const children = childrenMap.get(parentId) ?? [];
     const parent = nodesById.get(parentId);
     const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
-    return children
+    const renderedChildren = children
       .filter((node) => node.type !== 'document' && node.type !== 'page')
       .map((node) => (
         <CanvasNode
@@ -1116,6 +1186,21 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           applySelectionDeemphasis={!readOnly}
         />
       ));
+    if (!readOnly && parentUsesFlowLayout) {
+      const items = children.filter((child) => child.type !== 'document' && child.type !== 'page').map((child) => child.id);
+      const strategy =
+        parent?.layout?.display === 'grid'
+          ? rectSortingStrategy
+          : parent?.layout?.flexDirection === 'row'
+            ? horizontalListSortingStrategy
+            : verticalListSortingStrategy;
+      return (
+        <SortableContext items={items} strategy={strategy}>
+          {renderedChildren}
+        </SortableContext>
+      );
+    }
+    return renderedChildren;
   }, [
     activeReferenceNodeId,
     childExtentsMap,
