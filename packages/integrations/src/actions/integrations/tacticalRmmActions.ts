@@ -8,7 +8,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { createAsset } from '@alga-psa/assets/actions/assetActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
+import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
 import { TACTICAL_WEBHOOK_HEADER_NAME, type TacticalRmmAuthMode } from '../../lib/rmm/tacticalrmm/shared';
@@ -489,26 +489,48 @@ export const testTacticalRmmConnection = withAuth(async (
         return { success: false, totpRequired: true, error: 'TOTP code required' };
       }
 
-      const loginPayload: Record<string, any> = { username, password };
-      if (needsTotp && input?.totpCode) {
-        loginPayload.twofactor = String(input.totpCode).trim();
+      const buildLoginPayload = (): Record<string, any> => {
+        const payload: Record<string, any> = { username, password };
+        if (needsTotp && input?.totpCode) {
+          payload.twofactor = String(input.totpCode).trim();
+        }
+        return payload;
+      };
+
+      const extractToken = (data: any): string | undefined =>
+        data?.token || data?.auth_token || data?.key;
+
+      const doLogin = async (): Promise<string> => {
+        const login = await axios.post(
+          new URL('/api/v2/login/', instanceUrl).toString(),
+          buildLoginPayload(),
+          { timeout: 15_000 }
+        );
+        const token = extractToken(login.data);
+        if (!token) throw new Error('Login succeeded but no token was returned');
+        await secretProvider.setTenantSecret(tenant, TACTICAL_KNOX_TOKEN_SECRET, token);
+        return token;
+      };
+
+      const verifyToken = async (token: string): Promise<void> => {
+        await axios.get(new URL('/api/beta/v1/client/', instanceUrl).toString(), {
+          headers: { Authorization: `Token ${token}` },
+          timeout: 15_000,
+        });
+      };
+
+      const token = await doLogin();
+      try {
+        await verifyToken(token);
+      } catch (err) {
+        // Best-effort retry once on 401 in case the token is stale/invalid immediately.
+        if (isAxiosUnauthorized(err)) {
+          const retryToken = await doLogin();
+          await verifyToken(retryToken);
+        } else {
+          throw err;
+        }
       }
-      const login = await axios.post(new URL('/api/v2/login/', instanceUrl).toString(), loginPayload, { timeout: 15_000 });
-
-      // Tactical returns a Knox token in typical DRF Knox format; accept a few common keys.
-      const token: string | undefined =
-        (login.data as any)?.token ||
-        (login.data as any)?.auth_token ||
-        (login.data as any)?.key;
-
-      if (!token) return { success: false, error: 'Login succeeded but no token was returned' };
-      await secretProvider.setTenantSecret(tenant, TACTICAL_KNOX_TOKEN_SECRET, token);
-
-      // Verify token works against a cheap endpoint.
-      await axios.get(new URL('/api/beta/v1/client/', instanceUrl).toString(), {
-        headers: { Authorization: `Token ${token}` },
-        timeout: 15_000,
-      });
     }
 
     await knex('rmm_integrations')
