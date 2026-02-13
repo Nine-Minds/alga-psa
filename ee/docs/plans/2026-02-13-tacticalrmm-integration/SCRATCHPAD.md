@@ -47,6 +47,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Assets RMM status indicator (CE+EE): `packages/assets/src/components/RmmStatusIndicator.tsx`
 - API auth middleware skip list (add `/api/webhooks/tacticalrmm`): `server/src/middleware.ts`
 
+## Test Notes
+
+- (2026-02-13) T080: Added bulk software ingest test verifying Tactical ingestion uses only `GET /api/software/` (no per-agent refresh `PUT`) and writes to normalized software tables (`software_catalog`, `asset_software`). Files:
+  - `server/src/test/unit/tacticalrmm/tacticalSoftwareIngest.bulk.test.ts`
+
 ## Open Questions
 
 - Should we mark assets inactive when an agent disappears from Tactical inventory, or leave as-is unless explicitly deleted?

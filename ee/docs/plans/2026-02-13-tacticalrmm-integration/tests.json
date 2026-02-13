@@ -43,7 +43,7 @@
   { "id": "T070", "description": "Integration: Alerts backfill uses `PATCH /alerts/` filters and upserts records without duplicating on rerun.", "implemented": true, "featureIds": ["F070"] },
   { "id": "T071", "description": "Integration: Alerts backfill maps computed `agent_id` to assets via external mappings when available.", "implemented": true, "featureIds": ["F070"] },
 
-  { "id": "T080", "description": "Integration: Bulk software ingestion via `GET /software/` updates software inventory storage without calling per-agent refresh endpoints.", "implemented": false, "featureIds": ["F071"] },
+  { "id": "T080", "description": "Integration: Bulk software ingestion via `GET /software/` updates software inventory storage without calling per-agent refresh endpoints.", "implemented": true, "featureIds": ["F071"] },
 
   { "id": "T081", "description": "Integration: Bulk software ingestion associates software rows to the correct asset via Tactical agent_id mapping.", "implemented": false, "featureIds": ["F071", "F054"] },
   { "id": "T082", "description": "Integration: Bulk software ingestion is idempotent (re-running does not create duplicate software catalog entries).", "implemented": false, "featureIds": ["F071"] },
