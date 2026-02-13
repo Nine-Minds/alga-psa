@@ -72,4 +72,23 @@ describe('patchOps.unsetNodeProp', () => {
     expect((next[0].props as any).metadata.items.length).toBe(2);
     expect((next[0].props as any).metadata.items.includes(undefined)).toBe(false);
   });
+
+  it('unsets nested properties inside array elements without splicing the element itself', () => {
+    const nodeA = createNode({
+      id: 'a',
+      type: 'text',
+      props: {
+        name: 'Node A',
+        metadata: {
+          rows: [{ a: 1, b: 2 }, { a: 3 }],
+        },
+      } as any,
+    });
+    const nodes = [nodeA];
+
+    const next = unsetNodeProp(nodes, 'a', 'props.metadata.rows.0.a');
+
+    expect((next[0].props as any).metadata.rows).toEqual([{ b: 2 }, { a: 3 }]);
+    expect((next[0].props as any).metadata.rows.length).toBe(2);
+  });
 });

@@ -161,7 +161,7 @@
   {
     "id": "T020",
     "description": "PatchOps: unsetting a nested property inside an array element unsets that property without splicing the array element itself.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
