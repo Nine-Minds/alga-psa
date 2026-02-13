@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Repo guard: fails if any tracked file matches env-backup patterns (e.g. `server/.env.local.bak.*`).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
