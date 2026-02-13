@@ -8,7 +8,7 @@
   { "id": "T012", "description": "E2E: Tactical settings panel can save instance URL + API key and shows \"credentials saved\" masked status.", "implemented": true, "featureIds": ["F011", "F020"] },
   { "id": "T013", "description": "E2E: Tactical settings panel can save username/password and completes login when no TOTP is required.", "implemented": true, "featureIds": ["F011", "F032", "F020"] },
   { "id": "T014", "description": "E2E: Tactical settings panel detects TOTP-required via checkcreds and completes login when TOTP is provided.", "implemented": true, "featureIds": ["F011", "F032"] },
-  { "id": "T015", "description": "E2E: Disconnect clears stored Tactical credentials and marks `rmm_integrations` inactive.", "implemented": false, "featureIds": ["F011", "F020", "F022"] },
+  { "id": "T015", "description": "E2E: Disconnect clears stored Tactical credentials and marks `rmm_integrations` inactive.", "implemented": true, "featureIds": ["F011", "F020", "F022"] },
 
   { "id": "T020", "description": "Unit: Tactical server action masks secrets (only last 4 chars) when returning credential status.", "implemented": false, "featureIds": ["F020"] },
   { "id": "T021", "description": "Integration: Connection test uses API key mode header `X-API-KEY` and surfaces 401 as invalid credentials.", "implemented": false, "featureIds": ["F021", "F031"] },
