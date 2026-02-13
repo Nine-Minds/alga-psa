@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 import TacticalRmmIntegrationSettings from './TacticalRmmIntegrationSettings';
 
@@ -82,41 +83,71 @@ const NinjaOneIntegrationSettings = dynamic(
 
 export default function RmmIntegrationsSetup() {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
+  const isTacticalEnabled = !!tacticalFlag?.enabled;
+
+  const options = useMemo<RmmIntegrationOption[]>(
+    () => {
+      const next: RmmIntegrationOption[] = [];
+
+      if (isTacticalEnabled) {
+        next.push({
+          id: 'tacticalrmm',
+          title: 'Tactical RMM',
+          description: 'Sync devices and ingest alerts via Tactical RMM (beta API + alert-action webhooks).',
+          highlights: [
+            { label: 'Sync', value: 'Devices' },
+            { label: 'Realtime', value: 'Alerts' }
+          ],
+          component: TacticalRmmIntegrationSettings
+        });
+      }
+
+      if (isEEAvailable) {
+        next.push({
+          id: 'ninjaone',
+          title: 'NinjaOne',
+          description: 'Sync devices, receive alerts, and enable remote access (Enterprise).',
+          badge: { label: 'Enterprise', variant: 'secondary' },
+          highlights: [
+            { label: 'Sync', value: 'Devices' },
+            { label: 'Realtime', value: 'Webhooks' }
+          ],
+          component: NinjaOneIntegrationSettings
+        });
+      }
+
+      return next;
+    },
+    [isTacticalEnabled, isEEAvailable]
+  );
+
+  const [selected, setSelected] = useState<RmmIntegrationId>(() => {
+    if (isTacticalEnabled) return 'tacticalrmm';
+    return isEEAvailable ? 'ninjaone' : 'tacticalrmm';
+  });
+  const selectedOption = options.find((option) => option.id === selected) ?? options[0];
+
+  useEffect(() => {
+    if (options.length > 0 && !options.some((option) => option.id === selected)) {
+      setSelected(options[0]?.id ?? 'ninjaone');
+    }
+  }, [options, selected]);
 
   // In CE, Tactical is the only supported RMM provider UI we expose today.
   if (!isEEAvailable) {
+    if (!isTacticalEnabled) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>RMM Integrations</CardTitle>
+            <CardDescription>RMM integration configuration is not enabled for this tenant.</CardDescription>
+          </CardHeader>
+        </Card>
+      );
+    }
     return <TacticalRmmIntegrationSettings />;
   }
-
-  const options = useMemo<RmmIntegrationOption[]>(
-    () => [
-      {
-        id: 'tacticalrmm',
-        title: 'Tactical RMM',
-        description: 'Sync devices and ingest alerts via Tactical RMM (beta API + alert-action webhooks).',
-        highlights: [
-          { label: 'Sync', value: 'Devices' },
-          { label: 'Realtime', value: 'Alerts' }
-        ],
-        component: TacticalRmmIntegrationSettings
-      },
-      {
-        id: 'ninjaone',
-        title: 'NinjaOne',
-        description: 'Sync devices, receive alerts, and enable remote access (Enterprise).',
-        badge: { label: 'Enterprise', variant: 'secondary' },
-        highlights: [
-          { label: 'Sync', value: 'Devices' },
-          { label: 'Realtime', value: 'Webhooks' }
-        ],
-        component: NinjaOneIntegrationSettings
-      }
-    ],
-    []
-  );
-
-  const [selected, setSelected] = useState<RmmIntegrationId>('tacticalrmm');
-  const selectedOption = options.find((option) => option.id === selected) ?? options[0];
 
   return (
     <div className="space-y-6" id="rmm-integrations-setup">
