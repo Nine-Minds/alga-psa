@@ -726,14 +726,18 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const nodes = state.nodes.map((node) => {
           if (node.id !== id) return node;
           const clampedSize = clampNodeSizeToPracticalMinimum(node.type, size);
+          const roundedSize = {
+            width: Math.round(clampedSize.width),
+            height: Math.round(clampedSize.height),
+          };
           return {
             ...node,
-            size: clampedSize,
-            baseSize: clampedSize,
+            size: roundedSize,
+            baseSize: roundedSize,
             style: {
               ...node.style,
-              width: `${Math.round(clampedSize.width)}px`,
-              height: `${Math.round(clampedSize.height)}px`,
+              width: `${roundedSize.width}px`,
+              height: `${roundedSize.height}px`,
             },
           };
         });

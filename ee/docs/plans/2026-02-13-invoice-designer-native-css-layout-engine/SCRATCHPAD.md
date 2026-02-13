@@ -20,6 +20,8 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Layout modes: flex + grid.
   - Resizing: enabled via CSS sizing props.
   - Snapping: edge + grid snapping as discrete insertion behavior.
+  - Resize writes pixel values:
+    - `updateNodeSize` rounds stored `node.size` to whole pixels and writes `node.style.width/height` as `Npx` strings (avoids float drift between size and CSS).
 
 ## Detailed Decisions
 
