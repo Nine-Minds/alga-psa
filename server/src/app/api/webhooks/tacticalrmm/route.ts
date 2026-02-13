@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { syncTacticalSingleAgentForTenant } from '@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 export const runtime = 'nodejs';
 
@@ -92,6 +93,25 @@ export async function POST(req: Request) {
       .first(['alga_entity_id']);
     assetId = mapping?.alga_entity_id;
 
+    // Best-effort observability event.
+    try {
+      await publishEvent({
+        eventType: 'RMM_WEBHOOK_RECEIVED',
+        payload: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          integrationId: integration.integration_id,
+          provider: PROVIDER,
+          webhookEventType: event,
+          externalDeviceId: agentId,
+          assetId: assetId,
+          rawPayload: body,
+        },
+      } as any);
+    } catch {
+      // ignore
+    }
+
     const existing = await knex('rmm_alerts')
       .where({
         tenant,
@@ -138,4 +158,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err?.message || 'Webhook error' }, { status: 500 });
   }
 }
-

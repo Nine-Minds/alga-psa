@@ -7,6 +7,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { createAsset } from '@alga-psa/assets/actions/assetActions';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
@@ -22,6 +23,42 @@ const TACTICAL_WEBHOOK_SECRET = 'tacticalrmm_webhook_secret';
 
 export type TacticalRmmAuthMode = 'api_key' | 'knox';
 export const TACTICAL_WEBHOOK_HEADER_NAME = 'X-Alga-Webhook-Secret';
+
+async function publishRmmSyncEvent(args: {
+  eventType: 'RMM_SYNC_STARTED' | 'RMM_SYNC_COMPLETED' | 'RMM_SYNC_FAILED';
+  tenantId: string;
+  actorUserId?: string;
+  integrationId: string;
+  syncType: 'organizations' | 'devices' | 'alerts';
+  itemsProcessed?: number;
+  itemsCreated?: number;
+  itemsUpdated?: number;
+  itemsFailed?: number;
+  errorMessage?: string;
+}) {
+  const payload: Record<string, unknown> = {
+    tenantId: args.tenantId,
+    occurredAt: new Date().toISOString(),
+    actorType: args.actorUserId ? 'USER' : 'SYSTEM',
+    actorUserId: args.actorUserId,
+    integrationId: args.integrationId,
+    provider: PROVIDER,
+    syncType: args.syncType,
+    itemsProcessed: args.itemsProcessed,
+    itemsCreated: args.itemsCreated,
+    itemsUpdated: args.itemsUpdated,
+    itemsFailed: args.itemsFailed,
+    ...(args.eventType === 'RMM_SYNC_FAILED'
+      ? { error: { message: args.errorMessage || 'Sync failed' } }
+      : {}),
+  };
+
+  try {
+    await publishEvent({ eventType: args.eventType, payload } as any);
+  } catch {
+    // Best-effort: never fail the sync on event-publish issues.
+  }
+}
 
 function maskSecret(value: string): string {
   if (!value) return '';
@@ -513,6 +550,14 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
+    await publishRmmSyncEvent({
+      eventType: 'RMM_SYNC_STARTED',
+      tenantId: tenant,
+      actorUserId: (user as any)?.user_id,
+      integrationId: integration.integration_id,
+      syncType: 'organizations',
+    });
+
     const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
     const client = await buildConfiguredTacticalClient({
       tenant,
@@ -568,6 +613,18 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       .where({ tenant, provider: PROVIDER })
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
 
+    await publishRmmSyncEvent({
+      eventType: 'RMM_SYNC_COMPLETED',
+      tenantId: tenant,
+      actorUserId: (user as any)?.user_id,
+      integrationId: integration.integration_id,
+      syncType: 'organizations',
+      itemsProcessed: remoteClients.length,
+      itemsCreated: created,
+      itemsUpdated: updated,
+      itemsFailed: errors.length,
+    });
+
     return {
       success: true,
       items_processed: remoteClients.length,
@@ -577,6 +634,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       errors: errors.length ? errors : undefined,
     };
   } catch (err) {
+    // Best-effort publish; we might not have integrationId if we failed early.
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
@@ -666,6 +724,14 @@ export const syncTacticalRmmDevices = withAuth(async (
     if (!integration?.integration_id) {
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
+
+    await publishRmmSyncEvent({
+      eventType: 'RMM_SYNC_STARTED',
+      tenantId: tenant,
+      actorUserId: (user as any)?.user_id,
+      integrationId: integration.integration_id,
+      syncType: 'devices',
+    });
 
     const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
     const client = await buildConfiguredTacticalClient({
@@ -921,6 +987,18 @@ export const syncTacticalRmmDevices = withAuth(async (
       .where({ tenant, provider: PROVIDER })
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
 
+    await publishRmmSyncEvent({
+      eventType: 'RMM_SYNC_COMPLETED',
+      tenantId: tenant,
+      actorUserId: (user as any)?.user_id,
+      integrationId: integration.integration_id,
+      syncType: 'devices',
+      itemsProcessed: processed,
+      itemsCreated: created,
+      itemsUpdated: updated,
+      itemsFailed: errors.length,
+    });
+
     return {
       success: true,
       items_processed: processed,
@@ -1106,6 +1184,14 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
+    await publishRmmSyncEvent({
+      eventType: 'RMM_SYNC_STARTED',
+      tenantId: tenant,
+      actorUserId: (user as any)?.user_id,
+      integrationId: integration.integration_id,
+      syncType: 'alerts',
+    });
+
     const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
     const client = await buildConfiguredTacticalClient({
       tenant,
@@ -1207,6 +1293,18 @@ export const backfillTacticalRmmAlerts = withAuth(async (
     await knex('rmm_integrations')
       .where({ tenant, provider: PROVIDER })
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+
+    await publishRmmSyncEvent({
+      eventType: 'RMM_SYNC_COMPLETED',
+      tenantId: tenant,
+      actorUserId: (user as any)?.user_id,
+      integrationId: integration.integration_id,
+      syncType: 'alerts',
+      itemsProcessed: alerts.length,
+      itemsCreated: created,
+      itemsUpdated: updated,
+      itemsFailed: errors.length,
+    });
 
     return {
       success: true,
