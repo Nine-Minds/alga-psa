@@ -77,7 +77,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   onVisualWorkspaceTabChange,
 }) => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
-  const constraints = useInvoiceDesignerStore((state) => state.constraints);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
   const showRulers = useInvoiceDesignerStore((state) => state.showRulers);
@@ -233,7 +232,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     runAuthoritativeInvoiceTemplatePreview({
       workspace: {
         nodes: debouncedNodes,
-        constraints,
         snapToGrid,
         gridSize,
         showGuides,
@@ -281,7 +279,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       });
   }, [
     canvasScale,
-    constraints,
     debouncedNodes,
     gridSize,
     manualRunNonce,
@@ -607,7 +604,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               title="Invoice Preview Output"
               className="block w-full border-0"
               style={{ height: `${previewIframeHeightPx}px` }}
-              srcDoc={`<style>${authoritativePreview.render.css ?? ''}</style>${authoritativePreview.render.html}`}
+              srcDoc={`<!doctype html><html><head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;background:#fff;}</style><style>${authoritativePreview.render.css ?? ''}</style></head><body>${authoritativePreview.render.html}</body></html>`}
               data-automation-id="invoice-designer-preview-render-iframe"
             />
           )}

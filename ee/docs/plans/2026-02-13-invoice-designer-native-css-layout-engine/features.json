@@ -21,7 +21,7 @@
   { "id": "F017", "description": "Delete legacy geometry utilities: constraintSolver.ts, constraints.ts, dropParentResolution.ts, aspectRatio.ts.", "implemented": true },
   { "id": "F018", "description": "Reduce utils/layout.ts to lightweight mapping helpers only, removing coordinate math and solver logic.", "implemented": true },
   { "id": "F019", "description": "Update designer state serialization/export to persist CSS-like layout props as part of the workspace snapshot/AST export.", "implemented": true },
-  { "id": "F020", "description": "Ensure preview rendering uses the same CSS semantics as the invoice renderer (no designer-only geometry).", "implemented": false },
+  { "id": "F020", "description": "Ensure preview rendering uses the same CSS semantics as the invoice renderer (no designer-only geometry).", "implemented": true },
   { "id": "F021", "description": "Audit and remove any runtime imports of deleted geometry modules from invoice-designer components.", "implemented": false },
   { "id": "F022", "description": "Add developer-facing docs in SCRATCHPAD.md for key dnd-kit collision strategy choices and nesting rules.", "implemented": false }
 ]
