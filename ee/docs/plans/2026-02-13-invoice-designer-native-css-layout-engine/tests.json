@@ -12,7 +12,7 @@
   { "id": "T011", "featureIds": ["F010"], "description": "E2E: drag to reorder within the same container updates node order deterministically.", "implemented": true },
   { "id": "T012", "featureIds": ["F011"], "description": "E2E: drag a node from container A to container B inserts at expected index.", "implemented": true },
   { "id": "T013", "featureIds": ["F012"], "description": "E2E: nesting a node into an eligible container succeeds; nesting into an ineligible container is rejected.", "implemented": true },
-  { "id": "T014", "featureIds": ["F013"], "description": "E2E: drop indicator shows before/after insertion cues based on cursor position.", "implemented": false },
+  { "id": "T014", "featureIds": ["F013"], "description": "E2E: drop indicator shows before/after insertion cues based on cursor position.", "implemented": true },
   { "id": "T015", "featureIds": ["F014"], "description": "E2E: invalid drop shows blocked indicator and does not mutate designer state.", "implemented": false },
   { "id": "T016", "featureIds": ["F015"], "description": "Integration: image nodes with aspect ratio render with correct box ratio via CSS aspect-ratio.", "implemented": false },
   { "id": "T017", "featureIds": ["F016"], "description": "E2E: resizing an image node updates pixel sizing props and DOM layout changes accordingly.", "implemented": false },

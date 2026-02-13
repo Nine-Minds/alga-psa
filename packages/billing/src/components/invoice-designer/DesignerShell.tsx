@@ -30,6 +30,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
+import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -1572,9 +1573,7 @@ export const DesignerShell: React.FC = () => {
         return;
       }
 
-      const activeCenter = axis === 'x' ? activeRect.left + activeRect.width / 2 : activeRect.top + activeRect.height / 2;
-      const overCenter = axis === 'x' ? overRect.left + overRect.width / 2 : overRect.top + overRect.height / 2;
-      const position: 'before' | 'after' = activeCenter < overCenter ? 'before' : 'after';
+      const position = resolveInsertPositionFromRects(activeRect, overRect, axis);
       setDropIndicator({
         kind: 'insert',
         overNodeId: overNode.id,
