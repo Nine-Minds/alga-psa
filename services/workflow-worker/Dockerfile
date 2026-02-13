@@ -24,6 +24,7 @@ COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/media/package.json ./packages/media/
+COPY packages/portal-shared/package.json ./packages/portal-shared/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 
@@ -37,6 +38,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/db \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/media \
+  --workspace=@alga-psa/portal-shared \
   --workspace=@alga-psa/types \
   --workspace=@alga-psa/ui
 

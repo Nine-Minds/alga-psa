@@ -1366,7 +1366,9 @@ async function syncAssetSoftwareToNormalizedTables(
   const currentSoftware = await knex('asset_software')
     .where({ tenant, asset_id: assetId, is_current: true })
     .select('software_id');
-  const currentSoftwareIds = new Set(currentSoftware.map((s: any) => s.software_id));
+  const currentSoftwareIds = new Set<string>(
+    currentSoftware.map((s: { software_id: unknown }) => String(s.software_id))
+  );
 
   const seenSoftwareIds = new Set<string>();
 
