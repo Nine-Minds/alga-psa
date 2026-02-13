@@ -16,7 +16,7 @@
   { "id": "T015", "featureIds": ["F014"], "description": "E2E: invalid drop shows blocked indicator and does not mutate designer state.", "implemented": true },
   { "id": "T016", "featureIds": ["F015"], "description": "Integration: image nodes with aspect ratio render with correct box ratio via CSS aspect-ratio.", "implemented": true },
   { "id": "T017", "featureIds": ["F016"], "description": "E2E: resizing an image node updates pixel sizing props and DOM layout changes accordingly.", "implemented": true },
-  { "id": "T017A", "featureIds": ["F016"], "description": "E2E: resizing a section/stack container updates pixel sizing props and DOM layout changes accordingly.", "implemented": false },
+  { "id": "T017A", "featureIds": ["F016"], "description": "E2E: resizing a section/stack container updates pixel sizing props and DOM layout changes accordingly.", "implemented": true },
   { "id": "T017B", "featureIds": ["F016A"], "description": "Integration: property-panel can set width/height as CSS strings (%, rem, auto) and the canvas reflects the change.", "implemented": false },
   { "id": "T017C", "featureIds": ["F016A"], "description": "Unit: drag-resize always writes pixel values (px) even when the property panel was last set to non-px sizing.", "implemented": false },
   { "id": "T017D", "featureIds": ["F016B"], "description": "E2E: edge snapping chooses before/after insertion index consistently near sibling boundaries in flex containers.", "implemented": false },
