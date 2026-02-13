@@ -101,3 +101,7 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Drag-drop reparent/reorder now uses generic tree ops:
   - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` now calls `store.moveNode(...)` (tree move) instead of `moveNodeToParentAtIndex`.
   - `packages/billing/src/components/invoice-designer/state/designerStore.flowDnd.test.ts` updated to exercise `moveNode(...)` directly.
+- 2026-02-13: Resizing now writes through the generic patch API:
+  - Removed `updateNodeSize` from `packages/billing/src/components/invoice-designer/state/designerStore.ts`.
+  - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` now implements `resizeNode(...)` using `setNodeProp` writes (`size.*`, `baseSize.*`, `style.*`) with a single history commit on mouse-up.
+  - `setNodeProp`/`unsetNodeProp` now mirror `name`/`style.*`/`layout.*`/`metadata.*` updates into both legacy fields and `props.*` during cutover.

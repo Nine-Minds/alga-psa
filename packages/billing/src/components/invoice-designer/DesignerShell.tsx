@@ -21,7 +21,7 @@ import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
 import type { DesignerComponentType, DesignerNode, Point, Size } from './state/designerStore';
-import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
+import { clampNodeSizeToPracticalMinimum, getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
@@ -261,8 +261,8 @@ export const DesignerShell: React.FC = () => {
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
   const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
-  const updateNodeSize = useInvoiceDesignerStore((state) => state.updateNodeSize);
   const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
+  const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
   const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
@@ -284,6 +284,28 @@ export const DesignerShell: React.FC = () => {
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
 
   const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
+
+  const resizeNode = useCallback(
+    (id: string, size: Size, commit: boolean = false) => {
+      const node = useInvoiceDesignerStore.getState().nodesById[id];
+      if (!node) return;
+
+      const clamped = clampNodeSizeToPracticalMinimum(node.type, size);
+      const rounded = {
+        width: Math.round(clamped.width),
+        height: Math.round(clamped.height),
+      };
+
+      // Batch updates without generating multiple history entries.
+      setNodeProp(id, 'size.width', rounded.width, false);
+      setNodeProp(id, 'size.height', rounded.height, false);
+      setNodeProp(id, 'baseSize.width', rounded.width, false);
+      setNodeProp(id, 'baseSize.height', rounded.height, false);
+      setNodeProp(id, 'style.width', `${rounded.width}px`, false);
+      setNodeProp(id, 'style.height', `${rounded.height}px`, commit);
+    },
+    [setNodeProp]
+  );
 
   // Constraints were removed as part of the CSS-first layout cutover.
   const referenceNodeId = null;
@@ -1817,7 +1839,7 @@ export const DesignerShell: React.FC = () => {
       }
 
       const beforeSize = section.size;
-      updateNodeSize(section.id, intent.size, true);
+      resizeNode(section.id, intent.size, true);
       const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === section.id);
       if (!afterSection || sizesAreEffectivelyEqual(beforeSize, afterSection.size)) {
         showDropFeedback('info', getSectionFitNoopMessage(section));
@@ -1830,7 +1852,7 @@ export const DesignerShell: React.FC = () => {
           : 'Section fitted to contents.'
       );
     },
-    [showDropFeedback, updateNodeSize]
+    [showDropFeedback, resizeNode]
   );
 
   const commitPropertyChanges = () => {
@@ -1841,7 +1863,7 @@ export const DesignerShell: React.FC = () => {
       liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
 
     setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
-    updateNodeSize(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
+    resizeNode(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
 
     const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
     if (!resolvedNode) {
@@ -1965,7 +1987,7 @@ export const DesignerShell: React.FC = () => {
 	            modifiers={modifiers}
 	            onPointerLocationChange={updatePointerLocation}
             onNodeSelect={selectNode}
-	            onResize={updateNodeSize}
+	            onResize={resizeNode}
 	            onDragStart={handleDragStart}
 	            onDragMove={handleDragMove}
               onDragOver={handleDragOver}

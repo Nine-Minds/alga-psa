@@ -1,12 +1,29 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useInvoiceDesignerStore } from './designerStore';
+import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
 import type { DesignerNode } from './designerStore';
 
 describe('designerStore (resize)', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
+
+  const resizeViaSetNodeProp = (nodeId: string, size: { width: number; height: number }, commit = true) => {
+    const store = useInvoiceDesignerStore.getState();
+    const node = store.nodesById[nodeId];
+    expect(node).toBeTruthy();
+    if (!node) return;
+
+    const clamped = clampNodeSizeToPracticalMinimum(node.type, size);
+    const rounded = { width: Math.round(clamped.width), height: Math.round(clamped.height) };
+
+    store.setNodeProp(nodeId, 'size.width', rounded.width, false);
+    store.setNodeProp(nodeId, 'size.height', rounded.height, false);
+    store.setNodeProp(nodeId, 'baseSize.width', rounded.width, false);
+    store.setNodeProp(nodeId, 'baseSize.height', rounded.height, false);
+    store.setNodeProp(nodeId, 'style.width', `${rounded.width}px`, false);
+    store.setNodeProp(nodeId, 'style.height', `${rounded.height}px`, commit);
+  };
 
   it('resizing an image writes pixel sizing props (px) into node.style', () => {
     const nodes: DesignerNode[] = [
@@ -63,7 +80,7 @@ describe('designerStore (resize)', () => {
       canvasScale: 1,
     });
 
-    store.updateNodeSize('image-1', { width: 333.4, height: 222.2 }, true);
+    resizeViaSetNodeProp('image-1', { width: 333.4, height: 222.2 }, true);
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'image-1');
     expect(updated?.size).toEqual({ width: 333, height: 222 });
@@ -116,7 +133,7 @@ describe('designerStore (resize)', () => {
       canvasScale: 1,
     });
 
-    store.updateNodeSize('section-1', { width: 512.1, height: 301.6 }, true);
+    resizeViaSetNodeProp('section-1', { width: 512.1, height: 301.6 }, true);
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
     expect(updated?.size).toEqual({ width: 512, height: 302 });
@@ -179,7 +196,7 @@ describe('designerStore (resize)', () => {
       canvasScale: 1,
     });
 
-    store.updateNodeSize('image-1', { width: 200, height: 100 }, true);
+    resizeViaSetNodeProp('image-1', { width: 200, height: 100 }, true);
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'image-1');
     expect(updated?.style?.width).toBe('200px');

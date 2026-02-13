@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { DesignerNode } from './designerStore';
-import { useInvoiceDesignerStore } from './designerStore';
+import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
 
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
@@ -162,7 +162,18 @@ describe('designerStore label text authority', () => {
     const store = useInvoiceDesignerStore.getState();
     store.updateNodeMetadata('label', { text: 'INVOICE' });
     store.setNodePosition('label', { x: 24, y: 24 }, true);
-    store.updateNodeSize('label', { width: 160, height: 40 }, true);
+    const nodeBefore = store.nodesById['label'];
+    expect(nodeBefore).toBeTruthy();
+    if (!nodeBefore) return;
+
+    const clamped = clampNodeSizeToPracticalMinimum(nodeBefore.type, { width: 160, height: 40 });
+    const rounded = { width: Math.round(clamped.width), height: Math.round(clamped.height) };
+    store.setNodeProp('label', 'size.width', rounded.width, false);
+    store.setNodeProp('label', 'size.height', rounded.height, false);
+    store.setNodeProp('label', 'baseSize.width', rounded.width, false);
+    store.setNodeProp('label', 'baseSize.height', rounded.height, false);
+    store.setNodeProp('label', 'style.width', `${rounded.width}px`, false);
+    store.setNodeProp('label', 'style.height', `${rounded.height}px`, true);
 
     const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
     expect(label?.name).toBe('INVOICE');

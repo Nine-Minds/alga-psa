@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useInvoiceDesignerStore } from './designerStore';
+import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
 
-describe('designerStore updateNodeSize', () => {
+describe('designerStore resizing via setNodeProp', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
@@ -23,7 +23,19 @@ describe('designerStore updateNodeSize', () => {
     expect(nodeId).toBeTruthy();
     if (!nodeId) return;
 
-    store.updateNodeSize(nodeId, { width: 280, height: 1 }, true);
+    const nodeBefore = useInvoiceDesignerStore.getState().nodesById[nodeId];
+    expect(nodeBefore).toBeTruthy();
+    if (!nodeBefore) return;
+
+    const clamped = clampNodeSizeToPracticalMinimum(nodeBefore.type, { width: 280, height: 1 });
+    const rounded = { width: Math.round(clamped.width), height: Math.round(clamped.height) };
+
+    store.setNodeProp(nodeId, 'size.width', rounded.width, false);
+    store.setNodeProp(nodeId, 'size.height', rounded.height, false);
+    store.setNodeProp(nodeId, 'baseSize.width', rounded.width, false);
+    store.setNodeProp(nodeId, 'baseSize.height', rounded.height, false);
+    store.setNodeProp(nodeId, 'style.width', `${rounded.width}px`, false);
+    store.setNodeProp(nodeId, 'style.height', `${rounded.height}px`, true);
 
     const node = useInvoiceDesignerStore.getState().nodes.find((entry) => entry.id === nodeId);
     expect(node?.size.width).toBe(280);

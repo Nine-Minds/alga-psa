@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useInvoiceDesignerStore } from './designerStore';
+import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
 
 describe('designerStore CSS-first model (sizing primitives)', () => {
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     expect(selected?.style?.height).toMatch(/px$/);
   });
 
-  it('clamps updateNodeSize to practical minimums and mirrors into CSS style', () => {
+  it('clamps resizing to practical minimums and mirrors into CSS style', () => {
     const store = useInvoiceDesignerStore.getState();
     const pageId = store.nodes.find((node) => node.type === 'page')?.id;
     expect(pageId).toBeTruthy();
@@ -43,7 +43,19 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     expect(fieldId).toBeTruthy();
     if (!fieldId) return;
 
-    store.updateNodeSize(fieldId, { width: 1, height: 1 }, true);
+    const nodeBefore = useInvoiceDesignerStore.getState().nodesById[fieldId];
+    expect(nodeBefore).toBeTruthy();
+    if (!nodeBefore) return;
+
+    const clamped = clampNodeSizeToPracticalMinimum(nodeBefore.type, { width: 1, height: 1 });
+    const rounded = { width: Math.round(clamped.width), height: Math.round(clamped.height) };
+
+    store.setNodeProp(fieldId, 'size.width', rounded.width, false);
+    store.setNodeProp(fieldId, 'size.height', rounded.height, false);
+    store.setNodeProp(fieldId, 'baseSize.width', rounded.width, false);
+    store.setNodeProp(fieldId, 'baseSize.height', rounded.height, false);
+    store.setNodeProp(fieldId, 'style.width', `${rounded.width}px`, false);
+    store.setNodeProp(fieldId, 'style.height', `${rounded.height}px`, true);
 
     const field = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === fieldId);
     expect(field?.size.width).toBe(120);

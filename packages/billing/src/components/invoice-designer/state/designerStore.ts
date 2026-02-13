@@ -176,7 +176,6 @@ interface DesignerState {
   moveNodeByDelta: (id: string, delta: Point, commit?: boolean) => void;
   moveNodeToParentAtIndex: (nodeId: string, parentId: string, index: number) => void;
   setNodePosition: (id: string, position: Point, commit?: boolean) => void;
-  updateNodeSize: (id: string, size: Size, commit?: boolean) => void;
   updateNodeName: (id: string, name: string) => void;
   updateNodeMetadata: (id: string, metadata: Record<string, unknown>) => void;
   updateNodeLayout: (id: string, layout: Partial<DesignerContainerLayout>) => void;
@@ -289,7 +288,7 @@ const getPracticalMinimumSizeForType = (type: DesignerComponentType): Size => {
   }
 };
 
-const clampNodeSizeToPracticalMinimum = (type: DesignerComponentType, size: Size): Size => {
+export const clampNodeSizeToPracticalMinimum = (type: DesignerComponentType, size: Size): Size => {
   const minimum = getPracticalMinimumSizeForType(type);
   return {
     width: Math.max(minimum.width, size.width),
@@ -827,7 +826,34 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     setNodeProp: (nodeId, path, value, commit = true) => {
       setWithIndex((state) => {
-        const nodes = patchSetNodeProp(state.nodes, nodeId, path, value);
+        const expandPaths = (input: string): string[] => {
+          if (input.startsWith('props.')) {
+            const withoutPrefix = input.slice('props.'.length);
+            if (
+              withoutPrefix === 'name' ||
+              withoutPrefix.startsWith('style.') ||
+              withoutPrefix.startsWith('layout.') ||
+              withoutPrefix.startsWith('metadata.')
+            ) {
+              return [input, withoutPrefix];
+            }
+            return [input];
+          }
+          if (
+            input === 'name' ||
+            input.startsWith('style.') ||
+            input.startsWith('layout.') ||
+            input.startsWith('metadata.')
+          ) {
+            return [input, `props.${input}`];
+          }
+          return [input];
+        };
+
+        let nodes = state.nodes;
+        for (const expandedPath of expandPaths(path)) {
+          nodes = patchSetNodeProp(nodes, nodeId, expandedPath, value);
+        }
         if (nodes === state.nodes) return state;
 
         if (!commit) return { nodes };
@@ -839,7 +865,34 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     unsetNodeProp: (nodeId, path, commit = true) => {
       setWithIndex((state) => {
-        const nodes = patchUnsetNodeProp(state.nodes, nodeId, path);
+        const expandPaths = (input: string): string[] => {
+          if (input.startsWith('props.')) {
+            const withoutPrefix = input.slice('props.'.length);
+            if (
+              withoutPrefix === 'name' ||
+              withoutPrefix.startsWith('style.') ||
+              withoutPrefix.startsWith('layout.') ||
+              withoutPrefix.startsWith('metadata.')
+            ) {
+              return [input, withoutPrefix];
+            }
+            return [input];
+          }
+          if (
+            input === 'name' ||
+            input.startsWith('style.') ||
+            input.startsWith('layout.') ||
+            input.startsWith('metadata.')
+          ) {
+            return [input, `props.${input}`];
+          }
+          return [input];
+        };
+
+        let nodes = state.nodes;
+        for (const expandedPath of expandPaths(path)) {
+          nodes = patchUnsetNodeProp(nodes, nodeId, expandedPath);
+        }
         if (nodes === state.nodes) return state;
 
         if (!commit) return { nodes };
@@ -935,43 +988,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const { history, historyIndex } = appendHistory(state, nodes);
         return { nodes, history, historyIndex };
       }, false, 'designer/setNodePosition');
-    },
-
-    updateNodeSize: (id, size, commit = false) => {
-      setWithIndex((state) => {
-        const nodes = state.nodes.map((node) => {
-          if (node.id !== id) return node;
-          const clampedSize = clampNodeSizeToPracticalMinimum(node.type, size);
-          const roundedSize = {
-            width: Math.round(clampedSize.width),
-            height: Math.round(clampedSize.height),
-          };
-          const nextStyle: DesignerNodeStyle = {
-            ...node.style,
-            width: `${roundedSize.width}px`,
-            height: `${roundedSize.height}px`,
-          };
-          return {
-            ...node,
-            size: roundedSize,
-            baseSize: roundedSize,
-            style: nextStyle,
-            props: {
-              ...node.props,
-              size: roundedSize,
-              baseSize: roundedSize,
-              style: nextStyle,
-            },
-          };
-        });
-
-        if (!commit) {
-          return { nodes };
-        }
-
-        const { history, historyIndex } = appendHistory(state, nodes);
-        return { nodes, history, historyIndex };
-      }, false, 'designer/updateNodeSize');
     },
 
     updateNodeName: (id, name) => {
