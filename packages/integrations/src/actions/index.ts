@@ -112,6 +112,7 @@ export {
   TACTICAL_WEBHOOK_HEADER_NAME,
   backfillTacticalRmmAlerts,
   ingestTacticalRmmSoftwareInventory,
+  syncTacticalRmmSingleAgent,
   type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
 export {

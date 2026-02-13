@@ -1435,3 +1435,155 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
+
+export const syncTacticalRmmSingleAgent = withAuth(async (
+  user,
+  { tenant },
+  input: { agentId: string }
+): Promise<{ success: boolean; error?: string; updated?: boolean; assetId?: string | null }> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  const agentId = String(input.agentId || '').trim();
+  if (!agentId) return { success: false, error: 'agentId is required' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first(['integration_id', 'instance_url', 'settings']);
+
+    if (!integration?.integration_id) {
+      return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
+    }
+
+    const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
+    const client = await buildConfiguredTacticalClient({
+      tenant,
+      instanceUrl: integration.instance_url,
+      authMode,
+    });
+
+    const agent = await client.request<any>({ method: 'GET', path: `/api/beta/v1/agent/${encodeURIComponent(agentId)}/` });
+
+    const mapping = await knex('tenant_external_entity_mappings')
+      .where({
+        tenant,
+        integration_type: PROVIDER,
+        alga_entity_type: 'asset',
+        external_entity_id: agentId,
+      })
+      .first(['id', 'alga_entity_id', 'external_realm_id']);
+
+    if (!mapping?.alga_entity_id) {
+      return { success: true, updated: false, assetId: null };
+    }
+
+    const assetIdText = String(mapping.alga_entity_id);
+    const externalOrgId = String(
+      (agent as any).client_id ??
+      (agent as any).client ??
+      (mapping.external_realm_id ?? '')
+    );
+
+    const lastSeen = (agent as any).last_seen || (agent as any).lastSeen || null;
+    const offlineTime = (agent as any).offline_time ?? (agent as any).offlineTime ?? null;
+    const overdueTime = (agent as any).overdue_time ?? (agent as any).overdueTime ?? null;
+    const status = computeTacticalAgentStatus({
+      lastSeen,
+      offlineTimeMinutes: offlineTime,
+      overdueTimeMinutes: overdueTime,
+    });
+
+    const deviceName = String((agent as any).hostname || (agent as any).name || (agent as any).computer_name || agentId);
+    const osFields = extractOsFields(agent);
+    const agentVersion = (agent as any).agent_version ?? (agent as any).version ?? null;
+    const vitals = extractVitals(agent);
+
+    const siteId = String((agent as any).site_id ?? (agent as any).site ?? '');
+    const siteName = (agent as any).site_name ? String((agent as any).site_name) : undefined;
+
+    const assetRow = await knex('assets')
+      .where({ tenant })
+      .whereRaw('assets.asset_id::text = ?', [assetIdText])
+      .first(['asset_type']);
+
+    await knex('assets')
+      .where({ tenant })
+      .whereRaw('assets.asset_id::text = ?', [assetIdText])
+      .update({
+        name: deviceName,
+        rmm_provider: PROVIDER,
+        rmm_device_id: agentId,
+        rmm_organization_id: externalOrgId || null,
+        agent_status: status,
+        last_seen_at: lastSeen ? new Date(lastSeen) : null,
+        last_rmm_sync_at: knex.fn.now(),
+      });
+
+    if (assetRow?.asset_type === 'server') {
+      await knex('server_assets')
+        .insert({
+          tenant,
+          asset_id: knex.raw('?::uuid', [assetIdText]),
+          os_type: osFields.os_type,
+          os_version: osFields.os_version,
+          agent_version: agentVersion ? String(agentVersion) : null,
+          current_user: vitals.current_user,
+          uptime_seconds: vitals.uptime_seconds,
+          lan_ip: vitals.lan_ip,
+          wan_ip: vitals.wan_ip,
+        })
+        .onConflict(['tenant', 'asset_id'])
+        .merge({
+          os_type: osFields.os_type,
+          os_version: osFields.os_version,
+          agent_version: agentVersion ? String(agentVersion) : null,
+          current_user: vitals.current_user,
+          uptime_seconds: vitals.uptime_seconds,
+          lan_ip: vitals.lan_ip,
+          wan_ip: vitals.wan_ip,
+        });
+    } else {
+      await knex('workstation_assets')
+        .insert({
+          tenant,
+          asset_id: knex.raw('?::uuid', [assetIdText]),
+          os_type: osFields.os_type,
+          os_version: osFields.os_version,
+          agent_version: agentVersion ? String(agentVersion) : null,
+          current_user: vitals.current_user,
+          uptime_seconds: vitals.uptime_seconds,
+          lan_ip: vitals.lan_ip,
+          wan_ip: vitals.wan_ip,
+        })
+        .onConflict(['tenant', 'asset_id'])
+        .merge({
+          os_type: osFields.os_type,
+          os_version: osFields.os_version,
+          agent_version: agentVersion ? String(agentVersion) : null,
+          current_user: vitals.current_user,
+          uptime_seconds: vitals.uptime_seconds,
+          lan_ip: vitals.lan_ip,
+          wan_ip: vitals.wan_ip,
+        });
+    }
+
+    await knex('tenant_external_entity_mappings')
+      .where({ tenant, id: mapping.id })
+      .update({
+        external_realm_id: externalOrgId || mapping.external_realm_id,
+        sync_status: 'synced',
+        last_synced_at: knex.fn.now(),
+        metadata: {
+          site_id: siteId || undefined,
+          site_name: siteName || undefined,
+          raw: agent,
+        },
+      });
+
+    return { success: true, updated: true, assetId: assetIdText };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});

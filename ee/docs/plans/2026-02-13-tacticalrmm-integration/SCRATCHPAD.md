@@ -87,3 +87,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F054: Implemented Tactical external entity mapping upserts to `tenant_external_entity_mappings` with `external_entity_id=agent_id`, `external_realm_id=client_pk`, and site metadata.
 - (2026-02-13) F052: Mapped Tactical agent OS/version + agent version into workstation/server extension rows during device sync; base asset RMM fields and last_seen/last_rmm_sync are set.
 - (2026-02-13) F053: Mapped Tactical agent vitals (current user, uptime, LAN/WAN IP) into cached RMM extension fields when present on list responses.
+- (2026-02-13) F056: Added targeted single-agent sync server action by `agentId` (refreshes asset fields + extension vitals).
