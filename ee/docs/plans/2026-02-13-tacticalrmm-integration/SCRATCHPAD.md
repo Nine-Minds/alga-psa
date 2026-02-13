@@ -124,3 +124,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) T057: Added an integration-style unit test for `syncTacticalRmmSingleAgent` using a fake Knex + mocked Tactical `GET /api/beta/v1/agent/<id>/` to assert the linked asset and external mapping are updated (including site metadata).
 - (2026-02-13) T058: Added an integration-style unit test asserting the Tactical device deletion policy is "skip": when an agent disappears from list responses, the sync does not delete or inactivate the existing asset/mapping (items_deleted stays 0).
 - (2026-02-13) T060: Added unit tests for the Tactical webhook route handler ensuring it does not require API-key auth and enforces `X-Alga-Webhook-Secret` (401 on missing/invalid secret).
+- (2026-02-13) T061-T062: Added unit tests for webhook ingestion verifying minimal payload upserts `rmm_alerts` and that `asset_id` is populated only when an external mapping exists.
