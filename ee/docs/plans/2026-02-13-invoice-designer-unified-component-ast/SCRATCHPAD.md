@@ -242,3 +242,5 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Made workspace <-> template AST export/import deterministic:
   - Updated `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` import to treat a single top-level AST `section` wrapper as the designer `page` node (avoids nested page->section wrapping on roundtrip).
   - Added `export -> import -> export` deterministic roundtrip assertion in `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`.
+- 2026-02-13: Added persisted workspace snapshot format coverage:
+  - Added `packages/billing/src/components/invoice-designer/state/designerStore.exportWorkspace.test.ts` to ensure `exportWorkspace()` returns only `{ rootId, nodesById, snapToGrid, gridSize, showGuides, showRulers, canvasScale }` and strips runtime/editor-only `props` keys (`position`, `size`, `baseSize`, `layoutPresetId`).
