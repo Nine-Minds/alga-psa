@@ -266,3 +266,9 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
 - Running tests from repo root:
   - `npm run test:local` currently shells out to a system `dotenv` binary in some environments (CLI flag mismatch).
   - Reliable alternative: `cd server && npx vitest run <path-to-test>` (uses `server/vitest.globalSetup.js` to load `../.env.localtest`).
+
+## Notes (Renderer Schema)
+
+- Preview/renderer schema must allow the same safe CSS subset that the designer exports into `style.inline`.
+  - Added support for: `flexDirection`, grid inline props (`gridTemplateColumns`, `gridTemplateRows`, `gridAutoFlow`), and media props (`aspectRatio`, `objectFit`) in:
+    - `packages/billing/src/lib/invoice-template-ast/schema.ts`
