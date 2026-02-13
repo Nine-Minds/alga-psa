@@ -79,6 +79,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.unsetNodeProp.test.ts`
 - (2026-02-13) Added unit coverage to ensure nested unsets inside array elements remove only the nested property (do not splice the element).
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.unsetNodeProp.test.ts`
+- (2026-02-13) Added undo/redo coverage for canonical JSON snapshots involving array edits (set + leaf-array unset splice) to ensure history restores exact committed state.
+  - Test: `packages/billing/src/components/invoice-designer/state/designerStore.undoRedo.test.ts`
 
 ## Commands / Runbooks
 

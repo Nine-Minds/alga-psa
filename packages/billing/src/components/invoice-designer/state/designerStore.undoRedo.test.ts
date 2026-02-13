@@ -72,5 +72,43 @@ describe('designerStore undo/redo (patch ops history)', () => {
     expect(redoDelete.nodesById[textId]).toBeUndefined();
     expect(redoDelete.nodesById[sectionId]?.children).toEqual([containerId]);
   });
-});
 
+  it('undo/redo restores exact canonical JSON snapshots for array edits (including leaf-array unset splice semantics)', () => {
+    const store = useInvoiceDesignerStore.getState();
+    const pageId = store.nodes.find((node) => node.type === 'page')?.id;
+    expect(pageId).toBeTruthy();
+    if (!pageId) return;
+
+    store.addNodeFromPalette('section', { x: 40, y: 40 }, { parentId: pageId });
+    const sectionId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(sectionId).toBeTruthy();
+    if (!sectionId) return;
+
+    store.addNodeFromPalette('text', { x: 60, y: 60 }, { parentId: sectionId });
+    const textId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(textId).toBeTruthy();
+    if (!textId) return;
+
+    // Reset history baseline to a deterministic starting state.
+    const baselineWorkspace = useInvoiceDesignerStore.getState().exportWorkspace();
+    store.loadWorkspace(baselineWorkspace);
+
+    store.setNodeProp(textId, 'props.metadata.items', ['a', 'b', 'c']);
+    const withItems = useInvoiceDesignerStore.getState().exportWorkspace();
+    expect((withItems.nodesById[textId]?.props as any).metadata.items).toEqual(['a', 'b', 'c']);
+
+    store.unsetNodeProp(textId, 'props.metadata.items.1');
+    const withUnset = useInvoiceDesignerStore.getState().exportWorkspace();
+    expect((withUnset.nodesById[textId]?.props as any).metadata.items).toEqual(['a', 'c']);
+
+    store.undo();
+    const undo = useInvoiceDesignerStore.getState().exportWorkspace();
+    expect(undo).toEqual(withItems);
+    expect((undo.nodesById[textId]?.props as any).metadata.items).toEqual(['a', 'b', 'c']);
+
+    store.redo();
+    const redo = useInvoiceDesignerStore.getState().exportWorkspace();
+    expect(redo).toEqual(withUnset);
+    expect((redo.nodesById[textId]?.props as any).metadata.items).toEqual(['a', 'c']);
+  });
+});

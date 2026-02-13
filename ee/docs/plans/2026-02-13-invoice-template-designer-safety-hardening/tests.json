@@ -169,7 +169,7 @@
   {
     "id": "T021",
     "description": "Undo/redo: committed history snapshots restore the exact canonical JSON state (arrays/objects match expectation).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F010"
