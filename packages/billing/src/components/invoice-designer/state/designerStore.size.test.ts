@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
+import { getNodeStyle } from '../utils/nodeProps';
 
 describe('designerStore resizing via setNodeProp', () => {
   beforeEach(() => {
@@ -43,7 +44,9 @@ describe('designerStore resizing via setNodeProp', () => {
     expect(node?.size.height).toBe(96);
     expect(node?.baseSize?.width).toBe(node?.size.width);
     expect(node?.baseSize?.height).toBe(node?.size.height);
-    expect(node?.style?.width).toBe('280px');
-    expect(node?.style?.height).toBe('96px');
+    expect(node).toBeTruthy();
+    if (!node) return;
+    expect(getNodeStyle(node)?.width).toBe('280px');
+    expect(getNodeStyle(node)?.height).toBe('96px');
   });
 });

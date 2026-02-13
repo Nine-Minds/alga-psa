@@ -237,6 +237,19 @@ const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined):
 
 type LabelNormalizationKind = 'name' | 'metadata';
 
+const normalizeDesignerPatchPath = (input: string): string => {
+  const path = input.trim();
+  if (path.startsWith('props.')) return path;
+
+  // During cutover we accept legacy root-level fields but always persist them to canonical `props.*`.
+  if (path === 'name') return 'props.name';
+  if (path === 'metadata' || path.startsWith('metadata.')) return `props.${path}`;
+  if (path === 'layout' || path.startsWith('layout.')) return `props.${path}`;
+  if (path === 'style' || path.startsWith('style.')) return `props.${path}`;
+
+  return path;
+};
+
 const resolveLabelNormalizationKind = (path: string): LabelNormalizationKind | null => {
   if (path === 'name' || path === 'props.name') {
     return 'name';
@@ -265,7 +278,9 @@ const normalizeLabelAfterMutation = (
   const propsMetadata = isPlainObject(existingProps.metadata) ? (existingProps.metadata as Record<string, unknown>) : {};
 
   if (kind === 'name') {
-    const nextText = typeof node.name === 'string' ? node.name : '';
+    // Name is canonical in `props.name`; legacy `node.name` exists only for back-compat while callsites migrate.
+    const nextText =
+      typeof existingProps.name === 'string' ? (existingProps.name as string) : typeof node.name === 'string' ? node.name : '';
     const nextMetadata = { ...existingMetadata, ...propsMetadata, text: nextText };
     const nextProps = { ...existingProps, name: nextText, metadata: nextMetadata };
     const nextNode: DesignerNode = { ...node, name: nextText, metadata: nextMetadata, props: nextProps };
@@ -1042,37 +1057,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     setNodeProp: (nodeId, path, value, commit = true) => {
       setWithIndex((state) => {
-        const expandPaths = (input: string): string[] => {
-          if (input.startsWith('props.')) {
-            const withoutPrefix = input.slice('props.'.length);
-            if (
-              withoutPrefix === 'name' ||
-              withoutPrefix.startsWith('style.') ||
-              withoutPrefix.startsWith('layout.') ||
-              withoutPrefix.startsWith('metadata.')
-            ) {
-              return [input, withoutPrefix];
-            }
-            return [input];
-          }
-          if (
-            input === 'name' ||
-            input.startsWith('style.') ||
-            input.startsWith('layout.') ||
-            input.startsWith('metadata.')
-          ) {
-            return [input, `props.${input}`];
-          }
-          return [input];
-        };
-
-        let nodes = state.nodes;
-        for (const expandedPath of expandPaths(path)) {
-          nodes = patchSetNodeProp(nodes, nodeId, expandedPath, value);
-        }
+        const normalizedPath = normalizeDesignerPatchPath(path);
+        let nodes = patchSetNodeProp(state.nodes, nodeId, normalizedPath, value);
         if (nodes === state.nodes) return state;
 
-        const labelNormalization = resolveLabelNormalizationKind(path);
+        const labelNormalization = resolveLabelNormalizationKind(normalizedPath);
         if (labelNormalization) {
           nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
         }
@@ -1086,37 +1075,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     unsetNodeProp: (nodeId, path, commit = true) => {
       setWithIndex((state) => {
-        const expandPaths = (input: string): string[] => {
-          if (input.startsWith('props.')) {
-            const withoutPrefix = input.slice('props.'.length);
-            if (
-              withoutPrefix === 'name' ||
-              withoutPrefix.startsWith('style.') ||
-              withoutPrefix.startsWith('layout.') ||
-              withoutPrefix.startsWith('metadata.')
-            ) {
-              return [input, withoutPrefix];
-            }
-            return [input];
-          }
-          if (
-            input === 'name' ||
-            input.startsWith('style.') ||
-            input.startsWith('layout.') ||
-            input.startsWith('metadata.')
-          ) {
-            return [input, `props.${input}`];
-          }
-          return [input];
-        };
-
-        let nodes = state.nodes;
-        for (const expandedPath of expandPaths(path)) {
-          nodes = patchUnsetNodeProp(nodes, nodeId, expandedPath);
-        }
+        const normalizedPath = normalizeDesignerPatchPath(path);
+        let nodes = patchUnsetNodeProp(state.nodes, nodeId, normalizedPath);
         if (nodes === state.nodes) return state;
 
-        const labelNormalization = resolveLabelNormalizationKind(path);
+        const labelNormalization = resolveLabelNormalizationKind(normalizedPath);
         if (labelNormalization) {
           nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
         }

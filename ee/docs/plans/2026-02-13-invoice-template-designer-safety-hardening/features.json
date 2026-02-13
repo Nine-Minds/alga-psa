@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Normalize all supported patch paths to canonical `props.*` targets (accept legacy paths but write only canonical state).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 3"]
   },
   {

@@ -29,6 +29,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - CI: `.github/workflows/secrets-env-backup-guard.yml`
 - (2026-02-13) Current patch implementation writes to both `props.*` and legacy top-level fields via `expandPaths`:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+- (2026-02-13) Designer store now normalizes legacy patch paths (`name`, `metadata.*`, `layout.*`, `style.*`) to canonical `props.*` and writes only canonical state.
+  - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 - (2026-02-13) Patch ops currently allow arbitrary object keys and could write `__proto__` unless guarded:
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
 - (2026-02-13) Patch ops now reject prototype-pollution path segments (`__proto__`, `prototype`, `constructor`) at any depth (safe no-op):

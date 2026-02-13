@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
 import type { DesignerNode } from './designerStore';
+import { getNodeStyle } from '../utils/nodeProps';
 
 describe('designerStore (resize)', () => {
   beforeEach(() => {
@@ -84,8 +85,10 @@ describe('designerStore (resize)', () => {
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'image-1');
     expect(updated?.size).toEqual({ width: 333, height: 222 });
-    expect(updated?.style?.width).toBe('333px');
-    expect(updated?.style?.height).toBe('222px');
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+    expect(getNodeStyle(updated)?.width).toBe('333px');
+    expect(getNodeStyle(updated)?.height).toBe('222px');
   });
 
   it('resizing a section writes pixel sizing props (px) into node.style', () => {
@@ -137,8 +140,10 @@ describe('designerStore (resize)', () => {
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
     expect(updated?.size).toEqual({ width: 512, height: 302 });
-    expect(updated?.style?.width).toBe('512px');
-    expect(updated?.style?.height).toBe('302px');
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+    expect(getNodeStyle(updated)?.width).toBe('512px');
+    expect(getNodeStyle(updated)?.height).toBe('302px');
   });
 
   it('drag-resize overwrites non-px sizing strings to px values', () => {
@@ -199,7 +204,9 @@ describe('designerStore (resize)', () => {
     resizeViaSetNodeProp('image-1', { width: 200, height: 100 }, true);
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'image-1');
-    expect(updated?.style?.width).toBe('200px');
-    expect(updated?.style?.height).toBe('100px');
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+    expect(getNodeStyle(updated)?.width).toBe('200px');
+    expect(getNodeStyle(updated)?.height).toBe('100px');
   });
 });

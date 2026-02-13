@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useInvoiceDesignerStore } from './designerStore';
+import { getNodeLayout } from '../utils/nodeProps';
 
 describe('designerStore container layout editing', () => {
   beforeEach(() => {
@@ -23,8 +24,11 @@ describe('designerStore container layout editing', () => {
     store.setNodeProp(sectionId, 'layout.gap', '12px', true);
 
     const section = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === sectionId);
-    expect(section?.layout?.display).toBe('grid');
-    expect(section?.layout?.gridTemplateColumns).toBe('1fr 1fr');
-    expect(section?.layout?.gap).toBe('12px');
+    expect(section).toBeTruthy();
+    if (!section) return;
+
+    expect(getNodeLayout(section)?.display).toBe('grid');
+    expect(getNodeLayout(section)?.gridTemplateColumns).toBe('1fr 1fr');
+    expect(getNodeLayout(section)?.gap).toBe('12px');
   });
 });

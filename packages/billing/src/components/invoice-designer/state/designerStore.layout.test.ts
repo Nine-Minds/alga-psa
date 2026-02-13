@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
+import { getNodeStyle } from '../utils/nodeProps';
 
 describe('designerStore CSS-first model (sizing primitives)', () => {
   beforeEach(() => {
@@ -23,8 +24,10 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     const selectedId = useInvoiceDesignerStore.getState().selectedNodeId;
     const selected = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedId);
     expect(selected?.type).toBe('field');
-    expect(selected?.style?.width).toMatch(/px$/);
-    expect(selected?.style?.height).toMatch(/px$/);
+    expect(selected).toBeTruthy();
+    if (!selected) return;
+    expect(getNodeStyle(selected)?.width).toMatch(/px$/);
+    expect(getNodeStyle(selected)?.height).toMatch(/px$/);
   });
 
   it('clamps resizing to practical minimums and mirrors into CSS style', () => {
@@ -60,7 +63,9 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     const field = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === fieldId);
     expect(field?.size.width).toBe(120);
     expect(field?.size.height).toBe(40);
-    expect(field?.style?.width).toBe('120px');
-    expect(field?.style?.height).toBe('40px');
+    expect(field).toBeTruthy();
+    if (!field) return;
+    expect(getNodeStyle(field)?.width).toBe('120px');
+    expect(getNodeStyle(field)?.height).toBe('40px');
   });
 });

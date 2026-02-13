@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useInvoiceDesignerStore } from './designerStore';
+import { getNodeStyle } from '../utils/nodeProps';
 
 describe('designerStore (no constraint solver state)', () => {
   beforeEach(() => {
@@ -49,8 +50,10 @@ describe('designerStore (no constraint solver state)', () => {
     store.setNodeProp(nodeId, 'style.height', 'auto', false);
     store.setNodeProp(nodeId, 'style.minWidth', '12rem', true);
     const updated = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === nodeId);
-    expect(updated?.style?.width).toBe('50%');
-    expect(updated?.style?.height).toBe('auto');
-    expect(updated?.style?.minWidth).toBe('12rem');
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+    expect(getNodeStyle(updated)?.width).toBe('50%');
+    expect(getNodeStyle(updated)?.height).toBe('auto');
+    expect(getNodeStyle(updated)?.minWidth).toBe('12rem');
   });
 });
