@@ -239,6 +239,8 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
 
 - Search for legacy geometry imports:
   - `rg -n \"constraintSolver|constraints|dropParentResolution|aspectRatio\" packages/billing/src/components/invoice-designer`
+- Run a single designer test under the server Vitest config:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/utils/cssLayout.test.ts`
 
 ## Repo/Test Gotchas (Discovered 2026-02-13)
 
