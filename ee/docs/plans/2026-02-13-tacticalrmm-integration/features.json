@@ -41,7 +41,7 @@
   { "id": "F063", "description": "On webhook receive: upsert `rmm_alerts` for provider `tacticalrmm`, associate alert to asset via `agent_id` mapping when available.", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F064", "description": "On webhook receive: trigger 'sync single agent' to refresh cached vitals + status for the affected asset.", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F070", "description": "Implement Tactical alerts backfill via `PATCH /alerts/` and upsert into `rmm_alerts` (configurable filters).", "implemented": false, "prdRefs": ["Functional Requirements", "Open Questions"] },
+  { "id": "F070", "description": "Implement Tactical alerts backfill via `PATCH /alerts/` and upsert into `rmm_alerts` (configurable filters).", "implemented": true, "prdRefs": ["Functional Requirements", "Open Questions"] },
   { "id": "F071", "description": "Implement bulk software inventory ingestion via `GET /software/` and map results into Alga’s software inventory storage (initially minimal ingestion; no per-agent refresh).", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F080", "description": "Publish existing event-bus events for Tactical integration actions where appropriate (RMM_WEBHOOK_RECEIVED, RMM_DEVICE_UPDATED/CREATED, INTEGRATION_SYNC_*).", "implemented": false, "prdRefs": ["Observability"] }
