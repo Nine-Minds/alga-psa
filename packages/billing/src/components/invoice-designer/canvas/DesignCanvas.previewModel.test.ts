@@ -7,6 +7,12 @@ const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? 'node-' + Math.random().toString(36).slice(2, 7),
   type: overrides.type ?? 'subtotal',
   name: overrides.name ?? 'Subtotal',
+  props: overrides.props ?? {
+    name: overrides.name ?? 'Subtotal',
+    metadata: overrides.metadata ?? {},
+    layout: overrides.layout,
+    style: overrides.style ?? { width: '280px', height: '56px' },
+  },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 280, height: 56 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 280, height: 56 },
@@ -16,9 +22,11 @@ const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
   parentId: overrides.parentId ?? null,
+  children: overrides.children ?? overrides.childIds ?? [],
   childIds: overrides.childIds ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
   layout: overrides.layout,
+  style: overrides.style,
 });
 
 describe('DesignCanvas totals preview model', () => {

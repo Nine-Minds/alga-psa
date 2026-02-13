@@ -7,32 +7,45 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { DesignerNode } from '../state/designerStore';
 import { DesignCanvas } from './DesignCanvas';
 
-const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
-  id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
-  type: overrides.type ?? 'text',
-  name: overrides.name ?? 'Node',
-  position: overrides.position ?? { x: 0, y: 0 },
-  size: overrides.size ?? { width: 120, height: 48 },
-  baseSize: overrides.baseSize ?? overrides.size ?? { width: 120, height: 48 },
-  canRotate: overrides.canRotate ?? false,
-  allowResize: overrides.allowResize ?? true,
-  rotation: overrides.rotation ?? 0,
-  metadata: overrides.metadata ?? {},
-  layoutPresetId: overrides.layoutPresetId,
-  layout:
+const createNode = (overrides: Partial<DesignerNode>): DesignerNode => {
+  const size = overrides.size ?? { width: 120, height: 48 };
+  const style = overrides.style ?? { width: `${size.width}px`, height: `${size.height}px` };
+  const layout =
     overrides.layout ?? {
-      mode: 'canvas',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'start',
-      sizing: 'fixed',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0px',
+      padding: '0px',
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+    };
+
+  return {
+    id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
+    type: overrides.type ?? 'text',
+    name: overrides.name ?? 'Node',
+    props: overrides.props ?? {
+      name: overrides.name ?? 'Node',
+      metadata: overrides.metadata ?? {},
+      layout,
+      style,
     },
-  parentId: overrides.parentId ?? null,
-  childIds: overrides.childIds ?? [],
-  allowedChildren: overrides.allowedChildren ?? [],
-});
+    position: overrides.position ?? { x: 0, y: 0 },
+    size,
+    baseSize: overrides.baseSize ?? size,
+    canRotate: overrides.canRotate ?? false,
+    allowResize: overrides.allowResize ?? true,
+    rotation: overrides.rotation ?? 0,
+    metadata: overrides.metadata ?? {},
+    layoutPresetId: overrides.layoutPresetId,
+    layout,
+    parentId: overrides.parentId ?? null,
+    children: overrides.children ?? overrides.childIds ?? [],
+    childIds: overrides.childIds ?? [],
+    allowedChildren: overrides.allowedChildren ?? [],
+    style,
+  };
+};
 
 const buildNodes = () => {
   const doc = createNode({

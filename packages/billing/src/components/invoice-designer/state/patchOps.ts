@@ -109,7 +109,7 @@ export const insertChild = (
       const nextChildIds = node.childIds.slice();
       const clampedIndex = Math.max(0, Math.min(index, nextChildIds.length));
       nextChildIds.splice(clampedIndex, 0, childId);
-      return { ...node, childIds: nextChildIds };
+      return { ...node, childIds: nextChildIds, children: nextChildIds };
     }
     if (node.id === childId) {
       return { ...node, parentId };
@@ -129,7 +129,8 @@ export const removeChild = (nodes: DesignerNode[], parentId: string, childId: st
 
   return nodes.map((node) => {
     if (node.id === parentId) {
-      return { ...node, childIds: node.childIds.filter((id) => id !== childId) };
+      const nextChildIds = node.childIds.filter((id) => id !== childId);
+      return { ...node, childIds: nextChildIds, children: nextChildIds };
     }
     if (node.id === childId && node.parentId === parentId) {
       return { ...node, parentId: null };
@@ -144,7 +145,7 @@ const collectDescendants = (nodesById: Map<string, DesignerNode>, rootId: string
     if (visited.has(id)) return;
     visited.add(id);
     const node = nodesById.get(id);
-    node?.childIds.forEach(dfs);
+    (node?.children ?? node?.childIds ?? []).forEach(dfs);
   };
   dfs(rootId);
   return visited;
@@ -194,4 +195,3 @@ export const deleteNode = (nodes: DesignerNode[], nodeId: string): DesignerNode[
   const toRemove = collectDescendants(nextNodesById, nodeId);
   return nextNodes.filter((node) => !toRemove.has(node.id));
 };
-

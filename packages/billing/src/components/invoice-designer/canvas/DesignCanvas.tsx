@@ -12,6 +12,7 @@ import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
 import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
+import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
 import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
@@ -410,16 +411,16 @@ const resolveTotalsRowPreviewModel = (
 ): TotalsRowPreviewModel => {
   if (!isTotalsRowType(node.type)) {
     return {
-      label: node.name,
+      label: getNodeName(node),
       bindingKey: 'binding',
       previewValue: '$0.00',
       isGrandTotal: false,
     };
   }
 
-  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const metadata = getNodeMetadata(node);
   const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
-  const label = asTrimmedString(metadata.label) || asTrimmedString(node.name) || fallbackLabel;
+  const label = asTrimmedString(metadata.label) || asTrimmedString(getNodeName(node)) || fallbackLabel;
   const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
   const format = normalizeFieldFormat(metadata.format ?? 'currency');
   const boundValue = formatBoundValue(
@@ -561,7 +562,7 @@ const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): R
 };
 
 const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null): PreviewContentResult => {
-  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const metadata = getNodeMetadata(node);
   switch (node.type) {
     case 'field': {
       const bindingKey =
@@ -608,8 +609,8 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       };
     }
     case 'text': {
-      const text = typeof metadata.text === 'string' ? metadata.text : node.name;
-      const content = text.length > 0 ? text.slice(0, 140) : node.name;
+      const text = typeof metadata.text === 'string' ? metadata.text : getNodeName(node);
+      const content = text.length > 0 ? text.slice(0, 140) : getNodeName(node);
       
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
@@ -720,7 +721,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
             : metadata.fit === 'contain' || metadata.fit === 'cover' || metadata.fit === 'fill'
               ? metadata.fit
               : 'contain';
-        const objectFit = node.style?.objectFit ?? fallbackFit;
+        const objectFit = getNodeStyle(node)?.objectFit ?? fallbackFit;
 
         if (!src) {
           const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
@@ -795,7 +796,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     isContainer && childExtents && Number.isFinite(childExtents.maxBottom)
       ? Math.max(node.size.height, childExtents.maxBottom - node.position.y)
       : node.size.height;
-  const resolvedBoxStyle = resolveNodeBoxStyle(node.style);
+  const resolvedBoxStyle = resolveNodeBoxStyle(getNodeStyle(node));
   const resolvedWidth = resolvedBoxStyle.width;
   const resolvedHeight = resolvedBoxStyle.height;
   const isFlowPositioning = parentUsesFlowLayout;
@@ -823,8 +824,8 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
-  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
-  const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
+  const metadata = getNodeMetadata(node);
+  const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
   const isFieldNode = node.type === 'field';
@@ -1009,7 +1010,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         <div className="relative w-full h-full">
           {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
           <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10 flex items-center gap-1.5">
-            <span>{node.name} · {node.type}</span>
+            <span>{getNodeName(node)} · {node.type}</span>
             {sectionCue && (
               <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
                 {sectionCue.label}
@@ -1018,7 +1019,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           </div>
           <div
             className="relative w-full h-full"
-            style={resolveContainerLayoutStyle(node.layout)}
+            style={resolveContainerLayoutStyle(getNodeLayout(node))}
           >
             {renderChildren(node.id)}
           </div>
@@ -1042,7 +1043,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         ) : (
           <>
             <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
-              <span className="truncate">{node.name}</span>
+              <span className="truncate">{getNodeName(node)}</span>
               <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
             </div>
 	            <div
@@ -1189,7 +1190,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     const map = new Map<string, DesignerNode[]>();
     // Prefer authored order (childIds) when the parent uses flow layout (flex/grid).
     nodes.forEach((parent) => {
-      const parentUsesFlowLayout = parent.layout?.display === 'flex' || parent.layout?.display === 'grid';
+      const parentLayout = getNodeLayout(parent);
+      const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
       if (!parentUsesFlowLayout) return;
       if (!parent.childIds.length) return;
 
@@ -1204,7 +1206,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     nodes.forEach((node) => {
       if (!node.parentId) return;
       const parent = nodesById.get(node.parentId);
-      const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
+      const parentLayout = parent ? getNodeLayout(parent) : undefined;
+      const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
       if (parentUsesFlowLayout) return;
       if (!map.has(node.parentId)) {
         map.set(node.parentId, []);
@@ -1213,7 +1216,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     });
     map.forEach((list, parentId) => {
       const parent = nodesById.get(parentId);
-      const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
+      const parentLayout = parent ? getNodeLayout(parent) : undefined;
+      const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
       if (parentUsesFlowLayout) return;
       list.sort((a, b) => (a.position.y - b.position.y) || (a.position.x - b.position.x));
     });
@@ -1247,7 +1251,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const renderNodeTree = useCallback((parentId: string) => {
     const children = childrenMap.get(parentId) ?? [];
     const parent = nodesById.get(parentId);
-    const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
+    const parentLayout = parent ? getNodeLayout(parent) : undefined;
+    const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
     const renderedChildren = children
       .filter((node) => node.type !== 'document' && node.type !== 'page')
       .map((node) => (
@@ -1274,7 +1279,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       ));
     if (!readOnly && parentUsesFlowLayout) {
       const items = children.filter((child) => child.type !== 'document' && child.type !== 'page').map((child) => child.id);
-      const strategy = resolveSortableStrategy(parent?.layout);
+      const strategy = resolveSortableStrategy(parentLayout);
       return (
         <SortableContext items={items} strategy={strategy}>
           {renderedChildren}
@@ -1388,7 +1393,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
               className="absolute inset-0"
               style={{
                 boxSizing: 'border-box',
-                ...(rootDropMeta ? resolveContainerLayoutStyle(rootDropMeta.layout) : {}),
+                ...(rootDropMeta ? resolveContainerLayoutStyle(getNodeLayout(rootDropMeta)) : {}),
               }}
             >
               {rootParentId && renderNodeTree(rootParentId)}

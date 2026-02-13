@@ -104,6 +104,9 @@ export interface DesignerNode {
   type: DesignerComponentType;
   name: string;
 
+  // Unified props container (cutover in progress). Canvas/render code should prefer this.
+  props: Record<string, unknown>;
+
   // Legacy geometry fields kept during cutover. Drag-drop cutover will stop persisting coordinates.
   position: Point;
   size: Size;
@@ -117,6 +120,9 @@ export interface DesignerNode {
   layoutPresetId?: string;
 
   parentId: string | null;
+
+  // Unified hierarchy (cutover in progress). This should become the only authoritative hierarchy.
+  children: string[];
   childIds: string[];
   allowedChildren: DesignerComponentType[];
 
@@ -334,6 +340,22 @@ const createDocumentNode = (): DesignerNode => ({
   id: DOCUMENT_NODE_ID,
   type: 'document',
   name: 'Document',
+  props: {
+    name: 'Document',
+    metadata: {},
+    layout: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0px',
+      padding: '0px',
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+    },
+    style: {
+      width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
+      height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
+    },
+  },
   position: { x: 0, y: 0 },
   size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
   baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
@@ -343,6 +365,7 @@ const createDocumentNode = (): DesignerNode => ({
   metadata: {},
   layoutPresetId: undefined,
   parentId: null,
+  children: [],
   childIds: [],
   allowedChildren: getAllowedChildrenForType('document'),
   layout: {
@@ -359,6 +382,22 @@ const createPageNode = (parentId: string, index = 1): DesignerNode => ({
   id: `${DEFAULT_PAGE_NODE_ID}-${index}-${generateId()}`,
   type: 'page',
   name: `Page ${index}`,
+  props: {
+    name: `Page ${index}`,
+    metadata: {},
+    layout: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '32px',
+      padding: '40px', // Page margins
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+    },
+    style: {
+      width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
+      height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
+    },
+  },
   position: { x: 0, y: 0 },
   size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
   baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
@@ -368,6 +407,7 @@ const createPageNode = (parentId: string, index = 1): DesignerNode => ({
   metadata: {},
   layoutPresetId: undefined,
   parentId,
+  children: [],
   childIds: [],
   allowedChildren: getAllowedChildrenForType('page'),
   layout: {
@@ -384,6 +424,7 @@ const createInitialNodes = (): DesignerNode[] => {
   const documentNode = createDocumentNode();
   const pageNode = createPageNode(documentNode.id);
   documentNode.childIds = [pageNode.id];
+  documentNode.children = [pageNode.id];
   return [documentNode, pageNode];
 };
 
@@ -399,13 +440,19 @@ const attachChildAtIndex = (nodes: DesignerNode[], parentId: string, childId: st
     } else {
       next.push(childId);
     }
-    return { ...node, childIds: next };
+    return { ...node, childIds: next, children: next };
   });
 
 const detachChild = (nodes: DesignerNode[], parentId: string | null, childId: string) =>
   parentId
     ? nodes.map((node) =>
-        node.id === parentId ? { ...node, childIds: node.childIds.filter((id) => id !== childId) } : node
+        node.id === parentId
+          ? {
+              ...node,
+              childIds: node.childIds.filter((id) => id !== childId),
+              children: node.children.filter((id) => id !== childId),
+            }
+          : node
       )
     : nodes;
 
@@ -415,7 +462,7 @@ const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> 
   const dfs = (id: string) => {
     toRemove.add(id);
     const node = map.get(id);
-    node?.childIds.forEach(dfs);
+    (node?.children ?? node?.childIds ?? []).forEach(dfs);
   };
   dfs(rootId);
   return toRemove;
@@ -424,9 +471,11 @@ const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> 
 const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
   nodes.map((node) => ({
     ...node,
+    props: node.props ? JSON.parse(JSON.stringify(node.props)) : {},
     position: { ...node.position },
     size: { ...node.size },
     baseSize: node.baseSize ? { ...node.baseSize } : undefined,
+    children: [...node.children],
     childIds: [...node.childIds],
     allowedChildren: [...node.allowedChildren],
     layout: node.layout ? { ...node.layout } : undefined,
@@ -567,6 +616,16 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         id: generateId(),
         type,
         name: schema?.defaults.name ?? `${schema?.label ?? type} ${get().nodes.length + 1}`,
+        props: {
+          name: schema?.defaults.name ?? `${schema?.label ?? type} ${get().nodes.length + 1}`,
+          metadata: mergedMetadata,
+          layout: options.defaults?.layout ?? schema?.defaults.layout,
+          style: {
+            ...baseStyle,
+            ...(schema?.defaults.style ?? {}),
+            ...(options.defaults?.style ?? {}),
+          },
+        },
         position,
         size,
         baseSize: size,
@@ -576,6 +635,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         ...options.defaults,
         metadata: mergedMetadata,
         parentId: null,
+        children: [],
         childIds: [],
         allowedChildren: getAllowedChildrenForType(type),
         layout: options.defaults?.layout ?? schema?.defaults.layout,
@@ -648,27 +708,38 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             ? mapLegacyPresetLayoutToCss(definition.layout)
             : definition.layout;
 
+          const style: DesignerNodeStyle = {
+            width: `${Math.round(size.width)}px`,
+            height: `${Math.round(size.height)}px`,
+            ...definition.style,
+          };
+          const metadata = definition.metadata ?? {};
+          const name = definition.name ?? definition.type;
+
           createdNodes.push({
             id,
             type: definition.type,
-            name: definition.name ?? definition.type,
+            name,
+            props: {
+              name,
+              metadata,
+              layout: mappedLayout,
+              style,
+            },
             position,
             size,
             baseSize: size,
             rotation: 0,
             canRotate: true,
             allowResize: true,
-            metadata: definition.metadata ?? {},
+            metadata,
             layoutPresetId: presetId,
             parentId: nodeParentId,
+            children: [],
             childIds: [],
             allowedChildren: getAllowedChildrenForType(definition.type),
             layout: mappedLayout,
-            style: {
-              width: `${Math.round(size.width)}px`,
-              height: `${Math.round(size.height)}px`,
-              ...definition.style,
-            },
+            style,
           });
         });
 
@@ -683,10 +754,15 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
             const target = createdNodes.find((node) => node.id === nodeId);
             if (!target) return;
-            target.style = {
+            const nextStyle: DesignerNodeStyle = {
               ...target.style,
               aspectRatio: `${ratio} / 1`,
               objectFit: target.style?.objectFit ?? 'contain',
+            };
+            target.style = nextStyle;
+            target.props = {
+              ...target.props,
+              style: nextStyle,
             };
           });
         }
@@ -730,7 +806,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             x: clamp(desired.x, 0, DESIGNER_CANVAS_BOUNDS.width - 10),
             y: clamp(desired.y, 0, DESIGNER_CANVAS_BOUNDS.height - 10),
           };
-          return { ...node, position: clamped };
+          return { ...node, position: clamped, props: { ...node.props, position: clamped } };
         });
 
         if (!commit) {
@@ -841,7 +917,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     setNodePosition: (id, position, commit = false) => {
       setWithIndex((state) => {
-        const nodes = state.nodes.map((node) => (node.id === id ? { ...node, position: { ...position } } : node));
+        const nodes = state.nodes.map((node) =>
+          node.id === id
+            ? { ...node, position: { ...position }, props: { ...node.props, position: { ...position } } }
+            : node
+        );
         if (!commit) {
           return { nodes };
         }
@@ -859,14 +939,21 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             width: Math.round(clampedSize.width),
             height: Math.round(clampedSize.height),
           };
+          const nextStyle: DesignerNodeStyle = {
+            ...node.style,
+            width: `${roundedSize.width}px`,
+            height: `${roundedSize.height}px`,
+          };
           return {
             ...node,
             size: roundedSize,
             baseSize: roundedSize,
-            style: {
-              ...node.style,
-              width: `${roundedSize.width}px`,
-              height: `${roundedSize.height}px`,
+            style: nextStyle,
+            props: {
+              ...node.props,
+              size: roundedSize,
+              baseSize: roundedSize,
+              style: nextStyle,
             },
           };
         });
@@ -885,16 +972,22 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         nodes: state.nodes.map((node) => {
           if (node.id !== id) return node;
           if (node.type !== 'label') {
-            return { ...node, name };
+            return { ...node, name, props: { ...node.props, name } };
           }
           // Labels treat their displayed text as authoritative and keep metadata.text in sync.
           const nextText = typeof name === 'string' ? name : '';
+          const nextMetadata = {
+            ...(node.metadata ?? {}),
+            text: nextText,
+          };
           return {
             ...node,
             name: nextText,
-            metadata: {
-              ...(node.metadata ?? {}),
-              text: nextText,
+            metadata: nextMetadata,
+            props: {
+              ...node.props,
+              name: nextText,
+              metadata: nextMetadata,
             },
           };
         }),
@@ -907,29 +1000,33 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           if (node.id !== id) return node;
           const nextMetadata = metadata;
           if (node.type !== 'label') {
-            return { ...node, metadata: nextMetadata };
+            return { ...node, metadata: nextMetadata, props: { ...node.props, metadata: nextMetadata } };
           }
 
           const candidateText = typeof nextMetadata?.text === 'string' ? nextMetadata.text.trim() : '';
           const candidateLabel = typeof nextMetadata?.label === 'string' ? nextMetadata.label.trim() : '';
 
           if (candidateText) {
+            const resolvedMetadata = { ...nextMetadata, text: candidateText };
             return {
               ...node,
               name: candidateText,
-              metadata: { ...nextMetadata, text: candidateText },
+              metadata: resolvedMetadata,
+              props: { ...node.props, name: candidateText, metadata: resolvedMetadata },
             };
           }
 
           if (candidateLabel) {
+            const resolvedMetadata = { ...nextMetadata, text: candidateLabel, label: candidateLabel };
             return {
               ...node,
               name: candidateLabel,
-              metadata: { ...nextMetadata, text: candidateLabel, label: candidateLabel },
+              metadata: resolvedMetadata,
+              props: { ...node.props, name: candidateLabel, metadata: resolvedMetadata },
             };
           }
 
-          return { ...node, metadata: nextMetadata };
+          return { ...node, metadata: nextMetadata, props: { ...node.props, metadata: nextMetadata } };
         }),
       }));
     },
@@ -944,6 +1041,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
                   ...(node.layout ?? { display: 'flex' }),
                   ...layout,
                 },
+                props: {
+                  ...node.props,
+                  layout: {
+                    ...(node.layout ?? { display: 'flex' }),
+                    ...layout,
+                  },
+                },
               }
             : node
         ),
@@ -952,14 +1056,20 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     updateNodeStyle: (id, style) => {
       setWithIndex((state) => ({
-        nodes: state.nodes.map((node) => (node.id === id ? { ...node, style: { ...node.style, ...style } } : node)),
+        nodes: state.nodes.map((node) => {
+          if (node.id !== id) return node;
+          const nextStyle = { ...node.style, ...style };
+          return { ...node, style: nextStyle, props: { ...node.props, style: nextStyle } };
+        }),
       }));
     },
 
     clearLayoutPreset: (nodeId) => {
       setWithIndex((state) => ({
         nodes: state.nodes.map((node) =>
-          node.id === nodeId ? { ...node, layoutPresetId: undefined } : node
+          node.id === nodeId
+            ? { ...node, layoutPresetId: undefined, props: { ...node.props, layoutPresetId: undefined } }
+            : node
         ),
       }));
     },

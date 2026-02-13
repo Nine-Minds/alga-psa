@@ -94,3 +94,7 @@ This plan intentionally continues the simplification arc:
   - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` breadcrumbs now derive parent links from `childIds` instead of relying on persisted `parentId`.
 - 2026-02-13: Selection/hover state now validates ids against `nodesById`:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `selectNode`/`setHoverNode` clear invalid ids and `deleteNode` clears selection/hover if the referenced node is removed as part of a subtree delete.
+- 2026-02-13: Canvas rendering now resolves from unified node props:
+  - Added `packages/billing/src/components/invoice-designer/utils/nodeProps.ts` as the canonical accessor for `props.name`, `props.layout`, `props.style`, `props.metadata` (with temporary legacy fallbacks during cutover).
+  - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx` and `packages/billing/src/components/invoice-designer/canvas/previewScaffolds.ts` now render using `props.*` accessors.
+  - Store mutations keep `props` in sync with legacy fields for now (`packages/billing/src/components/invoice-designer/state/designerStore.ts`).

@@ -7,6 +7,12 @@ const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? 'node-' + Math.random().toString(36).slice(2, 7),
   type: overrides.type ?? 'field',
   name: overrides.name ?? 'Node',
+  props: overrides.props ?? {
+    name: overrides.name ?? 'Node',
+    metadata: overrides.metadata ?? {},
+    layout: overrides.layout,
+    style: overrides.style ?? { width: '200px', height: '48px' },
+  },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 200, height: 48 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 200, height: 48 },
@@ -16,9 +22,11 @@ const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
   parentId: overrides.parentId ?? null,
+  children: overrides.children ?? overrides.childIds ?? [],
   childIds: overrides.childIds ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
   layout: overrides.layout,
+  style: overrides.style,
 });
 
 describe('previewScaffolds', () => {
