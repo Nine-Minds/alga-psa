@@ -34,7 +34,7 @@ describe('DesignerShell selected context header', () => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
-  it('renders the selected node name via canonical props helpers (prefers props.name over legacy name)', () => {
+  it('renders the selected node name via canonical props helpers', () => {
     act(() => {
       useInvoiceDesignerStore.setState(
         {
@@ -43,65 +43,34 @@ describe('DesignerShell selected context header', () => {
             {
               id: 'doc-1',
               type: 'document',
-              name: 'Document',
               props: { name: 'Document' },
               position: { x: 0, y: 0 },
               size: { width: 816, height: 1056 },
-              baseSize: { width: 816, height: 1056 },
-              rotation: 0,
-              canRotate: false,
-              allowResize: false,
-              metadata: {},
-              layoutPresetId: undefined,
               parentId: null,
               children: ['page-1'],
-              childIds: ['page-1'],
               allowedChildren: ['page'],
-              layout: undefined,
-              style: undefined,
             },
             {
               id: 'page-1',
               type: 'page',
-              name: 'Page',
               props: { name: 'Page' },
               position: { x: 0, y: 0 },
               size: { width: 816, height: 1056 },
-              baseSize: { width: 816, height: 1056 },
-              rotation: 0,
-              canRotate: false,
-              allowResize: false,
-              metadata: {},
-              layoutPresetId: undefined,
               parentId: 'doc-1',
               children: ['text-1'],
-              childIds: ['text-1'],
               allowedChildren: ['text'],
-              layout: undefined,
-              style: undefined,
             },
             {
               id: 'text-1',
               type: 'text',
-              // Deliberately inconsistent legacy vs canonical fields.
-              name: 'Legacy Name',
               props: { name: 'Canonical Name' },
               position: { x: 20, y: 20 },
               size: { width: 120, height: 32 },
-              baseSize: { width: 120, height: 32 },
-              rotation: 0,
-              canRotate: true,
-              allowResize: true,
-              metadata: {},
-              layoutPresetId: undefined,
               parentId: 'page-1',
               children: [],
-              childIds: [],
               allowedChildren: [],
-              layout: undefined,
-              style: undefined,
             },
-          ] as any,
+          ],
         } as any,
         false
       );
@@ -112,7 +81,5 @@ describe('DesignerShell selected context header', () => {
     const selected = document.querySelector('[data-automation-id="designer-selected-context"]');
     expect(selected?.textContent).toContain('Canonical Name');
     expect(selected?.textContent).toContain('(text)');
-    expect(selected?.textContent).not.toContain('Legacy Name');
   });
 });
-

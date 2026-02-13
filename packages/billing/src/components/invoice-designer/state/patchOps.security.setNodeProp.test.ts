@@ -10,7 +10,6 @@ describe('patchOps security (setNodeProp)', () => {
     const node: DesignerNode = {
       id: 'a',
       type: 'text',
-      name: 'Node A',
       props: { name: 'Node A' },
       position: { x: 0, y: 0 },
       size: { width: 100, height: 40 },
@@ -18,10 +17,8 @@ describe('patchOps security (setNodeProp)', () => {
       rotation: 0,
       canRotate: false,
       allowResize: true,
-      metadata: {},
       parentId: null,
       children: [],
-      childIds: [],
       allowedChildren: [],
     };
 
@@ -33,4 +30,3 @@ describe('patchOps security (setNodeProp)', () => {
     expect(({} as any).polluted).toBeUndefined();
   });
 });
-

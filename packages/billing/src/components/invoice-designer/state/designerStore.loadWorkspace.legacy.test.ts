@@ -71,8 +71,7 @@ describe('designerStore.loadWorkspace (legacy nodes[] import)', () => {
     expect(getNodeLayout(importedDoc)).toMatchObject({ display: 'flex' });
     expect(getNodeStyle(importedDoc)).toMatchObject({ width: '816px' });
 
-    // Children should materialize deterministically from either `children` or `childIds`.
+    // Children should materialize deterministically from either `children` or legacy `childIds`.
     expect(importedDoc.children).toEqual(['page-1']);
-    expect(importedDoc.childIds).toEqual(['page-1']);
   });
 });

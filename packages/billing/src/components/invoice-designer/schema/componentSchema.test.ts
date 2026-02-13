@@ -7,6 +7,7 @@ import {
   getAllowedParentsForType,
   getComponentSchema,
 } from './componentSchema';
+import type { DesignerComponentType } from '../state/designerStore';
 
 describe('componentSchema', () => {
   it('declares defaults, inspector schema, and hierarchy rules for each component type', () => {
@@ -38,7 +39,9 @@ describe('componentSchema', () => {
   });
 
   it('defines reciprocal allowedParents/allowedChildren (nesting checks resolve via schema only)', () => {
-    for (const [parentType, parentSchema] of Object.entries(DESIGNER_COMPONENT_SCHEMAS)) {
+    for (const [parentType, parentSchema] of Object.entries(DESIGNER_COMPONENT_SCHEMAS) as Array<
+      [DesignerComponentType, (typeof DESIGNER_COMPONENT_SCHEMAS)[DesignerComponentType]]
+    >) {
       for (const childType of parentSchema.hierarchy.allowedChildren) {
         const childSchema = getComponentSchema(childType);
         expect(childSchema.hierarchy.allowedParents).toContain(parentType);
@@ -46,7 +49,9 @@ describe('componentSchema', () => {
       }
     }
 
-    for (const [childType, childSchema] of Object.entries(DESIGNER_COMPONENT_SCHEMAS)) {
+    for (const [childType, childSchema] of Object.entries(DESIGNER_COMPONENT_SCHEMAS) as Array<
+      [DesignerComponentType, (typeof DESIGNER_COMPONENT_SCHEMAS)[DesignerComponentType]]
+    >) {
       for (const parentType of childSchema.hierarchy.allowedParents) {
         const parentSchema = getComponentSchema(parentType);
         expect(parentSchema.hierarchy.allowedChildren).toContain(childType);
@@ -55,4 +60,3 @@ describe('componentSchema', () => {
     }
   });
 });
-

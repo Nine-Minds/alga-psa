@@ -18,7 +18,6 @@ describe('DesignCanvas (unified props integration)', () => {
       {
         id: 'doc-1',
         type: 'document',
-        name: 'Document',
         props: {
           name: 'Document',
           metadata: {},
@@ -28,14 +27,12 @@ describe('DesignCanvas (unified props integration)', () => {
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: null,
-        childIds: ['page-1'],
         children: ['page-1'],
         allowedChildren: ['page'],
       },
       {
         id: 'page-1',
         type: 'page',
-        name: 'Page 1',
         props: {
           name: 'Page 1',
           metadata: {},
@@ -45,14 +42,12 @@ describe('DesignCanvas (unified props integration)', () => {
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: 'doc-1',
-        childIds: ['section-1'],
         children: ['section-1'],
         allowedChildren: ['section'],
       },
       {
         id: 'section-1',
         type: 'section',
-        name: 'Section',
         props: {
           name: 'Section',
           metadata: {},
@@ -69,14 +64,12 @@ describe('DesignCanvas (unified props integration)', () => {
         position: { x: 24, y: 24 },
         size: { width: 400, height: 240 },
         parentId: 'page-1',
-        childIds: ['text-1'],
         children: ['text-1'],
         allowedChildren: ['text'],
       },
       {
         id: 'text-1',
         type: 'text',
-        name: 'Text 1',
         props: {
           name: 'Text 1',
           metadata: { text: 'Hello' },
@@ -92,7 +85,6 @@ describe('DesignCanvas (unified props integration)', () => {
         position: { x: 0, y: 0 },
         size: { width: 100, height: 32 },
         parentId: 'section-1',
-        childIds: [],
         children: [],
         allowedChildren: [],
       },
@@ -146,4 +138,3 @@ describe('DesignCanvas (unified props integration)', () => {
     expect(flexSurface.style.padding).toBe('6px');
   });
 });
-

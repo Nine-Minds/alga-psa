@@ -6,27 +6,23 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 export const getNodeName = (node: DesignerNode): string => {
   const props = isPlainObject(node.props) ? node.props : {};
   if (typeof props.name === 'string') return props.name;
-  // Back-compat during cutover: allow legacy nodes without props.
-  return typeof node.name === 'string' ? node.name : '';
+  return '';
 };
 
 export const getNodeMetadata = (node: DesignerNode): Record<string, unknown> => {
   const props = isPlainObject(node.props) ? node.props : {};
   if (isPlainObject(props.metadata)) return props.metadata as Record<string, unknown>;
-  // Back-compat during cutover: allow legacy nodes without props.
-  return isPlainObject(node.metadata) ? (node.metadata as Record<string, unknown>) : {};
+  return {};
 };
 
 export const getNodeLayout = (node: DesignerNode): DesignerContainerLayout | undefined => {
   const props = isPlainObject(node.props) ? node.props : {};
-  if (isPlainObject(props.layout)) return props.layout as DesignerContainerLayout;
-  // Back-compat during cutover: allow legacy nodes without props.
-  return node.layout;
+  if (isPlainObject(props.layout)) return props.layout as unknown as DesignerContainerLayout;
+  return undefined;
 };
 
 export const getNodeStyle = (node: DesignerNode): DesignerNodeStyle | undefined => {
   const props = isPlainObject(node.props) ? node.props : {};
-  if (isPlainObject(props.style)) return props.style as DesignerNodeStyle;
-  // Back-compat during cutover: allow legacy nodes without props.
-  return node.style;
+  if (isPlainObject(props.style)) return props.style as unknown as DesignerNodeStyle;
+  return undefined;
 };

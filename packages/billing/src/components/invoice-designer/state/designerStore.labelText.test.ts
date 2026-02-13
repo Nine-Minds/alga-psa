@@ -2,31 +2,21 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { DesignerNode } from './designerStore';
 import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './designerStore';
+import { getNodeMetadata, getNodeName } from '../utils/nodeProps';
 
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
   type: overrides.type ?? 'text',
-  name: overrides.name ?? 'Node',
+  props: overrides.props ?? ({ name: 'Node', metadata: {} } as any),
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 120, height: 48 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 120, height: 48 },
   canRotate: overrides.canRotate ?? false,
   allowResize: overrides.allowResize ?? true,
   rotation: overrides.rotation ?? 0,
-  metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
-  layout:
-    overrides.layout ?? {
-      mode: 'canvas',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'start',
-      sizing: 'fixed',
-    },
   parentId: overrides.parentId ?? null,
-  childIds: overrides.childIds ?? [],
+  children: overrides.children ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
 });
 
@@ -34,108 +24,83 @@ const seedLabelWorkspace = () => {
   const document = createNode({
     id: 'doc',
     type: 'document',
-    name: 'Document',
+    props: {
+      name: 'Document',
+      metadata: {},
+      layout: { display: 'flex', flexDirection: 'column', gap: '0px', padding: '0px' },
+      style: { width: '816px', height: '1056px' },
+    },
     size: { width: 816, height: 1056 },
     baseSize: { width: 816, height: 1056 },
     parentId: null,
-    childIds: ['page'],
+    children: ['page'],
     allowedChildren: ['page'],
     allowResize: false,
     canRotate: false,
-    layout: {
-      mode: 'flex',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'stretch',
-      sizing: 'fixed',
-    },
   });
   const page = createNode({
     id: 'page',
     type: 'page',
-    name: 'Page 1',
+    props: {
+      name: 'Page 1',
+      metadata: {},
+      layout: { display: 'flex', flexDirection: 'column', gap: '32px', padding: '40px' },
+      style: { width: '816px', height: '1056px' },
+    },
     parentId: 'doc',
     position: { x: 0, y: 0 },
     size: { width: 816, height: 1056 },
     baseSize: { width: 816, height: 1056 },
-    childIds: ['section'],
+    children: ['section'],
     allowedChildren: ['section'],
     allowResize: false,
     canRotate: false,
-    layout: {
-      mode: 'flex',
-      direction: 'column',
-      gap: 32,
-      padding: 40,
-      justify: 'start',
-      align: 'stretch',
-      sizing: 'hug',
-    },
   });
   const section = createNode({
     id: 'section',
     type: 'section',
-    name: 'Header',
+    props: {
+      name: 'Header',
+      metadata: {},
+      layout: { display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' },
+      style: { width: '736px', height: '220px' },
+    },
     parentId: 'page',
     position: { x: 40, y: 40 },
     size: { width: 736, height: 220 },
     baseSize: { width: 736, height: 220 },
-    childIds: ['container'],
+    children: ['container'],
     allowedChildren: ['container', 'label', 'field', 'text'],
-    layout: {
-      mode: 'flex',
-      direction: 'column',
-      gap: 12,
-      padding: 16,
-      justify: 'start',
-      align: 'stretch',
-      sizing: 'fixed',
-    },
   });
   const container = createNode({
     id: 'container',
     type: 'container',
-    name: 'Container',
+    props: {
+      name: 'Container',
+      metadata: {},
+      layout: { display: 'grid', gap: '0px', padding: '0px' },
+      style: { width: '400px', height: '120px' },
+    },
     parentId: 'section',
     position: { x: 16, y: 16 },
     size: { width: 400, height: 120 },
     baseSize: { width: 400, height: 120 },
-    childIds: ['label'],
+    children: ['label'],
     allowedChildren: ['label', 'field', 'text'],
-    layout: {
-      mode: 'canvas',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'start',
-      sizing: 'fixed',
-    },
   });
   const label = createNode({
     id: 'label',
     type: 'label',
-    name: 'label 12',
+    props: { name: 'label 12', metadata: { text: 'Label' } },
     parentId: 'container',
     position: { x: 24, y: 24 },
     size: { width: 160, height: 40 },
     baseSize: { width: 160, height: 40 },
-    childIds: [],
+    children: [],
     allowedChildren: [],
-    metadata: { text: 'Label' },
   });
 
-  useInvoiceDesignerStore.getState().loadWorkspace({
-    nodes: [document, page, section, container, label],
-    constraints: [],
-    snapToGrid: true,
-    gridSize: 8,
-    showGuides: true,
-    showRulers: true,
-    canvasScale: 1,
-  });
+  useInvoiceDesignerStore.getState().loadNodes([document, page, section, container, label]);
 };
 
 describe('designerStore label text authority', () => {
@@ -144,18 +109,24 @@ describe('designerStore label text authority', () => {
     seedLabelWorkspace();
   });
 
-  it('syncs label node name from metadata.text updates', () => {
+  it('syncs label props.name from metadata.text updates', () => {
     useInvoiceDesignerStore.getState().setNodeProp('label', 'metadata.text', 'INVOICE', true);
-    const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
-    expect(label?.name).toBe('INVOICE');
-    expect(label?.metadata?.text).toBe('INVOICE');
+    const label = useInvoiceDesignerStore.getState().nodesById['label'];
+    expect(label).toBeTruthy();
+    if (!label) return;
+
+    expect(getNodeName(label)).toBe('INVOICE');
+    expect((getNodeMetadata(label) as any).text).toBe('INVOICE');
   });
 
   it('syncs label metadata.text from name updates', () => {
     useInvoiceDesignerStore.getState().setNodeProp('label', 'name', 'DUE DATE', true);
-    const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
-    expect(label?.name).toBe('DUE DATE');
-    expect(label?.metadata?.text).toBe('DUE DATE');
+    const label = useInvoiceDesignerStore.getState().nodesById['label'];
+    expect(label).toBeTruthy();
+    if (!label) return;
+
+    expect(getNodeName(label)).toBe('DUE DATE');
+    expect((getNodeMetadata(label) as any).text).toBe('DUE DATE');
   });
 
   it('preserves synced label text after position/size commits', () => {
@@ -176,19 +147,20 @@ describe('designerStore label text authority', () => {
     store.setNodeProp('label', 'style.width', `${rounded.width}px`, false);
     store.setNodeProp('label', 'style.height', `${rounded.height}px`, true);
 
-    const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
-    expect(label?.name).toBe('INVOICE');
-    expect(label?.metadata?.text).toBe('INVOICE');
+    const label = store.nodesById['label'];
+    expect(getNodeName(label)).toBe('INVOICE');
+    expect((getNodeMetadata(label) as any).text).toBe('INVOICE');
   });
 
-  it('syncs label node name and metadata.text from metadata.label for legacy nodes', () => {
+  it('syncs label props.name and metadata.text from metadata.label for legacy nodes', () => {
     const store = useInvoiceDesignerStore.getState();
     store.setNodeProp('label', 'metadata.text', '', false);
     store.setNodeProp('label', 'metadata.label', 'Billing Contact', true);
 
-    const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
-    expect(label?.name).toBe('Billing Contact');
-    expect(label?.metadata?.text).toBe('Billing Contact');
-    expect(label?.metadata?.label).toBe('Billing Contact');
+    const label = store.nodesById['label'];
+    expect(getNodeName(label)).toBe('Billing Contact');
+    expect((getNodeMetadata(label) as any).text).toBe('Billing Contact');
+    expect((getNodeMetadata(label) as any).label).toBe('Billing Contact');
   });
 });
+

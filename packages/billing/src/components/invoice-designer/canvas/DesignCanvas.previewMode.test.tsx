@@ -7,21 +7,45 @@ import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DesignerNode } from '../state/designerStore';
 import { DesignCanvas } from './DesignCanvas';
 
-const baseNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
-  id: 'node-id',
-  type: 'field',
-  name: 'Field',
-  position: { x: 20, y: 20 },
-  size: { width: 200, height: 48 },
-  canRotate: false,
-  allowResize: true,
-  rotation: 0,
-  metadata: {},
-  parentId: 'page-1',
-  childIds: [],
-  allowedChildren: [],
-  ...overrides,
-});
+const baseNode = (
+  overrides: Partial<DesignerNode> & {
+    // Convenience inputs for test fixtures; these are written into props.
+    name?: string;
+    metadata?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
+    style?: Record<string, unknown>;
+    childIds?: string[];
+  }
+): DesignerNode => {
+  const rawProps = overrides.props ?? {};
+  const name = overrides.name ?? (rawProps as any).name ?? 'Field';
+  const metadata = overrides.metadata ?? (rawProps as any).metadata;
+  const layout = overrides.layout ?? (rawProps as any).layout;
+  const style = overrides.style ?? (rawProps as any).style;
+  const children = overrides.children ?? overrides.childIds ?? [];
+
+  return {
+    id: overrides.id ?? 'node-id',
+    type: overrides.type ?? 'field',
+    props: {
+      ...rawProps,
+      name,
+      ...(metadata ? { metadata } : {}),
+      ...(layout ? { layout } : {}),
+      ...(style ? { style } : {}),
+    },
+    position: overrides.position ?? { x: 20, y: 20 },
+    size: overrides.size ?? { width: 200, height: 48 },
+    baseSize: overrides.baseSize,
+    canRotate: overrides.canRotate ?? false,
+    allowResize: overrides.allowResize ?? true,
+    rotation: overrides.rotation ?? 0,
+    layoutPresetId: overrides.layoutPresetId,
+    parentId: overrides.parentId ?? 'page-1',
+    children,
+    allowedChildren: overrides.allowedChildren ?? [],
+  };
+};
 
 const buildCanvasNodes = (children: DesignerNode[]): DesignerNode[] => [
   baseNode({

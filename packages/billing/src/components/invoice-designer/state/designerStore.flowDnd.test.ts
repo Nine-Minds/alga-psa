@@ -3,13 +3,44 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useInvoiceDesignerStore } from './designerStore';
 import type { DesignerNode } from './designerStore';
 
+type LegacyNodeInput = {
+  id: string;
+  type: DesignerNode['type'];
+  name: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  parentId: string | null;
+  childIds: string[];
+  allowedChildren: DesignerNode['allowedChildren'];
+  metadata?: Record<string, unknown>;
+  layout?: Record<string, unknown>;
+  style?: Record<string, unknown>;
+};
+
+const materializeNodes = (nodes: LegacyNodeInput[]): DesignerNode[] =>
+  nodes.map((node) => ({
+    id: node.id,
+    type: node.type,
+    props: {
+      name: node.name,
+      ...(node.metadata ? { metadata: node.metadata } : {}),
+      ...(node.layout ? { layout: node.layout } : {}),
+      ...(node.style ? { style: node.style } : {}),
+    },
+    position: node.position,
+    size: node.size,
+    parentId: node.parentId,
+    children: node.childIds,
+    allowedChildren: node.allowedChildren,
+  }));
+
 describe('designerStore (flow drag-drop state updates)', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
   it('reorders within the same container deterministically (parent.children)', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -71,7 +102,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         childIds: [],
         allowedChildren: [],
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -90,7 +121,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
   });
 
   it('moves a node across containers and inserts at the requested index', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -163,7 +194,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         childIds: [],
         allowedChildren: [],
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -188,7 +219,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
   });
 
   it('allows nesting into eligible containers and rejects ineligible nesting', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -251,7 +282,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         childIds: [],
         allowedChildren: [],
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -281,7 +312,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
   });
 
   it('prevents cycles when nesting containers (cannot drop into a descendant)', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -335,7 +366,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         allowedChildren: ['container'],
         layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' },
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -358,7 +389,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
   });
 
   it('does not mutate state for invalid drops (ineligible parent)', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -411,7 +442,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         childIds: [],
         allowedChildren: [],
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -435,7 +466,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
   });
 
   it('adjusts insertion index correctly when reordering within the same parent (before/after midpoint semantics)', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -497,7 +528,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         childIds: [],
         allowedChildren: [],
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -516,7 +547,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
   });
 
   it('does not write coordinate-based layout during drag-drop moves (positions remain unchanged)', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -569,7 +600,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
         childIds: [],
         allowedChildren: [],
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({

@@ -1,4 +1,4 @@
-import { DesignerComponentType, Point, Size, DesignerNode } from '../state/designerStore';
+import type { DesignerComponentType, DesignerContainerLayout, DesignerNodeStyle, Point, Size } from '../state/designerStore';
 
 // Legacy preset layouts still use the pre-CSS cutover shape. We accept both so presets
 // can be migrated incrementally while the live designer uses CSS-like layout state.
@@ -27,8 +27,8 @@ export interface LayoutPresetNodeDefinition {
   size?: Size;
   name?: string;
   parentKey?: string;
-  layout?: DesignerNode['layout'] | LegacyLayoutPresetLayout;
-  style?: DesignerNode['style'];
+  layout?: Partial<DesignerContainerLayout> | LegacyLayoutPresetLayout;
+  style?: Partial<DesignerNodeStyle>;
   metadata?: Record<string, unknown>;
 }
 

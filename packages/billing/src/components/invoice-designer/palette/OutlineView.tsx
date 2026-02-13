@@ -46,7 +46,7 @@ export const OutlineView: React.FC = () => {
       const toExpand = new Set<string>();
       let currentId: string | null = selectedNodeId;
       while (currentId) {
-        const parentId = parentById.get(currentId) ?? null;
+        const parentId: string | null = parentById.get(currentId) ?? null;
         if (!parentId) break;
         toExpand.add(parentId);
         currentId = parentId;

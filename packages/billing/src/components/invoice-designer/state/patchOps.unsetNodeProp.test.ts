@@ -6,22 +6,17 @@ import { unsetNodeProp } from './patchOps';
 const createNode = (overrides: Partial<DesignerNode> & { id: string; type: DesignerComponentType }): DesignerNode => ({
   id: overrides.id,
   type: overrides.type,
-  name: overrides.name ?? overrides.id,
-  props: overrides.props ?? { name: overrides.name ?? overrides.id },
+  props: overrides.props ?? { name: overrides.id },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 100, height: 40 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 100, height: 40 },
   rotation: overrides.rotation ?? 0,
   canRotate: overrides.canRotate ?? false,
   allowResize: overrides.allowResize ?? true,
-  metadata: overrides.metadata,
   layoutPresetId: overrides.layoutPresetId,
   parentId: overrides.parentId ?? null,
   children: overrides.children ?? [],
-  childIds: overrides.childIds ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
-  layout: overrides.layout,
-  style: overrides.style,
 });
 
 describe('patchOps.unsetNodeProp', () => {

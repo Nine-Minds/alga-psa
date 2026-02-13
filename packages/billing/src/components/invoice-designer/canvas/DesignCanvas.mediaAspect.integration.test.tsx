@@ -18,45 +18,46 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
       {
         id: 'doc-1',
         type: 'document',
-        name: 'Document',
+        props: { name: 'Document' },
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: null,
-        childIds: ['page-1'],
+        children: ['page-1'],
         allowedChildren: ['page'],
       },
       {
         id: 'page-1',
         type: 'page',
-        name: 'Page 1',
+        props: { name: 'Page 1' },
         position: { x: 0, y: 0 },
         size: { width: 816, height: 1056 },
         parentId: 'doc-1',
-        childIds: ['section-1'],
+        children: ['section-1'],
         allowedChildren: ['section'],
       },
       {
         id: 'section-1',
         type: 'section',
-        name: 'Section',
+        props: { name: 'Section', layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' } },
         position: { x: 24, y: 24 },
         size: { width: 400, height: 240 },
         parentId: 'page-1',
-        childIds: ['image-1'],
+        children: ['image-1'],
         allowedChildren: ['image'],
-        layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' },
       },
       {
         id: 'image-1',
         type: 'image',
-        name: 'Image',
+        props: {
+          name: 'Image',
+          metadata: { src: 'https://example.com/test.png', alt: 'Test' },
+          style: { aspectRatio: '16 / 9', objectFit: 'cover' },
+        },
         position: { x: 0, y: 0 },
         size: { width: 320, height: 180 },
         parentId: 'section-1',
-        childIds: [],
+        children: [],
         allowedChildren: [],
-        metadata: { src: 'https://example.com/test.png', alt: 'Test' },
-        style: { aspectRatio: '16 / 9', objectFit: 'cover' },
       },
     ];
 
@@ -94,4 +95,3 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
     expect(img.style.objectFit).toBe('cover');
   });
 });
-

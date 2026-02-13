@@ -30,8 +30,6 @@ describe('designerStore legacy path normalization', () => {
     if (!node) return;
 
     expect((node.props as any).metadata.bindingKey).toBe('invoice.invoiceNumber');
-    expect((node.metadata as any).bindingKey).toBe('invoice.invoiceNumber');
-    expect(node.metadata).toBe((node.props as any).metadata);
   });
 
   it('supports canonical props.metadata.* paths and updates props immutably', () => {
@@ -92,7 +90,6 @@ describe('designerStore legacy path normalization', () => {
     if (!node) return;
 
     expect((node.props as any).name).toBe('Renamed');
-    expect(node.name).toBe('Renamed');
   });
 
   it('unsetNodeProp removes canonical props keys without leaving undefined sentinels', () => {

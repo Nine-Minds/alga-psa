@@ -30,6 +30,18 @@ const getIn = (value: unknown, path: string[]): unknown => {
 
 const splitDotPath = (path: string): string[] => path.split('.').map((segment) => segment.trim()).filter(Boolean);
 
+// Inspector schemas currently use legacy root-level paths like `metadata.foo` and `layout.display`.
+// The canonical node shape stores authored values under `props.*`.
+const normalizeInspectorPath = (input: string): string => {
+  const path = input.trim();
+  if (path.startsWith('props.')) return path;
+  if (path === 'name') return 'props.name';
+  if (path === 'metadata' || path.startsWith('metadata.')) return `props.${path}`;
+  if (path === 'layout' || path.startsWith('layout.')) return `props.${path}`;
+  if (path === 'style' || path.startsWith('style.')) return `props.${path}`;
+  return path;
+};
+
 type Props = {
   node: DesignerNode;
   nodesById: Map<string, DesignerNode>;
@@ -47,7 +59,12 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
   );
 
   const resolveValue = useCallback(
-    (field: DesignerInspectorField): unknown => getIn(node, splitDotPath(field.path)),
+    (field: DesignerInspectorField): unknown => {
+      if (!('path' in field)) {
+        return undefined;
+      }
+      return getIn(node, splitDotPath(normalizeInspectorPath(field.path)));
+    },
     [node]
   );
 
@@ -58,12 +75,12 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
         return Array.isArray(node.allowedChildren) && node.allowedChildren.length > 0;
       }
       if (rule.kind === 'pathEquals') {
-        const value = getIn(node, splitDotPath(rule.path));
+        const value = getIn(node, splitDotPath(normalizeInspectorPath(rule.path)));
         return value === rule.value;
       }
       if (rule.kind === 'parentPathEquals') {
         if (!parent) return false;
-        const value = getIn(parent, splitDotPath(rule.path));
+        const value = getIn(parent, splitDotPath(normalizeInspectorPath(rule.path)));
         return value === rule.value;
       }
       return true;

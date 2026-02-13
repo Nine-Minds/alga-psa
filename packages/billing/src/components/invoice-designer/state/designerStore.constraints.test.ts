@@ -10,8 +10,8 @@ describe('designerStore (no constraint solver state)', () => {
 
   it('exportWorkspace omits legacy constraint-solver fields', () => {
     const snapshot = useInvoiceDesignerStore.getState().exportWorkspace();
-    expect('constraints' in (snapshot as Record<string, unknown>)).toBe(false);
-    expect('nodes' in (snapshot as Record<string, unknown>)).toBe(false);
+    expect('constraints' in (snapshot as unknown as Record<string, unknown>)).toBe(false);
+    expect('nodes' in (snapshot as unknown as Record<string, unknown>)).toBe(false);
   });
 
   it('exported nodes use unified node shape and omit legacy geometry/editor props', () => {

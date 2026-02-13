@@ -7,26 +7,42 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { DesignerNode } from '../state/designerStore';
 import { DesignCanvas } from './DesignCanvas';
 
-const createNode = (overrides: Partial<DesignerNode>): DesignerNode => {
+const createNode = (
+  overrides: Partial<DesignerNode> & {
+    name?: string;
+    metadata?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
+    style?: Record<string, unknown>;
+  }
+): DesignerNode => {
   const size = overrides.size ?? { width: 120, height: 48 };
-  const style = overrides.style ?? { width: `${size.width}px`, height: `${size.height}px` };
+  const style =
+    overrides.style ??
+    (overrides.props && (overrides.props as any).style) ??
+    ({ width: `${size.width}px`, height: `${size.height}px` } as Record<string, unknown>);
   const layout =
-    overrides.layout ?? {
+    overrides.layout ??
+    (overrides.props && (overrides.props as any).layout) ??
+    ({
       display: 'flex',
       flexDirection: 'column',
       gap: '0px',
       padding: '0px',
       justifyContent: 'flex-start',
       alignItems: 'stretch',
-    };
+    } as Record<string, unknown>);
+  const metadata =
+    overrides.metadata ??
+    (overrides.props && (overrides.props as any).metadata) ??
+    ({} as Record<string, unknown>);
+  const name = overrides.name ?? (overrides.props && (overrides.props as any).name) ?? 'Node';
 
   return {
     id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
     type: overrides.type ?? 'text',
-    name: overrides.name ?? 'Node',
     props: overrides.props ?? {
-      name: overrides.name ?? 'Node',
-      metadata: overrides.metadata ?? {},
+      name,
+      metadata,
       layout,
       style,
     },
@@ -36,14 +52,10 @@ const createNode = (overrides: Partial<DesignerNode>): DesignerNode => {
     canRotate: overrides.canRotate ?? false,
     allowResize: overrides.allowResize ?? true,
     rotation: overrides.rotation ?? 0,
-    metadata: overrides.metadata ?? {},
     layoutPresetId: overrides.layoutPresetId,
-    layout,
     parentId: overrides.parentId ?? null,
-    children: overrides.children ?? overrides.childIds ?? [],
-    childIds: overrides.childIds ?? [],
+    children: overrides.children ?? [],
     allowedChildren: overrides.allowedChildren ?? [],
-    style,
   };
 };
 
@@ -51,43 +63,46 @@ const buildNodes = () => {
   const doc = createNode({
     id: 'doc',
     type: 'document',
+    props: { name: 'Document' },
     size: { width: 816, height: 1056 },
     baseSize: { width: 816, height: 1056 },
-    childIds: ['page'],
+    children: ['page'],
     allowedChildren: ['page'],
     allowResize: false,
   });
   const page = createNode({
     id: 'page',
     type: 'page',
+    props: { name: 'Page' },
     parentId: 'doc',
     size: { width: 816, height: 1056 },
     baseSize: { width: 816, height: 1056 },
-    childIds: ['section'],
+    children: ['section'],
     allowedChildren: ['section'],
     allowResize: false,
   });
   const section = createNode({
     id: 'section',
     type: 'section',
+    props: { name: 'Section' },
     parentId: 'page',
     size: { width: 640, height: 220 },
     baseSize: { width: 640, height: 220 },
-    childIds: ['field-a', 'field-b'],
+    children: ['field-a', 'field-b'],
     allowedChildren: ['field'],
   });
   const fieldA = createNode({
     id: 'field-a',
     type: 'field',
     parentId: 'section',
-    name: 'Field A',
+    props: { name: 'Field A' },
     position: { x: 24, y: 24 },
   });
   const fieldB = createNode({
     id: 'field-b',
     type: 'field',
     parentId: 'section',
-    name: 'Field B',
+    props: { name: 'Field B' },
     position: { x: 240, y: 24 },
   });
   return [doc, page, section, fieldA, fieldB];

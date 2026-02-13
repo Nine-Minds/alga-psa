@@ -6,22 +6,17 @@ import { deleteNode } from './patchOps';
 const createNode = (overrides: Partial<DesignerNode> & { id: string; type: DesignerComponentType }): DesignerNode => ({
   id: overrides.id,
   type: overrides.type,
-  name: overrides.name ?? overrides.id,
-  props: overrides.props ?? { name: overrides.name ?? overrides.id },
+  props: overrides.props ?? { name: overrides.id },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 100, height: 40 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 100, height: 40 },
   rotation: overrides.rotation ?? 0,
   canRotate: overrides.canRotate ?? false,
   allowResize: overrides.allowResize ?? true,
-  metadata: overrides.metadata,
   layoutPresetId: overrides.layoutPresetId,
   parentId: overrides.parentId ?? null,
-  children: overrides.children ?? overrides.childIds ?? [],
-  childIds: overrides.childIds ?? overrides.children ?? [],
+  children: overrides.children ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
-  layout: overrides.layout,
-  style: overrides.style,
 });
 
 describe('patchOps.deleteNode', () => {
@@ -29,10 +24,9 @@ describe('patchOps.deleteNode', () => {
     const parent = createNode({
       id: 'p',
       type: 'container',
-      childIds: ['a', 'b'],
       children: ['a', 'b'],
     });
-    const a = createNode({ id: 'a', type: 'container', parentId: 'p', childIds: ['a1'], children: ['a1'] });
+    const a = createNode({ id: 'a', type: 'container', parentId: 'p', children: ['a1'] });
     const a1 = createNode({ id: 'a1', type: 'text', parentId: 'a' });
     const b = createNode({ id: 'b', type: 'text', parentId: 'p' });
 
@@ -42,19 +36,15 @@ describe('patchOps.deleteNode', () => {
     const nextIds = next.map((n) => n.id).sort();
     expect(nextIds).toEqual(['b', 'p']);
     expect(next.find((n) => n.id === 'p')?.children).toEqual(['b']);
-    // Legacy `childIds` is not canonical and must not be written during mutations.
-    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['a', 'b']);
   });
 
-  it('removes descendants based on canonical `children` traversal (does not rely on legacy `childIds`)', () => {
-    const parent = createNode({ id: 'p', type: 'container', children: ['a'], childIds: ['a'] });
+  it('removes descendants based on canonical `children` traversal', () => {
+    const parent = createNode({ id: 'p', type: 'container', children: ['a'] });
     const a = createNode({
       id: 'a',
       type: 'container',
       parentId: 'p',
-      // Deliberately inconsistent legacy vs canonical fields.
       children: ['a1'],
-      childIds: [],
     });
     const a1 = createNode({ id: 'a1', type: 'text', parentId: 'a' });
 

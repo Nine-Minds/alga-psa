@@ -1188,7 +1188,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   const childrenMap = useMemo(() => {
     const map = new Map<string, DesignerNode[]>();
-    // Prefer authored order (childIds) when the parent uses flow layout (flex/grid).
+    // Prefer authored order (children) when the parent uses flow layout (flex/grid).
     nodes.forEach((parent) => {
       const parentLayout = getNodeLayout(parent);
       const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';

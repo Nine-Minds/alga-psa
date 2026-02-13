@@ -6,7 +6,6 @@ import { setNodeProp, unsetNodeProp } from './patchOps';
 const createNode = (): DesignerNode => ({
   id: 'a',
   type: 'text',
-  name: 'Node A',
   props: { name: 'Node A', metadata: { label: 'X' } },
   position: { x: 0, y: 0 },
   size: { width: 100, height: 40 },
@@ -14,10 +13,8 @@ const createNode = (): DesignerNode => ({
   rotation: 0,
   canRotate: false,
   allowResize: true,
-  metadata: {},
   parentId: null,
   children: [],
-  childIds: [],
   allowedChildren: [],
 });
 
@@ -38,4 +35,3 @@ describe('patchOps security (no mutation on rejection)', () => {
     expect(next[0]).toBe(node);
   });
 });
-

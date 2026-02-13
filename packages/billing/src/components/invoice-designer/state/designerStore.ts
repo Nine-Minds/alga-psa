@@ -106,12 +106,16 @@ export interface DesignerNodeStyle {
 export interface DesignerNode {
   id: string;
   type: DesignerComponentType;
-  name: string;
 
-  // Unified props container (cutover in progress). Canvas/render code should prefer this.
+  // Canonical authored props container.
+  // Conventions for common namespaces:
+  // - props.name: string
+  // - props.metadata: Record<string, unknown>
+  // - props.layout: DesignerContainerLayout
+  // - props.style: DesignerNodeStyle
   props: Record<string, unknown>;
 
-  // Legacy geometry fields kept during cutover. Drag-drop cutover will stop persisting coordinates.
+  // Runtime/editor geometry (not persisted in exported workspace).
   position: Point;
   size: Size;
   baseSize?: Size;
@@ -120,22 +124,37 @@ export interface DesignerNode {
   rotation?: number;
   allowResize?: boolean;
 
-  metadata?: Record<string, unknown>;
   layoutPresetId?: string;
 
   parentId: string | null;
 
-  // Unified hierarchy (cutover in progress). This should become the only authoritative hierarchy.
+  // Canonical hierarchy.
   children: string[];
-  childIds: string[];
   allowedChildren: DesignerComponentType[];
-
-  // CSS-like layout. Applies to containers.
-  layout?: DesignerContainerLayout;
-
-  // CSS-like sizing/media/item props.
-  style?: DesignerNodeStyle;
 }
+
+export type DesignerNodeDefaults = {
+  // Optional authored defaults (written into props.*)
+  name?: string;
+  metadata?: Record<string, unknown>;
+  layout?: DesignerContainerLayout;
+  style?: Partial<DesignerNodeStyle>;
+
+  // Optional runtime/editor defaults
+  size?: Size;
+  rotation?: number;
+  canRotate?: boolean;
+  allowResize?: boolean;
+  layoutPresetId?: string;
+};
+
+export type DesignerWorkspaceLoadInput = Partial<Omit<DesignerWorkspaceSnapshot, 'nodesById'>> & {
+  rootId?: string;
+  // Canonical snapshot input.
+  nodesById?: DesignerWorkspaceSnapshot['nodesById'];
+  // Legacy runtime nodes[] input (supported for tests/internal tooling during cutover).
+  nodes?: DesignerNode[];
+};
 
 interface DesignerMetrics {
   totalDrags: number;
@@ -174,7 +193,7 @@ interface DesignerState {
   addNodeFromPalette: (
     type: DesignerComponentType,
     dropPoint: Point,
-    options?: { defaults?: Partial<DesignerNode>; parentId?: string }
+    options?: { defaults?: DesignerNodeDefaults; parentId?: string }
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
   // Generic patch API (primary path going forward).
@@ -196,11 +215,7 @@ interface DesignerState {
   redo: () => void;
   resetWorkspace: () => void;
   loadNodes: (nodes: DesignerNode[]) => void;
-  loadWorkspace: (
-    workspace: Partial<DesignerWorkspaceSnapshot> &
-      Pick<DesignerWorkspaceSnapshot, 'nodesById'> &
-      Partial<Pick<DesignerWorkspaceSnapshot, 'rootId'>>
-  ) => void;
+  loadWorkspace: (workspace: DesignerWorkspaceLoadInput) => void;
   exportWorkspace: () => DesignerWorkspaceSnapshot;
   recordDropResult: (success: boolean) => void;
 }
@@ -223,39 +238,6 @@ const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const syncLegacyFieldsFromProps = (node: DesignerNode): DesignerNode => {
-  const props = isPlainObject(node.props) ? node.props : {};
-
-  const nextName = typeof props.name === 'string' ? (props.name as string) : node.name;
-  const nextMetadata = isPlainObject(props.metadata) ? (props.metadata as Record<string, unknown>) : node.metadata;
-  const nextLayout = isPlainObject(props.layout) ? (props.layout as DesignerContainerLayout) : node.layout;
-  const nextStyle = isPlainObject(props.style) ? (props.style as DesignerNodeStyle) : node.style;
-
-  if (nextName === node.name && nextMetadata === node.metadata && nextLayout === node.layout && nextStyle === node.style) {
-    return node;
-  }
-
-  return {
-    ...node,
-    name: nextName,
-    metadata: nextMetadata,
-    layout: nextLayout,
-    style: nextStyle,
-  };
-};
-
-const syncLegacyFieldsFromPropsForNodeId = (nodes: DesignerNode[], nodeId: string): DesignerNode[] => {
-  const index = nodes.findIndex((node) => node.id === nodeId);
-  if (index < 0) return nodes;
-  const node = nodes[index];
-  if (!node) return nodes;
-  const nextNode = syncLegacyFieldsFromProps(node);
-  if (nextNode === node) return nodes;
-  const copy = nodes.slice();
-  copy[index] = nextNode;
-  return copy;
-};
 
 const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined): Record<string, unknown> => {
   // Persist only authored component props. Runtime geometry (position/size) and editor-only hints
@@ -306,15 +288,12 @@ const normalizeLabelAfterMutation = (
   const node = nodes[index];
   if (!node || node.type !== 'label') return nodes;
 
-  const existingMetadata = (node.metadata ?? {}) as Record<string, unknown>;
   const existingProps = isPlainObject(node.props) ? node.props : {};
   const propsMetadata = isPlainObject(existingProps.metadata) ? (existingProps.metadata as Record<string, unknown>) : {};
 
   if (kind === 'name') {
-    // Name is canonical in `props.name`; legacy `node.name` exists only for back-compat while callsites migrate.
-    const nextText =
-      typeof existingProps.name === 'string' ? (existingProps.name as string) : typeof node.name === 'string' ? node.name : '';
-    const nextMetadata = { ...existingMetadata, ...propsMetadata, text: nextText };
+    const nextText = typeof existingProps.name === 'string' ? (existingProps.name as string) : '';
+    const nextMetadata = { ...propsMetadata, text: nextText };
     const nextProps = { ...existingProps, name: nextText, metadata: nextMetadata };
     const nextNode: DesignerNode = { ...node, props: nextProps };
     if (nextNode === node) return nodes;
@@ -323,12 +302,11 @@ const normalizeLabelAfterMutation = (
     return copy;
   }
 
-  const mergedMetadata = { ...existingMetadata, ...propsMetadata };
-  const candidateText = typeof mergedMetadata.text === 'string' ? mergedMetadata.text.trim() : '';
-  const candidateLabel = typeof mergedMetadata.label === 'string' ? mergedMetadata.label.trim() : '';
+  const candidateText = typeof propsMetadata.text === 'string' ? propsMetadata.text.trim() : '';
+  const candidateLabel = typeof propsMetadata.label === 'string' ? propsMetadata.label.trim() : '';
 
   if (candidateText) {
-    const nextMetadata = { ...mergedMetadata, text: candidateText };
+    const nextMetadata = { ...propsMetadata, text: candidateText };
     const nextProps = { ...existingProps, name: candidateText, metadata: nextMetadata };
     const nextNode: DesignerNode = { ...node, props: nextProps };
     const copy = nodes.slice();
@@ -337,7 +315,7 @@ const normalizeLabelAfterMutation = (
   }
 
   if (candidateLabel) {
-    const nextMetadata = { ...mergedMetadata, text: candidateLabel, label: candidateLabel };
+    const nextMetadata = { ...propsMetadata, text: candidateLabel, label: candidateLabel };
     const nextProps = { ...existingProps, name: candidateLabel, metadata: nextMetadata };
     const nextNode: DesignerNode = { ...node, props: nextProps };
     const copy = nodes.slice();
@@ -405,15 +383,31 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
 
     const schema = getComponentSchema(snapshotNode.type);
     const rawProps = isPlainObject(snapshotNode.props) ? snapshotNode.props : {};
+    // Back-compat: older snapshots stored authored fields on the node itself rather than inside `props`.
+    // We only use these legacy fields during snapshot materialization; runtime state remains canonical.
+    const legacyName = typeof (snapshotNode as any).name === 'string' ? String((snapshotNode as any).name) : undefined;
+    const legacyMetadata = isPlainObject((snapshotNode as any).metadata) ? ((snapshotNode as any).metadata as Record<string, unknown>) : undefined;
+    const legacyLayout = isPlainObject((snapshotNode as any).layout)
+      ? ((snapshotNode as any).layout as Partial<DesignerContainerLayout>)
+      : undefined;
+    const legacyStyle = isPlainObject((snapshotNode as any).style)
+      ? ((snapshotNode as any).style as Partial<DesignerNodeStyle>)
+      : undefined;
 
     const name =
       typeof rawProps.name === 'string'
         ? rawProps.name
-        : schema?.defaults.name ?? `${schema?.label ?? snapshotNode.type}`;
+        : legacyName ?? schema?.defaults.name ?? `${schema?.label ?? snapshotNode.type}`;
 
-    const rawMetadata = isPlainObject(rawProps.metadata) ? (rawProps.metadata as Record<string, unknown>) : {};
-    const rawLayout = isPlainObject(rawProps.layout) ? (rawProps.layout as Partial<DesignerContainerLayout>) : undefined;
-    const rawStyle = isPlainObject(rawProps.style) ? (rawProps.style as Partial<DesignerNodeStyle>) : undefined;
+    const rawMetadata = isPlainObject(rawProps.metadata)
+      ? (rawProps.metadata as Record<string, unknown>)
+      : legacyMetadata ?? {};
+    const rawLayout = isPlainObject(rawProps.layout)
+      ? (rawProps.layout as Partial<DesignerContainerLayout>)
+      : legacyLayout;
+    const rawStyle = isPlainObject(rawProps.style)
+      ? (rawProps.style as Partial<DesignerNodeStyle>)
+      : legacyStyle;
 
     const metadata = {
       ...(schema?.defaults.metadata ?? {}),
@@ -432,7 +426,8 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
       ...(rawStyle ?? {}),
     };
 
-    const sizeFromProps = coerceSize(rawProps.size);
+    const rawSizeValue = (rawProps as any).size ?? (snapshotNode as any).size;
+    const sizeFromProps = coerceSize(rawSizeValue);
     const sizeFromStyle = {
       width: parsePx(style.width),
       height: parsePx(style.height),
@@ -447,14 +442,16 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
     if (!style.width) style.width = `${Math.round(size.width)}px`;
     if (!style.height) style.height = `${Math.round(size.height)}px`;
 
-    const positionFromProps = coercePoint(rawProps.position);
+    const rawPositionValue = (rawProps as any).position ?? (snapshotNode as any).position;
+    const positionFromProps = coercePoint(rawPositionValue);
     const position =
       positionFromProps ??
       (snapshotNode.type === 'document' || snapshotNode.type === 'page'
         ? { x: 0, y: 0 }
         : { x: 24, y: 24 + index * (Math.round(size.height) + 12) + depth * 4 });
 
-    const children = coerceChildren(snapshotNode.children);
+    // Back-compat: older snapshots used `childIds` instead of `children`.
+    const children = coerceChildren((snapshotNode as any).children ?? (snapshotNode as any).childIds);
 
     const normalizedProps: Record<string, unknown> = {
       ...rawProps,
@@ -463,32 +460,28 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
       layout,
       style,
       // Preserve any authored geometry if present; also ensure it's available for runtime.
-      position: positionFromProps ?? rawProps.position,
-      size: sizeFromProps ?? rawProps.size,
+      position: rawPositionValue,
+      size: rawSizeValue,
     };
 
-    output.push(
-      syncLegacyFieldsFromProps({
-        id: snapshotNode.id,
-        type: snapshotNode.type,
-        name,
-        props: normalizedProps,
-        position,
-        size,
-        baseSize: size,
-        rotation: 0,
-        canRotate: snapshotNode.type !== 'document' && snapshotNode.type !== 'page',
-        allowResize: snapshotNode.type !== 'document' && snapshotNode.type !== 'page',
-        layoutPresetId:
-          typeof (rawProps as { layoutPresetId?: unknown }).layoutPresetId === 'string'
-            ? (rawProps as { layoutPresetId: string }).layoutPresetId
-            : undefined,
-        parentId,
-        children,
-        childIds: children,
-        allowedChildren: getAllowedChildrenForType(snapshotNode.type),
-      })
-    );
+    output.push({
+      id: snapshotNode.id,
+      type: snapshotNode.type,
+      props: normalizedProps,
+      position,
+      size,
+      baseSize: size,
+      rotation: 0,
+      canRotate: snapshotNode.type !== 'document' && snapshotNode.type !== 'page',
+      allowResize: snapshotNode.type !== 'document' && snapshotNode.type !== 'page',
+      layoutPresetId:
+        typeof (rawProps as { layoutPresetId?: unknown }).layoutPresetId === 'string'
+          ? (rawProps as { layoutPresetId: string }).layoutPresetId
+          : undefined,
+      parentId,
+      children,
+      allowedChildren: getAllowedChildrenForType(snapshotNode.type),
+    });
 
     children.forEach((childId, childIndex) => dfs(childId, snapshotNode.id, depth + 1, childIndex));
   };
@@ -612,73 +605,67 @@ const mapLegacyPresetLayoutToCss = (layout: LegacyLayoutPresetLayout): DesignerC
   };
 };
 
-const createDocumentNode = (): DesignerNode =>
-  syncLegacyFieldsFromProps({
-    id: DOCUMENT_NODE_ID,
-    type: 'document',
+const createDocumentNode = (): DesignerNode => ({
+  id: DOCUMENT_NODE_ID,
+  type: 'document',
+  props: {
     name: 'Document',
-    props: {
-      name: 'Document',
-      metadata: {},
-      layout: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0px',
-        padding: '0px',
-        justifyContent: 'flex-start',
-        alignItems: 'stretch',
-      },
-      style: {
-        width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
-        height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
-      },
+    metadata: {},
+    layout: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0px',
+      padding: '0px',
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
     },
-    position: { x: 0, y: 0 },
-    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    canRotate: false,
-    allowResize: false,
-    rotation: 0,
-    layoutPresetId: undefined,
-    parentId: null,
-    children: [],
-    childIds: [],
-    allowedChildren: getAllowedChildrenForType('document'),
-  });
+    style: {
+      width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
+      height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
+    },
+  },
+  position: { x: 0, y: 0 },
+  size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  canRotate: false,
+  allowResize: false,
+  rotation: 0,
+  layoutPresetId: undefined,
+  parentId: null,
+  children: [],
+  allowedChildren: getAllowedChildrenForType('document'),
+});
 
-const createPageNode = (parentId: string, index = 1): DesignerNode =>
-  syncLegacyFieldsFromProps({
-    id: `${DEFAULT_PAGE_NODE_ID}-${index}-${generateId()}`,
-    type: 'page',
+const createPageNode = (parentId: string, index = 1): DesignerNode => ({
+  id: `${DEFAULT_PAGE_NODE_ID}-${index}-${generateId()}`,
+  type: 'page',
+  props: {
     name: `Page ${index}`,
-    props: {
-      name: `Page ${index}`,
-      metadata: {},
-      layout: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '32px',
-        padding: '40px', // Page margins
-        justifyContent: 'flex-start',
-        alignItems: 'stretch',
-      },
-      style: {
-        width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
-        height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
-      },
+    metadata: {},
+    layout: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '32px',
+      padding: '40px', // Page margins
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
     },
-    position: { x: 0, y: 0 },
-    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    canRotate: false,
-    allowResize: false,
-    rotation: 0,
-    layoutPresetId: undefined,
-    parentId,
-    children: [],
-    childIds: [],
-    allowedChildren: getAllowedChildrenForType('page'),
-  });
+    style: {
+      width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
+      height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
+    },
+  },
+  position: { x: 0, y: 0 },
+  size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  canRotate: false,
+  allowResize: false,
+  rotation: 0,
+  layoutPresetId: undefined,
+  parentId,
+  children: [],
+  allowedChildren: getAllowedChildrenForType('page'),
+});
 
 const createInitialNodes = (): DesignerNode[] => {
   const documentNode = createDocumentNode();
@@ -728,42 +715,13 @@ const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> 
 
 const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
   nodes.map((node) => {
-    const props: Record<string, unknown> = isPlainObject(node.props) ? deepCloneJson(node.props) : {};
-
-    // Legacy workspace imports can include `props: {}` (or omit the canonical namespaces entirely)
-    // while still providing data in the legacy top-level fields. Canonicalize these into props so
-    // all UI call sites can consistently read via `props.*`.
-    if (typeof props.name !== 'string' && typeof node.name === 'string') {
-      props.name = node.name;
-    }
-    if (!isPlainObject(props.metadata) && isPlainObject(node.metadata)) {
-      props.metadata = deepCloneJson(node.metadata as Record<string, unknown>);
-    }
-    if (!isPlainObject(props.layout) && isPlainObject(node.layout)) {
-      props.layout = deepCloneJson(node.layout as unknown as Record<string, unknown>);
-    }
-    if (!isPlainObject(props.style) && isPlainObject(node.style)) {
-      props.style = deepCloneJson(node.style as unknown as Record<string, unknown>);
-    }
-
-    const derivedName = typeof props.name === 'string' ? (props.name as string) : node.name;
-    const derivedMetadata = isPlainObject(props.metadata) ? (props.metadata as Record<string, unknown>) : node.metadata;
-    const derivedLayout = isPlainObject(props.layout) ? (props.layout as DesignerContainerLayout) : node.layout;
-    const derivedStyle = isPlainObject(props.style) ? (props.style as DesignerNodeStyle) : node.style;
-    const children = [...(node.children ?? node.childIds ?? [])];
-
     return {
       ...node,
-      props,
-      name: derivedName,
-      metadata: derivedMetadata,
-      layout: derivedLayout,
-      style: derivedStyle,
+      props: isPlainObject(node.props) ? deepCloneJson(node.props) : {},
       position: { ...node.position },
       size: { ...node.size },
       baseSize: node.baseSize ? { ...node.baseSize } : undefined,
-      children,
-      childIds: children.slice(),
+      children: node.children.slice(),
       allowedChildren: [...node.allowedChildren],
     };
   });
@@ -910,10 +868,9 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
       const nodeName = schema?.defaults.name ?? `${schema?.label ?? type} ${get().nodes.length + 1}`;
 
-      const node: DesignerNode = syncLegacyFieldsFromProps({
+      const node: DesignerNode = {
         id: generateId(),
         type,
-        name: nodeName,
         props: {
           name: nodeName,
           metadata: mergedMetadata,
@@ -934,9 +891,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           typeof options.defaults?.layoutPresetId === 'string' ? options.defaults.layoutPresetId : undefined,
         parentId: null,
         children: [],
-        childIds: [],
         allowedChildren: getAllowedChildrenForType(type),
-      });
+      };
 
       setWithIndex((state) => {
         const appendedNodes = [...state.nodes, node];
@@ -1008,30 +964,26 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           const metadata = definition.metadata ?? {};
           const name = definition.name ?? definition.type;
 
-          createdNodes.push(
-            syncLegacyFieldsFromProps({
-              id,
-              type: definition.type,
+          createdNodes.push({
+            id,
+            type: definition.type,
+            props: {
               name,
-              props: {
-                name,
-                metadata,
-                layout: mappedLayout,
-                style,
-              },
-              position,
-              size,
-              baseSize: size,
-              rotation: 0,
-              canRotate: true,
-              allowResize: true,
-              layoutPresetId: presetId,
-              parentId: nodeParentId,
-              children: [],
-              childIds: [],
-              allowedChildren: getAllowedChildrenForType(definition.type),
-            })
-          );
+              metadata,
+              layout: mappedLayout,
+              style,
+            },
+            position,
+            size,
+            baseSize: size,
+            rotation: 0,
+            canRotate: true,
+            allowResize: true,
+            layoutPresetId: presetId,
+            parentId: nodeParentId,
+            children: [],
+            allowedChildren: getAllowedChildrenForType(definition.type),
+          });
         });
 
         // Apply legacy preset constraints by translating them into CSS-like node styles.
@@ -1045,23 +997,15 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
             const target = createdNodes.find((node) => node.id === nodeId);
             if (!target) return;
+            const existingStyle = isPlainObject((target.props as Record<string, unknown>).style)
+              ? ((target.props as Record<string, unknown>).style as DesignerNodeStyle)
+              : {};
             const nextStyle: DesignerNodeStyle = {
-              ...(isPlainObject((target.props as Record<string, unknown>).style)
-                ? ((target.props as Record<string, unknown>).style as DesignerNodeStyle)
-                : {}),
+              ...existingStyle,
               aspectRatio: `${ratio} / 1`,
-              objectFit: target.style?.objectFit ?? 'contain',
+              objectFit: existingStyle.objectFit ?? 'contain',
             };
-            Object.assign(
-              target,
-              syncLegacyFieldsFromProps({
-                ...target,
-                props: {
-                  ...target.props,
-                  style: nextStyle,
-                },
-              })
-            );
+            target.props = { ...target.props, style: nextStyle };
           });
         }
 
@@ -1102,8 +1046,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
         }
 
-        nodes = syncLegacyFieldsFromPropsForNodeId(nodes, nodeId);
-
         if (!commit) return { nodes };
 
         const { history, historyIndex } = appendHistory(state, nodes);
@@ -1121,8 +1063,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (labelNormalization) {
           nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
         }
-
-        nodes = syncLegacyFieldsFromPropsForNodeId(nodes, nodeId);
 
         if (!commit) return { nodes };
 
@@ -1283,7 +1223,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const nextNodes = Array.isArray(legacyNodes)
           ? snapshotNodes(legacyNodes as DesignerNode[])
           : materializeNodesFromSnapshot({
-              nodesById: workspace.nodesById,
+              nodesById: workspace.nodesById ?? {},
               rootId: nextRootId,
             });
         return {

@@ -4,6 +4,37 @@ import { clampNodeSizeToPracticalMinimum, useInvoiceDesignerStore } from './desi
 import type { DesignerNode } from './designerStore';
 import { getNodeStyle } from '../utils/nodeProps';
 
+type LegacyNodeInput = {
+  id: string;
+  type: DesignerNode['type'];
+  name: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  parentId: string | null;
+  childIds: string[];
+  allowedChildren: DesignerNode['allowedChildren'];
+  metadata?: Record<string, unknown>;
+  layout?: Record<string, unknown>;
+  style?: Record<string, unknown>;
+};
+
+const materializeNodes = (nodes: LegacyNodeInput[]): DesignerNode[] =>
+  nodes.map((node) => ({
+    id: node.id,
+    type: node.type,
+    props: {
+      name: node.name,
+      ...(node.metadata ? { metadata: node.metadata } : {}),
+      ...(node.layout ? { layout: node.layout } : {}),
+      ...(node.style ? { style: node.style } : {}),
+    },
+    position: node.position,
+    size: node.size,
+    parentId: node.parentId,
+    children: node.childIds,
+    allowedChildren: node.allowedChildren,
+  }));
+
 describe('designerStore (resize)', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
@@ -27,7 +58,7 @@ describe('designerStore (resize)', () => {
   };
 
   it('resizing an image writes pixel sizing props (px) into node.style', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -69,7 +100,7 @@ describe('designerStore (resize)', () => {
         allowedChildren: [],
         style: { width: '50%', height: 'auto' },
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -92,7 +123,7 @@ describe('designerStore (resize)', () => {
   });
 
   it('resizing a section writes pixel sizing props (px) into node.style', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -124,7 +155,7 @@ describe('designerStore (resize)', () => {
         allowedChildren: ['text'],
         style: { width: 'auto', height: 'auto' },
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -147,7 +178,7 @@ describe('designerStore (resize)', () => {
   });
 
   it('drag-resize overwrites non-px sizing strings to px values', () => {
-    const nodes: DesignerNode[] = [
+    const nodes: DesignerNode[] = materializeNodes([
       {
         id: 'doc-1',
         type: 'document',
@@ -189,7 +220,7 @@ describe('designerStore (resize)', () => {
         allowedChildren: [],
         style: { width: '50%', height: 'auto' },
       },
-    ];
+    ]);
 
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({

@@ -71,43 +71,22 @@ describe('OutlineView', () => {
             'doc-1': {
               id: 'doc-1',
               type: 'document',
-              // Deliberately inconsistent legacy vs canonical fields.
-              name: 'Legacy Doc',
               props: { name: 'Canonical Doc' },
               position: { x: 0, y: 0 },
               size: { width: 816, height: 1056 },
-              baseSize: { width: 816, height: 1056 },
-              rotation: 0,
-              canRotate: false,
-              allowResize: false,
-              metadata: {},
-              layoutPresetId: undefined,
               parentId: null,
               children: ['page-1'],
-              childIds: ['page-1'],
               allowedChildren: ['page'],
-              layout: undefined,
-              style: undefined,
             },
             'page-1': {
               id: 'page-1',
               type: 'page',
-              name: 'Legacy Page',
               props: { name: 'Canonical Page' },
               position: { x: 0, y: 0 },
               size: { width: 816, height: 1056 },
-              baseSize: { width: 816, height: 1056 },
-              rotation: 0,
-              canRotate: false,
-              allowResize: false,
-              metadata: {},
-              layoutPresetId: undefined,
               parentId: 'doc-1',
               children: [],
-              childIds: [],
               allowedChildren: [],
-              layout: undefined,
-              style: undefined,
             },
           } as any,
         } as any,
@@ -121,8 +100,5 @@ describe('OutlineView', () => {
       expect(screen.getByText('Canonical Doc')).toBeTruthy();
       expect(screen.getByText('Canonical Page')).toBeTruthy();
     });
-
-    expect(screen.queryByText('Legacy Doc')).toBeNull();
-    expect(screen.queryByText('Legacy Page')).toBeNull();
   });
 });

@@ -18,7 +18,6 @@ describe('DesignCanvas (sizing strings integration)', () => {
       {
         id: 'doc-1',
         type: 'document',
-        name: 'Document',
         props: {
           name: 'Document',
           metadata: {},
@@ -29,13 +28,11 @@ describe('DesignCanvas (sizing strings integration)', () => {
         size: { width: 816, height: 1056 },
         parentId: null,
         children: ['page-1'],
-        childIds: ['page-1'],
         allowedChildren: ['page'],
       },
       {
         id: 'page-1',
         type: 'page',
-        name: 'Page 1',
         props: {
           name: 'Page 1',
           metadata: {},
@@ -46,13 +43,11 @@ describe('DesignCanvas (sizing strings integration)', () => {
         size: { width: 816, height: 1056 },
         parentId: 'doc-1',
         children: ['section-1'],
-        childIds: ['section-1'],
         allowedChildren: ['section'],
       },
       {
         id: 'section-1',
         type: 'section',
-        name: 'Section',
         props: {
           name: 'Section',
           metadata: {},
@@ -63,13 +58,11 @@ describe('DesignCanvas (sizing strings integration)', () => {
         size: { width: 400, height: 240 },
         parentId: 'page-1',
         children: ['text-1'],
-        childIds: ['text-1'],
         allowedChildren: ['text'],
       },
       {
         id: 'text-1',
         type: 'text',
-        name: 'Text 1',
         props: {
           name: 'Text 1',
           metadata: {},
@@ -83,7 +76,6 @@ describe('DesignCanvas (sizing strings integration)', () => {
         size: { width: 100, height: 32 },
         parentId: 'section-1',
         children: [],
-        childIds: [],
         allowedChildren: [],
       },
     ];
