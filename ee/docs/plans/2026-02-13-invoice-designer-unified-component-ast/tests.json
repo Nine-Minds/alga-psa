@@ -9,7 +9,7 @@
   { "id": "T008", "featureIds": ["F005"], "description": "Unit: component schema declares defaults, editable props, and allowed parent/child relationships for each component type.", "implemented": true },
   { "id": "T009", "featureIds": ["F006", "F018"], "description": "Repo/unit: state/hierarchy.ts is removed and all hierarchy checks resolve via schema rules only.", "implemented": true },
   { "id": "T010", "featureIds": ["F007"], "description": "Integration: adding a node from the palette uses schema defaults for props and attaches to a valid container.", "implemented": true },
-  { "id": "T011", "featureIds": ["F008"], "description": "Integration: outline view renders the correct tree order (children arrays) and selection highlights the correct node.", "implemented": false },
+  { "id": "T011", "featureIds": ["F008"], "description": "Integration: outline view renders the correct tree order (children arrays) and selection highlights the correct node.", "implemented": true },
   { "id": "T012", "featureIds": ["F008"], "description": "Integration: breadcrumbs compute the ancestor path from children-only hierarchy without persisted parentId.", "implemented": false },
   { "id": "T013", "featureIds": ["F010"], "description": "Integration: canvas rendering reads layout/style props from unified node props and produces expected DOM styles.", "implemented": false },
   { "id": "T014", "featureIds": ["F011"], "description": "E2E/integration: drag-drop reorder within a flex container updates children order via moveNode.", "implemented": false },

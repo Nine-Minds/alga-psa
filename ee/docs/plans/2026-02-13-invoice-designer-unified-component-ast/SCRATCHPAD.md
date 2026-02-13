@@ -198,6 +198,8 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Added repo/unit guard ensuring `packages/billing/src/components/invoice-designer/state/hierarchy.ts` stays deleted and is not imported anywhere in the invoice designer code.
 - 2026-02-13: Added palette insertion integration test in `packages/billing/src/components/invoice-designer/state/designerStore.addNodeFromPalette.test.ts`:
   - Verifies `addNodeFromPalette` pulls `layout/metadata/size` defaults from the component schema and attaches the new node id into the parent `children` array.
+- 2026-02-13: Added outline rendering integration test in `packages/billing/src/components/invoice-designer/palette/OutlineView.integration.test.tsx`:
+  - Verifies outline order matches `childIds` ordering and selection state drives highlight styling.
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
