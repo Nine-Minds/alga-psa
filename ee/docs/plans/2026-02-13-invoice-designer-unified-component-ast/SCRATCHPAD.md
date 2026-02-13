@@ -74,3 +74,7 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Added canonical indexing to the designer store state in `packages/billing/src/components/invoice-designer/state/designerStore.ts`:
   - Store state now includes `rootId` and `nodesById` kept in sync with the existing `nodes` array via a `setWithIndex` wrapper.
   - This is an incremental cutover step so downstream UI/tests can migrate off `nodes` progressively.
+- 2026-02-13: Implemented generic patch operations in `packages/billing/src/components/invoice-designer/state/patchOps.ts` and exposed them on the store:
+  - `setNodeProp` / `unsetNodeProp` for dot-path updates (immutable deep updates with empty-object cleanup).
+  - `insertChild` / `removeChild` / `moveNode` / `deleteNode` for hierarchy mutations (cycle prevention in `moveNode`).
+  - Renamed legacy coordinate nudge API to `moveNodeByDelta` to free `moveNode` for tree moves.

@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { getAllowedChildrenForType, getAllowedParentsForType, canNestWithinParent } from './hierarchy';
+import {
+  deleteNode as patchDeleteNode,
+  insertChild as patchInsertChild,
+  moveNode as patchMoveNode,
+  removeChild as patchRemoveChild,
+  setNodeProp as patchSetNodeProp,
+  unsetNodeProp as patchUnsetNodeProp,
+} from './patchOps';
 import { getPresetById, LegacyLayoutPresetLayout } from '../constants/presets';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 
@@ -157,7 +165,8 @@ interface DesignerState {
     options?: { defaults?: Partial<DesignerNode>; parentId?: string }
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
-  moveNode: (id: string, delta: Point, commit?: boolean) => void;
+  // Legacy coordinate nudge during cutover.
+  moveNodeByDelta: (id: string, delta: Point, commit?: boolean) => void;
   moveNodeToParentAtIndex: (nodeId: string, parentId: string, index: number) => void;
   setNodePosition: (id: string, position: Point, commit?: boolean) => void;
   updateNodeSize: (id: string, size: Size, commit?: boolean) => void;
@@ -165,6 +174,13 @@ interface DesignerState {
   updateNodeMetadata: (id: string, metadata: Record<string, unknown>) => void;
   updateNodeLayout: (id: string, layout: Partial<DesignerContainerLayout>) => void;
   updateNodeStyle: (id: string, style: Partial<DesignerNodeStyle>) => void;
+  // Generic patch API (primary path going forward).
+  setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
+  unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
+  insertChild: (parentId: string, childId: string, index: number) => void;
+  removeChild: (parentId: string, childId: string) => void;
+  moveNode: (nodeId: string, nextParentId: string, nextIndex: number) => void;
+  deleteNode: (nodeId: string) => void;
   clearLayoutPreset: (nodeId: string) => void;
   selectNode: (id: string | null) => void;
   setHoverNode: (id: string | null) => void;
@@ -673,7 +689,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/insertPreset');
     },
 
-    moveNode: (id, delta, commit = false) => {
+    moveNodeByDelta: (id, delta, commit = false) => {
       setWithIndex((state) => {
         const nodes = state.nodes.map((node) => {
           if (node.id !== id) return node;
@@ -695,46 +711,105 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         const { history, historyIndex } = appendHistory(state, nodes);
         return { nodes, history, historyIndex };
+      }, false, 'designer/moveNodeByDelta');
+    },
+
+    setNodeProp: (nodeId, path, value, commit = false) => {
+      setWithIndex((state) => {
+        const nodes = patchSetNodeProp(state.nodes, nodeId, path, value);
+        if (nodes === state.nodes) return state;
+
+        if (!commit) {
+          return { nodes };
+        }
+
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return { nodes, history, historyIndex };
+      }, false, 'designer/setNodeProp');
+    },
+
+    unsetNodeProp: (nodeId, path, commit = false) => {
+      setWithIndex((state) => {
+        const nodes = patchUnsetNodeProp(state.nodes, nodeId, path);
+        if (nodes === state.nodes) return state;
+
+        if (!commit) {
+          return { nodes };
+        }
+
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return { nodes, history, historyIndex };
+      }, false, 'designer/unsetNodeProp');
+    },
+
+    insertChild: (parentId, childId, index) => {
+      setWithIndex((state) => {
+        const parent = state.nodesById[parentId];
+        const child = state.nodesById[childId];
+        if (!parent || !child) return state;
+        if (!canNestWithinParent(child.type, parent.type)) return state;
+
+        const nodes = patchInsertChild(state.nodes, parentId, childId, index);
+        if (nodes === state.nodes) return state;
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return { nodes, history, historyIndex };
+      }, false, 'designer/insertChild');
+    },
+
+    removeChild: (parentId, childId) => {
+      setWithIndex((state) => {
+        const parent = state.nodesById[parentId];
+        const child = state.nodesById[childId];
+        if (!parent || !child) return state;
+
+        const nodes = patchRemoveChild(state.nodes, parentId, childId);
+        if (nodes === state.nodes) return state;
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return { nodes, history, historyIndex };
+      }, false, 'designer/removeChild');
+    },
+
+    moveNode: (nodeId, nextParentId, nextIndex) => {
+      setWithIndex((state) => {
+        const nodesById = state.nodesById;
+        const node = nodesById[nodeId];
+        const nextParent = nodesById[nextParentId];
+        if (!node || !nextParent) return state;
+        if (!canNestWithinParent(node.type, nextParent.type)) return state;
+
+        const nodes = patchMoveNode(state.nodes, nodeId, nextParentId, nextIndex);
+        if (nodes === state.nodes) return state;
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return { nodes, history, historyIndex };
       }, false, 'designer/moveNode');
+    },
+
+    deleteNode: (nodeId) => {
+      setWithIndex((state) => {
+        const nodes = patchDeleteNode(state.nodes, nodeId);
+        if (nodes === state.nodes) return state;
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return {
+          nodes,
+          history,
+          historyIndex,
+          selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+        };
+      }, false, 'designer/deleteNode');
     },
 
     moveNodeToParentAtIndex: (nodeId, parentId, index) => {
       setWithIndex((state) => {
-        const nodesById = new Map(state.nodes.map((node) => [node.id, node] as const));
-        const node = nodesById.get(nodeId);
-        const nextParent = nodesById.get(parentId);
-        if (!node || !nextParent) {
-          return state;
-        }
-        if (!canNestWithinParent(node.type, nextParent.type)) {
-          return state;
-        }
-        // Prevent cycles (can't move a node into itself or any of its descendants).
-        if (collectDescendants(state.nodes, nodeId).has(parentId)) {
-          return state;
-        }
+        const nodesById = state.nodesById;
+        const node = nodesById[nodeId];
+        const nextParent = nodesById[parentId];
+        if (!node || !nextParent) return state;
+        if (!canNestWithinParent(node.type, nextParent.type)) return state;
 
-        const prevParentId = node.parentId;
-        const prevParent = prevParentId ? nodesById.get(prevParentId) ?? null : null;
-        const prevIndex = prevParent ? prevParent.childIds.indexOf(nodeId) : -1;
-        const adjustedIndex =
-          prevParentId === parentId && prevIndex !== -1 && prevIndex < index ? Math.max(0, index - 1) : index;
-
-        let nextNodes = state.nodes;
-        nextNodes = detachChild(nextNodes, prevParentId, nodeId);
-        nextNodes = nextNodes.map((candidate) =>
-          candidate.id === nodeId ? { ...candidate, parentId } : candidate
-        );
-        nextNodes = nextNodes.map((candidate) => {
-          if (candidate.id !== parentId) return candidate;
-          const nextChildIds = candidate.childIds.filter((id) => id !== nodeId);
-          const clampedIndex = Math.max(0, Math.min(adjustedIndex, nextChildIds.length));
-          nextChildIds.splice(clampedIndex, 0, nodeId);
-          return { ...candidate, childIds: nextChildIds };
-        });
-
-        const { history, historyIndex } = appendHistory(state, nextNodes);
-        return { ...state, nodes: nextNodes, history, historyIndex };
+        const nodes = patchMoveNode(state.nodes, nodeId, parentId, index);
+        if (nodes === state.nodes) return state;
+        const { history, historyIndex } = appendHistory(state, nodes);
+        return { nodes, history, historyIndex };
       }, false, 'designer/moveNodeToParentAtIndex');
     },
 
@@ -879,20 +954,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       if (!selectedNodeId) {
         return;
       }
-
-      setWithIndex((state) => {
-        const toRemove = collectDescendants(state.nodes, selectedNodeId);
-        const selectedNode = state.nodes.find((node) => node.id === selectedNodeId);
-        const nodesWithout = state.nodes.filter((node) => !toRemove.has(node.id));
-        const nodesDetached = detachChild(nodesWithout, selectedNode?.parentId ?? null, selectedNodeId);
-        const { history, historyIndex } = appendHistory(state, nodesDetached);
-        return {
-          nodes: nodesDetached,
-          history,
-          historyIndex,
-          selectedNodeId: null,
-        };
-      }, false, 'designer/deleteSelectedNode');
+      get().deleteNode(selectedNodeId);
     },
 
     toggleSnap: () => setWithIndex((state) => ({ snapToGrid: !state.snapToGrid })),

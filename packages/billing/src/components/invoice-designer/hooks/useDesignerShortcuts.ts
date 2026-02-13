@@ -7,7 +7,7 @@ export const useDesignerShortcuts = () => {
   const deleteSelectedNode = useInvoiceDesignerStore((state) => state.deleteSelectedNode);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
-  const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
+  const moveNodeByDelta = useInvoiceDesignerStore((state) => state.moveNodeByDelta);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
 
@@ -49,21 +49,21 @@ export const useDesignerShortcuts = () => {
         const delta = snapToGrid ? gridSize : 4;
         switch (event.key) {
           case 'ArrowUp':
-            moveNode(selectedNodeId, { x: 0, y: -delta }, true);
+            moveNodeByDelta(selectedNodeId, { x: 0, y: -delta }, true);
             break;
           case 'ArrowDown':
-            moveNode(selectedNodeId, { x: 0, y: delta }, true);
+            moveNodeByDelta(selectedNodeId, { x: 0, y: delta }, true);
             break;
           case 'ArrowLeft':
-            moveNode(selectedNodeId, { x: -delta, y: 0 }, true);
+            moveNodeByDelta(selectedNodeId, { x: -delta, y: 0 }, true);
             break;
           case 'ArrowRight':
-            moveNode(selectedNodeId, { x: delta, y: 0 }, true);
+            moveNodeByDelta(selectedNodeId, { x: delta, y: 0 }, true);
             break;
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelectedNode, gridSize, moveNode, redo, selectNode, selectedNodeId, snapToGrid, undo]);
+  }, [deleteSelectedNode, gridSize, moveNodeByDelta, redo, selectNode, selectedNodeId, snapToGrid, undo]);
 };
