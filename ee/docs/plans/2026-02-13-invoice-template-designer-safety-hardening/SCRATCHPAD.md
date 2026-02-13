@@ -62,6 +62,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/billing/src/lib/invoice-template-ast/schema.ts`
 - (2026-02-13) Invoice template AST renderer now sanitizes style identifiers before emitting CSS selectors and custom properties (defense-in-depth even if schema validation is bypassed).
   - `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
+- (2026-02-13) Legacy workspace `nodes[]` imports can include `props: {}`; snapshotting now materializes canonical `props.name/metadata/layout/style` from legacy top-level fields so UI helpers can consistently read canonical props.
+  - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+  - Test: `packages/billing/src/components/invoice-designer/state/designerStore.loadWorkspace.legacy.test.ts`
 
 ## Commands / Runbooks
 

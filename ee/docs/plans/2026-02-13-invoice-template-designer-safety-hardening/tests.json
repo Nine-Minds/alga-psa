@@ -104,7 +104,7 @@
   {
     "id": "T013",
     "description": "Workspace import: legacy workspace inputs materialize canonical `props` so UI helpers read expected values.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F009"

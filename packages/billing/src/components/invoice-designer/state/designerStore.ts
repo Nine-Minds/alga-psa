@@ -728,14 +728,23 @@ const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> 
 
 const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
   nodes.map((node) => {
-    const props: Record<string, unknown> = node.props
-      ? JSON.parse(JSON.stringify(node.props))
-      : {
-          name: node.name,
-          metadata: node.metadata ?? {},
-          layout: node.layout,
-          style: node.style,
-        };
+    const props: Record<string, unknown> = isPlainObject(node.props) ? deepCloneJson(node.props) : {};
+
+    // Legacy workspace imports can include `props: {}` (or omit the canonical namespaces entirely)
+    // while still providing data in the legacy top-level fields. Canonicalize these into props so
+    // all UI call sites can consistently read via `props.*`.
+    if (typeof props.name !== 'string' && typeof node.name === 'string') {
+      props.name = node.name;
+    }
+    if (!isPlainObject(props.metadata) && isPlainObject(node.metadata)) {
+      props.metadata = deepCloneJson(node.metadata as Record<string, unknown>);
+    }
+    if (!isPlainObject(props.layout) && isPlainObject(node.layout)) {
+      props.layout = deepCloneJson(node.layout as unknown as Record<string, unknown>);
+    }
+    if (!isPlainObject(props.style) && isPlainObject(node.style)) {
+      props.style = deepCloneJson(node.style as unknown as Record<string, unknown>);
+    }
 
     const derivedName = typeof props.name === 'string' ? (props.name as string) : node.name;
     const derivedMetadata = isPlainObject(props.metadata) ? (props.metadata as Record<string, unknown>) : node.metadata;
