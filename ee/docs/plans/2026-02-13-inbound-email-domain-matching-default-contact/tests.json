@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Integration: ambiguous domain match (multiple clients share domain) falls back to inbound defaults client_id and keeps contact null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F005"]
   },
   {
