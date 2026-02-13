@@ -356,4 +356,81 @@ describe('designerStore (flow drag-drop state updates)', () => {
     expect(containerA?.parentId).toBe('section-1');
     expect(section?.childIds).toEqual(['container-a']);
   });
+
+  it('does not mutate state for invalid drops (ineligible parent)', () => {
+    const nodes: DesignerNode[] = [
+      {
+        id: 'doc-1',
+        type: 'document',
+        name: 'Document',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: null,
+        childIds: ['page-1'],
+        allowedChildren: ['page'],
+      },
+      {
+        id: 'page-1',
+        type: 'page',
+        name: 'Page 1',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: 'doc-1',
+        childIds: ['section-1'],
+        allowedChildren: ['section'],
+      },
+      {
+        id: 'section-1',
+        type: 'section',
+        name: 'Section',
+        position: { x: 24, y: 24 },
+        size: { width: 400, height: 240 },
+        parentId: 'page-1',
+        childIds: ['container-1', 'text-1'],
+        allowedChildren: ['container', 'text'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' },
+      },
+      {
+        id: 'container-1',
+        type: 'container',
+        name: 'Container',
+        position: { x: 0, y: 0 },
+        size: { width: 320, height: 160 },
+        parentId: 'section-1',
+        childIds: [],
+        allowedChildren: ['text'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' },
+      },
+      {
+        id: 'text-1',
+        type: 'text',
+        name: 'Text 1',
+        position: { x: 0, y: 0 },
+        size: { width: 100, height: 32 },
+        parentId: 'section-1',
+        childIds: [],
+        allowedChildren: [],
+      },
+    ];
+
+    const store = useInvoiceDesignerStore.getState();
+    store.loadWorkspace({
+      nodes,
+      snapToGrid: false,
+      gridSize: 8,
+      showGuides: false,
+      showRulers: false,
+      canvasScale: 1,
+    });
+
+    const beforeNodes = useInvoiceDesignerStore.getState().nodes;
+    const beforeHistoryIndex = useInvoiceDesignerStore.getState().historyIndex;
+
+    // Invalid: container -> text (text is not a container parent).
+    store.moveNodeToParentAtIndex('container-1', 'text-1', 0);
+
+    const afterState = useInvoiceDesignerStore.getState();
+    expect(afterState.nodes).toEqual(beforeNodes);
+    expect(afterState.historyIndex).toBe(beforeHistoryIndex);
+  });
 });
