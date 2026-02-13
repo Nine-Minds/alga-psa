@@ -67,3 +67,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F016: Implemented webhook config UI (URL, `X-Alga-Webhook-Secret`, payload template) with per-tenant secret generation via secret store.
 - (2026-02-13) F017: Added UI + server action to backfill Tactical alerts into `rmm_alerts` and display sync results.
 - (2026-02-13) F018: Added UI + server action to ingest Tactical bulk cached software inventory into `software_catalog` + `asset_software` using external mappings (no per-agent refresh).
+- (2026-02-13) F020: Added server actions to save/read Tactical settings and credential status with masking; disconnect clears tenant secrets.
