@@ -231,3 +231,6 @@ This plan intentionally continues the simplification arc:
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.insertChild.test.ts` to validate deterministic child insertion ordering.
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.moveNode.test.ts` to validate reorder/reparent semantics + cycle prevention.
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.deleteNode.test.ts` to validate subtree deletion behavior.
+- 2026-02-13: Added schema-driven inspector integration coverage:
+  - Added `packages/billing/src/components/invoice-designer/inspector/DesignerSchemaInspector.integration.test.tsx` to assert the inspector renders fields from schema and writes unified `props.*` via generic patch operations.
+  - Testing gotcha: our shared `<Input>` doesn’t reliably forward `id` to the native `<input>`, so tests query controls by placeholder rather than label association.
