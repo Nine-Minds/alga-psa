@@ -3,9 +3,14 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import net from 'node:net';
 
-import { createTestDbConnection } from '../../test-utils/dbConfig';
-import { getActionRegistryV2 } from '@alga-psa/shared/workflow/runtime';
-import { registerEmailWorkflowActionsV2 } from '@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
+
+// shared/workflow/actions/emailWorkflowActions imports the event-bus publisher module at load time.
+// In unit/integration tests we don't need the real publisher implementation (and dist artifacts may not exist),
+// so we stub it.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
 
 const dbReachable: boolean = await new Promise((resolve) => {
   const host = process.env.DB_HOST || 'localhost';
@@ -29,6 +34,7 @@ let boardId: string;
 let statusId: string;
 let priorityId: string;
 let enteredByUserId: string;
+let actionRegistry: any;
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
@@ -70,8 +76,13 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
     if (!user?.user_id) throw new Error('Expected seeded user');
     enteredByUserId = user.user_id;
 
-    const registry = getActionRegistryV2();
-    if (!registry.get('resolve_inbound_ticket_context', 1)) {
+    const { getActionRegistryV2 } = await import('@alga-psa/shared/workflow/runtime');
+    const { registerEmailWorkflowActionsV2 } = await import(
+      '@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions'
+    );
+
+    actionRegistry = getActionRegistryV2();
+    if (!actionRegistry.get('resolve_inbound_ticket_context', 1)) {
       registerEmailWorkflowActionsV2();
     }
   }, 180_000);
@@ -174,7 +185,7 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 
-    const action = getActionRegistryV2().get('resolve_inbound_ticket_context', 1);
+    const action = actionRegistry.get('resolve_inbound_ticket_context', 1);
     if (!action) throw new Error('Expected resolve_inbound_ticket_context@1 to be registered');
 
     const ctx = {
