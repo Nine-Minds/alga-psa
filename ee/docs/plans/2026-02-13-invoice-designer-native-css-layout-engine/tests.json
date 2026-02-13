@@ -2,7 +2,7 @@
   { "id": "T001", "featureIds": ["F001"], "description": "Type/schema: designer layout model contains only CSS-like properties (no constraint solver fields).", "implemented": true },
   { "id": "T002", "featureIds": ["F002"], "description": "Unit: mapping from layout props to DOM styles produces expected inline styles/classes for containers and items.", "implemented": true },
   { "id": "T003", "featureIds": ["F003"], "description": "Integration: flex column container lays out children vertically with expected spacing.", "implemented": true },
-  { "id": "T004", "featureIds": ["F003"], "description": "Integration: flex row container lays out children horizontally with expected spacing.", "implemented": false },
+  { "id": "T004", "featureIds": ["F003"], "description": "Integration: flex row container lays out children horizontally with expected spacing.", "implemented": true },
   { "id": "T005", "featureIds": ["F004"], "description": "Integration: gap/padding/border settings change DOM box model as expected in the canvas.", "implemented": false },
   { "id": "T006", "featureIds": ["F005"], "description": "Integration: justify-content/align-items settings impact child positioning as expected.", "implemented": false },
   { "id": "T007", "featureIds": ["F006"], "description": "Integration: width/height/min/max settings apply as CSS constraints without runtime geometry math.", "implemented": false },
