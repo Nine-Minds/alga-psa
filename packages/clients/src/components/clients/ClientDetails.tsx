@@ -775,15 +775,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   }, [contacts]);
 
   const defaultContactOptions: SelectOption[] = useMemo(() => {
-    return clientActiveContacts.map((c) => ({
-      value: c.contact_name_id,
-      label: c.email ? `${c.full_name} (${c.email})` : c.full_name,
-    }));
+    return [
+      { value: '', label: 'None' },
+      ...clientActiveContacts.map((c) => ({
+        value: c.contact_name_id,
+        label: c.email ? `${c.full_name} (${c.email})` : c.full_name,
+      })),
+    ];
   }, [clientActiveContacts]);
 
   const handleDefaultContactChange = useCallback((contactId: string) => {
-    const selected = clientActiveContacts.find((c) => c.contact_name_id === contactId);
-    const selectedName = selected?.full_name ?? '';
+    const selected = contactId ? clientActiveContacts.find((c) => c.contact_name_id === contactId) : undefined;
+    const selectedName = contactId ? (selected?.full_name ?? '') : '';
 
     setEditedClient((prevClient) => {
       const updatedClient = JSON.parse(JSON.stringify(prevClient)) as IClient;
