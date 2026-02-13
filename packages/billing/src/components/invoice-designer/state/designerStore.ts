@@ -135,6 +135,10 @@ export interface DesignerWorkspaceSnapshot {
 }
 
 interface DesignerState {
+  // Canonical tree index (cutover in progress): nodesById + rootId.
+  // The legacy `nodes` array remains during migration but is always kept in sync.
+  rootId: string;
+  nodesById: Record<string, DesignerNode>;
   nodes: DesignerNode[];
   selectedNodeId: string | null;
   hoverNodeId: string | null;
@@ -195,6 +199,9 @@ const generateId = () =>
 
 const snapToGridValue = (value: number, gridSize: number) => Math.round(value / gridSize) * gridSize;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const indexNodesById = (nodes: DesignerNode[]): Record<string, DesignerNode> =>
+  Object.fromEntries(nodes.map((node) => [node.id, node]));
 
 const getPracticalMinimumSizeForType = (type: DesignerComponentType): Size => {
   switch (type) {
@@ -415,8 +422,29 @@ export const getAbsolutePosition = (nodeId: string, nodes: DesignerNode[]): Poin
 };
 
 export const useInvoiceDesignerStore = create<DesignerState>()(
-  devtools((set, get) => ({
-    nodes: createInitialNodes(),
+  devtools((set, get) => {
+    const initialNodes = createInitialNodes();
+
+    const setWithIndex: typeof set = (partial, replace, action) =>
+      set((state) => {
+        const nextPartial = typeof partial === 'function' ? partial(state) : partial;
+        if (!nextPartial) return state;
+        if (nextPartial === state) return state;
+
+        const nextState = { ...state, ...(nextPartial as Partial<DesignerState>) } as DesignerState;
+
+        if ('nodes' in (nextPartial as Partial<DesignerState>) && Array.isArray(nextState.nodes)) {
+          nextState.rootId = DOCUMENT_NODE_ID;
+          nextState.nodesById = indexNodesById(nextState.nodes);
+        }
+
+        return nextState;
+      }, replace, action);
+
+    return {
+    rootId: DOCUMENT_NODE_ID,
+    nodesById: indexNodesById(initialNodes),
+    nodes: initialNodes,
     selectedNodeId: null,
     hoverNodeId: null,
     snapToGrid: true,
@@ -516,7 +544,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 	          },
 	      };
 
-      set((state) => {
+      setWithIndex((state) => {
         const appendedNodes = [...state.nodes, node];
         const withParentLink = attachChildAtIndex(appendedNodes, resolvedParentId, node.id);
         const { history, historyIndex } = appendHistory(state, withParentLink);
@@ -536,7 +564,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         return;
       }
 
-      set((state) => {
+      setWithIndex((state) => {
         const origin = dropPoint ?? { x: 120, y: 120 };
         const resolvedParentId =
           parentId ??
@@ -646,7 +674,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     moveNode: (id, delta, commit = false) => {
-      set((state) => {
+      setWithIndex((state) => {
         const nodes = state.nodes.map((node) => {
           if (node.id !== id) return node;
           const desired = {
@@ -671,7 +699,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     moveNodeToParentAtIndex: (nodeId, parentId, index) => {
-      set((state) => {
+      setWithIndex((state) => {
         const nodesById = new Map(state.nodes.map((node) => [node.id, node] as const));
         const node = nodesById.get(nodeId);
         const nextParent = nodesById.get(parentId);
@@ -711,7 +739,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     setNodePosition: (id, position, commit = false) => {
-      set((state) => {
+      setWithIndex((state) => {
         const nodes = state.nodes.map((node) => (node.id === id ? { ...node, position: { ...position } } : node));
         if (!commit) {
           return { nodes };
@@ -722,7 +750,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     updateNodeSize: (id, size, commit = false) => {
-      set((state) => {
+      setWithIndex((state) => {
         const nodes = state.nodes.map((node) => {
           if (node.id !== id) return node;
           const clampedSize = clampNodeSizeToPracticalMinimum(node.type, size);
@@ -752,7 +780,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     updateNodeName: (id, name) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         nodes: state.nodes.map((node) => {
           if (node.id !== id) return node;
           if (node.type !== 'label') {
@@ -773,7 +801,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     updateNodeMetadata: (id, metadata) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         nodes: state.nodes.map((node) => {
           if (node.id !== id) return node;
           const nextMetadata = metadata;
@@ -806,7 +834,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     updateNodeLayout: (id, layout) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         nodes: state.nodes.map((node) =>
           node.id === id
             ? {
@@ -822,13 +850,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     updateNodeStyle: (id, style) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         nodes: state.nodes.map((node) => (node.id === id ? { ...node, style: { ...node.style, ...style } } : node)),
       }));
     },
 
     clearLayoutPreset: (nodeId) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         nodes: state.nodes.map((node) =>
           node.id === nodeId ? { ...node, layoutPresetId: undefined } : node
         ),
@@ -836,14 +864,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     selectNode: (id) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         selectedNodeId: id,
         metrics: { ...state.metrics, totalSelections: state.metrics.totalSelections + 1 },
       }));
     },
 
     setHoverNode: (id) => {
-      set({ hoverNodeId: id });
+      setWithIndex({ hoverNodeId: id });
     },
 
     deleteSelectedNode: () => {
@@ -852,7 +880,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         return;
       }
 
-      set((state) => {
+      setWithIndex((state) => {
         const toRemove = collectDescendants(state.nodes, selectedNodeId);
         const selectedNode = state.nodes.find((node) => node.id === selectedNodeId);
         const nodesWithout = state.nodes.filter((node) => !toRemove.has(node.id));
@@ -867,14 +895,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/deleteSelectedNode');
     },
 
-    toggleSnap: () => set((state) => ({ snapToGrid: !state.snapToGrid })),
-    setGridSize: (size) => set({ gridSize: size }),
-    setCanvasScale: (scale) => set({ canvasScale: scale }),
-    toggleGuides: () => set((state) => ({ showGuides: !state.showGuides })),
-    toggleRulers: () => set((state) => ({ showRulers: !state.showRulers })),
+    toggleSnap: () => setWithIndex((state) => ({ snapToGrid: !state.snapToGrid })),
+    setGridSize: (size) => setWithIndex({ gridSize: size }),
+    setCanvasScale: (scale) => setWithIndex({ canvasScale: scale }),
+    toggleGuides: () => setWithIndex((state) => ({ showGuides: !state.showGuides })),
+    toggleRulers: () => setWithIndex((state) => ({ showRulers: !state.showRulers })),
 
     undo: () => {
-      set((state) => {
+      setWithIndex((state) => {
         if (state.historyIndex <= 0) {
           return state;
         }
@@ -892,7 +920,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     redo: () => {
-      set((state) => {
+      setWithIndex((state) => {
         if (state.historyIndex >= state.history.length - 1) {
           return state;
         }
@@ -910,7 +938,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     resetWorkspace: () => {
-      set(() => ({
+      setWithIndex(() => ({
         nodes: createInitialNodes(),
         selectedNodeId: null,
         hoverNodeId: null,
@@ -920,7 +948,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     loadNodes: (nodes) => {
-      set((state) => {
+      setWithIndex((state) => {
         const nextNodes = snapshotNodes(nodes);
         const { history, historyIndex } = appendHistory(state, nextNodes);
         return {
@@ -933,7 +961,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     loadWorkspace: (workspace) => {
-      set((state) => {
+      setWithIndex((state) => {
         const nextNodes = snapshotNodes(workspace.nodes);
         return {
           nodes: nextNodes,
@@ -962,7 +990,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     recordDropResult: (success) => {
-      set((state) => ({
+      setWithIndex((state) => ({
         metrics: {
           ...state.metrics,
           completedDrops: state.metrics.completedDrops + (success ? 1 : 0),
@@ -970,5 +998,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         },
       }));
     },
-  }))
+  };
+  })
 );

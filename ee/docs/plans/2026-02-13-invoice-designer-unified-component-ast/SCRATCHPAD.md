@@ -71,3 +71,6 @@ This plan intentionally continues the simplification arc:
   - `DesignerAstNode` with `{ id, type, props, children }`
   - `DesignerAstWorkspace` with `{ rootId, nodesById }`
   - Stable document root id constant: `DESIGNER_AST_DOCUMENT_ID = 'designer-document-root'`
+- 2026-02-13: Added canonical indexing to the designer store state in `packages/billing/src/components/invoice-designer/state/designerStore.ts`:
+  - Store state now includes `rootId` and `nodesById` kept in sync with the existing `nodes` array via a `setWithIndex` wrapper.
+  - This is an incremental cutover step so downstream UI/tests can migrate off `nodes` progressively.
