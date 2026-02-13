@@ -417,9 +417,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
     // Format options for dropdowns
-    const statusOptions = statuses.map((status) => ({
+    // Include `is_closed` so UI can reliably derive "closed status" subsets.
+    const statusOptions = statuses.map((status: any) => ({
       value: status.status_id,
-      label: status.name || ""
+      label: status.name || "",
+      is_closed: !!status.is_closed,
     }));
 
     const agentOptions = users.map((agent) => ({

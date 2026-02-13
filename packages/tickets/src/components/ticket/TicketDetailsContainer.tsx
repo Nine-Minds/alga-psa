@@ -39,7 +39,7 @@ interface TicketDetailsContainerProps {
       }
     >;
     options: {
-      status: { value: string; label: string }[];
+      status: { value: string; label: string; is_closed?: boolean }[];
       agent: { value: string; label: string }[];
       board: { value: string; label: string }[];
       priority: { value: string; label: string }[];
