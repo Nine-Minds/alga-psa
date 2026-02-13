@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import http from 'node:http';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +11,13 @@ import {
 } from './helpers/testSetup';
 
 applyTestEnvDefaults();
+
+async function selectTacticalRmmIfSelectorPresent(page: Page): Promise<void> {
+  const btn = page.locator('#rmm-integration-configure-tacticalrmm');
+  if (await btn.count()) {
+    await btn.click();
+  }
+}
 
 async function ensureSystemSettingsPermission(
   db: Knex,
@@ -155,6 +162,8 @@ test('Disconnect clears stored Tactical credentials and marks integration inacti
     });
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
 
+    await selectTacticalRmmIfSelectorPresent(page);
+
     const card = page.locator('#tacticalrmm-integration-settings-card');
 
     await card.locator('#tacticalrmm-instance-url').fill(tactical.baseUrl);
@@ -188,4 +197,3 @@ test('Disconnect clears stored Tactical credentials and marks integration inacti
     await db.destroy().catch(() => undefined);
   }
 });
-

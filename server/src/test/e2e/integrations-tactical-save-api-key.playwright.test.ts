@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -10,6 +10,13 @@ import {
 } from './helpers/testSetup';
 
 applyTestEnvDefaults();
+
+async function selectTacticalRmmIfSelectorPresent(page: Page): Promise<void> {
+  const btn = page.locator('#rmm-integration-configure-tacticalrmm');
+  if (await btn.count()) {
+    await btn.click();
+  }
+}
 
 async function ensureSystemSettingsPermission(
   db: Knex,
@@ -85,6 +92,8 @@ test('Tactical settings can save instance URL + API key and shows masked credent
       timeout: 60_000,
     });
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
+
+    await selectTacticalRmmIfSelectorPresent(page);
 
     await page.locator('#tacticalrmm-instance-url').fill('https://tactical.example.test');
 
