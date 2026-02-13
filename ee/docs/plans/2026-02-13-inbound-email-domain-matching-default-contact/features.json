@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "Workflow action parity: update `resolve_inbound_ticket_context` to include the same domain fallback + default contact behavior",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",

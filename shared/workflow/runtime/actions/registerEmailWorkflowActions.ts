@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import {
   findContactByEmail,
+  findUniqueClientIdByContactEmailDomain,
+  findValidClientPrimaryContactId,
   findTicketByEmailThread,
   findTicketByReplyToken,
   resolveInboundTicketDefaults,
@@ -14,6 +16,7 @@ import {
   createOrFindContact,
   saveEmailClientAssociation
 } from '../../actions/emailWorkflowActions';
+import { extractEmailDomain } from '../../../lib/email/addressUtils';
 
 // =============================================================================
 // SHARED OUTPUT SCHEMAS FOR EMAIL ACTIONS
@@ -383,11 +386,29 @@ export function registerEmailWorkflowActionsV2(): void {
         };
       }
 
-      const targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
-      const targetContactId = matchedClient?.contact_id ?? null;
-      const targetLocationId = (matchedClient?.client_id && ticketDefaults.client_id && matchedClient.client_id !== ticketDefaults.client_id)
-        ? null
-        : ticketDefaults.location_id ?? null;
+      let targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
+      let targetContactId = matchedClient?.contact_id ?? null;
+
+      // Domain fallback: if no exact contact match, infer a unique client via sender email domain.
+      if (!matchedClient?.contact_id) {
+        try {
+          const domain = extractEmailDomain(input.senderEmail);
+          if (domain) {
+            const domainMatchedClientId = await findUniqueClientIdByContactEmailDomain(domain, tenant);
+            if (domainMatchedClientId) {
+              targetClientId = domainMatchedClientId;
+              targetContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenant);
+            }
+          }
+        } catch {
+          // Best-effort only; fall back to defaults.
+        }
+      }
+
+      const targetLocationId =
+        (targetClientId && ticketDefaults.client_id && targetClientId !== ticketDefaults.client_id)
+          ? null
+          : ticketDefaults.location_id ?? null;
 
       return {
         ticketDefaults,

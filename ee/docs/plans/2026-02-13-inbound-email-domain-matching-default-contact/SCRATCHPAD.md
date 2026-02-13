@@ -36,6 +36,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Returns a client_id only when exactly one unique client matches; otherwise returns null.
 - (2026-02-13) Implemented `findValidClientPrimaryContactId(clientId, tenant)` in `shared/workflow/actions/emailWorkflowActions.ts` to safely apply `clients.properties.primary_contact_id` only when it references an active contact belonging to the client.
 - (2026-02-13) The workflow runtime action `resolve_inbound_ticket_context` in `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` contains similar “find contact by email, else defaults” logic and should be kept in parity if workflows still invoke it.
+- (2026-02-13) Updated `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` (`resolve_inbound_ticket_context`) to match in-app resolution:
+  - Exact contact match first.
+  - Else unique domain-to-client match and optional validated client default contact.
+  - `targetLocationId` is null when resolved client differs from defaults client.
 - (2026-02-13) There is existing “billing contact” (`clients.billing_contact_id`) UI in `packages/clients/src/components/clients/BillingConfigForm.tsx`, but it is billing-specific and not suitable as the inbound-email default contact.
 
 ## Commands / Runbooks
