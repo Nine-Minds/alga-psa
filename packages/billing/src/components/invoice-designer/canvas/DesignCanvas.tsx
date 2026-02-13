@@ -40,6 +40,7 @@ const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 
 interface CanvasNodeProps {
   node: DesignerNode;
+  parentUsesFlowLayout: boolean;
   isSelected: boolean;
   isReferenceNode: boolean;
   isConstraintCounterpart: boolean;
@@ -693,6 +694,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 
 const CanvasNode: React.FC<CanvasNodeProps> = ({
   node,
+  parentUsesFlowLayout,
   isSelected,
   isReferenceNode,
   isConstraintCounterpart,
@@ -736,10 +738,6 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     isContainer && childExtents && Number.isFinite(childExtents.maxBottom)
       ? Math.max(node.size.height, childExtents.maxBottom - node.position.y)
       : node.size.height;
-  const localPosition = {
-    x: node.position.x,
-    y: node.position.y,
-  };
   const resolvedBoxStyle = resolveNodeBoxStyle(node.style);
   const resolvedWidth = resolvedBoxStyle.width ?? inferredWidth;
   const resolvedHeight = resolvedBoxStyle.height ?? inferredHeight;
@@ -747,9 +745,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     ...resolvedBoxStyle,
     width: resolvedWidth,
     height: resolvedHeight,
-    top: localPosition.y,
-    left: localPosition.x,
-    position: 'absolute',
+    top: parentUsesFlowLayout ? undefined : node.position.y,
+    left: parentUsesFlowLayout ? undefined : node.position.x,
+    position: parentUsesFlowLayout ? undefined : 'absolute',
     transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
@@ -1030,20 +1028,40 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     backgroundImage: `linear-gradient(to right, ${GRID_COLOR} 1px, transparent 1px), linear-gradient(to bottom, ${GRID_COLOR} 1px, transparent 1px)`,
   }), [gridSize, canvasScale]);
 
+  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
+
   const childrenMap = useMemo(() => {
     const map = new Map<string, DesignerNode[]>();
+    // Prefer authored order (childIds) when the parent uses flow layout (flex/grid).
+    nodes.forEach((parent) => {
+      const parentUsesFlowLayout = parent.layout?.display === 'flex' || parent.layout?.display === 'grid';
+      if (!parentUsesFlowLayout) return;
+      if (!parent.childIds.length) return;
+
+      const ordered = parent.childIds
+        .map((childId) => nodesById.get(childId))
+        .filter((node): node is DesignerNode => Boolean(node));
+
+      map.set(parent.id, ordered);
+    });
+
+    // Legacy fallback: collect children by parentId and sort by canvas position.
     nodes.forEach((node) => {
       if (!node.parentId) return;
+      if (map.has(node.parentId)) return;
       if (!map.has(node.parentId)) {
         map.set(node.parentId, []);
       }
       map.get(node.parentId)!.push(node);
     });
-    map.forEach((list) => {
+    map.forEach((list, parentId) => {
+      const parent = nodesById.get(parentId);
+      const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
+      if (parentUsesFlowLayout) return;
       list.sort((a, b) => (a.position.y - b.position.y) || (a.position.x - b.position.x));
     });
     return map;
-  }, [nodes]);
+  }, [nodes, nodesById]);
 
   const childExtentsMap = useMemo(() => {
     const map = new Map<string, { maxRight: number; maxBottom: number }>();
@@ -1071,12 +1089,15 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   const renderNodeTree = useCallback((parentId: string) => {
     const children = childrenMap.get(parentId) ?? [];
+    const parent = nodesById.get(parentId);
+    const parentUsesFlowLayout = parent?.layout?.display === 'flex' || parent?.layout?.display === 'grid';
     return children
       .filter((node) => node.type !== 'document' && node.type !== 'page')
       .map((node) => (
         <CanvasNode
           key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
+          parentUsesFlowLayout={parentUsesFlowLayout}
           isSelected={selectedNodeId === node.id}
           isReferenceNode={activeReferenceNodeId === node.id}
           isConstraintCounterpart={constrainedCounterpartNodeIds.has(node.id)}
@@ -1097,6 +1118,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     activeReferenceNodeId,
     childExtentsMap,
     childrenMap,
+    nodesById,
     constrainedCounterpartNodeIds,
     forcedDropTarget,
     hasActiveRenderableSelection,

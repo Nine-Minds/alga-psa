@@ -58,6 +58,11 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
       - outer node: uses `node.style` for width/height/min/max/flex props, still absolute-positioned during cutover
       - container child wrapper: uses `node.layout` to set `display`, flex/grid rules, `gap`, `padding`
 
+- 2026-02-13: `F003` Flex row/column container layout
+  - Children of flex/grid containers are now rendered as flow items (no absolute `top/left`), enabling native flex row/column layout:
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Child ordering uses `parent.childIds` when parent is `display:flex|grid` (stable authored order); legacy canvas containers remain position-sorted for now.
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
