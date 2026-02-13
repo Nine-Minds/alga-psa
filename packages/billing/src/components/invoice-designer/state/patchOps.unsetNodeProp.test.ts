@@ -52,5 +52,24 @@ describe('patchOps.unsetNodeProp', () => {
 
     expect(next).toBe(nodes);
   });
-});
 
+  it('splices leaf array index unsets (no undefined holes)', () => {
+    const nodeA = createNode({
+      id: 'a',
+      type: 'text',
+      props: {
+        name: 'Node A',
+        metadata: {
+          items: ['a', 'b', 'c'],
+        },
+      } as any,
+    });
+    const nodes = [nodeA];
+
+    const next = unsetNodeProp(nodes, 'a', 'props.metadata.items.1');
+
+    expect((next[0].props as any).metadata.items).toEqual(['a', 'c']);
+    expect((next[0].props as any).metadata.items.length).toBe(2);
+    expect((next[0].props as any).metadata.items.includes(undefined)).toBe(false);
+  });
+});

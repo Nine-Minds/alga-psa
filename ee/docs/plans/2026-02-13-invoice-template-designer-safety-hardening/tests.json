@@ -153,7 +153,7 @@
   {
     "id": "T019",
     "description": "PatchOps: leaf array `unset` splices the array (length decreases, no `undefined` holes).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]

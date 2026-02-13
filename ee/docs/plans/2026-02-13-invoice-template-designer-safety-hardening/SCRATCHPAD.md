@@ -75,6 +75,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/palette/OutlineView.integration.test.tsx`
 - (2026-02-13) Added a focused DesignerShell UI test to ensure the selected-node header uses `getNodeName` (canonical `props.name` takes precedence over legacy `name`).
   - Test: `packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
+- (2026-02-13) Added unit coverage for leaf array `unset` semantics: leaf index unsets splice the array (no `undefined` holes).
+  - Test: `packages/billing/src/components/invoice-designer/state/patchOps.unsetNodeProp.test.ts`
 
 ## Commands / Runbooks
 
