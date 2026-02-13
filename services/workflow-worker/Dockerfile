@@ -22,6 +22,7 @@ COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/media/package.json ./packages/media/
 COPY packages/types/package.json ./packages/types/
@@ -35,6 +36,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=server \
   --workspace=@alga-psa/core \
   --workspace=@alga-psa/db \
+  --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/media \
   --workspace=@alga-psa/types \
@@ -47,6 +49,10 @@ COPY packages/ ./packages/
 
 # Build event schemas (required by workflow streams runtime)
 WORKDIR /app/packages/event-schemas
+RUN npm run build
+
+# Build event bus (required by shared)
+WORKDIR /app/packages/event-bus
 RUN npm run build
 
 # Build shared workspace first (server is only referenced for type imports)
