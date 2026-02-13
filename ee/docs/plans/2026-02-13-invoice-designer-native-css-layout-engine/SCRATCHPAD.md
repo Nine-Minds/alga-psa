@@ -73,3 +73,12 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
 
 - Search for legacy geometry imports:
   - `rg -n \"constraintSolver|constraints|dropParentResolution|aspectRatio\" packages/billing/src/components/invoice-designer`
+
+## Repo/Test Gotchas (Discovered 2026-02-13)
+
+- Vitest + React tests were failing when `NODE_ENV=production` leaked into the test process (React test utils expect non-production builds).
+  - Fix: `server/vitest.globalSetup.js` now forces `process.env.NODE_ENV = 'test'`.
+- Package tests under `../packages/**` were not being discovered when running Vitest from `server/`.
+  - Fix: `server/vitest.config.ts` now includes `../packages/**/*.{test,spec}.*` explicitly.
+- Coverage provider version must match Vitest major version.
+  - `server/` is currently on `vitest@3.2.4`, so `@vitest/coverage-v8@3.2.4` is added to `server/package.json` to avoid resolving the repo-root `@vitest/coverage-v8@4.x`.
