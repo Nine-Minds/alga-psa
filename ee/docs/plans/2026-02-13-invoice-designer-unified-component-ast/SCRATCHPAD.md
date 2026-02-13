@@ -203,3 +203,6 @@ This plan intentionally continues the simplification arc:
   - Kept label text behavior by normalizing label `name` <-> `metadata.text` changes inside `setNodeProp`/`unsetNodeProp` (only when mutating `name` or `metadata.*`).
   - Fixed `rootId` indexing so `exportWorkspace()` snapshots can be round-tripped via `loadWorkspace()` even when legacy fixtures use non-canonical document ids.
   - Updated affected tests and UI call sites to use `setNodeProp`/`unsetNodeProp` exclusively.
+- 2026-02-13: Added deterministic unified-tree traversal helper and tests:
+  - `packages/billing/src/components/invoice-designer/state/designerAst.ts` now exports `traverseDesignerAstNodeIds`.
+  - Added `packages/billing/src/components/invoice-designer/state/designerAst.test.ts`.

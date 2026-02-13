@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "featureIds": ["F001", "F002"], "description": "Type/unit: unified node model supports props + children and a rootId with a deterministic tree traversal.", "implemented": false },
+  { "id": "T001", "featureIds": ["F001", "F002"], "description": "Type/unit: unified node model supports props + children and a rootId with a deterministic tree traversal.", "implemented": true },
   { "id": "T002", "featureIds": ["F003"], "description": "Unit: setNodeProp updates deep paths (dot-notation) immutably and does not mutate previous state references.", "implemented": false },
   { "id": "T003", "featureIds": ["F003"], "description": "Unit: unsetNodeProp removes deep paths and cleans up empty objects where required by conventions.", "implemented": false },
   { "id": "T004", "featureIds": ["F003"], "description": "Unit: insertChild inserts at index and preserves existing child order deterministically.", "implemented": false },
@@ -22,4 +22,3 @@
   { "id": "T021", "featureIds": ["F017"], "description": "Unit: serialized workspace snapshot contains only the unified tree format + UI settings and omits legacy per-node typed fields.", "implemented": false },
   { "id": "T022", "featureIds": ["F019"], "description": "Repo: no references remain to removed per-property store actions and legacy typed node fields after refactor.", "implemented": false }
 ]
-
