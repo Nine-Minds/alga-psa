@@ -3,7 +3,7 @@
   { "id": "F002", "description": "Implement mapping from designer node layout properties to DOM style props (inline styles or class tokens) for canvas rendering.", "implemented": true },
   { "id": "F003", "description": "Implement container layout modes: flex column and flex row.", "implemented": true },
   { "id": "F004", "description": "Implement container spacing controls: gap, padding, border (as exposed by the designer UI).", "implemented": true },
-  { "id": "F005", "description": "Implement alignment controls for flex containers: justify-content and align-items.", "implemented": false },
+  { "id": "F005", "description": "Implement alignment controls for flex containers: justify-content and align-items.", "implemented": true },
   { "id": "F006", "description": "Implement item sizing controls: width/height and min/max constraints using CSS values.", "implemented": false },
   { "id": "F007", "description": "Implement flex item controls: grow/shrink/basis for nodes inside flex containers (where meaningful).", "implemented": false },
   { "id": "F008", "description": "Implement grid container mode using CSS grid (template columns/rows + gap + auto-flow).", "implemented": false },

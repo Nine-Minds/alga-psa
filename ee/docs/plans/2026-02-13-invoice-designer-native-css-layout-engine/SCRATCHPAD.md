@@ -69,6 +69,13 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - `resolveFlexPadding` updated to support both legacy numeric padding and CSS `padding: \"Npx\"` during cutover:
     - `packages/billing/src/components/invoice-designer/utils/layout.ts`
 
+- 2026-02-13: `F005` Flex alignment controls (justify/align)
+  - Layout inspector edits `align-items` and `justify-content` for containers and writes CSS values into `node.layout`:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas applies `justifyContent`/`alignItems` via the container style mapping:
+    - `packages/billing/src/components/invoice-designer/utils/cssLayout.ts`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
