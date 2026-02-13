@@ -196,6 +196,8 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Added schema invariants test in `packages/billing/src/components/invoice-designer/schema/componentSchema.test.ts`:
   - Ensures every component type has defaults, an inspector schema, and reciprocal nesting allowlists (parent allowedChildren aligns with child allowedParents).
 - 2026-02-13: Added repo/unit guard ensuring `packages/billing/src/components/invoice-designer/state/hierarchy.ts` stays deleted and is not imported anywhere in the invoice designer code.
+- 2026-02-13: Added palette insertion integration test in `packages/billing/src/components/invoice-designer/state/designerStore.addNodeFromPalette.test.ts`:
+  - Verifies `addNodeFromPalette` pulls `layout/metadata/size` defaults from the component schema and attaches the new node id into the parent `children` array.
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
