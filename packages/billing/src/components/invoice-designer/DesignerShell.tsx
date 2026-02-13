@@ -1695,12 +1695,13 @@ export const DesignerShell: React.FC = () => {
       );
     }
 
-    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
-      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Media</p>
-          <div>
+	    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
+	      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
+        const objectFit = selectedNode.style?.objectFit ?? fitMode;
+	      return (
+	        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+	          <p className="text-xs font-semibold text-slate-700">Media</p>
+	          <div>
             <label className="text-xs text-slate-500 block mb-1">Source URL</label>
             <Input
               id="designer-media-src"
@@ -1715,23 +1716,40 @@ export const DesignerShell: React.FC = () => {
               value={metadata.alt ?? ''}
               onChange={(event) => applyMetadata({ alt: event.target.value })}
             />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Fit mode</label>
-            <select
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={fitMode}
-              onChange={(event) => applyMetadata({ fitMode: event.target.value, fit: event.target.value })}
-            >
-              <option value="contain">Contain</option>
-              <option value="cover">Cover</option>
-              <option value="fill">Fill</option>
-            </select>
-          </div>
-          <div className="pt-2 border-t border-slate-100 space-y-1">
-            <Button
-              id="designer-fit-parent-section-to-media"
-              variant="outline"
+	          </div>
+	          <div>
+	            <label className="text-xs text-slate-500 block mb-1">Object fit</label>
+	            <select
+	              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+	              value={objectFit}
+	              onChange={(event) => {
+                  const next = event.target.value;
+                  updateNodeStyle(selectedNode.id, { objectFit: next as any });
+                  if (next === 'contain' || next === 'cover' || next === 'fill') {
+                    applyMetadata({ fitMode: next, fit: next });
+                  }
+                }}
+	            >
+	              <option value="contain">Contain</option>
+	              <option value="cover">Cover</option>
+	              <option value="fill">Fill</option>
+                <option value="none">None</option>
+                <option value="scale-down">Scale Down</option>
+	            </select>
+	          </div>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
+              <Input
+                id="designer-media-aspect-ratio"
+                value={selectedNode.style?.aspectRatio ?? ''}
+                placeholder="e.g. 16 / 9 or 1 / 1"
+                onChange={(event) => updateNodeStyle(selectedNode.id, { aspectRatio: normalizeCssValue(event.target.value) })}
+              />
+            </div>
+	          <div className="pt-2 border-t border-slate-100 space-y-1">
+	            <Button
+	              id="designer-fit-parent-section-to-media"
+	              variant="outline"
               onClick={fitParentSectionFromMedia}
               disabled={!selectedMediaParentSection}
             >

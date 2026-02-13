@@ -487,27 +487,34 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             }
           : undefined;
 
-      const node: DesignerNode = {
-        id: generateId(),
-        type,
-        name: `${type} ${get().nodes.length + 1}`,
-        position,
-        size,
-        baseSize: size,
+	      const node: DesignerNode = {
+	        id: generateId(),
+	        type,
+	        name: `${type} ${get().nodes.length + 1}`,
+	        position,
+	        size,
+	        baseSize: size,
         rotation: 0,
         canRotate: true,
         allowResize: true,
         ...options.defaults,
         metadata: options.defaults?.metadata ?? {},
         parentId: resolvedParentId,
-        childIds: [],
-        allowedChildren: getAllowedChildrenForType(type),
-        layout: options.defaults?.layout ?? defaultLayout,
-        style: options.defaults?.style ?? {
-          width: `${Math.round(size.width)}px`,
-          height: `${Math.round(size.height)}px`,
-        },
-      };
+	        childIds: [],
+	        allowedChildren: getAllowedChildrenForType(type),
+	        layout: options.defaults?.layout ?? defaultLayout,
+	        style:
+	          options.defaults?.style ?? {
+	            width: `${Math.round(size.width)}px`,
+	            height: `${Math.round(size.height)}px`,
+	            ...(type === 'image' || type === 'logo' || type === 'qr'
+	              ? {
+	                  objectFit: 'contain' as const,
+	                  ...(type === 'qr' ? { aspectRatio: '1 / 1' } : {}),
+	                }
+	              : {}),
+	          },
+	      };
 
       set((state) => {
         const appendedNodes = [...state.nodes, node];

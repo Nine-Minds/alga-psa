@@ -701,20 +701,59 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       return { content: renderTotalsSummaryPreview(previewData) };
     case 'divider':
       return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
-    case 'spacer':
-      return {
-        content: (
-          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
-            Spacer
-          </div>
-        ),
-      };
-    case 'container':
-      return { content: null }; // Container renders children directly
-    default:
-      return { content: `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}` };
-  }
-};
+	    case 'spacer':
+	      return {
+	        content: (
+	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
+	            Spacer
+	          </div>
+	        ),
+	      };
+	    case 'container':
+	      return { content: null }; // Container renders children directly
+      case 'image':
+      case 'logo':
+      case 'qr': {
+        const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
+        const alt = typeof metadata.alt === 'string' ? metadata.alt : '';
+        const fallbackFit =
+          metadata.fitMode === 'contain' || metadata.fitMode === 'cover' || metadata.fitMode === 'fill'
+            ? metadata.fitMode
+            : metadata.fit === 'contain' || metadata.fit === 'cover' || metadata.fit === 'fill'
+              ? metadata.fit
+              : 'contain';
+        const objectFit = node.style?.objectFit ?? fallbackFit;
+
+        if (!src) {
+          const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
+          return {
+            content: (
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50/50 border border-dashed border-slate-200">
+                {label}
+              </div>
+            ),
+          };
+        }
+
+        return {
+          content: (
+            <img
+              src={src}
+              alt={alt}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit,
+                display: 'block',
+              }}
+            />
+          ),
+        };
+      }
+	    default:
+	      return { content: `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}` };
+	  }
+	};
 
 const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   node,
@@ -778,6 +817,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
   const isFieldNode = node.type === 'field';
+  const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
   ];
@@ -988,15 +1028,19 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
               <span className="truncate">{node.name}</span>
               <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
             </div>
-            <div
-              className={clsx(
-                'text-[11px] text-slate-500',
-                node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
-                node.type === 'spacer' && 'h-full p-0',
-                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
-                previewContent.isPlaceholder && 'text-slate-400'
-              )}
-            >
+	            <div
+	              className={clsx(
+	                'text-[11px] text-slate-500',
+	                node.type === 'divider'
+	                  ? 'p-0 flex items-center justify-center h-[14px]'
+	                  : isMediaNode
+	                    ? 'p-0 h-full overflow-hidden'
+	                    : 'p-2 whitespace-pre-wrap',
+	                node.type === 'spacer' && 'h-full p-0',
+	                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+	                previewContent.isPlaceholder && 'text-slate-400'
+	              )}
+	            >
               {previewContent.content}
             </div>
           </>

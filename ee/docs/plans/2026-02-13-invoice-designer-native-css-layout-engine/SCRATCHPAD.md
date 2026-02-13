@@ -122,6 +122,13 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
   - Drop end emits an error toast-style banner via existing `dropFeedback` mechanism when invalid.
 
+- 2026-02-13: `F015` Image aspect ratio + object-fit (CSS)
+  - Media nodes (`image`, `logo`, `qr`) now render with CSS `aspect-ratio` (wrapper) and `object-fit` (img) support, with inspector controls writing `node.style.aspectRatio` and `node.style.objectFit`:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - New media nodes default to `objectFit: contain` (and `qr` defaults to `aspectRatio: 1 / 1`) without any JS measurement loops:
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
