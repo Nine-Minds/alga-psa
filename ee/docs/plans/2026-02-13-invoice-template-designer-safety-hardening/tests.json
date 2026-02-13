@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Repo: `.gitignore` ignores `server/.env.local.bak*` (and related local backup patterns).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]

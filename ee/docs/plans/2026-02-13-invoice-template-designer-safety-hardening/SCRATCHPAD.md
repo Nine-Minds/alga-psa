@@ -67,6 +67,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-02-13) Check for tracked env backups:
   - `git ls-files | rg "\\.env\\.local\\.bak\\.|\\.env\\.bak\\."`
+- (2026-02-13) Check `.gitignore` contains env-backup ignore patterns:
+  - `node scripts/test-gitignore-env-backups.mjs`
 - (2026-02-13) Run invoice-designer unit tests (Vitest config root is `server/`):
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts`
 - (2026-02-13) Gotcha: Vitest can fail with `ENOSPC` (no space left on device) when Vite attempts to write `.vite-temp` config bundles.
