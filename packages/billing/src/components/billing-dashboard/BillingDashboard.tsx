@@ -24,6 +24,7 @@ import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
+import AccountingExportsTab from './accounting/AccountingExportsTab';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -135,6 +136,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           ) : (
             <ClientContractsTab />
           )}
+        </Tabs.Content>
+
+        <Tabs.Content value="accounting-exports">
+          <AccountingExportsTab />
         </Tabs.Content>
 
         <Tabs.Content value="reports">
