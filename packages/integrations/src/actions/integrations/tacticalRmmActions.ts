@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
+import { TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -23,17 +24,7 @@ function maskSecret(value: string): string {
 }
 
 function normalizeBaseUrl(input: string): string {
-  const raw = (input || '').trim();
-  if (!raw) return '';
-
-  const withProto = raw.startsWith('http://') || raw.startsWith('https://')
-    ? raw
-    : `https://${raw}`;
-
-  const url = new URL(withProto);
-  const pathname = url.pathname.replace(/\/+$/, '');
-  const normalizedPath = pathname === '/api' ? '' : pathname;
-  return `${url.protocol}//${url.host}${normalizedPath}`;
+  return normalizeTacticalBaseUrl(input);
 }
 
 function axiosErrorToMessage(err: unknown): string {
@@ -93,6 +84,52 @@ async function upsertIntegrationRow(args: {
     connected_at: string | null;
     sync_error: string | null;
   };
+}
+
+async function buildConfiguredTacticalClient(args: {
+  tenant: string;
+  instanceUrl: string;
+  authMode: TacticalRmmAuthMode;
+}) {
+  const secretProvider = await getSecretProviderInstance();
+  const baseUrl = normalizeTacticalBaseUrl(args.instanceUrl);
+  if (!baseUrl) throw new Error('Instance URL is not configured');
+
+  if (args.authMode === 'api_key') {
+    const apiKey = await secretProvider.getTenantSecret(args.tenant, TACTICAL_API_KEY_SECRET);
+    return new TacticalRmmClient({
+      baseUrl,
+      authMode: 'api_key',
+      apiKey: apiKey || undefined,
+    });
+  }
+
+  const token = await secretProvider.getTenantSecret(args.tenant, TACTICAL_KNOX_TOKEN_SECRET);
+  const username = await secretProvider.getTenantSecret(args.tenant, TACTICAL_KNOX_USERNAME_SECRET);
+  const password = await secretProvider.getTenantSecret(args.tenant, TACTICAL_KNOX_PASSWORD_SECRET);
+
+  const client = new TacticalRmmClient({
+    baseUrl,
+    authMode: 'knox',
+    knoxToken: token || undefined,
+    refreshKnoxToken: async () => {
+      if (!username || !password) {
+        throw new Error('Knox username/password not configured');
+      }
+      const unauth = new TacticalRmmClient({ baseUrl, authMode: 'knox' });
+      const { totp } = await unauth.checkCreds({ username, password });
+      if (totp) {
+        throw new Error('TOTP required. Run Test Connection with a TOTP code to save a Knox token.');
+      }
+      const login = await unauth.login({ username, password });
+      return login.token;
+    },
+    onKnoxTokenRefreshed: async (newToken) => {
+      await secretProvider.setTenantSecret(args.tenant, TACTICAL_KNOX_TOKEN_SECRET, newToken);
+    },
+  });
+
+  return client;
 }
 
 export const getTacticalRmmSettings = withAuth(async (user, { tenant }): Promise<{
@@ -438,6 +475,101 @@ export const testTacticalRmmConnection = withAuth(async (
       .update({ is_active: true, connected_at: knex.fn.now(), sync_error: null });
 
     return { success: true };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
+
+export const syncTacticalRmmOrganizations = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  items_processed?: number;
+  items_created?: number;
+  items_updated?: number;
+  items_failed?: number;
+  errors?: string[];
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  const errors: string[] = [];
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first(['integration_id', 'instance_url', 'settings']);
+
+    if (!integration?.integration_id) {
+      return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
+    }
+
+    const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
+    const client = await buildConfiguredTacticalClient({
+      tenant,
+      instanceUrl: integration.instance_url,
+      authMode,
+    });
+
+    const remoteClients = await client.listAllBeta<any>({ path: '/api/beta/v1/client/' });
+
+    const existingRows = await knex('rmm_organization_mappings')
+      .where({ tenant, integration_id: integration.integration_id })
+      .select('external_organization_id');
+
+    const existing = new Set(existingRows.map((r: any) => String(r.external_organization_id)));
+
+    let created = 0;
+    let updated = 0;
+
+    for (const rc of remoteClients) {
+      const externalId = String((rc as any).id ?? (rc as any).pk ?? (rc as any).client_id ?? '');
+      if (!externalId) {
+        errors.push('Client record missing id');
+        continue;
+      }
+
+      const name =
+        (rc as any).name ||
+        (rc as any).client_name ||
+        (rc as any).company_name ||
+        (rc as any).organization ||
+        externalId;
+
+      if (existing.has(externalId)) updated += 1;
+      else created += 1;
+
+      await knex('rmm_organization_mappings')
+        .insert({
+          tenant,
+          integration_id: integration.integration_id,
+          external_organization_id: externalId,
+          external_organization_name: String(name),
+          metadata: rc,
+        })
+        .onConflict(['tenant', 'integration_id', 'external_organization_id'])
+        .merge({
+          external_organization_name: String(name),
+          metadata: rc,
+          updated_at: knex.fn.now(),
+        });
+    }
+
+    await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
+
+    return {
+      success: true,
+      items_processed: remoteClients.length,
+      items_created: created,
+      items_updated: updated,
+      items_failed: errors.length,
+      errors: errors.length ? errors : undefined,
+    };
   } catch (err) {
     return { success: false, error: axiosErrorToMessage(err) };
   }

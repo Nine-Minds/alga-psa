@@ -104,6 +104,7 @@ export {
   testTacticalRmmConnection,
   disconnectTacticalRmmIntegration,
   getTacticalRmmConnectionSummary,
+  syncTacticalRmmOrganizations,
   type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
 export {
