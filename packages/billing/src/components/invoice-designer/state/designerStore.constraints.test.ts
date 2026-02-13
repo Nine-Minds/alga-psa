@@ -29,7 +29,7 @@ describe('designerStore (no constraint solver state)', () => {
     });
   });
 
-  it('allows setting non-px sizing strings via updateNodeStyle', () => {
+  it('allows setting non-px sizing strings via setNodeProp', () => {
     const store = useInvoiceDesignerStore.getState();
     const pageId = store.nodes.find((node) => node.type === 'page')?.id;
     expect(pageId).toBeTruthy();
@@ -45,7 +45,9 @@ describe('designerStore (no constraint solver state)', () => {
     expect(nodeId).toBeTruthy();
     if (!nodeId) return;
 
-    store.updateNodeStyle(nodeId, { width: '50%', height: 'auto', minWidth: '12rem' });
+    store.setNodeProp(nodeId, 'style.width', '50%', false);
+    store.setNodeProp(nodeId, 'style.height', 'auto', false);
+    store.setNodeProp(nodeId, 'style.minWidth', '12rem', true);
     const updated = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === nodeId);
     expect(updated?.style?.width).toBe('50%');
     expect(updated?.style?.height).toBe('auto');

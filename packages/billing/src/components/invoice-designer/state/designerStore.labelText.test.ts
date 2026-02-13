@@ -145,14 +145,14 @@ describe('designerStore label text authority', () => {
   });
 
   it('syncs label node name from metadata.text updates', () => {
-    useInvoiceDesignerStore.getState().updateNodeMetadata('label', { text: 'INVOICE' });
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'metadata.text', 'INVOICE', true);
     const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
     expect(label?.name).toBe('INVOICE');
     expect(label?.metadata?.text).toBe('INVOICE');
   });
 
   it('syncs label metadata.text from name updates', () => {
-    useInvoiceDesignerStore.getState().updateNodeName('label', 'DUE DATE');
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'name', 'DUE DATE', true);
     const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
     expect(label?.name).toBe('DUE DATE');
     expect(label?.metadata?.text).toBe('DUE DATE');
@@ -160,8 +160,9 @@ describe('designerStore label text authority', () => {
 
   it('preserves synced label text after position/size commits', () => {
     const store = useInvoiceDesignerStore.getState();
-    store.updateNodeMetadata('label', { text: 'INVOICE' });
-    store.setNodePosition('label', { x: 24, y: 24 }, true);
+    store.setNodeProp('label', 'metadata.text', 'INVOICE', true);
+    store.setNodeProp('label', 'position.x', 24, false);
+    store.setNodeProp('label', 'position.y', 24, true);
     const nodeBefore = store.nodesById['label'];
     expect(nodeBefore).toBeTruthy();
     if (!nodeBefore) return;
@@ -182,7 +183,8 @@ describe('designerStore label text authority', () => {
 
   it('syncs label node name and metadata.text from metadata.label for legacy nodes', () => {
     const store = useInvoiceDesignerStore.getState();
-    store.updateNodeMetadata('label', { text: '', label: 'Billing Contact' });
+    store.setNodeProp('label', 'metadata.text', '', false);
+    store.setNodeProp('label', 'metadata.label', 'Billing Contact', true);
 
     const label = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'label');
     expect(label?.name).toBe('Billing Contact');

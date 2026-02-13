@@ -177,14 +177,6 @@ interface DesignerState {
     options?: { defaults?: Partial<DesignerNode>; parentId?: string }
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
-  // Legacy coordinate nudge during cutover.
-  moveNodeByDelta: (id: string, delta: Point, commit?: boolean) => void;
-  moveNodeToParentAtIndex: (nodeId: string, parentId: string, index: number) => void;
-  setNodePosition: (id: string, position: Point, commit?: boolean) => void;
-  updateNodeName: (id: string, name: string) => void;
-  updateNodeMetadata: (id: string, metadata: Record<string, unknown>) => void;
-  updateNodeLayout: (id: string, layout: Partial<DesignerContainerLayout>) => void;
-  updateNodeStyle: (id: string, style: Partial<DesignerNodeStyle>) => void;
   // Generic patch API (primary path going forward).
   setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
   unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
@@ -192,7 +184,6 @@ interface DesignerState {
   removeChild: (parentId: string, childId: string) => void;
   moveNode: (nodeId: string, nextParentId: string, nextIndex: number) => void;
   deleteNode: (nodeId: string) => void;
-  clearLayoutPreset: (nodeId: string) => void;
   selectNode: (id: string | null) => void;
   setHoverNode: (id: string | null) => void;
   deleteSelectedNode: () => void;
@@ -242,6 +233,71 @@ const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined):
   delete (clone as { baseSize?: unknown }).baseSize;
   delete (clone as { layoutPresetId?: unknown }).layoutPresetId;
   return clone;
+};
+
+type LabelNormalizationKind = 'name' | 'metadata';
+
+const resolveLabelNormalizationKind = (path: string): LabelNormalizationKind | null => {
+  if (path === 'name' || path === 'props.name') {
+    return 'name';
+  }
+  if (path === 'metadata' || path === 'props.metadata') {
+    return 'metadata';
+  }
+  if (path.startsWith('metadata.') || path.startsWith('props.metadata.')) {
+    return 'metadata';
+  }
+  return null;
+};
+
+const normalizeLabelAfterMutation = (
+  nodes: DesignerNode[],
+  nodeId: string,
+  kind: LabelNormalizationKind
+): DesignerNode[] => {
+  const index = nodes.findIndex((node) => node.id === nodeId);
+  if (index < 0) return nodes;
+  const node = nodes[index];
+  if (!node || node.type !== 'label') return nodes;
+
+  const existingMetadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const existingProps = isPlainObject(node.props) ? node.props : {};
+  const propsMetadata = isPlainObject(existingProps.metadata) ? (existingProps.metadata as Record<string, unknown>) : {};
+
+  if (kind === 'name') {
+    const nextText = typeof node.name === 'string' ? node.name : '';
+    const nextMetadata = { ...existingMetadata, ...propsMetadata, text: nextText };
+    const nextProps = { ...existingProps, name: nextText, metadata: nextMetadata };
+    const nextNode: DesignerNode = { ...node, name: nextText, metadata: nextMetadata, props: nextProps };
+    if (nextNode === node) return nodes;
+    const copy = nodes.slice();
+    copy[index] = nextNode;
+    return copy;
+  }
+
+  const mergedMetadata = { ...existingMetadata, ...propsMetadata };
+  const candidateText = typeof mergedMetadata.text === 'string' ? mergedMetadata.text.trim() : '';
+  const candidateLabel = typeof mergedMetadata.label === 'string' ? mergedMetadata.label.trim() : '';
+
+  if (candidateText) {
+    const nextMetadata = { ...mergedMetadata, text: candidateText };
+    const nextProps = { ...existingProps, name: candidateText, metadata: nextMetadata };
+    const nextNode: DesignerNode = { ...node, name: candidateText, metadata: nextMetadata, props: nextProps };
+    const copy = nodes.slice();
+    copy[index] = nextNode;
+    return copy;
+  }
+
+  if (candidateLabel) {
+    const nextMetadata = { ...mergedMetadata, text: candidateLabel, label: candidateLabel };
+    const nextProps = { ...existingProps, name: candidateLabel, metadata: nextMetadata };
+    const nextNode: DesignerNode = { ...node, name: candidateLabel, metadata: nextMetadata, props: nextProps };
+    const copy = nodes.slice();
+    copy[index] = nextNode;
+    return copy;
+  }
+
+  return nodes;
 };
 
 const snapshotWorkspaceNodesById = (
@@ -710,8 +766,19 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const nextState = { ...state, ...(nextPartial as Partial<DesignerState>) } as DesignerState;
 
         if ('nodes' in (nextPartial as Partial<DesignerState>) && Array.isArray(nextState.nodes)) {
-          nextState.rootId = DOCUMENT_NODE_ID;
           nextState.nodesById = indexNodesById(nextState.nodes);
+          const requestedRootId = (nextPartial as { rootId?: unknown }).rootId;
+          const hasRequestedRoot = typeof requestedRootId === 'string' && Boolean(nextState.nodesById[requestedRootId]);
+          const hasExistingRoot = Boolean(nextState.rootId && nextState.nodesById[nextState.rootId]);
+          const derivedRootId =
+            nextState.nodes.find((node) => node.type === 'document')?.id ??
+            nextState.nodes.at(0)?.id ??
+            DOCUMENT_NODE_ID;
+          nextState.rootId = hasRequestedRoot
+            ? (requestedRootId as string)
+            : hasExistingRoot
+              ? nextState.rootId
+              : derivedRootId;
         }
 
         return nextState;
@@ -973,31 +1040,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/insertPreset');
     },
 
-    moveNodeByDelta: (id, delta, commit = false) => {
-      setWithIndex((state) => {
-        const nodes = state.nodes.map((node) => {
-          if (node.id !== id) return node;
-          const desired = {
-            x: node.position.x + delta.x,
-            y: node.position.y + delta.y,
-          };
-          // Clamp within the canvas bounds in legacy mode.
-          const clamped = {
-            x: clamp(desired.x, 0, DESIGNER_CANVAS_BOUNDS.width - 10),
-            y: clamp(desired.y, 0, DESIGNER_CANVAS_BOUNDS.height - 10),
-          };
-          return { ...node, position: clamped, props: { ...node.props, position: clamped } };
-        });
-
-        if (!commit) {
-          return { nodes };
-        }
-
-        const { history, historyIndex } = appendHistory(state, nodes);
-        return { nodes, history, historyIndex };
-      }, false, 'designer/moveNodeByDelta');
-    },
-
     setNodeProp: (nodeId, path, value, commit = true) => {
       setWithIndex((state) => {
         const expandPaths = (input: string): string[] => {
@@ -1029,6 +1071,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           nodes = patchSetNodeProp(nodes, nodeId, expandedPath, value);
         }
         if (nodes === state.nodes) return state;
+
+        const labelNormalization = resolveLabelNormalizationKind(path);
+        if (labelNormalization) {
+          nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
+        }
 
         if (!commit) return { nodes };
 
@@ -1068,6 +1115,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           nodes = patchUnsetNodeProp(nodes, nodeId, expandedPath);
         }
         if (nodes === state.nodes) return state;
+
+        const labelNormalization = resolveLabelNormalizationKind(path);
+        if (labelNormalization) {
+          nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
+        }
 
         if (!commit) return { nodes };
 
@@ -1132,143 +1184,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           hoverNodeId: state.hoverNodeId && remainingIds.has(state.hoverNodeId) ? state.hoverNodeId : null,
         };
       }, false, 'designer/deleteNode');
-    },
-
-    moveNodeToParentAtIndex: (nodeId, parentId, index) => {
-      setWithIndex((state) => {
-        const nodesById = state.nodesById;
-        const node = nodesById[nodeId];
-        const nextParent = nodesById[parentId];
-        if (!node || !nextParent) return state;
-        if (!canNestWithinParent(node.type, nextParent.type)) return state;
-
-        const nodes = patchMoveNode(state.nodes, nodeId, parentId, index);
-        if (nodes === state.nodes) return state;
-        const { history, historyIndex } = appendHistory(state, nodes);
-        return { nodes, history, historyIndex };
-      }, false, 'designer/moveNodeToParentAtIndex');
-    },
-
-    setNodePosition: (id, position, commit = false) => {
-      setWithIndex((state) => {
-        const nodes = state.nodes.map((node) =>
-          node.id === id
-            ? { ...node, position: { ...position }, props: { ...node.props, position: { ...position } } }
-            : node
-        );
-        if (!commit) {
-          return { nodes };
-        }
-        const { history, historyIndex } = appendHistory(state, nodes);
-        return { nodes, history, historyIndex };
-      }, false, 'designer/setNodePosition');
-    },
-
-    updateNodeName: (id, name) => {
-      setWithIndex((state) => ({
-        nodes: state.nodes.map((node) => {
-          if (node.id !== id) return node;
-          if (node.type !== 'label') {
-            return { ...node, name, props: { ...node.props, name } };
-          }
-          // Labels treat their displayed text as authoritative and keep metadata.text in sync.
-          const nextText = typeof name === 'string' ? name : '';
-          const nextMetadata = {
-            ...(node.metadata ?? {}),
-            text: nextText,
-          };
-          return {
-            ...node,
-            name: nextText,
-            metadata: nextMetadata,
-            props: {
-              ...node.props,
-              name: nextText,
-              metadata: nextMetadata,
-            },
-          };
-        }),
-      }));
-    },
-
-    updateNodeMetadata: (id, metadata) => {
-      setWithIndex((state) => ({
-        nodes: state.nodes.map((node) => {
-          if (node.id !== id) return node;
-          const nextMetadata = metadata;
-          if (node.type !== 'label') {
-            return { ...node, metadata: nextMetadata, props: { ...node.props, metadata: nextMetadata } };
-          }
-
-          const candidateText = typeof nextMetadata?.text === 'string' ? nextMetadata.text.trim() : '';
-          const candidateLabel = typeof nextMetadata?.label === 'string' ? nextMetadata.label.trim() : '';
-
-          if (candidateText) {
-            const resolvedMetadata = { ...nextMetadata, text: candidateText };
-            return {
-              ...node,
-              name: candidateText,
-              metadata: resolvedMetadata,
-              props: { ...node.props, name: candidateText, metadata: resolvedMetadata },
-            };
-          }
-
-          if (candidateLabel) {
-            const resolvedMetadata = { ...nextMetadata, text: candidateLabel, label: candidateLabel };
-            return {
-              ...node,
-              name: candidateLabel,
-              metadata: resolvedMetadata,
-              props: { ...node.props, name: candidateLabel, metadata: resolvedMetadata },
-            };
-          }
-
-          return { ...node, metadata: nextMetadata, props: { ...node.props, metadata: nextMetadata } };
-        }),
-      }));
-    },
-
-    updateNodeLayout: (id, layout) => {
-      setWithIndex((state) => ({
-        nodes: state.nodes.map((node) =>
-          node.id === id
-            ? {
-                ...node,
-                layout: {
-                  ...(node.layout ?? { display: 'flex' }),
-                  ...layout,
-                },
-                props: {
-                  ...node.props,
-                  layout: {
-                    ...(node.layout ?? { display: 'flex' }),
-                    ...layout,
-                  },
-                },
-              }
-            : node
-        ),
-      }));
-    },
-
-    updateNodeStyle: (id, style) => {
-      setWithIndex((state) => ({
-        nodes: state.nodes.map((node) => {
-          if (node.id !== id) return node;
-          const nextStyle = { ...node.style, ...style };
-          return { ...node, style: nextStyle, props: { ...node.props, style: nextStyle } };
-        }),
-      }));
-    },
-
-    clearLayoutPreset: (nodeId) => {
-      setWithIndex((state) => ({
-        nodes: state.nodes.map((node) =>
-          node.id === nodeId
-            ? { ...node, layoutPresetId: undefined, props: { ...node.props, layoutPresetId: undefined } }
-            : node
-        ),
-      }));
     },
 
     selectNode: (id) => {
@@ -1361,13 +1276,15 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     loadWorkspace: (workspace) => {
       setWithIndex((state) => {
         const legacyNodes = (workspace as { nodes?: unknown }).nodes;
+        const nextRootId = typeof workspace.rootId === 'string' ? workspace.rootId : state.rootId;
         const nextNodes = Array.isArray(legacyNodes)
           ? snapshotNodes(legacyNodes as DesignerNode[])
           : materializeNodesFromSnapshot({
               nodesById: workspace.nodesById,
-              rootId: typeof workspace.rootId === 'string' ? workspace.rootId : state.rootId,
+              rootId: nextRootId,
             });
         return {
+          rootId: nextRootId,
           nodes: nextNodes,
           snapToGrid: typeof workspace.snapToGrid === 'boolean' ? workspace.snapToGrid : state.snapToGrid,
           gridSize: typeof workspace.gridSize === 'number' ? workspace.gridSize : state.gridSize,
@@ -1377,6 +1294,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           history: [createHistoryEntry(nextNodes)],
           historyIndex: 0,
           selectedNodeId: null,
+          hoverNodeId: null,
         };
       }, false, 'designer/loadWorkspace');
     },

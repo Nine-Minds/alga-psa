@@ -45,7 +45,6 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const designerResetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
   const designerExportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
   const designerNodes = useInvoiceDesignerStore((state) => state.nodes);
-  const designerConstraints = useInvoiceDesignerStore((state) => state.constraints);
   const designerSnapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const designerGridSize = useInvoiceDesignerStore((state) => state.gridSize);
   const designerShowGuides = useInvoiceDesignerStore((state) => state.showGuides);
@@ -72,23 +71,14 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     }
 
     try {
-      const workspace = {
-        nodes: designerNodes,
-        constraints: designerConstraints,
-        snapToGrid: designerSnapToGrid,
-        gridSize: designerGridSize,
-        showGuides: designerShowGuides,
-        showRulers: designerShowRulers,
-        canvasScale: designerCanvasScale,
-      };
-      return exportWorkspaceToInvoiceTemplateAstJson(workspace);
+      return exportWorkspaceToInvoiceTemplateAstJson(designerExportWorkspace());
     } catch {
       return null;
     }
   }, [
     canUseDesigner,
+    designerExportWorkspace,
     designerCanvasScale,
-    designerConstraints,
     designerGridSize,
     designerNodes,
     designerShowGuides,
@@ -170,6 +160,11 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
       if (stored) {
         try {
           const parsed = JSON.parse(stored) as any;
+          if (parsed?.nodesById) {
+            designerLoadWorkspace(parsed);
+            setDesignerHydratedFor(hydrationKey);
+            return;
+          }
           if (parsed?.nodes) {
             designerLoadWorkspace(parsed);
             setDesignerHydratedFor(hydrationKey);

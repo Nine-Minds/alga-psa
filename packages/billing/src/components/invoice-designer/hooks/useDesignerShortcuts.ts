@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useInvoiceDesignerStore } from '../state/designerStore';
+import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 
 export const useDesignerShortcuts = () => {
   const undo = useInvoiceDesignerStore((state) => state.undo);
@@ -7,7 +8,8 @@ export const useDesignerShortcuts = () => {
   const deleteSelectedNode = useInvoiceDesignerStore((state) => state.deleteSelectedNode);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
-  const moveNodeByDelta = useInvoiceDesignerStore((state) => state.moveNodeByDelta);
+  const nodesById = useInvoiceDesignerStore((state) => state.nodesById);
+  const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
 
@@ -47,23 +49,53 @@ export const useDesignerShortcuts = () => {
       if (selectedNodeId && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
         const delta = snapToGrid ? gridSize : 4;
+        const node = nodesById[selectedNodeId];
+        if (!node) {
+          return;
+        }
+        const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+        let dx = 0;
+        let dy = 0;
         switch (event.key) {
           case 'ArrowUp':
-            moveNodeByDelta(selectedNodeId, { x: 0, y: -delta }, true);
+            dy = -delta;
             break;
           case 'ArrowDown':
-            moveNodeByDelta(selectedNodeId, { x: 0, y: delta }, true);
+            dy = delta;
             break;
           case 'ArrowLeft':
-            moveNodeByDelta(selectedNodeId, { x: -delta, y: 0 }, true);
+            dx = -delta;
             break;
           case 'ArrowRight':
-            moveNodeByDelta(selectedNodeId, { x: delta, y: 0 }, true);
+            dx = delta;
             break;
+        }
+
+        const desired = {
+          x: node.position.x + dx,
+          y: node.position.y + dy,
+        };
+        const clamped = {
+          x: clamp(desired.x, 0, DESIGNER_CANVAS_BOUNDS.width - 10),
+          y: clamp(desired.y, 0, DESIGNER_CANVAS_BOUNDS.height - 10),
+        };
+
+        if (dx !== 0 && dy !== 0) {
+          setNodeProp(selectedNodeId, 'position.x', clamped.x, false);
+          setNodeProp(selectedNodeId, 'position.y', clamped.y, true);
+          return;
+        }
+        if (dx !== 0) {
+          setNodeProp(selectedNodeId, 'position.x', clamped.x, true);
+          return;
+        }
+        if (dy !== 0) {
+          setNodeProp(selectedNodeId, 'position.y', clamped.y, true);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelectedNode, gridSize, moveNodeByDelta, redo, selectNode, selectedNodeId, snapToGrid, undo]);
+  }, [deleteSelectedNode, gridSize, nodesById, redo, selectNode, selectedNodeId, setNodeProp, snapToGrid, undo]);
 };

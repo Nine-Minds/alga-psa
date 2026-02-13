@@ -261,13 +261,10 @@ export const DesignerShell: React.FC = () => {
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
-  const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
   const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
+  const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
-  const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
-  const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
-  const updateNodeStyle = useInvoiceDesignerStore((state) => state.updateNodeStyle);
   const toggleSnap = useInvoiceDesignerStore((state) => state.toggleSnap);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const toggleGuides = useInvoiceDesignerStore((state) => state.toggleGuides);
@@ -282,8 +279,6 @@ export const DesignerShell: React.FC = () => {
   const redo = useInvoiceDesignerStore((state) => state.redo);
   const metrics = useInvoiceDesignerStore((state) => state.metrics);
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
-
-  const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
 
   const resizeNode = useCallback(
     (id: string, size: Size, commit: boolean = false) => {
@@ -690,7 +685,13 @@ export const DesignerShell: React.FC = () => {
       return null;
     }
     const metadata = (selectedNode.metadata ?? {}) as Record<string, any>;
-    const applyMetadata = (patch: Record<string, unknown>) => updateNodeMetadata(selectedNode.id, patch);
+    const applyMetadata = (patch: Record<string, unknown>) => {
+      const entries = Object.entries(patch);
+      if (entries.length === 0) return;
+      entries.forEach(([key, value], index) => {
+        setNodeProp(selectedNode.id, `metadata.${key}`, value, index === entries.length - 1);
+      });
+    };
 
     if (selectedNode.type === 'attachment-list') {
       const items: Array<Record<string, any>> = Array.isArray(metadata.items) ? metadata.items : [];
@@ -758,12 +759,12 @@ export const DesignerShell: React.FC = () => {
       );
     }
 
-	    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
-	      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
+		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
+		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
         const objectFit = selectedNode.style?.objectFit ?? fitMode;
-	      return (
-	        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-	          <p className="text-xs font-semibold text-slate-700">Media</p>
+		      return (
+		        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+		          <p className="text-xs font-semibold text-slate-700">Media</p>
 	          <div>
             <label className="text-xs text-slate-500 block mb-1">Source URL</label>
             <Input
@@ -784,15 +785,15 @@ export const DesignerShell: React.FC = () => {
 	            <label className="text-xs text-slate-500 block mb-1">Object fit</label>
 	            <select
 	              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-	              value={objectFit}
-	              onChange={(event) => {
-                  const next = event.target.value;
-                  updateNodeStyle(selectedNode.id, { objectFit: next as any });
-                  if (next === 'contain' || next === 'cover' || next === 'fill') {
-                    applyMetadata({ fitMode: next, fit: next });
-                  }
-                }}
-	            >
+		              value={objectFit}
+		              onChange={(event) => {
+	                  const next = event.target.value;
+	                  setNodeProp(selectedNode.id, 'style.objectFit', next, true);
+	                  if (next === 'contain' || next === 'cover' || next === 'fill') {
+	                    applyMetadata({ fitMode: next, fit: next });
+	                  }
+	                }}
+		            >
 	              <option value="contain">Contain</option>
 	              <option value="cover">Cover</option>
 	              <option value="fill">Fill</option>
@@ -802,14 +803,21 @@ export const DesignerShell: React.FC = () => {
 	          </div>
             <div>
               <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
-              <Input
-                id="designer-media-aspect-ratio"
-                value={selectedNode.style?.aspectRatio ?? ''}
-                placeholder="e.g. 16 / 9 or 1 / 1"
-                onChange={(event) => updateNodeStyle(selectedNode.id, { aspectRatio: normalizeCssValue(event.target.value) })}
-              />
-            </div>
-	          <div className="pt-2 border-t border-slate-100 space-y-1">
+	              <Input
+	                id="designer-media-aspect-ratio"
+	                value={selectedNode.style?.aspectRatio ?? ''}
+	                placeholder="e.g. 16 / 9 or 1 / 1"
+	                onChange={(event) => {
+                    const normalized = normalizeCssValue(event.target.value);
+                    if (normalized === undefined) {
+                      unsetNodeProp(selectedNode.id, 'style.aspectRatio', true);
+                      return;
+                    }
+                    setNodeProp(selectedNode.id, 'style.aspectRatio', normalized, true);
+                  }}
+	              />
+	            </div>
+		          <div className="pt-2 border-t border-slate-100 space-y-1">
 	            <Button
 	              id="designer-fit-parent-section-to-media"
 	              variant="outline"
@@ -1194,7 +1202,9 @@ export const DesignerShell: React.FC = () => {
     const liveParentNode =
       liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
 
-    setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
+    // Avoid creating a separate history entry just for position; the resize commit will snapshot both.
+    setNodeProp(selectedNodeId, 'position.x', propertyDraft.x, false);
+    setNodeProp(selectedNodeId, 'position.y', propertyDraft.y, false);
     resizeNode(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
 
     const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
@@ -1328,16 +1338,17 @@ export const DesignerShell: React.FC = () => {
 	          />
           <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
             <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
-	          {selectedNode ? (
-	            <div className="space-y-3">
-	              <div>
-	                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
-	                <Input
-                  id="selected-name"
-                  value={selectedNode.name}
-                  onChange={(event) => updateNodeName(selectedNode.id, event.target.value)}
-                />
-              </div>
+		          {selectedNode ? (
+		            <div className="space-y-3">
+		              <div>
+		                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
+		                <Input
+	                  id="selected-name"
+	                  value={selectedNode.name}
+	                  onChange={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, false)}
+	                  onBlur={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, true)}
+	                />
+	              </div>
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
                 <div>
                   <label htmlFor="prop-x" className="block mb-1">X</label>
@@ -1360,14 +1371,14 @@ export const DesignerShell: React.FC = () => {
                 <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-slate-700">Layout Preset</span>
-                    <button
-                      type="button"
-                      className="text-blue-600 hover:underline"
-                      onClick={() => clearLayoutPreset(selectedNode.id)}
-                    >
-                      Clear
-                    </button>
-                  </div>
+	                    <button
+	                      type="button"
+	                      className="text-blue-600 hover:underline"
+	                      onClick={() => unsetNodeProp(selectedNode.id, 'layoutPresetId', true)}
+	                    >
+	                      Clear
+	                    </button>
+	                  </div>
 	                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
 	                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
 	                </div>

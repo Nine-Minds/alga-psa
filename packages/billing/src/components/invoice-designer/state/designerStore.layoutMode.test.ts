@@ -7,7 +7,7 @@ describe('designerStore container layout editing', () => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
-  it('updateNodeLayout merges CSS-like container layout props', () => {
+  it('setNodeProp updates CSS-like container layout props', () => {
     const store = useInvoiceDesignerStore.getState();
     const pageId = store.nodes.find((node) => node.type === 'page')?.id;
     expect(pageId).toBeTruthy();
@@ -18,11 +18,9 @@ describe('designerStore container layout editing', () => {
     expect(sectionId).toBeTruthy();
     if (!sectionId) return;
 
-    store.updateNodeLayout(sectionId, {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '12px',
-    });
+    store.setNodeProp(sectionId, 'layout.display', 'grid', false);
+    store.setNodeProp(sectionId, 'layout.gridTemplateColumns', '1fr 1fr', false);
+    store.setNodeProp(sectionId, 'layout.gap', '12px', true);
 
     const section = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === sectionId);
     expect(section?.layout?.display).toBe('grid');
@@ -30,4 +28,3 @@ describe('designerStore container layout editing', () => {
     expect(section?.layout?.gap).toBe('12px');
   });
 });
-

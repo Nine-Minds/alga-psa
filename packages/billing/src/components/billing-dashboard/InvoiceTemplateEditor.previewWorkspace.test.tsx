@@ -64,79 +64,60 @@ vi.mock('../invoice-designer/DesignerVisualWorkspace', () => ({
 
 const createWorkspaceWithField = (fieldId: string): DesignerWorkspaceSnapshot => {
   const base = useInvoiceDesignerStore.getState().exportWorkspace();
-  const documentNode = base.nodes.find((node) => node.type === 'document');
-  const pageNode = base.nodes.find((node) => node.type === 'page');
-  if (!documentNode || !pageNode) {
+  const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
+  if (!pageNode) {
     return base;
   }
-  const fieldNode = {
-    id: fieldId,
-    type: 'field' as const,
-    name: 'Invoice Number',
-    position: { x: 24, y: 24 },
-    size: { width: 220, height: 48 },
-    canRotate: false,
-    allowResize: true,
-    rotation: 0,
-    metadata: { bindingKey: 'invoice.number', format: 'text' },
-    parentId: pageNode.id,
-    childIds: [],
-    allowedChildren: [],
-  };
   return {
     ...base,
-    nodes: base.nodes.map((node) => {
-      if (node.id !== pageNode.id) {
-        return node;
-      }
-      return {
-        ...node,
-        childIds: [...node.childIds, fieldId],
-      };
-    }).concat(fieldNode),
+    nodesById: {
+      ...base.nodesById,
+      [pageNode.id]: {
+        ...base.nodesById[pageNode.id],
+        children: [...(base.nodesById[pageNode.id]?.children ?? []), fieldId],
+      },
+      [fieldId]: {
+        id: fieldId,
+        type: 'field',
+        props: { name: 'Invoice Number', metadata: { bindingKey: 'invoice.number', format: 'text' } },
+        children: [],
+      },
+    },
   };
 };
 
 const createWorkspaceWithFieldAndDynamicTable = (fieldId: string): DesignerWorkspaceSnapshot => {
   const base = createWorkspaceWithField(fieldId);
-  const pageNode = base.nodes.find((node) => node.type === 'page');
+  const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
   if (!pageNode) {
     return base;
   }
   const tableId = `${fieldId}-table`;
-  const tableNode = {
-    id: tableId,
-    type: 'dynamic-table' as const,
-    name: 'Line Items',
-    position: { x: 24, y: 96 },
-    size: { width: 520, height: 220 },
-    canRotate: false,
-    allowResize: true,
-    rotation: 0,
-    metadata: {
-      collectionBindingKey: 'items',
-      columns: [
-        { id: 'col-desc', header: 'Description', key: 'item.description' },
-        { id: 'col-total', header: 'Amount', key: 'item.total' },
-      ],
-    },
-    parentId: pageNode.id,
-    childIds: [],
-    allowedChildren: [],
-  };
 
   return {
     ...base,
-    nodes: base.nodes
-      .map((node) =>
-        node.id === pageNode.id
-          ? {
-              ...node,
-              childIds: [...node.childIds, tableId],
-            }
-          : node
-      )
-      .concat(tableNode),
+    nodesById: {
+      ...base.nodesById,
+      [pageNode.id]: {
+        ...base.nodesById[pageNode.id],
+        children: [...(base.nodesById[pageNode.id]?.children ?? []), tableId],
+      },
+      [tableId]: {
+        id: tableId,
+        type: 'dynamic-table',
+        props: {
+          name: 'Line Items',
+          metadata: {
+            collectionBindingKey: 'items',
+            columns: [
+              { id: 'col-desc', header: 'Description', key: 'item.description' },
+              { id: 'col-total', header: 'Amount', key: 'item.total' },
+            ],
+          },
+        },
+        children: [],
+      },
+    },
   };
 };
 
@@ -338,10 +319,9 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     });
 
     act(() => {
-      useInvoiceDesignerStore.getState().updateNodeMetadata('field-sync', {
-        bindingKey: 'customer.name',
-        format: 'text',
-      });
+      const store = useInvoiceDesignerStore.getState();
+      store.setNodeProp('field-sync', 'metadata.bindingKey', 'customer.name', false);
+      store.setNodeProp('field-sync', 'metadata.format', 'text', true);
     });
 
     fireEvent.click(screen.getByRole('tab', { name: 'Visual' }));

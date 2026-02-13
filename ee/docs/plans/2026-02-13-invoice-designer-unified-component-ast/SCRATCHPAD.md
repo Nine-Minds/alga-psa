@@ -128,3 +128,8 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Removed legacy hierarchy module:
   - Deleted `packages/billing/src/components/invoice-designer/state/hierarchy.ts`.
   - Moved `getAllowedChildrenForType` / `getAllowedParentsForType` / `canNestWithinParent` helpers into `packages/billing/src/components/invoice-designer/schema/componentSchema.ts` and updated call sites to import from schema.
+- 2026-02-13: Removed per-property store actions in favor of patch ops:
+  - Deleted legacy store APIs: `updateNodeName`, `updateNodeMetadata`, `updateNodeLayout`, `updateNodeStyle`, `setNodePosition`, `moveNodeByDelta`, `moveNodeToParentAtIndex`.
+  - Kept label text behavior by normalizing label `name` <-> `metadata.text` changes inside `setNodeProp`/`unsetNodeProp` (only when mutating `name` or `metadata.*`).
+  - Fixed `rootId` indexing so `exportWorkspace()` snapshots can be round-tripped via `loadWorkspace()` even when legacy fixtures use non-canonical document ids.
+  - Updated affected tests and UI call sites to use `setNodeProp`/`unsetNodeProp` exclusively.

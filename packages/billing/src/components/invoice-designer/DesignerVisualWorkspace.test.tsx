@@ -542,8 +542,10 @@ describe('DesignerVisualWorkspace', () => {
     const nodeId = useInvoiceDesignerStore.getState().selectedNodeId;
     expect(nodeId).toBeTruthy();
     act(() => {
-      useInvoiceDesignerStore.getState().updateNodeMetadata(nodeId!, { bindingKey: 'invoice.poNumber', format: 'text' });
-      useInvoiceDesignerStore.getState().updateNodeMetadata(nodeId!, { bindingKey: 'customer.name', format: 'text' });
+      const store = useInvoiceDesignerStore.getState();
+      store.setNodeProp(nodeId!, 'metadata.bindingKey', 'invoice.poNumber', false);
+      store.setNodeProp(nodeId!, 'metadata.format', 'text', false);
+      store.setNodeProp(nodeId!, 'metadata.bindingKey', 'customer.name', true);
     });
 
     // Debounce should delay preview refresh.
@@ -554,8 +556,8 @@ describe('DesignerVisualWorkspace', () => {
 
     expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls);
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
-    const updatedField = latestCall.workspace.nodes.find((node: DesignerNode) => node.id === nodeId);
-    expect(updatedField?.metadata?.bindingKey).toBe('customer.name');
+    const updatedField = latestCall.workspace.nodesById?.[nodeId!];
+    expect((updatedField?.props as any)?.metadata?.bindingKey).toBe('customer.name');
   });
 
   it('manual rerun retriggers pipeline without workspace delta', async () => {
@@ -608,7 +610,7 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
-    const before = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const before = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       position: node.position,
     }));
@@ -620,7 +622,7 @@ describe('DesignerVisualWorkspace', () => {
     fireEvent.mouseMove(document, { clientX: 260, clientY: 260, buttons: 1 });
     fireEvent.mouseUp(document);
 
-    const after = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const after = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       position: node.position,
     }));
@@ -632,7 +634,7 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
-    const before = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const before = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       size: node.size,
     }));
@@ -644,7 +646,7 @@ describe('DesignerVisualWorkspace', () => {
     fireEvent.mouseMove(document, { clientX: 360, clientY: 360, buttons: 1, shiftKey: true });
     fireEvent.mouseUp(document);
 
-    const after = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const after = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       size: node.size,
     }));
@@ -656,12 +658,12 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
-    const beforeIds = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => node.id).sort();
+    const beforeIds = useInvoiceDesignerStore.getState().nodes.map((node) => node.id).sort();
 
     fireEvent.keyDown(window, { key: 'Delete' });
     fireEvent.keyDown(window, { key: 'Backspace' });
 
-    const afterIds = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => node.id).sort();
+    const afterIds = useInvoiceDesignerStore.getState().nodes.map((node) => node.id).sort();
     expect(afterIds).toEqual(beforeIds);
   });
 
@@ -674,34 +676,31 @@ describe('DesignerVisualWorkspace', () => {
     act(() => {
       const store = useInvoiceDesignerStore.getState();
       const workspace = store.exportWorkspace();
-      const pageNode = workspace.nodes.find((node) => node.type === 'page');
+      const pageNode = Object.values(workspace.nodesById).find((node) => node.type === 'page');
       if (!pageNode) {
         return;
       }
-      const tableNode: DesignerNode = {
-        id: 'table-layout-change',
-        type: 'table',
-        name: 'Items Table',
-        position: { x: 32, y: 120 },
-        size: { width: 420, height: 180 },
-        canRotate: false,
-        allowResize: true,
-        rotation: 0,
-        metadata: {
-          columns: [{ id: 'desc', header: 'Description', key: 'item.description', type: 'text' }],
-        },
-        parentId: pageNode.id,
-        childIds: [],
-        allowedChildren: [],
-      };
 
       store.loadWorkspace({
         ...workspace,
-        nodes: workspace.nodes
-          .map((node) =>
-            node.id === pageNode.id ? { ...node, childIds: [...node.childIds, tableNode.id] } : node
-          )
-          .concat(tableNode),
+        nodesById: {
+          ...workspace.nodesById,
+          [pageNode.id]: {
+            ...workspace.nodesById[pageNode.id],
+            children: [...(workspace.nodesById[pageNode.id]?.children ?? []), 'table-layout-change'],
+          },
+          ['table-layout-change']: {
+            id: 'table-layout-change',
+            type: 'table',
+            props: {
+              name: 'Items Table',
+              metadata: {
+                columns: [{ id: 'desc', header: 'Description', key: 'item.description', type: 'text' }],
+              },
+            },
+            children: [],
+          },
+        },
       });
     });
 
@@ -710,7 +709,7 @@ describe('DesignerVisualWorkspace', () => {
     }, { timeout: 2500 });
     await waitFor(() => {
       const hasTableNodeCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.some((call) =>
-        call[0].workspace.nodes.some((node: DesignerNode) => node.id === 'table-layout-change')
+        Boolean(call[0].workspace.nodesById?.['table-layout-change'])
       );
       expect(hasTableNodeCall).toBe(true);
     });
