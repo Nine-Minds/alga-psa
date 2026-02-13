@@ -76,3 +76,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F032: Knox auth implemented (checkcreds + login with optional TOTP) and token persisted in tenant secrets; requests use `Authorization: Token ...`.
 - (2026-02-13) F033: Knox mode retries once on 401 by refreshing the token and retrying the request (single refresh guard).
 - (2026-02-13) F034: Implemented beta pagination helper (`listAllBeta`) looping `page` until `next` is null with `page_size` capped at 1000.
+- (2026-02-13) F040: Implemented Tactical client inventory sync into `rmm_organization_mappings` via `/api/beta/v1/client/`.
