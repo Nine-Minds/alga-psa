@@ -1,0 +1,62 @@
+[
+  {
+    "id": "F001",
+    "description": "Define domain extraction + normalization approach for inbound sender emails (use normalized sender email and extract substring after '@')",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Implement domain-to-client lookup derived from existing contacts (unique client only; ignore inactive contacts)",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Define client default contact storage using existing client properties field `clients.properties.primary_contact_id` (+ optional `primary_contact_name`)",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Resolve default contact ID safely (exists, belongs to client, active) when applying domain fallback",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Inbound email (new ticket path): if no exact contact match, attempt domain match to set target client; apply default contact if configured",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Inbound email: preserve precedence (exact contact match overrides domain match; domain match overrides defaults client)",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Inbound email: if resolved target client differs from inbound defaults client, do not apply defaults.location_id (avoid cross-client location mismatch)",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Workflow action parity: update `resolve_inbound_ticket_context` to include the same domain fallback + default contact behavior",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Client UI: add a 'Default contact' picker on the client screen and persist to `client.properties.primary_contact_id`",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Client UI: allow clearing the default contact (removes/empties `primary_contact_id` and `primary_contact_name` in client properties)",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Add automated coverage for domain fallback matching in inbound email processing (integration tests)",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Add automated coverage for client default contact UI persistence (unit/integration test)",
+    "implemented": false
+  }
+]

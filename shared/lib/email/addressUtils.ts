@@ -106,6 +106,25 @@ export function normalizeEmailAddress(value?: string | null): string | null {
   return parseEmailAddress(value)?.email ?? null;
 }
 
+/**
+ * Extract a domain from an email address, using the same normalization rules as
+ * `normalizeEmailAddress` (display-name stripping, `mailto:` removal, lowercase).
+ */
+export function extractEmailDomain(value?: string | null): string | null {
+  const normalized = normalizeEmailAddress(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const atIndex = normalized.lastIndexOf('@');
+  if (atIndex <= 0 || atIndex >= normalized.length - 1) {
+    return null;
+  }
+
+  const domain = normalized.slice(atIndex + 1).trim().toLowerCase();
+  return domain || null;
+}
+
 export function parseEmailAddressList(value?: string | null): ParsedEmailAddress[] {
   if (typeof value !== 'string') {
     return [];

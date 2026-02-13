@@ -1,0 +1,43 @@
+# Scratchpad — Inbound Email Domain Matching + Client Default Contact
+
+- Plan slug: `inbound-email-domain-matching-default-contact`
+- Created: `2026-02-13`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also *update earlier notes* when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-02-13) Store the “client default contact” using existing `clients.properties.primary_contact_id` (and optional `primary_contact_name`) to avoid a DB migration for this phase.
+- (2026-02-13) Implement domain-to-client matching by deriving from existing `contacts.email` domains (unique client only); do not introduce a new client-domain mapping UI/table in this phase.
+
+## Discoveries / Constraints
+
+- (2026-02-13) In-app inbound email new-ticket creation happens in `shared/services/email/processInboundEmailInApp.ts` and currently:
+  - Finds a contact strictly by exact normalized email (`findContactByEmail`).
+  - Otherwise uses inbound ticket defaults `client_id` and leaves `contact_id` null.
+- (2026-02-13) Added shared helper `extractEmailDomain()` in `shared/lib/email/addressUtils.ts` which normalizes via `normalizeEmailAddress()` then returns substring after `@` (lowercased).
+- (2026-02-13) The workflow runtime action `resolve_inbound_ticket_context` in `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` contains similar “find contact by email, else defaults” logic and should be kept in parity if workflows still invoke it.
+- (2026-02-13) There is existing “billing contact” (`clients.billing_contact_id`) UI in `packages/clients/src/components/clients/BillingConfigForm.tsx`, but it is billing-specific and not suitable as the inbound-email default contact.
+
+## Commands / Runbooks
+
+- (2026-02-13) Code search:
+  - `rg -n "resolve_inbound_ticket_context|processInboundEmailInApp|findContactByEmail" -S`
+
+## Links / References
+
+- `shared/services/email/processInboundEmailInApp.ts` (new-ticket path)
+- `shared/workflow/actions/emailWorkflowActions.ts` (`findContactByEmail`)
+- `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` (`resolve_inbound_ticket_context`)
+- `packages/clients/src/components/clients/ClientDetails.tsx` (client screen)
+- `packages/types/src/interfaces/client.interfaces.ts` (`IClient.properties.primary_contact_id`)
+
+## Open Questions
+
+- Should domain-to-client matching be derived from contacts (this phase) or do we need explicit client-domain configuration immediately?
+- Should domain matching consider inactive contacts?
+- Should comment author attribution change when ticket contact is set via default contact (domain fallback)?
