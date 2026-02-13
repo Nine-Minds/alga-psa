@@ -77,7 +77,7 @@
   {
     "id": "T010",
     "description": "Designer store: `setNodeProp(nodeId, 'name', ...)` results in `props.name` being updated (no separate legacy `name` mutation required).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"

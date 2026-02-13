@@ -69,4 +69,29 @@ describe('designerStore legacy path normalization', () => {
     expect(after.props).not.toBe(beforeProps);
     expect((after.props as any).metadata).not.toBe(beforeMetadata);
   });
+
+  it("writes legacy 'name' path into canonical props.name", () => {
+    const store = useInvoiceDesignerStore.getState();
+    const pageId = store.nodes.find((node) => node.type === 'page')?.id;
+    expect(pageId).toBeTruthy();
+    if (!pageId) return;
+
+    store.addNodeFromPalette('section', { x: 40, y: 40 }, { parentId: pageId });
+    const sectionId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(sectionId).toBeTruthy();
+    if (!sectionId) return;
+
+    store.addNodeFromPalette('text', { x: 60, y: 60 }, { parentId: sectionId });
+    const nodeId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(nodeId).toBeTruthy();
+    if (!nodeId) return;
+
+    store.setNodeProp(nodeId, 'name', 'Renamed', true);
+    const node = useInvoiceDesignerStore.getState().nodesById[nodeId];
+    expect(node).toBeTruthy();
+    if (!node) return;
+
+    expect((node.props as any).name).toBe('Renamed');
+    expect(node.name).toBe('Renamed');
+  });
 });
