@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Integration: domain fallback with no configured default contact sets ticket.contact_name_id to null (but still sets ticket.client_id from domain match)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F005"]
   },
   {
