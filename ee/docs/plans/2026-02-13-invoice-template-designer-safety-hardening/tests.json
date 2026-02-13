@@ -137,7 +137,7 @@
   {
     "id": "T017",
     "description": "UI: Outline/tree views display names via `props.name` (and do not depend on legacy top-level `name`).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]

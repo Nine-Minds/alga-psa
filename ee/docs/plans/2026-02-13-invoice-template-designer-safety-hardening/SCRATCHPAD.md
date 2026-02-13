@@ -71,6 +71,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.moveNode.test.ts`
 - (2026-02-13) Extended hierarchy unit coverage for `deleteNode` to ensure subtree traversal keys off canonical `children` and does not mutate legacy `childIds`.
   - Test: `packages/billing/src/components/invoice-designer/state/patchOps.deleteNode.test.ts`
+- (2026-02-13) Added UI integration coverage to ensure Outline/tree rendering prefers canonical `props.name` over legacy top-level `name`.
+  - Test: `packages/billing/src/components/invoice-designer/palette/OutlineView.integration.test.tsx`
 
 ## Commands / Runbooks
 
