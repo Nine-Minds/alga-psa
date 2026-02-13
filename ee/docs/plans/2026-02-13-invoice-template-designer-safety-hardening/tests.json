@@ -44,7 +44,7 @@
   {
     "id": "T006",
     "description": "PatchOps: when a path is rejected, the returned nodes/state is referentially equal to input (no partial mutation).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
