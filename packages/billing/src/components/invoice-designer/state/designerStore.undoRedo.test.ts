@@ -111,4 +111,65 @@ describe('designerStore undo/redo (patch ops history)', () => {
     expect(redo).toEqual(withUnset);
     expect((redo.nodesById[textId]?.props as any).metadata.items).toEqual(['a', 'c']);
   });
+
+  it('undo/redo is deterministic across setNodeProp + moveNode + deleteNode sequences', () => {
+    const store = useInvoiceDesignerStore.getState();
+    const pageId = store.nodes.find((node) => node.type === 'page')?.id;
+    expect(pageId).toBeTruthy();
+    if (!pageId) return;
+
+    // Build a small tree: page -> section -> textA, textB
+    store.addNodeFromPalette('section', { x: 40, y: 40 }, { parentId: pageId });
+    const sectionId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(sectionId).toBeTruthy();
+    if (!sectionId) return;
+
+    store.addNodeFromPalette('text', { x: 60, y: 60 }, { parentId: sectionId });
+    const textAId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(textAId).toBeTruthy();
+    if (!textAId) return;
+
+    store.addNodeFromPalette('text', { x: 80, y: 80 }, { parentId: sectionId });
+    const textBId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(textBId).toBeTruthy();
+    if (!textBId) return;
+
+    // Reset history baseline to this authored tree.
+    store.loadWorkspace(store.exportWorkspace());
+
+    const baseline = store.exportWorkspace();
+
+    store.setNodeProp(textAId, 'name', 'Text A');
+    const afterRename = store.exportWorkspace();
+
+    store.moveNode(textBId, sectionId, 0);
+    const afterMove = store.exportWorkspace();
+
+    store.deleteNode(textAId);
+    const afterDelete = store.exportWorkspace();
+
+    // Undo delete -> back to afterMove
+    store.undo();
+    expect(store.exportWorkspace()).toEqual(afterMove);
+
+    // Undo move -> back to afterRename
+    store.undo();
+    expect(store.exportWorkspace()).toEqual(afterRename);
+
+    // Undo rename -> back to baseline
+    store.undo();
+    expect(store.exportWorkspace()).toEqual(baseline);
+
+    // Redo rename -> afterRename
+    store.redo();
+    expect(store.exportWorkspace()).toEqual(afterRename);
+
+    // Redo move -> afterMove
+    store.redo();
+    expect(store.exportWorkspace()).toEqual(afterMove);
+
+    // Redo delete -> afterDelete
+    store.redo();
+    expect(store.exportWorkspace()).toEqual(afterDelete);
+  });
 });
