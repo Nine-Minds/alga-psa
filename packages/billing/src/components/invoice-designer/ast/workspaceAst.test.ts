@@ -111,4 +111,103 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     const page = hydrated.nodes.find((node) => node.type === 'page');
     expect(page?.childIds.length).toBeGreaterThan(0);
   });
+
+  it('roundtrips CSS-like layout/style props through AST inline styles', () => {
+    const base = useInvoiceDesignerStore.getState().exportWorkspace();
+    const pageNode = base.nodes.find((node) => node.type === 'page');
+    expect(pageNode).toBeTruthy();
+    if (!pageNode) return;
+
+    const containerId = 'ast-container-1';
+    const imageId = 'ast-image-1';
+
+    const nextNodes: DesignerWorkspaceSnapshot['nodes'] = base.nodes.map((node) =>
+      node.id === pageNode.id
+        ? {
+            ...node,
+            layout: {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              padding: '24px',
+              justifyContent: 'space-between',
+              alignItems: 'stretch',
+            },
+            childIds: [...node.childIds, containerId],
+          }
+        : node
+    );
+
+    nextNodes.push({
+      id: containerId,
+      type: 'container',
+      name: 'Grid Container',
+      position: { x: 24, y: 24 },
+      size: { width: 600, height: 240 },
+      canRotate: false,
+      allowResize: true,
+      rotation: 0,
+      metadata: {},
+      parentId: pageNode.id,
+      childIds: [imageId],
+      allowedChildren: ['image'],
+      layout: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 2fr',
+        gridTemplateRows: 'auto',
+        gridAutoFlow: 'row dense',
+        gap: '12px',
+        padding: '10px',
+      },
+    });
+
+    nextNodes.push({
+      id: imageId,
+      type: 'image',
+      name: 'Image',
+      position: { x: 0, y: 0 },
+      size: { width: 320, height: 180 },
+      canRotate: false,
+      allowResize: true,
+      rotation: 0,
+      metadata: { src: 'https://example.com/test.png' },
+      parentId: containerId,
+      childIds: [],
+      allowedChildren: [],
+      style: {
+        width: '320px',
+        height: '180px',
+        aspectRatio: '16 / 9',
+        objectFit: 'contain',
+      },
+    });
+
+    const workspace: DesignerWorkspaceSnapshot = {
+      ...base,
+      nodes: nextNodes,
+    };
+
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+
+    const hydratedContainer = hydrated.nodes.find((node) => node.id === containerId);
+    expect(hydratedContainer?.type).toBe('container');
+    expect(hydratedContainer?.layout).toMatchObject({
+      display: 'grid',
+      gridTemplateColumns: '1fr 2fr',
+      gridTemplateRows: 'auto',
+      gridAutoFlow: 'row dense',
+      gap: '12px',
+      padding: '10px',
+    });
+
+    const hydratedImage = hydrated.nodes.find((node) => node.id === imageId);
+    expect(hydratedImage?.type).toBe('image');
+    expect(hydratedImage?.style).toMatchObject({
+      width: '320px',
+      height: '180px',
+      aspectRatio: '16 / 9',
+      objectFit: 'contain',
+    });
+  });
 });
