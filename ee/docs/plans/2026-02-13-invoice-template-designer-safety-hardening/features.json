@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add a guard (test or CI check) that fails if known env-backup patterns are tracked by git.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 1"]
   },
   {

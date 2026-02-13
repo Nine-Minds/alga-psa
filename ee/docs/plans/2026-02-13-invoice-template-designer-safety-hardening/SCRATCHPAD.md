@@ -24,6 +24,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-02-13) Recent tracked secrets: `server/.env.local.bak.*` were committed and then removed in `fc2625507`.
 - (2026-02-13) Added repo `.gitignore` patterns to ignore env-backup files (e.g. `**/.env*.bak*`, `server/.env.local.bak*`) to prevent credential leaks.
+- (2026-02-13) Added repo guardrails to fail CI if any tracked file matches `.env*.bak*` patterns:
+  - Script: `scripts/guard-no-tracked-env-backups.mjs`
+  - CI: `.github/workflows/secrets-env-backup-guard.yml`
 - (2026-02-13) Current patch implementation writes to both `props.*` and legacy top-level fields via `expandPaths`:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 - (2026-02-13) Patch ops currently allow arbitrary object keys and could write `__proto__` unless guarded:
