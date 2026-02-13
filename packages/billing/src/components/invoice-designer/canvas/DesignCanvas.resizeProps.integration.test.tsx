@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { DndContext } from '@dnd-kit/core';
-import { cleanup, render } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DesignCanvas } from './DesignCanvas';
 import { useInvoiceDesignerStore } from '../state/designerStore';
@@ -135,5 +135,114 @@ describe('DesignCanvas (resize integration)', () => {
     expect(after.style.width).toBe('200px');
     expect(after.style.height).toBe('160px');
   });
-});
 
+  it('calls onResize with commit=false during pointer-move and commit=true on completion', () => {
+    // JSDOM doesn't always provide PointerEvent; DesignCanvas relies on window-level pointer listeners.
+    if (typeof (globalThis as any).PointerEvent === 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-extraneous-class
+      class MockPointerEvent extends MouseEvent {}
+      (globalThis as any).PointerEvent = MockPointerEvent;
+    }
+
+    const nodes: DesignerNode[] = [
+      {
+        id: 'doc-1',
+        type: 'document',
+        name: 'Document',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: null,
+        childIds: ['page-1'],
+        allowedChildren: ['page'],
+      },
+      {
+        id: 'page-1',
+        type: 'page',
+        name: 'Page 1',
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: 'doc-1',
+        childIds: ['section-1'],
+        allowedChildren: ['section'],
+      },
+      {
+        id: 'section-1',
+        type: 'section',
+        name: 'Section',
+        position: { x: 24, y: 24 },
+        size: { width: 520, height: 200 },
+        parentId: 'page-1',
+        childIds: ['container-1'],
+        allowedChildren: ['container'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' },
+      },
+      {
+        id: 'container-1',
+        type: 'container',
+        name: 'Container',
+        position: { x: 0, y: 0 },
+        size: { width: 200, height: 120 },
+        parentId: 'section-1',
+        childIds: [],
+        allowedChildren: ['text', 'container'],
+        layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px' },
+      },
+    ];
+
+    useInvoiceDesignerStore.getState().loadWorkspace({
+      nodes,
+      snapToGrid: false,
+      gridSize: 8,
+      showGuides: false,
+      showRulers: false,
+      canvasScale: 1,
+    });
+
+    const onResize = vi.fn();
+
+    render(
+      <DndContext>
+        <DesignCanvas
+          nodes={useInvoiceDesignerStore.getState().nodes}
+          selectedNodeId={null}
+          showGuides={false}
+          showRulers={false}
+          gridSize={8}
+          canvasScale={1}
+          snapToGrid={false}
+          guides={[]}
+          isDragActive={false}
+          forcedDropTarget={null}
+          droppableId="canvas"
+          onPointerLocationChange={noop}
+          onNodeSelect={noop}
+          onResize={onResize}
+          readOnly={false}
+        />
+      </DndContext>
+    );
+
+    const container = document.querySelector('[data-automation-id="designer-canvas-node-container-1"]') as
+      | HTMLElement
+      | null;
+    expect(container).toBeTruthy();
+    if (!container) return;
+
+    const resizeHandle = container.querySelector('div[role="button"]') as HTMLElement | null;
+    expect(resizeHandle).toBeTruthy();
+    if (!resizeHandle) return;
+
+    fireEvent.pointerDown(resizeHandle, { clientX: 100, clientY: 100 });
+    window.dispatchEvent(new (globalThis as any).PointerEvent('pointermove', { clientX: 120, clientY: 130 }));
+    window.dispatchEvent(new (globalThis as any).PointerEvent('pointerup', { clientX: 120, clientY: 130 }));
+
+    const calls = onResize.mock.calls.map((args) => ({
+      nodeId: args[0],
+      commit: args[2],
+    }));
+
+    // At least one in-flight update (commit=false) and one final commit=true update are required.
+    expect(calls.some((c) => c.nodeId === 'container-1' && c.commit === false)).toBe(true);
+    expect(calls.some((c) => c.nodeId === 'container-1' && c.commit === true)).toBe(true);
+  });
+});

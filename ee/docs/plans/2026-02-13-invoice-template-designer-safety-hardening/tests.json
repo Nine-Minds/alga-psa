@@ -194,7 +194,7 @@
   {
     "id": "T024",
     "description": "Interaction: drag/resize flows use `commit=false` during motion and `commit=true` on completion (integration-level assertion).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
