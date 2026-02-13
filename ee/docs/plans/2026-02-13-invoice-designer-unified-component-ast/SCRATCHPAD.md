@@ -98,3 +98,6 @@ This plan intentionally continues the simplification arc:
   - Added `packages/billing/src/components/invoice-designer/utils/nodeProps.ts` as the canonical accessor for `props.name`, `props.layout`, `props.style`, `props.metadata` (with temporary legacy fallbacks during cutover).
   - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx` and `packages/billing/src/components/invoice-designer/canvas/previewScaffolds.ts` now render using `props.*` accessors.
   - Store mutations keep `props` in sync with legacy fields for now (`packages/billing/src/components/invoice-designer/state/designerStore.ts`).
+- 2026-02-13: Drag-drop reparent/reorder now uses generic tree ops:
+  - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` now calls `store.moveNode(...)` (tree move) instead of `moveNodeToParentAtIndex`.
+  - `packages/billing/src/components/invoice-designer/state/designerStore.flowDnd.test.ts` updated to exercise `moveNode(...)` directly.

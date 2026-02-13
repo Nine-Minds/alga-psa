@@ -471,11 +471,18 @@ const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> 
 const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
   nodes.map((node) => ({
     ...node,
-    props: node.props ? JSON.parse(JSON.stringify(node.props)) : {},
+    props: node.props
+      ? JSON.parse(JSON.stringify(node.props))
+      : {
+          name: node.name,
+          metadata: node.metadata ?? {},
+          layout: node.layout,
+          style: node.style,
+        },
     position: { ...node.position },
     size: { ...node.size },
     baseSize: node.baseSize ? { ...node.baseSize } : undefined,
-    children: [...node.children],
+    children: [...(node.children ?? node.childIds ?? [])],
     childIds: [...node.childIds],
     allowedChildren: [...node.allowedChildren],
     layout: node.layout ? { ...node.layout } : undefined,

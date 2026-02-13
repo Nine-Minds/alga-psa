@@ -262,7 +262,7 @@ export const DesignerShell: React.FC = () => {
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
   const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
   const updateNodeSize = useInvoiceDesignerStore((state) => state.updateNodeSize);
-  const moveNodeToParentAtIndex = useInvoiceDesignerStore((state) => state.moveNodeToParentAtIndex);
+  const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
   const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
@@ -1691,7 +1691,7 @@ export const DesignerShell: React.FC = () => {
             return;
           }
 
-          moveNodeToParentAtIndex(activeNode.id, targetParentId, targetIndex);
+          moveNode(activeNode.id, targetParentId, targetIndex);
           recordDropResult(true);
           return;
         }

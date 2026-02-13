@@ -9,7 +9,7 @@
   { "id": "F008", "description": "Refactor outline view and breadcrumbs to traverse children using nodesById/rootId (no reliance on parentId persistence).", "implemented": true },
   { "id": "F009", "description": "Refactor selection and hover logic to use nodesById (including derived parent lookup when needed).", "implemented": true },
   { "id": "F010", "description": "Refactor canvas rendering to consume unified nodes (resolve props.style/props.layout/props.metadata) without referencing legacy typed fields.", "implemented": true },
-  { "id": "F011", "description": "Refactor drag-drop reorder and reparent actions to call moveNode/insertChild/removeChild on the unified tree only.", "implemented": false },
+  { "id": "F011", "description": "Refactor drag-drop reorder and reparent actions to call moveNode/insertChild/removeChild on the unified tree only.", "implemented": true },
   { "id": "F012", "description": "Refactor resizing to write sizing-related values via setNodeProp (for example style.width/style.height/flexBasis) and remove updateNodeSize API.", "implemented": false },
   { "id": "F013", "description": "Implement a schema-driven Inspector that renders editable controls by reading the selected node’s component schema.", "implemented": false },
   { "id": "F014", "description": "Implement Inspector field types and normalizers: string, number, boolean, enum, css-length, css-color; support grouped panels and conditional visibility.", "implemented": false },

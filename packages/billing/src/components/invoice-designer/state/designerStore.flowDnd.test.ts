@@ -83,7 +83,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
       canvasScale: 1,
     });
 
-    store.moveNodeToParentAtIndex('text-3', 'section-1', 1);
+    store.moveNode('text-3', 'section-1', 1);
 
     const section = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
     expect(section?.childIds).toEqual(['text-1', 'text-3', 'text-2']);
@@ -175,7 +175,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
       canvasScale: 1,
     });
 
-    store.moveNodeToParentAtIndex('text-2', 'section-b', 1);
+    store.moveNode('text-2', 'section-b', 1);
 
     const nextNodes = useInvoiceDesignerStore.getState().nodes;
     const sectionA = nextNodes.find((n) => n.id === 'section-a');
@@ -264,7 +264,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     });
 
     // Eligible: text -> container.
-    store.moveNodeToParentAtIndex('text-1', 'container-1', 0);
+    store.moveNode('text-1', 'container-1', 0);
     let nextNodes = useInvoiceDesignerStore.getState().nodes;
     const container = nextNodes.find((n) => n.id === 'container-1');
     const section = nextNodes.find((n) => n.id === 'section-1');
@@ -274,7 +274,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     expect(section?.childIds).toEqual(['container-1', 'text-2']);
 
     // Ineligible: text -> text (should be rejected, no change).
-    store.moveNodeToParentAtIndex('text-2', 'text-1', 0);
+    store.moveNode('text-2', 'text-1', 0);
     nextNodes = useInvoiceDesignerStore.getState().nodes;
     const text2 = nextNodes.find((n) => n.id === 'text-2');
     expect(text2?.parentId).toBe('section-1');
@@ -348,7 +348,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     });
 
     // Valid by type, invalid by cycle: container-a -> container-b (descendant).
-    store.moveNodeToParentAtIndex('container-a', 'container-b', 0);
+    store.moveNode('container-a', 'container-b', 0);
 
     const nextNodes = useInvoiceDesignerStore.getState().nodes;
     const containerA = nextNodes.find((n) => n.id === 'container-a');
@@ -427,7 +427,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     const beforeHistoryIndex = useInvoiceDesignerStore.getState().historyIndex;
 
     // Invalid: container -> text (text is not a container parent).
-    store.moveNodeToParentAtIndex('container-1', 'text-1', 0);
+    store.moveNode('container-1', 'text-1', 0);
 
     const afterState = useInvoiceDesignerStore.getState();
     expect(afterState.nodes).toEqual(beforeNodes);
@@ -510,7 +510,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     });
 
     // Simulate inserting "a" at index 2 (drop after "b"). This should become ["b","a","c"] after adjustment.
-    store.moveNodeToParentAtIndex('a', 'section-1', 2);
+    store.moveNode('a', 'section-1', 2);
     const section = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
     expect(section?.childIds).toEqual(['b', 'a', 'c']);
   });
@@ -581,7 +581,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
       canvasScale: 1,
     });
 
-    store.moveNodeToParentAtIndex('text-1', 'section-b', 0);
+    store.moveNode('text-1', 'section-b', 0);
 
     const updated = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'text-1');
     expect(updated?.position).toEqual({ x: 123, y: 456 });
