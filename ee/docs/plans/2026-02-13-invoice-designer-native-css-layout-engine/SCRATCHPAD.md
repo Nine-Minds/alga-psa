@@ -100,6 +100,9 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Added store action to move/reparent nodes by `parentId + insertionIndex`, with allowlist enforcement and cycle prevention:
     - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 
+- 2026-02-13: `F010` Reorder within container (sortable)
+  - Dragging a flow-layout node (inside a `display:flex|grid` parent) now reorders by updating the parent's `childIds` using dnd-kit sortable `over` resolution (no position math).
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
