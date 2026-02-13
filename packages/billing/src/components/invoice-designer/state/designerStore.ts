@@ -141,7 +141,8 @@ interface DesignerMetrics {
 }
 
 export interface DesignerWorkspaceSnapshot {
-  nodes: DesignerNode[];
+  rootId: string;
+  nodesById: Record<string, { id: string; type: DesignerComponentType; props: Record<string, unknown>; children: string[] }>;
   snapToGrid: boolean;
   gridSize: number;
   showGuides: boolean;
@@ -200,7 +201,11 @@ interface DesignerState {
   redo: () => void;
   resetWorkspace: () => void;
   loadNodes: (nodes: DesignerNode[]) => void;
-  loadWorkspace: (workspace: Partial<DesignerWorkspaceSnapshot> & Pick<DesignerWorkspaceSnapshot, 'nodes'>) => void;
+  loadWorkspace: (
+    workspace: Partial<DesignerWorkspaceSnapshot> &
+      Pick<DesignerWorkspaceSnapshot, 'nodesById'> &
+      Partial<Pick<DesignerWorkspaceSnapshot, 'rootId'>>
+  ) => void;
   exportWorkspace: () => DesignerWorkspaceSnapshot;
   recordDropResult: (success: boolean) => void;
 }
@@ -220,6 +225,171 @@ const generateId = () =>
     : Math.random().toString(36).slice(2);
 
 const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined): Record<string, unknown> => {
+  // Persist only authored component props. Runtime geometry (position/size) and editor-only hints
+  // are intentionally excluded from the persisted workspace format.
+  const clone = deepCloneJson(props ?? {});
+  delete (clone as { position?: unknown }).position;
+  delete (clone as { size?: unknown }).size;
+  delete (clone as { baseSize?: unknown }).baseSize;
+  delete (clone as { layoutPresetId?: unknown }).layoutPresetId;
+  return clone;
+};
+
+const snapshotWorkspaceNodesById = (
+  nodes: DesignerNode[]
+): DesignerWorkspaceSnapshot['nodesById'] =>
+  Object.fromEntries(
+    nodes.map((node) => [
+      node.id,
+      {
+        id: node.id,
+        type: node.type,
+        props: sanitizePersistedNodeProps(node.props),
+        children: Array.isArray(node.children) ? node.children.slice() : (node.childIds ?? []).slice(),
+      },
+    ])
+  );
+
+const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 'nodesById' | 'rootId'>): DesignerNode[] => {
+  const nodesById = snapshot.nodesById ?? {};
+  const rootId = typeof snapshot.rootId === 'string' && snapshot.rootId.length > 0 ? snapshot.rootId : DOCUMENT_NODE_ID;
+
+  const visited = new Set<string>();
+  const output: DesignerNode[] = [];
+
+  const coerceChildren = (value: unknown): string[] => (Array.isArray(value) ? value.filter((id) => typeof id === 'string') : []);
+
+  const coercePoint = (value: unknown): Point | undefined => {
+    if (!isPlainObject(value)) return undefined;
+    const x = value.x;
+    const y = value.y;
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+    return { x, y };
+  };
+
+  const coerceSize = (value: unknown): Size | undefined => {
+    if (!isPlainObject(value)) return undefined;
+    const width = value.width;
+    const height = value.height;
+    if (typeof width !== 'number' || typeof height !== 'number') return undefined;
+    if (!Number.isFinite(width) || !Number.isFinite(height)) return undefined;
+    return { width, height };
+  };
+
+  const parsePx = (value: unknown): number | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed.endsWith('px')) return undefined;
+    const parsed = Number.parseFloat(trimmed.slice(0, -2));
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const dfs = (nodeId: string, parentId: string | null, depth: number, index: number) => {
+    if (visited.has(nodeId)) return;
+    const snapshotNode = nodesById[nodeId];
+    if (!snapshotNode) return;
+    visited.add(nodeId);
+
+    const schema = getComponentSchema(snapshotNode.type);
+    const rawProps = isPlainObject(snapshotNode.props) ? snapshotNode.props : {};
+
+    const name =
+      typeof rawProps.name === 'string'
+        ? rawProps.name
+        : schema?.defaults.name ?? `${schema?.label ?? snapshotNode.type}`;
+
+    const rawMetadata = isPlainObject(rawProps.metadata) ? (rawProps.metadata as Record<string, unknown>) : {};
+    const rawLayout = isPlainObject(rawProps.layout) ? (rawProps.layout as Partial<DesignerContainerLayout>) : undefined;
+    const rawStyle = isPlainObject(rawProps.style) ? (rawProps.style as Partial<DesignerNodeStyle>) : undefined;
+
+    const metadata = {
+      ...(schema?.defaults.metadata ?? {}),
+      ...rawMetadata,
+    };
+
+    const layout = rawLayout
+      ? {
+          ...(schema?.defaults.layout ?? {}),
+          ...rawLayout,
+        }
+      : schema?.defaults.layout;
+
+    const style = {
+      ...(schema?.defaults.style ?? {}),
+      ...(rawStyle ?? {}),
+    };
+
+    const sizeFromProps = coerceSize(rawProps.size);
+    const sizeFromStyle = {
+      width: parsePx(style.width),
+      height: parsePx(style.height),
+    };
+    const defaultSize = schema?.defaults.size ?? DEFAULT_SIZE;
+    const size = clampNodeSizeToPracticalMinimum(snapshotNode.type, {
+      width: sizeFromProps?.width ?? sizeFromStyle.width ?? defaultSize.width,
+      height: sizeFromProps?.height ?? sizeFromStyle.height ?? defaultSize.height,
+    });
+
+    // Keep CSS size in sync with the numeric box size when not explicitly set.
+    if (!style.width) style.width = `${Math.round(size.width)}px`;
+    if (!style.height) style.height = `${Math.round(size.height)}px`;
+
+    const positionFromProps = coercePoint(rawProps.position);
+    const position =
+      positionFromProps ??
+      (snapshotNode.type === 'document' || snapshotNode.type === 'page'
+        ? { x: 0, y: 0 }
+        : { x: 24, y: 24 + index * (Math.round(size.height) + 12) + depth * 4 });
+
+    const children = coerceChildren(snapshotNode.children);
+
+    const normalizedProps: Record<string, unknown> = {
+      ...rawProps,
+      name,
+      metadata,
+      layout,
+      style,
+      // Preserve any authored geometry if present; also ensure it's available for runtime.
+      position: positionFromProps ?? rawProps.position,
+      size: sizeFromProps ?? rawProps.size,
+    };
+
+    output.push({
+      id: snapshotNode.id,
+      type: snapshotNode.type,
+      name,
+      props: normalizedProps,
+      position,
+      size,
+      baseSize: size,
+      rotation: 0,
+      canRotate: snapshotNode.type !== 'document' && snapshotNode.type !== 'page',
+      allowResize: snapshotNode.type !== 'document' && snapshotNode.type !== 'page',
+      metadata,
+      layoutPresetId:
+        typeof (rawProps as { layoutPresetId?: unknown }).layoutPresetId === 'string'
+          ? (rawProps as { layoutPresetId: string }).layoutPresetId
+          : undefined,
+      parentId,
+      children,
+      childIds: children,
+      allowedChildren: getAllowedChildrenForType(snapshotNode.type),
+      layout,
+      style,
+    });
+
+    children.forEach((childId, childIndex) => dfs(childId, snapshotNode.id, depth + 1, childIndex));
+  };
+
+  dfs(rootId, null, 0, 0);
+
+  return output;
+};
 
 const normalizeDefaultMetadataForNewNode = (
   type: DesignerComponentType,
@@ -1186,7 +1356,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     loadWorkspace: (workspace) => {
       setWithIndex((state) => {
-        const nextNodes = snapshotNodes(workspace.nodes);
+        const legacyNodes = (workspace as { nodes?: unknown }).nodes;
+        const nextNodes = Array.isArray(legacyNodes)
+          ? snapshotNodes(legacyNodes as DesignerNode[])
+          : materializeNodesFromSnapshot({
+              nodesById: workspace.nodesById,
+              rootId: typeof workspace.rootId === 'string' ? workspace.rootId : state.rootId,
+            });
         return {
           nodes: nextNodes,
           snapToGrid: typeof workspace.snapToGrid === 'boolean' ? workspace.snapToGrid : state.snapToGrid,
@@ -1204,7 +1380,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     exportWorkspace: () => {
       const state = get();
       return {
-        nodes: snapshotNodes(state.nodes),
+        rootId: state.rootId,
+        nodesById: snapshotWorkspaceNodesById(state.nodes),
         snapToGrid: state.snapToGrid,
         gridSize: state.gridSize,
         showGuides: state.showGuides,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import * as workspaceAstModule from '../components/invoice-designer/ast/workspaceAst';
+import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 
 const getAllTemplatesMock = vi.fn();
 
@@ -23,24 +24,21 @@ vi.mock('@alga-psa/billing/models/invoice', () => ({
 import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';
 import { renderTemplateOnServer } from './invoiceTemplates';
 
-const workspace = {
-  nodes: [
-    {
+const workspace: DesignerWorkspaceSnapshot = {
+  rootId: 'doc',
+  nodesById: {
+    doc: {
       id: 'doc',
       type: 'document',
-      name: 'Document',
-      position: { x: 0, y: 0 },
-      size: { width: 816, height: 1056 },
-      canRotate: false,
-      allowResize: false,
-      rotation: 0,
-      metadata: {},
-      parentId: null,
-      childIds: [],
-      allowedChildren: [],
+      props: {
+        name: 'Document',
+        metadata: {},
+        layout: { display: 'flex', flexDirection: 'column' },
+        style: { width: '816px', height: '1056px' },
+      },
+      children: [],
     },
-  ],
-  constraints: [],
+  },
   snapToGrid: true,
   gridSize: 8,
   showGuides: true,

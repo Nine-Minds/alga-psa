@@ -15,7 +15,7 @@
   { "id": "F014", "description": "Implement Inspector field types and normalizers: string, number, boolean, enum, css-length, css-color; support grouped panels and conditional visibility.", "implemented": true },
   { "id": "F015", "description": "Add schema widgets for complex metadata editing (table columns, dynamic-table, totals rows) replacing hardcoded inspectors where present.", "implemented": true },
   { "id": "F016", "description": "Update workspace import/export (designer <-> invoice-template AST) to map to/from unified props while preserving deterministic roundtrips.", "implemented": true },
-  { "id": "F017", "description": "Remove legacy typed node fields from the persisted workspace format (position/size/allowedChildren/parentId/etc.) where no longer needed.", "implemented": false },
+  { "id": "F017", "description": "Remove legacy typed node fields from the persisted workspace format (position/size/allowedChildren/parentId/etc.) where no longer needed.", "implemented": true },
   { "id": "F018", "description": "Delete packages/billing/src/components/invoice-designer/state/hierarchy.ts and migrate all call sites to schema-based hierarchy rules.", "implemented": false },
   { "id": "F019", "description": "Delete unused per-property store helpers/actions and update all tests to target unified tree patch semantics.", "implemented": false },
   { "id": "F020", "description": "Add developer docs in SCRATCHPAD.md: schema format, patch semantics, and conventions for adding new properties/components.", "implemented": false }

@@ -10,13 +10,22 @@ describe('designerStore (no constraint solver state)', () => {
   it('exportWorkspace omits legacy constraint-solver fields', () => {
     const snapshot = useInvoiceDesignerStore.getState().exportWorkspace();
     expect('constraints' in (snapshot as Record<string, unknown>)).toBe(false);
+    expect('nodes' in (snapshot as Record<string, unknown>)).toBe(false);
   });
 
-  it('exported nodes contain only CSS-like layout/style fields (no legacy constraints)', () => {
+  it('exported nodes use unified node shape and omit legacy geometry/editor props', () => {
     const snapshot = useInvoiceDesignerStore.getState().exportWorkspace();
-    snapshot.nodes.forEach((node) => {
+    Object.values(snapshot.nodesById).forEach((node) => {
+      expect(Object.keys(node).sort()).toEqual(['children', 'id', 'props', 'type']);
       expect('constraints' in (node as unknown as Record<string, unknown>)).toBe(false);
       expect('constraint' in (node as unknown as Record<string, unknown>)).toBe(false);
+      expect('position' in (node as unknown as Record<string, unknown>)).toBe(false);
+      expect('size' in (node as unknown as Record<string, unknown>)).toBe(false);
+      expect('baseSize' in (node as unknown as Record<string, unknown>)).toBe(false);
+      expect('layoutPresetId' in (node.props as Record<string, unknown>)).toBe(false);
+      expect('position' in (node.props as Record<string, unknown>)).toBe(false);
+      expect('size' in (node.props as Record<string, unknown>)).toBe(false);
+      expect('baseSize' in (node.props as Record<string, unknown>)).toBe(false);
     });
   });
 
