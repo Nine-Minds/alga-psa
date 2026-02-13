@@ -1993,8 +1993,25 @@ export const DesignerShell: React.FC = () => {
               return;
             }
             targetParentId = overNode.parentId;
-            const index = parent.childIds.indexOf(overNode.id);
-            targetIndex = index >= 0 ? index : parent.childIds.length;
+            const overIndex = parent.childIds.indexOf(overNode.id);
+            let index = overIndex >= 0 ? overIndex : parent.childIds.length;
+
+            if (parent.layout?.display === 'flex' && event.active.rect.current && over.rect) {
+              const axis = parent.layout.flexDirection === 'row' ? 'x' : 'y';
+              const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+              const overRect = over.rect;
+              if (activeRect && overRect) {
+                const activeCenter =
+                  axis === 'x' ? activeRect.left + activeRect.width / 2 : activeRect.top + activeRect.height / 2;
+                const overCenter =
+                  axis === 'x' ? overRect.left + overRect.width / 2 : overRect.top + overRect.height / 2;
+                if (activeCenter >= overCenter) {
+                  index += 1;
+                }
+              }
+            }
+
+            targetIndex = index;
           } else if (isDropTargetMeta(overData)) {
             const parent = nodesById.get(overData.nodeId) ?? null;
             if (!parent) {

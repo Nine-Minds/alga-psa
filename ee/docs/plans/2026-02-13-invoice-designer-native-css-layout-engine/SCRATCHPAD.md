@@ -138,6 +138,10 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
     - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 
+- 2026-02-13: `F016B` Basic snapping (discrete insertion)
+  - Flex parents now resolve insertion as before/after based on DOM rect midpoint along the main axis; grid uses the sortable `over` cell/index deterministically (no pixel snapping math):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

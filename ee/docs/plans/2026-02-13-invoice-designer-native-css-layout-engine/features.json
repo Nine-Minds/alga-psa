@@ -16,7 +16,7 @@
   { "id": "F015", "description": "Implement aspect ratio for images using CSS aspect-ratio and object-fit (no JS math).", "implemented": true },
   { "id": "F016", "description": "Implement resize handles for image + container blocks (section/stack) that update pixel CSS sizing props and rely on DOM layout (no constraint solver).", "implemented": true },
   { "id": "F016A", "description": "Implement property-panel editing of sizing props as CSS strings (%/rem/auto) while drag resize remains pixel-only.", "implemented": true },
-  { "id": "F016B", "description": "Implement basic snapping as discrete insertion behavior: edge snapping (before/after) for flex and deterministic cell/index snapping for grid.", "implemented": false },
+  { "id": "F016B", "description": "Implement basic snapping as discrete insertion behavior: edge snapping (before/after) for flex and deterministic cell/index snapping for grid.", "implemented": true },
   { "id": "F016C", "description": "Ensure drag-drop persists only container + insertion index (no coordinate-based layout persistence).", "implemented": false },
   { "id": "F017", "description": "Delete legacy geometry utilities: constraintSolver.ts, constraints.ts, dropParentResolution.ts, aspectRatio.ts.", "implemented": false },
   { "id": "F018", "description": "Reduce utils/layout.ts to lightweight mapping helpers only, removing coordinate math and solver logic.", "implemented": false },
