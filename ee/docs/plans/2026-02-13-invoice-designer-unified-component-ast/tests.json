@@ -1,0 +1,25 @@
+[
+  { "id": "T001", "featureIds": ["F001", "F002"], "description": "Type/unit: unified node model supports props + children and a rootId with a deterministic tree traversal.", "implemented": false },
+  { "id": "T002", "featureIds": ["F003"], "description": "Unit: setNodeProp updates deep paths (dot-notation) immutably and does not mutate previous state references.", "implemented": false },
+  { "id": "T003", "featureIds": ["F003"], "description": "Unit: unsetNodeProp removes deep paths and cleans up empty objects where required by conventions.", "implemented": false },
+  { "id": "T004", "featureIds": ["F003"], "description": "Unit: insertChild inserts at index and preserves existing child order deterministically.", "implemented": false },
+  { "id": "T005", "featureIds": ["F003"], "description": "Unit: moveNode reorders within same parent and re-parents across parents while preventing cycles.", "implemented": false },
+  { "id": "T006", "featureIds": ["F003"], "description": "Unit: deleteNode removes subtree and removes the node id from its parent's children list.", "implemented": false },
+  { "id": "T007", "featureIds": ["F004"], "description": "Unit: undo/redo returns to exact prior tree states after a sequence of patch operations (including move + delete).", "implemented": false },
+  { "id": "T008", "featureIds": ["F005"], "description": "Unit: component schema declares defaults, editable props, and allowed parent/child relationships for each component type.", "implemented": false },
+  { "id": "T009", "featureIds": ["F006", "F018"], "description": "Repo/unit: state/hierarchy.ts is removed and all hierarchy checks resolve via schema rules only.", "implemented": false },
+  { "id": "T010", "featureIds": ["F007"], "description": "Integration: adding a node from the palette uses schema defaults for props and attaches to a valid container.", "implemented": false },
+  { "id": "T011", "featureIds": ["F008"], "description": "Integration: outline view renders the correct tree order (children arrays) and selection highlights the correct node.", "implemented": false },
+  { "id": "T012", "featureIds": ["F008"], "description": "Integration: breadcrumbs compute the ancestor path from children-only hierarchy without persisted parentId.", "implemented": false },
+  { "id": "T013", "featureIds": ["F010"], "description": "Integration: canvas rendering reads layout/style props from unified node props and produces expected DOM styles.", "implemented": false },
+  { "id": "T014", "featureIds": ["F011"], "description": "E2E/integration: drag-drop reorder within a flex container updates children order via moveNode.", "implemented": false },
+  { "id": "T015", "featureIds": ["F011"], "description": "E2E/integration: drag-drop move across containers updates the unified tree only (no legacy fields) and respects schema nesting rules.", "implemented": false },
+  { "id": "T016", "featureIds": ["F012"], "description": "Integration: resizing a supported node writes sizing props via setNodeProp (style.width/style.height or flexBasis) and the DOM updates.", "implemented": false },
+  { "id": "T017", "featureIds": ["F013", "F014"], "description": "Integration: Inspector renders controls for a selected node from schema and updates the tree via generic patch operations.", "implemented": false },
+  { "id": "T018", "featureIds": ["F014"], "description": "Unit: Inspector normalizers convert input strings into canonical forms (for example css-length normalization) before writing props.", "implemented": false },
+  { "id": "T019", "featureIds": ["F015"], "description": "Integration: table columns editor updates metadata.columns via schema widget and updates are reflected in preview/canvas representation.", "implemented": false },
+  { "id": "T020", "featureIds": ["F016"], "description": "Integration: workspace export -> import roundtrips unified node props deterministically and template AST output remains stable.", "implemented": false },
+  { "id": "T021", "featureIds": ["F017"], "description": "Unit: serialized workspace snapshot contains only the unified tree format + UI settings and omits legacy per-node typed fields.", "implemented": false },
+  { "id": "T022", "featureIds": ["F019"], "description": "Repo: no references remain to removed per-property store actions and legacy typed node fields after refactor.", "implemented": false }
+]
+
