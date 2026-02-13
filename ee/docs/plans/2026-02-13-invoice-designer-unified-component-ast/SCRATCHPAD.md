@@ -191,6 +191,8 @@ This plan intentionally continues the simplification arc:
   - `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` now reads `name/layout/style/metadata` via `packages/billing/src/components/invoice-designer/utils/nodeProps.ts` helpers and traverses `children` (fallback to `childIds` for legacy nodes).
   - Import now materializes `props` and `children` on generated nodes and keeps them in sync with legacy fields during cutover.
   - Updated `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` fixtures to set `props` + `children` so export/import exercises the unified tree.
+- 2026-02-13: Added undo/redo history regression test in `packages/billing/src/components/invoice-designer/state/designerStore.undoRedo.test.ts`:
+  - Verifies tree state returns exactly to prior snapshots after a `moveNode` followed by `deleteNode`, via sequential `undo()` and `redo()`.
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
