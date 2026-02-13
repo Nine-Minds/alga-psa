@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Define and implement leaf array `unset` semantics as splice-removal (no `undefined` holes).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Non-functional Requirements > 2"]
   },
   {

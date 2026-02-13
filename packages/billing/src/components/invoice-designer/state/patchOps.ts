@@ -5,7 +5,8 @@ const RESERVED_PATCH_PATH_SEGMENTS = new Set(['__proto__', 'prototype', 'constru
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isIntegerKey = (key: string): boolean => key !== '' && String(Number.parseInt(key, 10)) === key;
+// Patch path grammar: dot-separated, with non-negative integer segments indicating array indices.
+const isIntegerKey = (key: string): boolean => key !== '' && /^[0-9]+$/.test(key);
 
 const getUnsafePatchPathSegment = (parts: string[]): string | null =>
   parts.find((part) => RESERVED_PATCH_PATH_SEGMENTS.has(part)) ?? null;
@@ -42,13 +43,21 @@ const unsetIn = (value: unknown, path: string[]): unknown => {
   if (isIntegerKey(head)) {
     const index = Number.parseInt(head, 10);
     if (!Array.isArray(value)) return value;
-    const next = value.slice();
     if (tail.length === 0) {
-      // For arrays we treat "unset" as clearing the slot.
-      next[index] = undefined;
+      // Leaf array unset: remove the element (no `undefined` holes).
+      if (index < 0 || index >= value.length) return value;
+      const next = value.slice();
+      next.splice(index, 1);
       return next;
     }
-    next[index] = unsetIn(next[index], tail);
+
+    const prevChild = value[index];
+    const nextChild = unsetIn(prevChild, tail);
+    if (nextChild === prevChild) return value;
+
+    const next = value.slice();
+    // Nested unsets should not splice the array element. If the element becomes empty, keep it as `{}`.
+    next[index] = typeof nextChild === 'undefined' ? {} : nextChild;
     return next;
   }
 
