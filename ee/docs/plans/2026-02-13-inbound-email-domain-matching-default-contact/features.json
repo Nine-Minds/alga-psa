@@ -1,62 +1,62 @@
 [
   {
     "id": "F001",
-    "description": "Define domain extraction + normalization approach for inbound sender emails (use normalized sender email and extract substring after '@')",
+    "description": "Domain extraction: normalize sender email and extract the domain substring after '@' (case-insensitive)",
     "implemented": true
   },
   {
     "id": "F002",
-    "description": "Implement domain-to-client lookup derived from existing contacts (unique client only; ignore inactive contacts)",
+    "description": "Data model: add `client_inbound_email_domains` table with uniqueness per tenant on lower(domain)",
     "implemented": true
   },
   {
     "id": "F003",
-    "description": "Define client default contact storage using existing client properties field `clients.properties.primary_contact_id` (+ optional `primary_contact_name`)",
+    "description": "Server API: add CRUD for client inbound email domains (list/add/remove) with tenant scoping and client update permission checks",
     "implemented": true
   },
   {
     "id": "F004",
-    "description": "Resolve default contact ID safely (exists, belongs to client, active) when applying domain fallback",
+    "description": "Client UI: add an 'Inbound email domains' section on the client screen with add/remove controls and inline validation",
     "implemented": true
   },
   {
     "id": "F005",
-    "description": "Inbound email (new ticket path): if no exact contact match, attempt domain match to set target client; apply default contact if configured",
+    "description": "Client UI: when adding a domain, verify uniqueness and show a clear error if the domain is already assigned to another client",
     "implemented": true
   },
   {
     "id": "F006",
-    "description": "Inbound email: preserve precedence (exact contact match overrides domain match; domain match overrides defaults client)",
+    "description": "Inbound email resolution: only perform domain-to-client matching using the explicit mapping table (no inference from contacts)",
     "implemented": true
   },
   {
     "id": "F007",
-    "description": "Inbound email: if resolved target client differs from inbound defaults client, do not apply defaults.location_id (avoid cross-client location mismatch)",
+    "description": "Inbound email resolution: keep precedence (exact contact match overrides domain match; domain match overrides defaults client)",
     "implemented": true
   },
   {
     "id": "F008",
-    "description": "Workflow action parity: update `resolve_inbound_ticket_context` to include the same domain fallback + default contact behavior",
+    "description": "Inbound email resolution: when domain match selects a different client than inbound defaults, do not apply defaults.location_id (avoid cross-client location mismatch)",
     "implemented": true
   },
   {
     "id": "F009",
-    "description": "Client UI: add a 'Default contact' picker on the client screen and persist to `client.properties.primary_contact_id`",
+    "description": "Default contact: allow configuring per-client default contact (stored as `clients.properties.primary_contact_id` + optional `primary_contact_name`)",
     "implemented": true
   },
   {
     "id": "F010",
-    "description": "Client UI: allow clearing the default contact (removes/empties `primary_contact_id` and `primary_contact_name` in client properties)",
+    "description": "Domain fallback contact: when a configured domain match occurs, apply the client's validated default contact as ticket contact when available",
     "implemented": true
   },
   {
     "id": "F011",
-    "description": "Add automated coverage for domain fallback matching in inbound email processing (integration tests)",
+    "description": "Remove/disable contact-derived domain matching codepaths (e.g. stop scanning `contacts.email` domains to infer a client)",
     "implemented": true
   },
   {
     "id": "F012",
-    "description": "Add automated coverage for client default contact UI persistence (unit/integration test)",
-    "implemented": true
+    "description": "Tests: add/update automated coverage for explicit inbound email domains + uniqueness + inbound email behavior",
+    "implemented": false
   }
 ]

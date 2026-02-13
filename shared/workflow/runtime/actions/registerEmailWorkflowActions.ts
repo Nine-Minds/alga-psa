@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import {
   findContactByEmail,
-  findUniqueClientIdByContactEmailDomain,
+  findClientIdByInboundEmailDomain,
   findValidClientPrimaryContactId,
   findTicketByEmailThread,
   findTicketByReplyToken,
@@ -389,12 +389,12 @@ export function registerEmailWorkflowActionsV2(): void {
       let targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
       let targetContactId = matchedClient?.contact_id ?? null;
 
-      // Domain fallback: if no exact contact match, infer a unique client via sender email domain.
+      // Domain fallback: if no exact contact match, match a client via explicitly configured inbound domains.
       if (!matchedClient?.contact_id) {
         try {
           const domain = extractEmailDomain(input.senderEmail);
           if (domain) {
-            const domainMatchedClientId = await findUniqueClientIdByContactEmailDomain(domain, tenant);
+            const domainMatchedClientId = await findClientIdByInboundEmailDomain(domain, tenant);
             if (domainMatchedClientId) {
               targetClientId = domainMatchedClientId;
               targetContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenant);

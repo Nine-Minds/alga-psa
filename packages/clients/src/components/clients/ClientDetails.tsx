@@ -28,6 +28,9 @@ import {
   deactivateClientContacts,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
+  listClientInboundEmailDomains,
+  addClientInboundEmailDomain,
+  removeClientInboundEmailDomain,
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
@@ -809,6 +812,68 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   }, [clientActiveContacts, editedClient, client]);
 
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
+  const [inboundDomainDraft, setInboundDomainDraft] = useState('');
+  const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await listClientInboundEmailDomains(editedClient.client_id);
+        if (cancelled) return;
+        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
+      } catch (error) {
+        // Non-blocking; if this fails we don't want to prevent other client edits.
+        console.error('Failed to load inbound email domains:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editedClient.client_id]);
+
+  const normalizeInboundDomain = useCallback((raw: string) => {
+    const trimmed = (raw ?? '').trim().toLowerCase();
+    return trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+  }, []);
+
+  const handleAddInboundDomain = useCallback(async () => {
+    const domain = normalizeInboundDomain(inboundDomainDraft);
+    if (!domain) return;
+    setIsInboundDomainBusy(true);
+    try {
+      const created = await addClientInboundEmailDomain(editedClient.client_id, domain);
+      setInboundEmailDomains((prev) => {
+        const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
+          (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
+        );
+        next.sort((a, b) => a.domain.localeCompare(b.domain));
+        return next;
+      });
+      setInboundDomainDraft('');
+      toast.success('Inbound email domain added');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add domain');
+    } finally {
+      setIsInboundDomainBusy(false);
+    }
+  }, [addClientInboundEmailDomain, editedClient.client_id, inboundDomainDraft, normalizeInboundDomain]);
+
+  const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
+    if (!domainId) return;
+    setIsInboundDomainBusy(true);
+    try {
+      await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      setInboundEmailDomains((prev) => prev.filter((d) => d.id !== domainId));
+      toast.success('Inbound email domain removed');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to remove domain');
+    } finally {
+      setIsInboundDomainBusy(false);
+    }
+  }, [editedClient.client_id]);
+
   const tabContent = useMemo(() => [
     {
       label: "Details",
@@ -848,7 +913,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 label="Default contact"
                 fieldType="select"
                 value={editedClient.properties?.primary_contact_id || ''}
-                helperText="Used when inbound email sender is not a known contact but matches this client by email domain."
+                helperText="Used when inbound email sender is not a known contact but matches this client by configured inbound email domain."
                 automationId="default-contact-field"
               >
                 <Text as="label" size="2" className="text-gray-700 font-medium">Default contact</Text>
@@ -860,6 +925,60 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   placeholder={defaultContactOptions.length ? "Select default contact" : "No active contacts"}
                   className="!w-full"
                 />
+              </FieldContainer>
+
+              <FieldContainer
+                label="Inbound email domains"
+                fieldType="textField"
+                value={inboundEmailDomains.map((d) => d.domain).join(', ')}
+                helperText="Only these domains will be used for inbound email domain matching (e.g. acme.com). Domains must be unique across clients."
+                automationId="client-inbound-email-domains-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">Inbound email domains</Text>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      id="client-inbound-email-domain-input"
+                      type="text"
+                      value={inboundDomainDraft}
+                      onChange={(e) => setInboundDomainDraft(e.target.value)}
+                      placeholder="acme.com"
+                      className="flex-1"
+                    />
+                    <Button
+                      id="client-inbound-email-domain-add"
+                      type="button"
+                      variant="default"
+                      disabled={isInboundDomainBusy || !normalizeInboundDomain(inboundDomainDraft)}
+                      onClick={handleAddInboundDomain}
+                    >
+                      Add
+                    </Button>
+                  </div>
+
+                  {inboundEmailDomains.length > 0 ? (
+                    <div className="space-y-2">
+                      {inboundEmailDomains.map((d) => (
+                        <div key={d.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+                          <Text size="2" className="text-gray-800">{d.domain}</Text>
+                          <Button
+                            id={`client-inbound-email-domain-remove-${d.id}`}
+                            type="button"
+                            variant="ghost"
+                            disabled={isInboundDomainBusy}
+                            onClick={() => handleRemoveInboundDomain(d.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Text size="1" className="text-gray-500">
+                      No inbound email domains configured. Domain matching will not be used.
+                    </Text>
+                  )}
+                </div>
               </FieldContainer>
               
               <TextDetailItem

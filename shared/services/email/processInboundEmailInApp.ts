@@ -211,7 +211,7 @@ export async function processInboundEmailInApp(
     findTicketByEmailThread,
     resolveInboundTicketDefaults,
     findContactByEmail,
-    findUniqueClientIdByContactEmailDomain,
+    findClientIdByInboundEmailDomain,
     findValidClientPrimaryContactId,
     createTicketFromEmail,
     createCommentFromEmail,
@@ -450,11 +450,11 @@ export async function processInboundEmailInApp(
   let targetClientId = matchedContact?.client_id ?? defaults.client_id;
   let targetContactId = matchedContact?.contact_id;
 
-  // Domain fallback: if no exact contact match, try to infer a client from the sender email domain.
+  // Domain fallback: if no exact contact match, try to match a client from explicitly configured inbound domains.
   if (!matchedContact && senderEmail) {
     const senderDomain = extractEmailDomain(senderEmail);
     if (senderDomain) {
-      const domainMatchedClientId = await findUniqueClientIdByContactEmailDomain(senderDomain, tenantId);
+      const domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
       if (domainMatchedClientId) {
         targetClientId = domainMatchedClientId;
         targetContactId = (await findValidClientPrimaryContactId(domainMatchedClientId, tenantId)) ?? undefined;

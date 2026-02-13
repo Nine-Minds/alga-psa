@@ -150,14 +150,13 @@ export async function findContactByEmail(
 }
 
 /**
- * Find a unique client_id for an email domain by scanning existing (active) contacts.
+ * Find a client_id for an explicitly configured inbound email domain.
  *
  * Returns null when:
  * - the domain is blank/invalid
- * - no contacts exist for the domain
- * - multiple unique clients have contacts in the domain (ambiguous)
+ * - no mapping exists for the domain in the tenant
  */
-export async function findUniqueClientIdByContactEmailDomain(
+export async function findClientIdByInboundEmailDomain(
   domain: string,
   tenant: string
 ): Promise<string | null> {
@@ -169,19 +168,24 @@ export async function findUniqueClientIdByContactEmailDomain(
   const { withAdminTransaction } = await import('@alga-psa/db');
 
   return withAdminTransaction(async (trx: Knex.Transaction) => {
-    const rows = await trx('contacts')
-      .distinct('contacts.client_id as client_id')
-      .where('contacts.tenant', tenant)
-      .andWhere('contacts.is_inactive', false)
-      .whereNotNull('contacts.email')
-      .andWhereRaw('lower(contacts.email) like ?', [`%@${normalizedDomain}`]);
+    try {
+      const row = await trx('client_inbound_email_domains')
+        .select('client_id')
+        .where('tenant', tenant)
+        .andWhereRaw('lower(domain) = ?', [normalizedDomain])
+        .first();
 
-    if (rows.length !== 1) {
-      return null;
+      const clientId = (row as any)?.client_id;
+      return typeof clientId === 'string' && clientId ? clientId : null;
+    } catch (error: any) {
+      // Best-effort safety: if the mapping table isn't present in a given environment,
+      // do not break inbound email processing; treat as "no match".
+      const message = error?.message ? String(error.message) : '';
+      if (message.includes('client_inbound_email_domains') || message.includes('does not exist')) {
+        return null;
+      }
+      throw error;
     }
-
-    const clientId = (rows[0] as any)?.client_id;
-    return typeof clientId === 'string' && clientId ? clientId : null;
   });
 }
 

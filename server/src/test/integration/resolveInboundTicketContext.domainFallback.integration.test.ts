@@ -169,6 +169,16 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
+
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
+      tenant: tenantId,
+      id: domainMappingId,
+      client_id: domainClientId,
+      domain,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
     await db('contacts').insert({
       tenant: tenantId,
       contact_name_id: defaultContactId,
@@ -182,6 +192,7 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
 
     cleanup.push(async () => {
       await db('contacts').where({ tenant: tenantId, contact_name_id: defaultContactId }).delete();
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
       await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 

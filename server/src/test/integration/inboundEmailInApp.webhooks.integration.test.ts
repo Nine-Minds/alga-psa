@@ -645,19 +645,17 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 
-    const domainContactId = uuidv4();
-    await db('contacts').insert({
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
       tenant: tenantId,
-      contact_name_id: domainContactId,
-      full_name: 'Domain Seed Contact',
-      email: `seed@${domain}`,
+      id: domainMappingId,
       client_id: domainClientId,
-      is_inactive: false,
+      domain,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: domainContactId }).delete();
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
     });
 
     const result = await processInboundEmailInApp({
@@ -722,6 +720,19 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
+      tenant: tenantId,
+      id: domainMappingId,
+      client_id: domainClientId,
+      domain,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
+    });
+
     await db('contacts').insert({
       tenant: tenantId,
       contact_name_id: defaultContactId,
@@ -768,7 +779,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
-  it('Domain fallback: ambiguous domain match falls back to inbound defaults client and keeps contact null', async () => {
+  it('Domain fallback: does not match by domain unless the domain is explicitly configured', async () => {
     const providerId = uuidv4();
     const mailbox = `support-domain-ambig-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
@@ -781,57 +792,35 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     const domain = `shared-${uuidv4().slice(0, 6)}.com`;
-    const clientAId = uuidv4();
-    const clientBId = uuidv4();
+    const domainClientId = uuidv4();
 
-    await db('clients').insert([
+    await db('clients').insert(
       {
         tenant: tenantId,
-        client_id: clientAId,
-        client_name: `Ambig A ${uuidv4().slice(0, 6)}`,
+        client_id: domainClientId,
+        client_name: `Unconfigured Domain Client ${uuidv4().slice(0, 6)}`,
         created_at: db.fn.now(),
         updated_at: db.fn.now(),
-      },
-      {
-        tenant: tenantId,
-        client_id: clientBId,
-        client_name: `Ambig B ${uuidv4().slice(0, 6)}`,
-        created_at: db.fn.now(),
-        updated_at: db.fn.now(),
-      },
-    ]);
+      }
+    );
     cleanup.push(async () => {
-      await db('clients').where({ tenant: tenantId, client_id: clientAId }).delete();
-      await db('clients').where({ tenant: tenantId, client_id: clientBId }).delete();
+      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 
-    const contactAId = uuidv4();
-    const contactBId = uuidv4();
-    await db('contacts').insert([
-      {
-        tenant: tenantId,
-        contact_name_id: contactAId,
-        full_name: 'Ambig A',
-        email: `a@${domain}`,
-        client_id: clientAId,
-        is_inactive: false,
-        created_at: db.fn.now(),
-        updated_at: db.fn.now(),
-      },
-      {
-        tenant: tenantId,
-        contact_name_id: contactBId,
-        full_name: 'Ambig B',
-        email: `b@${domain}`,
-        client_id: clientBId,
-        is_inactive: false,
-        created_at: db.fn.now(),
-        updated_at: db.fn.now(),
-      },
-    ]);
+    // Seed a contact with the same domain to ensure the system does NOT infer domain ownership from contacts.
+    const seedContactId = uuidv4();
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: seedContactId,
+      full_name: 'Seed Contact',
+      email: `seed@${domain}`,
+      client_id: domainClientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: contactAId }).delete();
-      await db('contacts').where({ tenant: tenantId, contact_name_id: contactBId }).delete();
+      await db('contacts').where({ tenant: tenantId, contact_name_id: seedContactId }).delete();
     });
 
     const result = await processInboundEmailInApp({
@@ -913,19 +902,17 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 
-    const domainContactId = uuidv4();
-    await db('contacts').insert({
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
       tenant: tenantId,
-      contact_name_id: domainContactId,
-      full_name: 'Domain Location Seed Contact',
-      email: `seed@${domain}`,
+      id: domainMappingId,
       client_id: domainClientId,
-      is_inactive: false,
+      domain,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: domainContactId }).delete();
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
     });
 
     const result = await processInboundEmailInApp({
