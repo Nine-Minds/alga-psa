@@ -5,7 +5,7 @@
 
   { "id": "T010", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in CE build.", "implemented": true, "featureIds": ["F010"] },
   { "id": "T011", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in EE build.", "implemented": true, "featureIds": ["F010"] },
-  { "id": "T012", "description": "E2E: Tactical settings panel can save instance URL + API key and shows \"credentials saved\" masked status.", "implemented": false, "featureIds": ["F011", "F020"] },
+  { "id": "T012", "description": "E2E: Tactical settings panel can save instance URL + API key and shows \"credentials saved\" masked status.", "implemented": true, "featureIds": ["F011", "F020"] },
   { "id": "T013", "description": "E2E: Tactical settings panel can save username/password and completes login when no TOTP is required.", "implemented": false, "featureIds": ["F011", "F032", "F020"] },
   { "id": "T014", "description": "E2E: Tactical settings panel detects TOTP-required via checkcreds and completes login when TOTP is provided.", "implemented": false, "featureIds": ["F011", "F032"] },
   { "id": "T015", "description": "E2E: Disconnect clears stored Tactical credentials and marks `rmm_integrations` inactive.", "implemented": false, "featureIds": ["F011", "F020", "F022"] },

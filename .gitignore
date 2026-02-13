@@ -211,3 +211,7 @@ vitest.config.*.timestamp*
 # Next.js
 .next
 out
+
+# Playwright local secret store (never commit)
+secrets-playwright/
+server/secrets-playwright/
