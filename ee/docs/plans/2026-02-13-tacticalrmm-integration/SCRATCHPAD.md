@@ -88,3 +88,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F052: Mapped Tactical agent OS/version + agent version into workstation/server extension rows during device sync; base asset RMM fields and last_seen/last_rmm_sync are set.
 - (2026-02-13) F053: Mapped Tactical agent vitals (current user, uptime, LAN/WAN IP) into cached RMM extension fields when present on list responses.
 - (2026-02-13) F056: Added targeted single-agent sync server action by `agentId` (refreshes asset fields + extension vitals).
+- (2026-02-13) F060: Added `POST /api/webhooks/tacticalrmm` route (node runtime) and exempted it from API-key middleware.

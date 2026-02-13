@@ -35,7 +35,7 @@
   { "id": "F055", "description": "Implement device deletion handling policy for Tactical sync (either mark inactive when missing or explicitly skip; choose and document behavior).", "implemented": true, "prdRefs": ["Open Questions"] },
   { "id": "F056", "description": "Implement targeted 'sync single agent' server action by `agent_id` (used by webhook and manual refresh).", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F060", "description": "Add Tactical webhook endpoint `POST /api/webhooks/tacticalrmm` (CE + EE) and skip API-key auth middleware for this path.", "implemented": false, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
+  { "id": "F060", "description": "Add Tactical webhook endpoint `POST /api/webhooks/tacticalrmm` (CE + EE) and skip API-key auth middleware for this path.", "implemented": true, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
   { "id": "F061", "description": "Validate Tactical webhook requests using `X-Alga-Webhook-Secret` against the stored integration webhook secret.", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F062", "description": "Define and document the expected Tactical webhook JSON contract (required: agent_id; recommended: client_id/site_id/event/severity/message/alert_time/alert_id).", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F063", "description": "On webhook receive: upsert `rmm_alerts` for provider `tacticalrmm`, associate alert to asset via `agent_id` mapping when available.", "implemented": false, "prdRefs": ["Functional Requirements"] },
