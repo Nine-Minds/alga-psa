@@ -20,6 +20,7 @@ import { StatusBadge } from './shared/StatusBadge';
 import type { Asset } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
@@ -82,7 +83,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               {asset.rmm_provider && (
                 <StatusBadge 
                   status={badgeStatus} 
-                  provider={asset.rmm_provider === 'ninjaone' ? 'NinjaOne' : asset.rmm_provider} 
+                  provider={getRmmProviderDisplayName(asset.rmm_provider)} 
                   size="md"
                 />
               )}

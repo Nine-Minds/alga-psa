@@ -10,28 +10,13 @@
 import React from 'react';
 import { Wifi, WifiOff, Cloud, Monitor } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
+import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 
 interface RmmStatusIndicatorProps {
   asset: Asset;
   showProvider?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-}
-
-/**
- * Get display name for RMM provider
- */
-function getProviderDisplayName(provider?: string): string {
-  switch (provider) {
-    case 'ninjaone':
-      return 'NinjaOne';
-    case 'datto':
-      return 'Datto';
-    case 'connectwise_automate':
-      return 'CW Automate';
-    default:
-      return provider || 'Unknown';
-  }
 }
 
 /**
@@ -76,7 +61,7 @@ export function RmmStatusIndicator({
         title="Agent status unknown"
       >
         <Cloud className={iconSizes[size]} />
-        {showProvider && <span>{getProviderDisplayName(asset.rmm_provider)}</span>}
+        {showProvider && <span>{getRmmProviderDisplayName(asset.rmm_provider)}</span>}
       </span>
     );
   }
@@ -96,7 +81,7 @@ export function RmmStatusIndicator({
         <WifiOff className={iconSizes[size]} />
       )}
       {showProvider ? (
-        <span>{getProviderDisplayName(asset.rmm_provider)}</span>
+        <span>{getRmmProviderDisplayName(asset.rmm_provider)}</span>
       ) : (
         <span>{isOnline ? 'Online' : 'Offline'}</span>
       )}

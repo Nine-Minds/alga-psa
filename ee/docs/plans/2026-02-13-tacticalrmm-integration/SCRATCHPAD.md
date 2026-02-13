@@ -56,3 +56,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 ## Progress Log
 
 - (2026-02-13) F001: Added `tacticalrmm` to `RmmProvider` unions in `packages/types`, `server` (CE), and `ee/server` (EE) so it can be persisted/rendered consistently.
+- (2026-02-13) F002: Centralized RMM provider display-name mapping in `packages/assets` and added friendly label `Tactical RMM` for `tacticalrmm` (used by status indicator + asset header badge).
