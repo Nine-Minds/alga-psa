@@ -29,7 +29,7 @@
 
   { "id": "F050", "description": "Implement Tactical device sync engine (full sync): fetch sites and agents (paged) for mapped Tactical clients and upsert into Assets.", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F051", "description": "Compute Tactical agent status as `online|offline|overdue` from last_seen/offline_time/overdue_time (list endpoint compatible).", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F052", "description": "Implement mapping from Tactical agent fields into Alga asset base fields (name/serial/os/version/provider IDs, last seen, last sync).", "implemented": false, "prdRefs": ["Goals", "Data / API / Integrations"] },
+  { "id": "F052", "description": "Implement mapping from Tactical agent fields into Alga asset base fields (name/serial/os/version/provider IDs, last seen, last sync).", "implemented": true, "prdRefs": ["Goals", "Data / API / Integrations"] },
   { "id": "F053", "description": "Implement mapping from Tactical agent fields into cached RMM vitals fields (current_user, uptime_seconds, lan_ip, wan_ip) where possible.", "implemented": false, "prdRefs": ["Goals"] },
   { "id": "F054", "description": "Upsert `tenant_external_entity_mappings` for Tactical agents using `external_entity_id=agent_id`, `external_realm_id=tactical_client_pk`, and include site id/name in metadata.", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F055", "description": "Implement device deletion handling policy for Tactical sync (either mark inactive when missing or explicitly skip; choose and document behavior).", "implemented": false, "prdRefs": ["Open Questions"] },

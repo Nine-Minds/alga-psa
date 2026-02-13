@@ -81,3 +81,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F050: Implemented Tactical full device sync (sites + agents) for mapped orgs; upserts assets and updates RMM fields.
 - (2026-02-13) F051: Implemented deterministic Tactical agent status computation (`online|offline|overdue`) from last_seen/offline_time/overdue_time.
 - (2026-02-13) F054: Implemented Tactical external entity mapping upserts to `tenant_external_entity_mappings` with `external_entity_id=agent_id`, `external_realm_id=client_pk`, and site metadata.
+- (2026-02-13) F052: Mapped Tactical agent OS/version + agent version into workstation/server extension rows during device sync; base asset RMM fields and last_seen/last_rmm_sync are set.
