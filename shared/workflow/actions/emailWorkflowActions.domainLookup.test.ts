@@ -32,5 +32,12 @@ describe('emailWorkflowActions: findUniqueClientIdByContactEmailDomain', () => {
 
     await expect(findUniqueClientIdByContactEmailDomain('example.com', 'tenant-1')).resolves.toBeNull();
   });
-});
 
+  it('returns the client_id when exactly one unique client has contacts in the domain', async () => {
+    const { trx, builder } = makeContactsDomainLookupTrx({ rows: [{ client_id: 'client-1' }] });
+    trxImpl = trx;
+
+    await expect(findUniqueClientIdByContactEmailDomain(' Example.COM ', 'tenant-1')).resolves.toBe('client-1');
+    expect(builder.andWhereRaw).toHaveBeenCalledWith('lower(contacts.email) like ?', ['%@example.com']);
+  });
+});

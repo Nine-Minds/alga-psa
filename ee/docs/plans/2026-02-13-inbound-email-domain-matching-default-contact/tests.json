@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Unit: domain-to-client lookup returns the client_id when exactly one unique client has contacts in that domain",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
