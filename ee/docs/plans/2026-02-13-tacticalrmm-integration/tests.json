@@ -13,7 +13,7 @@
   { "id": "T020", "description": "Unit: Tactical server action masks secrets (only last 4 chars) when returning credential status.", "implemented": true, "featureIds": ["F020"] },
   { "id": "T021", "description": "Integration: Connection test uses API key mode header `X-API-KEY` and surfaces 401 as invalid credentials.", "implemented": true, "featureIds": ["F021", "F031"] },
   { "id": "T022", "description": "Integration: Connection test uses Knox token header `Authorization: Token ...` and surfaces 401 by re-authing once.", "implemented": true, "featureIds": ["F021", "F033", "F032"] },
-  { "id": "T023", "description": "Integration: `rmm_integrations` row is created once per tenant+provider and updated on subsequent saves.", "implemented": false, "featureIds": ["F022"] },
+  { "id": "T023", "description": "Integration: `rmm_integrations` row is created once per tenant+provider and updated on subsequent saves.", "implemented": true, "featureIds": ["F022"] },
   { "id": "T024", "description": "Integration: Connection status summary returns correct counts for mapped orgs/devices/active alerts.", "implemented": false, "featureIds": ["F023"] },
 
   { "id": "T030", "description": "Unit: Base URL normalization produces correct API root for inputs with/without trailing slashes and with/without /api segments.", "implemented": false, "featureIds": ["F030"] },
