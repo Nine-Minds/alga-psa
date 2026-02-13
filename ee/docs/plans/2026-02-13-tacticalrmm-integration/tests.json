@@ -22,7 +22,7 @@
   { "id": "T033", "description": "Unit: Knox 401 retry occurs at most once per request to avoid infinite loops.", "implemented": true, "featureIds": ["F033"] },
 
   { "id": "T040", "description": "Integration: Sync clients upserts `rmm_organization_mappings` rows for Tactical and updates names/metadata on rerun.", "implemented": true, "featureIds": ["F040"] },
-  { "id": "T041", "description": "E2E: Org mapping UI can assign an Alga Client to a Tactical mapping and persists `client_id`.", "implemented": false, "featureIds": ["F015", "F041"] },
+  { "id": "T041", "description": "E2E: Org mapping UI can assign an Alga Client to a Tactical mapping and persists `client_id`.", "implemented": true, "featureIds": ["F015", "F041"] },
   { "id": "T042", "description": "E2E: Org mapping UI can toggle auto-sync and persists `auto_sync_assets`.", "implemented": false, "featureIds": ["F015", "F041"] },
 
   { "id": "T050", "description": "Unit: Compute agent status = online when last_seen >= now - offline_time.", "implemented": false, "featureIds": ["F051"] },

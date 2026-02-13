@@ -115,3 +115,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) T032: Added unit tests for the Knox connection test flow ensuring `checkcreds.totp=true` results in a `login` request with `twofactor`, while `totp=false` logs in without twofactor.
 - (2026-02-13) T033: Added a unit test for the Tactical API client's Knox 401 retry behavior, asserting it refreshes at most once and uses the refreshed `Authorization: Token ...` on the retry.
 - (2026-02-13) T040: Added an integration-style unit test for `syncTacticalRmmOrganizations` using a mocked Tactical API client and an in-memory `rmm_organization_mappings` store to verify upsert/merge behavior and created/updated counters across reruns.
+- (2026-02-13) T041: Added CE Playwright E2E coverage for Tactical org mapping assignment using `ClientPicker` option ids; asserts `rmm_organization_mappings.client_id` persists after selecting an Alga Client.
