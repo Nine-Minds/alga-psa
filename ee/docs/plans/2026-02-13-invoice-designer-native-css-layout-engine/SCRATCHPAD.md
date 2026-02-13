@@ -197,6 +197,31 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - Flex uses midpoint rule on hovered rect (before/after) for insertion indicators.
     - Grid uses sortable `over` resolution directly (deterministic cell/index).
 
+## Developer Notes (DnD + Nesting)
+
+- Collision detection (why pointer-within first):
+  - Implemented in `packages/billing/src/components/invoice-designer/DesignerShell.tsx` as `collisionDetection`.
+  - We use `pointerWithin(args)` and return the collisions sorted by smallest droppable rect area first, as a practical proxy for "deepest nested droppable under the cursor".
+  - If no droppable contains the pointer (fast drag / overlay edges), we fall back to `closestCenter(args)` so the drag never “loses” an `over` target.
+  - Measuring is configured as `MeasuringStrategy.Always` on the `DndContext` to avoid stale droppable rects in nested flex/grid layouts.
+
+- Droppable id conventions (how `over.id` maps back to a node):
+  - Container drop zones use `id: \`droppable-\${node.id}\`` in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`.
+  - Flow items use `useSortable({ id: node.id, ... })` (sortable id is the node id).
+  - When debugging: if `over.id` starts with `droppable-`, it represents “drop into this container”; otherwise it is a sortable item id representing “drop relative to this item”.
+
+- Nesting rules (authoritative allowlist):
+  - Implemented in `packages/billing/src/components/invoice-designer/state/hierarchy.ts` and enforced via `canNestWithinParent(...)`.
+  - Store actions that move/reparent nodes must validate:
+    - type allowlist (`canNestWithinParent`)
+    - cycle prevention (no dropping into descendants)
+  - When adding a new node type, update `HIERARCHY_RULES` and ensure `allowedChildren` on container nodes matches the same intent.
+
+- Where to tune UX:
+  - Activation threshold (avoid accidental drags): `PointerSensor` `activationConstraint.distance` in `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
+  - Over-target selection behavior: the `collisionDetection` callback in `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
+  - Sort strategy selection (row/column/grid): `SortableContext` `strategy` selection in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`.
+
 ## Implementation Sketch (Non-binding)
 
 - Introduce a single "layout props -> style props" mapping function used by:
