@@ -21,7 +21,7 @@
   { "id": "F030", "description": "Create Tactical API client wrapper with base URL normalization and shared request helpers.", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F031", "description": "Implement Tactical API key auth mode in the API client (`X-API-KEY`).", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F032", "description": "Implement Tactical Knox auth mode: checkcreds -> login (TOTP-aware), persist token + expiry, and attach `Authorization: Token ...` header.", "implemented": true, "prdRefs": ["Goals", "Data / API / Integrations"] },
-  { "id": "F033", "description": "Implement Knox re-auth on 401 for username/password mode (best-effort retry once per request).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
+  { "id": "F033", "description": "Implement Knox re-auth on 401 for username/password mode (best-effort retry once per request).", "implemented": true, "prdRefs": ["Non-functional Requirements"] },
   { "id": "F034", "description": "Implement beta pagination helpers (PageNumberPagination with `page_size` up to 1000).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
 
   { "id": "F040", "description": "Implement Tactical inventory sync: fetch clients (`/beta/v1/client/`) and upsert into `rmm_organization_mappings` for provider `tacticalrmm`.", "implemented": false, "prdRefs": ["Functional Requirements"] },
