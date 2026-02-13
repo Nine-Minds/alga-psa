@@ -66,6 +66,7 @@ const splitDotPath = (path: string): string[] => path.split('.').map((segment) =
 export const setNodeProp = (nodes: DesignerNode[], nodeId: string, path: string, propValue: unknown): DesignerNode[] => {
   const parts = splitDotPath(path);
   if (parts.length === 0) return nodes;
+  // Safe no-op: do not attempt any updates for paths that could cause prototype pollution.
   if (!isSafePatchPath(parts)) return nodes;
 
   const index = nodes.findIndex((node) => node.id === nodeId);
@@ -83,6 +84,7 @@ export const setNodeProp = (nodes: DesignerNode[], nodeId: string, path: string,
 export const unsetNodeProp = (nodes: DesignerNode[], nodeId: string, path: string): DesignerNode[] => {
   const parts = splitDotPath(path);
   if (parts.length === 0) return nodes;
+  // Safe no-op: do not attempt any updates for paths that could cause prototype pollution.
   if (!isSafePatchPath(parts)) return nodes;
 
   const index = nodes.findIndex((node) => node.id === nodeId);

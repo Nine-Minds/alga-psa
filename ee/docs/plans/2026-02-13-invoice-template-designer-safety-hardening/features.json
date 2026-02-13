@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Ensure `setNodeProp` and `unsetNodeProp` perform no mutation when a patch path is rejected (safe no-op).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 2"]
   },
   {
