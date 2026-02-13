@@ -38,7 +38,7 @@
   { "id": "F060", "description": "Add Tactical webhook endpoint `POST /api/webhooks/tacticalrmm` (CE + EE) and skip API-key auth middleware for this path.", "implemented": true, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
   { "id": "F061", "description": "Validate Tactical webhook requests using `X-Alga-Webhook-Secret` against the stored integration webhook secret.", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F062", "description": "Define and document the expected Tactical webhook JSON contract (required: agent_id; recommended: client_id/site_id/event/severity/message/alert_time/alert_id).", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F063", "description": "On webhook receive: upsert `rmm_alerts` for provider `tacticalrmm`, associate alert to asset via `agent_id` mapping when available.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F063", "description": "On webhook receive: upsert `rmm_alerts` for provider `tacticalrmm`, associate alert to asset via `agent_id` mapping when available.", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F064", "description": "On webhook receive: trigger 'sync single agent' to refresh cached vitals + status for the affected asset.", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F070", "description": "Implement Tactical alerts backfill via `PATCH /alerts/` and upsert into `rmm_alerts` (configurable filters).", "implemented": false, "prdRefs": ["Functional Requirements", "Open Questions"] },

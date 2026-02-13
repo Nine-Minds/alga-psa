@@ -91,3 +91,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F060: Added `POST /api/webhooks/tacticalrmm` route (node runtime) and exempted it from API-key middleware.
 - (2026-02-13) F061: Webhook validates `X-Alga-Webhook-Secret` (case-insensitive) against per-tenant secret store before processing.
 - (2026-02-13) F062: Documented Tactical webhook JSON contract in `ee/docs/plans/2026-02-13-tacticalrmm-integration/WEBHOOK_CONTRACT.md` and surfaced a payload template in the settings UI.
+- (2026-02-13) F063: Webhook upserts `rmm_alerts` for `tacticalrmm` and associates `asset_id` when an agent external mapping exists.
