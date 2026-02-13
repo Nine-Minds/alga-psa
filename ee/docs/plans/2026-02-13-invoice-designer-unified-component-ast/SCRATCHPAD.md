@@ -84,3 +84,5 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Introduced component schema definitions in `packages/billing/src/components/invoice-designer/schema/componentSchema.ts`:
   - Defines per-component label/description/category, defaults (size/layout/metadata), and hierarchy allowlists.
   - `packages/billing/src/components/invoice-designer/constants/componentCatalog.ts` now derives palette definitions from schema (schema is the new source of truth for palette metadata/defaults).
+- 2026-02-13: Hierarchy allowlists are now resolved via schema:
+  - `packages/billing/src/components/invoice-designer/state/hierarchy.ts` is now a thin wrapper over `getComponentSchema(type).hierarchy`.
