@@ -113,7 +113,7 @@
   {
     "id": "T014",
     "description": "Hierarchy: `insertChild` updates `children` deterministically and does not rely on `childIds`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

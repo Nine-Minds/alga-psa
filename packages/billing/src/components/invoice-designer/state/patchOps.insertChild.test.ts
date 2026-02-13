@@ -44,6 +44,8 @@ describe('patchOps.insertChild', () => {
     const nextChild = next.find((n) => n.id === 'c');
 
     expect(nextParent?.children).toEqual(['a', 'c', 'b']);
+    // Legacy `childIds` is not canonical and must not be written during mutations.
+    expect(nextParent?.childIds).toEqual(['a', 'b']);
     expect(nextChild?.parentId).toBe('p');
   });
 
@@ -63,5 +65,26 @@ describe('patchOps.insertChild', () => {
     const next = insertChild(nodes, 'p', 'c', 999);
 
     expect(next.find((n) => n.id === 'p')?.children).toEqual(['a', 'b', 'c']);
+    // Legacy `childIds` should remain untouched (no dual-source-of-truth writes).
+    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['a', 'b']);
+  });
+
+  it('uses canonical `children` as the source of truth (does not rely on `childIds`)', () => {
+    const parent = createNode({
+      id: 'p',
+      type: 'container',
+      // Deliberately inconsistent legacy vs canonical fields.
+      children: ['a', 'b'],
+      childIds: [],
+      allowedChildren: ['text'],
+    });
+    const childA = createNode({ id: 'a', type: 'text', parentId: 'p' });
+    const childB = createNode({ id: 'b', type: 'text', parentId: 'p' });
+
+    const nodes = [parent, childA, childB];
+    const next = insertChild(nodes, 'p', 'b', 0);
+
+    // `b` already exists in canonical `children`, so this should be a safe no-op even though legacy `childIds` is empty.
+    expect(next).toBe(nodes);
   });
 });

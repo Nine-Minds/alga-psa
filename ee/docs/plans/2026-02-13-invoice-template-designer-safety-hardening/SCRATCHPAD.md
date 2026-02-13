@@ -65,6 +65,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Legacy workspace `nodes[]` imports can include `props: {}`; snapshotting now materializes canonical `props.name/metadata/layout/style` from legacy top-level fields so UI helpers can consistently read canonical props.
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
   - Test: `packages/billing/src/components/invoice-designer/state/designerStore.loadWorkspace.legacy.test.ts`
+- (2026-02-13) Added hierarchy unit coverage to ensure canonical `children` is authoritative and `childIds` is not used/written during mutations.
+  - Test: `packages/billing/src/components/invoice-designer/state/patchOps.insertChild.test.ts`
 
 ## Commands / Runbooks
 
