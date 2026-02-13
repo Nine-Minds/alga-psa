@@ -111,3 +111,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) T023: Added an integration-style unit test that exercises `saveTacticalRmmConfiguration` twice with a mocked Knex upsert chain to ensure only one `rmm_integrations` row exists per tenant+provider and subsequent saves update the existing row (stable integration_id, instance_url updated).
 - (2026-02-13) T024: Added a unit/integration test for `getTacticalRmmConnectionSummary` with a table-switching Knex mock to validate mapped org/device/active alert counts and agent_status breakdown mapping (`null` -> `unknown`).
 - (2026-02-13) T030: Added unit tests for `normalizeTacticalBaseUrl` covering protocol defaults, trailing slash removal, and `/api` segment stripping behavior.
+- (2026-02-13) T031: Added a unit test for `TacticalRmmClient.listAllBeta` verifying DRF-style pagination loops pages until `next=null` and caps `page_size` at 1000.
