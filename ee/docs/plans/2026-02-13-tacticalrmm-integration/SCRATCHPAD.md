@@ -78,3 +78,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F034: Implemented beta pagination helper (`listAllBeta`) looping `page` until `next` is null with `page_size` capped at 1000.
 - (2026-02-13) F040: Implemented Tactical client inventory sync into `rmm_organization_mappings` via `/api/beta/v1/client/`.
 - (2026-02-13) F041: Implemented Tactical org mapping list/update server actions (client assignment + `auto_sync_assets`).
+- (2026-02-13) F050: Implemented Tactical full device sync (sites + agents) for mapped orgs; upserts assets and updates RMM fields.
