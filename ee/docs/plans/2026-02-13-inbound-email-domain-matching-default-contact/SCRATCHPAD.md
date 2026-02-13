@@ -23,6 +23,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Prefer exact contact match (existing behavior).
   - Else attempt unique client match by sender domain, and apply the client's validated `properties.primary_contact_id` as ticket contact when available.
   - Keep comment author attribution as `system` unless there is an exact sender email contact match (avoids implying the default contact authored the email).
+  - When the resolved client differs from the inbound defaults client, do not apply `defaults.location_id` to avoid cross-client location mismatch.
 - (2026-02-13) Client "default contact" storage is already supported end-to-end via client `properties`:
   - Types: `packages/types/src/interfaces/client.interfaces.ts` includes `properties.primary_contact_id` and `properties.primary_contact_name`.
   - Client-side validation: `packages/clients/src/schemas/client.schema.ts` includes `primary_contact_id` and `primary_contact_name`.

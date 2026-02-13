@@ -32,7 +32,7 @@
   {
     "id": "F007",
     "description": "Inbound email: if resolved target client differs from inbound defaults client, do not apply defaults.location_id (avoid cross-client location mismatch)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",

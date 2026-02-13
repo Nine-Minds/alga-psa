@@ -493,7 +493,8 @@ export async function processInboundEmailInApp(
       priority_id: defaults.priority_id,
       category_id: defaults.category_id,
       subcategory_id: defaults.subcategory_id,
-      location_id: defaults.location_id,
+      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
+      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: emailData.id,
