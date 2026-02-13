@@ -52,6 +52,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) T080: Added bulk software ingest test verifying Tactical ingestion uses only `GET /api/software/` (no per-agent refresh `PUT`) and writes to normalized software tables (`software_catalog`, `asset_software`). Files:
   - `server/src/test/unit/tacticalrmm/tacticalSoftwareIngest.bulk.test.ts`
 - (2026-02-13) T081: Extended software ingest test to assert agent_id to asset association via `tenant_external_entity_mappings` (unmapped agents do not produce catalog/asset_software rows).
+- (2026-02-13) T082: Extended software ingest test to assert idempotency (rerun does not duplicate `software_catalog` or `asset_software` rows).
 
 ## Open Questions
 

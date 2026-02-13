@@ -231,4 +231,20 @@ describe('Tactical software inventory ingest (bulk)', () => {
     expect(names.has('App Two')).toBe(true);
     expect(names.has('Unmapped App')).toBe(false);
   });
+
+  it('is idempotent (rerun does not duplicate software_catalog or asset_software rows)', async () => {
+    const { ingestTacticalRmmSoftwareInventory } = await import(
+      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+    );
+
+    const first = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    expect(first.success).toBe(true);
+    expect(state.software_catalog).toHaveLength(2);
+    expect(state.asset_software).toHaveLength(2);
+
+    const second = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    expect(second.success).toBe(true);
+    expect(state.software_catalog).toHaveLength(2);
+    expect(state.asset_software).toHaveLength(2);
+  });
 });
