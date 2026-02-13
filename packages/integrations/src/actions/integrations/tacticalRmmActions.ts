@@ -774,3 +774,84 @@ export const syncTacticalRmmDevices = withAuth(async (
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
+
+export const listTacticalRmmOrganizationMappings = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  mappings?: Array<{
+    mapping_id: string;
+    external_organization_id: string;
+    external_organization_name: string | null;
+    client_id: string | null;
+    company_name?: string | null;
+    auto_sync_assets: boolean;
+    metadata?: Record<string, unknown> | null;
+  }>;
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'read');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first(['integration_id']);
+
+    if (!integration?.integration_id) {
+      return { success: true, mappings: [] };
+    }
+
+    const rows = await knex('rmm_organization_mappings as rom')
+      .leftJoin('clients as c', function () {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const join = this as any;
+        join.on('c.client_id', '=', 'rom.client_id').andOn('c.tenant', '=', 'rom.tenant');
+      })
+      .where({
+        'rom.tenant': tenant,
+        'rom.integration_id': integration.integration_id,
+      })
+      .select([
+        'rom.mapping_id',
+        'rom.external_organization_id',
+        'rom.external_organization_name',
+        'rom.client_id',
+        'rom.auto_sync_assets',
+        'rom.metadata',
+        knex.raw('c.client_name as company_name'),
+      ])
+      .orderBy('rom.external_organization_name', 'asc');
+
+    return { success: true, mappings: rows as any };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
+
+export const updateTacticalRmmOrganizationMapping = withAuth(async (
+  user,
+  { tenant },
+  input: { mappingId: string; clientId?: string | null; autoSyncAssets?: boolean }
+): Promise<{ success: boolean; error?: string }> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const patch: Record<string, any> = {};
+    if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId;
+    if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
+    if (!Object.keys(patch).length) return { success: true };
+
+    await knex('rmm_organization_mappings')
+      .where({ tenant, mapping_id: input.mappingId })
+      .update({ ...patch, updated_at: knex.fn.now() });
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});

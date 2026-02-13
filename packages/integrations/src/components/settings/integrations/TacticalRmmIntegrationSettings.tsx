@@ -7,18 +7,24 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
   disconnectTacticalRmmIntegration,
   getTacticalRmmConnectionSummary,
   getTacticalRmmSettings,
+  listTacticalRmmOrganizationMappings,
   saveTacticalRmmConfiguration,
   syncTacticalRmmOrganizations,
   syncTacticalRmmDevices,
   testTacticalRmmConnection,
+  updateTacticalRmmOrganizationMapping,
   type TacticalRmmAuthMode,
 } from '@alga-psa/integrations/actions';
+import { getAllClientsForAssets } from '@alga-psa/assets/actions/clientLookupActions';
+import type { IClient } from '@alga-psa/types';
 
 export function TacticalRmmIntegrationSettings() {
   const { toast } = useToast();
@@ -55,6 +61,11 @@ export function TacticalRmmIntegrationSettings() {
   const [totpRequired, setTotpRequired] = React.useState(false);
 
   const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getTacticalRmmConnectionSummary>>['summary'] | null>(null);
+  const [orgMappings, setOrgMappings] = React.useState<NonNullable<Awaited<ReturnType<typeof listTacticalRmmOrganizationMappings>>['mappings']>>([]);
+  const [clients, setClients] = React.useState<IClient[]>([]);
+  const [clientsLoading, setClientsLoading] = React.useState(false);
+  const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -81,9 +92,37 @@ export function TacticalRmmIntegrationSettings() {
     }
   }, []);
 
+  const loadOrgMappings = React.useCallback(async () => {
+    const res = await listTacticalRmmOrganizationMappings();
+    if (!res.success) {
+      setError(res.error || 'Failed to load organization mappings');
+      return;
+    }
+    setOrgMappings(res.mappings || []);
+  }, []);
+
   React.useEffect(() => {
     load();
   }, [load]);
+
+  React.useEffect(() => {
+    void loadOrgMappings();
+  }, [loadOrgMappings]);
+
+  React.useEffect(() => {
+    const run = async () => {
+      setClientsLoading(true);
+      try {
+        const data = await getAllClientsForAssets(true);
+        setClients(data as any);
+      } catch (e) {
+        setClients([]);
+      } finally {
+        setClientsLoading(false);
+      }
+    };
+    void run();
+  }, []);
 
   const canSave = instanceUrl.trim() && (
     authMode === 'api_key'
@@ -220,6 +259,21 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; autoSyncAssets?: boolean }) => {
+    setError(null);
+    const res = await updateTacticalRmmOrganizationMapping({
+      mappingId,
+      clientId: patch.clientId,
+      autoSyncAssets: patch.autoSyncAssets,
+    });
+    if (!res.success) {
+      setError(res.error || 'Failed to update mapping');
+      toast({ title: 'Update failed', description: res.error || 'Unknown error', variant: 'destructive' });
+      return;
+    }
+    await loadOrgMappings();
+  };
+
   return (
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
@@ -327,6 +381,76 @@ export function TacticalRmmIntegrationSettings() {
                 {syncingOrgs ? 'Syncing...' : 'Sync Clients'}
               </Button>
             </div>
+          </div>
+
+          <div className="rounded-md border bg-background p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Organization Mapping</div>
+                <div className="text-xs text-muted-foreground">
+                  Assign each Tactical Client to an Alga Client and control auto-sync per org.
+                </div>
+              </div>
+              <Button
+                id="tacticalrmm-refresh-mappings"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadOrgMappings}
+                disabled={loading || syncingOrgs || syncingDevices || saving || testing || disconnecting}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+
+            {orgMappings.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No organizations found. Run "Sync Clients" first.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {orgMappings.map((m) => (
+                  <div key={m.mapping_id} className="flex flex-col lg:flex-row lg:items-center gap-3 rounded border p-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {m.external_organization_name || m.external_organization_id}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        Tactical ID: {m.external_organization_id}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <ClientPicker
+                        id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
+                        clients={clients}
+                        selectedClientId={m.client_id || null}
+                        onSelect={(clientId) => handleUpdateMapping(m.mapping_id, { clientId })}
+                        filterState={clientFilterState}
+                        onFilterStateChange={setClientFilterState}
+                        clientTypeFilter={clientTypeFilter}
+                        onClientTypeFilterChange={setClientTypeFilter}
+                        placeholder={clientsLoading ? 'Loading clients…' : 'Select client'}
+                        fitContent
+                        triggerVariant="outline"
+                        triggerSize="sm"
+                        className="min-w-[220px]"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id={`tacticalrmm-org-autosync-${m.mapping_id}`}
+                        checked={Boolean(m.auto_sync_assets)}
+                        onCheckedChange={(checked) => handleUpdateMapping(m.mapping_id, { autoSyncAssets: checked })}
+                      />
+                      <span className="text-sm">Auto-sync</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-md border bg-background p-4">
