@@ -141,7 +141,7 @@ export default function RmmIntegrationsSetup() {
         <Card>
           <CardHeader>
             <CardTitle>RMM Integrations</CardTitle>
-            <CardDescription>RMM integration configuration is not enabled for this tenant.</CardDescription>
+            <CardDescription>RMM integration coming soon</CardDescription>
           </CardHeader>
         </Card>
       );
