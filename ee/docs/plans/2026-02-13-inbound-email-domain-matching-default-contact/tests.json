@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "Unit: domain-to-client lookup returns null when no contacts exist for the domain",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

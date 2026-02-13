@@ -56,6 +56,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `rg -n "resolve_inbound_ticket_context|processInboundEmailInApp|findContactByEmail" -S`
 - (2026-02-13) Unit tests:
   - `shared/lib/email/addressUtils.test.ts` covers `extractEmailDomain()` normalization + domain extraction cases.
+  - `shared/workflow/actions/emailWorkflowActions.domainLookup.test.ts` covers `findUniqueClientIdByContactEmailDomain()` null return when the domain has no contacts.
 
 ## Links / References
 
