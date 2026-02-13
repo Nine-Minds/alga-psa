@@ -248,3 +248,6 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Fix: `server/vitest.config.ts` now includes `../packages/**/*.{test,spec}.*` explicitly.
 - Coverage provider version must match Vitest major version.
   - `server/` is currently on `vitest@3.2.4`, so `@vitest/coverage-v8@3.2.4` is added to `server/package.json` to avoid resolving the repo-root `@vitest/coverage-v8@4.x`.
+- Running tests from repo root:
+  - `npm run test:local` currently shells out to a system `dotenv` binary in some environments (CLI flag mismatch).
+  - Reliable alternative: `cd server && npx vitest run <path-to-test>` (uses `server/vitest.globalSetup.js` to load `../.env.localtest`).

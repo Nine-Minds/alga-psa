@@ -12,6 +12,14 @@ describe('designerStore (no constraint solver state)', () => {
     expect('constraints' in (snapshot as Record<string, unknown>)).toBe(false);
   });
 
+  it('exported nodes contain only CSS-like layout/style fields (no legacy constraints)', () => {
+    const snapshot = useInvoiceDesignerStore.getState().exportWorkspace();
+    snapshot.nodes.forEach((node) => {
+      expect('constraints' in (node as unknown as Record<string, unknown>)).toBe(false);
+      expect('constraint' in (node as unknown as Record<string, unknown>)).toBe(false);
+    });
+  });
+
   it('allows setting non-px sizing strings via updateNodeStyle', () => {
     const store = useInvoiceDesignerStore.getState();
     const pageId = store.nodes.find((node) => node.type === 'page')?.id;
