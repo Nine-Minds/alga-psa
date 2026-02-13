@@ -596,6 +596,49 @@ function extractOsFields(agent: any): { os_type: string | null; os_version: stri
   return { os_type, os_version };
 }
 
+function extractVitals(agent: any): {
+  current_user: string | null;
+  uptime_seconds: number | null;
+  lan_ip: string | null;
+  wan_ip: string | null;
+} {
+  const currentUser =
+    agent?.logged_in_username ??
+    agent?.current_user ??
+    agent?.currentUser ??
+    null;
+
+  const uptimeRaw =
+    agent?.uptime_seconds ??
+    agent?.uptimeSeconds ??
+    agent?.uptime ??
+    null;
+
+  const uptimeSeconds = uptimeRaw === null || typeof uptimeRaw === 'undefined'
+    ? null
+    : Number(uptimeRaw);
+
+  const lanIp =
+    agent?.lan_ip ??
+    agent?.local_ip ??
+    agent?.localIp ??
+    agent?.ip_address ??
+    null;
+
+  const wanIp =
+    agent?.wan_ip ??
+    agent?.public_ip ??
+    agent?.publicIp ??
+    null;
+
+  return {
+    current_user: currentUser ? String(currentUser) : null,
+    uptime_seconds: Number.isFinite(uptimeSeconds as any) ? uptimeSeconds : null,
+    lan_ip: lanIp ? String(lanIp) : null,
+    wan_ip: wanIp ? String(wanIp) : null,
+  };
+}
+
 export const syncTacticalRmmDevices = withAuth(async (
   user,
   { tenant }
@@ -692,6 +735,7 @@ export const syncTacticalRmmDevices = withAuth(async (
           const deviceName = String((agent as any).hostname || (agent as any).name || (agent as any).computer_name || agentId);
           const osFields = extractOsFields(agent);
           const agentVersion = (agent as any).agent_version ?? (agent as any).version ?? null;
+          const vitals = extractVitals(agent);
 
           if (!mapping?.alga_entity_id) {
             const assetType = inferAssetTypeFromTacticalAgent(agent);
@@ -725,12 +769,20 @@ export const syncTacticalRmmDevices = withAuth(async (
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 })
                 .onConflict(['tenant', 'asset_id'])
                 .merge({
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 });
             } else {
               await knex('server_assets')
@@ -740,12 +792,20 @@ export const syncTacticalRmmDevices = withAuth(async (
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 })
                 .onConflict(['tenant', 'asset_id'])
                 .merge({
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 });
             }
 
@@ -795,12 +855,20 @@ export const syncTacticalRmmDevices = withAuth(async (
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 })
                 .onConflict(['tenant', 'asset_id'])
                 .merge({
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 });
             } else {
               await knex('workstation_assets')
@@ -810,12 +878,20 @@ export const syncTacticalRmmDevices = withAuth(async (
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 })
                 .onConflict(['tenant', 'asset_id'])
                 .merge({
                   os_type: osFields.os_type,
                   os_version: osFields.os_version,
                   agent_version: agentVersion ? String(agentVersion) : null,
+                  current_user: vitals.current_user,
+                  uptime_seconds: vitals.uptime_seconds,
+                  lan_ip: vitals.lan_ip,
+                  wan_ip: vitals.wan_ip,
                 });
             }
 
