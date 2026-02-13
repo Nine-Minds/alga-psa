@@ -170,6 +170,15 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
   - Preview iframe `srcDoc` is now a full HTML document with `html, body { margin: 0; padding: 0; }` so the renderer-scoped CSS (`.invoice-template-root { ... }`) behaves the same inside the iframe as it does in the app / PDF (avoids default iframe body margins affecting layout).
 
+- 2026-02-13: `F021` Audit imports of deleted geometry utilities
+  - Confirmed no runtime imports/references remain for deleted modules:
+    - `packages/billing/src/components/invoice-designer/utils/constraintSolver.ts`
+    - `packages/billing/src/components/invoice-designer/utils/constraints.ts`
+    - `packages/billing/src/components/invoice-designer/utils/dropParentResolution.ts`
+    - `packages/billing/src/components/invoice-designer/utils/aspectRatio.ts`
+  - Grep runbook:
+    - `rg -n "utils/(constraintSolver|constraints|dropParentResolution|aspectRatio)" -S .`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
