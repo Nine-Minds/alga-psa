@@ -61,6 +61,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
     - `server/src/test/unit/tacticalrmm/tacticalEvents.published.test.ts`
 - (2026-02-13) T092: Webhook route behavior for unknown/unmapped `agent_id` is explicitly covered: returns 200 and persists `rmm_alerts` with `asset_id=null` when no mapping exists. File:
   - `server/src/test/unit/tacticalrmm/tacticalWebhook.upsertAlert.test.ts`
+- (2026-02-13) T094: Added unit coverage that `TacticalRmmClient.listAllBeta` accepts a non-paginated (array) response body for `/api/beta/v1/client/` and does not attempt to page further. File:
+  - `server/src/test/unit/tacticalrmm/tacticalApiClient.pagination.test.ts`
 
 ## Open Questions
 

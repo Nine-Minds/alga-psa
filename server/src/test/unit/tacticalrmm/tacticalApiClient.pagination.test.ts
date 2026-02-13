@@ -38,5 +38,29 @@ describe('TacticalRmmClient.listAllBeta pagination', () => {
     expect((requestSpy.mock.calls[1]?.[0] as any)?.params?.page).toBe(2);
     expect((requestSpy.mock.calls[1]?.[0] as any)?.params?.page_size).toBe(1000);
   });
-});
 
+  it('tolerates non-paginated beta responses (array body) for client list', async () => {
+    const client = new TacticalRmmClient({
+      baseUrl: 'https://tactical.example',
+      authMode: 'api_key',
+      apiKey: 'api_key',
+    });
+
+    const requestSpy = vi
+      .spyOn(client, 'request')
+      .mockImplementation(async (args: any) => {
+        expect(args.method).toBe('GET');
+        expect(args.path).toBe('/api/beta/v1/client/');
+        expect(args.params?.page).toBe(1);
+        expect(args.params?.page_size).toBe(1000);
+        return [{ id: 1 }, { id: 2 }] as any;
+      });
+
+    const res = await client.listAllBeta<{ id: number }>({
+      path: '/api/beta/v1/client/',
+    });
+
+    expect(res.map((r) => r.id)).toEqual([1, 2]);
+    expect(requestSpy).toHaveBeenCalledTimes(1);
+  });
+});
