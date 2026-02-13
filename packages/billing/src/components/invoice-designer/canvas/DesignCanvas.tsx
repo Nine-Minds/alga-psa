@@ -796,15 +796,28 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       ? Math.max(node.size.height, childExtents.maxBottom - node.position.y)
       : node.size.height;
   const resolvedBoxStyle = resolveNodeBoxStyle(node.style);
-  const resolvedWidth = resolvedBoxStyle.width ?? inferredWidth;
-  const resolvedHeight = resolvedBoxStyle.height ?? inferredHeight;
+  const resolvedWidth = resolvedBoxStyle.width;
+  const resolvedHeight = resolvedBoxStyle.height;
+  const isFlowPositioning = parentUsesFlowLayout;
   const nodeStyle: React.CSSProperties = {
     ...resolvedBoxStyle,
-    width: resolvedWidth,
-    height: resolvedHeight,
-    top: parentUsesFlowLayout ? undefined : node.position.y,
-    left: parentUsesFlowLayout ? undefined : node.position.x,
-    position: parentUsesFlowLayout ? undefined : 'absolute',
+    // Keep box sizing stable when we apply padding/borders via Tailwind classes.
+    boxSizing: 'border-box',
+    // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.
+    // Instead, treat the authored size as a minimum box size so flex/grid can stretch items naturally.
+    width: isFlowPositioning ? resolvedWidth : (resolvedWidth ?? inferredWidth),
+    height: isFlowPositioning ? resolvedHeight : (resolvedHeight ?? inferredHeight),
+    minWidth:
+      isFlowPositioning
+        ? (resolvedBoxStyle.minWidth ?? (resolvedWidth ? undefined : inferredWidth))
+        : resolvedBoxStyle.minWidth,
+    minHeight:
+      isFlowPositioning
+        ? (resolvedBoxStyle.minHeight ?? (resolvedHeight ? undefined : inferredHeight))
+        : resolvedBoxStyle.minHeight,
+    top: isFlowPositioning ? undefined : node.position.y,
+    left: isFlowPositioning ? undefined : node.position.x,
+    position: isFlowPositioning ? undefined : 'absolute',
     transform: transform && !isDragging ? CSS.Transform.toString(transform) : undefined,
     transition,
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
@@ -1371,7 +1384,15 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             className="absolute inset-0"
             style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}
           >
-            {rootParentId && renderNodeTree(rootParentId)}
+            <div
+              className="absolute inset-0"
+              style={{
+                boxSizing: 'border-box',
+                ...(rootDropMeta ? resolveContainerLayoutStyle(rootDropMeta.layout) : {}),
+              }}
+            >
+              {rootParentId && renderNodeTree(rootParentId)}
+            </div>
             {showGuides && guides.map((guide) => (
               <div
                 key={`${guide.type}-${guide.position}`}

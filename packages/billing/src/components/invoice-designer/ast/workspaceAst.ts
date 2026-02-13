@@ -604,7 +604,9 @@ const importAstNode = (
     totals: 'totals',
   };
 
-  const designerType = node.type === 'section' && depth === 0 ? 'page' : typeMap[node.type];
+  // The designer always has an explicit page node; AST nodes map directly without "first section becomes page"
+  // heuristics. This avoids accidentally shrinking the canvas when importing AST that starts with a section.
+  const designerType = typeMap[node.type];
   if (!designerType) {
     return;
   }
@@ -692,11 +694,40 @@ export const importInvoiceTemplateAstToWorkspace = (
     style: coerceNodeStyleFromInlineStyle(documentInline),
   };
 
-  const nodes: DesignerNode[] = [documentNode];
+  // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
+  const pageNode: DesignerNode = {
+    id: 'page-root',
+    type: 'page',
+    name: 'Page 1',
+    position: { x: 0, y: 0 },
+    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+    canRotate: false,
+    allowResize: false,
+    rotation: 0,
+    metadata: {},
+    layoutPresetId: undefined,
+    parentId: documentNode.id,
+    childIds: [],
+    allowedChildren: getAllowedChildrenForType('page'),
+    layout: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '32px',
+      padding: '40px', // Page margins
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+    },
+    style: undefined,
+  };
+
+  documentNode.childIds = [pageNode.id];
+
+  const nodes: DesignerNode[] = [documentNode, pageNode];
   const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
   rootChildren.forEach((child, index) => {
-    importAstNode(child, documentNode.id, nodes, ast, index, 0);
-    documentNode.childIds.push(child.id);
+    importAstNode(child, pageNode.id, nodes, ast, index, 0);
+    pageNode.childIds.push(child.id);
   });
 
   return {
