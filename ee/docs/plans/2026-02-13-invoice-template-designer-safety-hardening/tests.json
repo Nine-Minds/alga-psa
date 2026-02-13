@@ -210,7 +210,7 @@
   {
     "id": "T026",
     "description": "Invoice template AST schema: rejects invalid token ids in `styles.tokens.*.id` and invalid `node.style.tokenIds`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

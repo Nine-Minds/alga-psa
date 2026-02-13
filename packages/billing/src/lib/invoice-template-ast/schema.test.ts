@@ -258,4 +258,49 @@ describe('invoiceTemplateAstSchema', () => {
     if (result.success) return;
     expect(result.errors.some((error) => error.message.includes('Invalid CSS identifier'))).toBe(true);
   });
+
+  it('rejects invalid CSS identifiers in token ids and node.style.tokenIds', () => {
+    const invalidTokenId = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      styles: {
+        tokens: {
+          ok: { id: 'bad.id', value: 'red' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [],
+      },
+    });
+    expect(invalidTokenId.success).toBe(false);
+
+    const invalidNodeTokenIds = validateInvoiceTemplateAst({
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'section-1',
+            type: 'section',
+            style: {
+              tokenIds: ['bad.id'],
+            },
+            children: [],
+          },
+        ],
+      },
+    });
+    expect(invalidNodeTokenIds.success).toBe(false);
+
+    if (!invalidTokenId.success) {
+      expect(invalidTokenId.errors.some((error) => error.message.includes('Invalid CSS identifier'))).toBe(true);
+    }
+    if (!invalidNodeTokenIds.success) {
+      expect(invalidNodeTokenIds.errors.some((error) => error.message.includes('Invalid CSS identifier'))).toBe(true);
+    }
+  });
 });
