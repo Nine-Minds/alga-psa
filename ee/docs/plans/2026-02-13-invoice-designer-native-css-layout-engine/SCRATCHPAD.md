@@ -106,6 +106,10 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
 - 2026-02-13: `F011` Cross-container moves (flow layout)
   - Flow-layout nodes can be dragged into another eligible container (or onto a child within it) and are reparented by updating `parentId` + `childIds` insertion index (DOM-measured `over` target).
 
+- 2026-02-13: `F012` Nesting allowlist enforcement
+  - Reparenting via drag-drop is validated with `canNestWithinParent(childType, parentType)` and cycle prevention (no dropping into descendants):
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
