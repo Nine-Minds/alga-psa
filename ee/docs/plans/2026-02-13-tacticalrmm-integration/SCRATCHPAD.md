@@ -53,6 +53,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/tacticalrmm/tacticalSoftwareIngest.bulk.test.ts`
 - (2026-02-13) T081: Extended software ingest test to assert agent_id to asset association via `tenant_external_entity_mappings` (unmapped agents do not produce catalog/asset_software rows).
 - (2026-02-13) T082: Extended software ingest test to assert idempotency (rerun does not duplicate `software_catalog` or `asset_software` rows).
+- (2026-02-13) T090: Added coverage for Tactical event-bus publishing:
+  - Org sync publishes `RMM_SYNC_STARTED` and `RMM_SYNC_COMPLETED`, and now publishes `RMM_SYNC_FAILED` on exception (best-effort).
+  - Webhook route publishes `RMM_WEBHOOK_RECEIVED` on valid webhook requests.
+  - Files:
+    - `packages/integrations/src/actions/integrations/tacticalRmmActions.ts`
+    - `server/src/test/unit/tacticalrmm/tacticalEvents.published.test.ts`
 
 ## Open Questions
 

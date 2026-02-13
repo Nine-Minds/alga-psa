@@ -559,6 +559,8 @@ export const syncTacticalRmmOrganizations = withAuth(async (
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   const errors: string[] = [];
+  const actorUserId = (user as any)?.user_id as string | undefined;
+  let integrationId: string | null = null;
 
   try {
     const { knex } = await createTenantKnex();
@@ -570,11 +572,13 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
+    integrationId = integration.integration_id;
+
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_STARTED',
       tenantId: tenant,
-      actorUserId: (user as any)?.user_id,
-      integrationId: integration.integration_id,
+      actorUserId,
+      integrationId,
       syncType: 'organizations',
     });
 
@@ -636,8 +640,8 @@ export const syncTacticalRmmOrganizations = withAuth(async (
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_COMPLETED',
       tenantId: tenant,
-      actorUserId: (user as any)?.user_id,
-      integrationId: integration.integration_id,
+      actorUserId,
+      integrationId,
       syncType: 'organizations',
       itemsProcessed: remoteClients.length,
       itemsCreated: created,
@@ -654,7 +658,16 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       errors: errors.length ? errors : undefined,
     };
   } catch (err) {
-    // Best-effort publish; we might not have integrationId if we failed early.
+    if (integrationId) {
+      await publishRmmSyncEvent({
+        eventType: 'RMM_SYNC_FAILED',
+        tenantId: tenant,
+        actorUserId,
+        integrationId,
+        syncType: 'organizations',
+        errorMessage: axiosErrorToMessage(err),
+      });
+    }
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
@@ -734,6 +747,8 @@ export const syncTacticalRmmDevices = withAuth(async (
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   const errors: string[] = [];
+  const actorUserId = (user as any)?.user_id as string | undefined;
+  let integrationId: string | null = null;
 
   try {
     const { knex } = await createTenantKnex();
@@ -745,11 +760,13 @@ export const syncTacticalRmmDevices = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
+    integrationId = integration.integration_id;
+
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_STARTED',
       tenantId: tenant,
-      actorUserId: (user as any)?.user_id,
-      integrationId: integration.integration_id,
+      actorUserId,
+      integrationId,
       syncType: 'devices',
     });
 
@@ -1010,8 +1027,8 @@ export const syncTacticalRmmDevices = withAuth(async (
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_COMPLETED',
       tenantId: tenant,
-      actorUserId: (user as any)?.user_id,
-      integrationId: integration.integration_id,
+      actorUserId,
+      integrationId,
       syncType: 'devices',
       itemsProcessed: processed,
       itemsCreated: created,
@@ -1029,6 +1046,16 @@ export const syncTacticalRmmDevices = withAuth(async (
       errors: errors.length ? errors : undefined,
     };
   } catch (err) {
+    if (integrationId) {
+      await publishRmmSyncEvent({
+        eventType: 'RMM_SYNC_FAILED',
+        tenantId: tenant,
+        actorUserId,
+        integrationId,
+        syncType: 'devices',
+        errorMessage: axiosErrorToMessage(err),
+      });
+    }
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
@@ -1193,6 +1220,8 @@ export const backfillTacticalRmmAlerts = withAuth(async (
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   const errors: string[] = [];
+  const actorUserId = (user as any)?.user_id as string | undefined;
+  let integrationId: string | null = null;
 
   try {
     const { knex } = await createTenantKnex();
@@ -1204,11 +1233,13 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
+    integrationId = integration.integration_id;
+
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_STARTED',
       tenantId: tenant,
-      actorUserId: (user as any)?.user_id,
-      integrationId: integration.integration_id,
+      actorUserId,
+      integrationId,
       syncType: 'alerts',
     });
 
@@ -1317,8 +1348,8 @@ export const backfillTacticalRmmAlerts = withAuth(async (
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_COMPLETED',
       tenantId: tenant,
-      actorUserId: (user as any)?.user_id,
-      integrationId: integration.integration_id,
+      actorUserId,
+      integrationId,
       syncType: 'alerts',
       itemsProcessed: alerts.length,
       itemsCreated: created,
@@ -1335,6 +1366,16 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       errors: errors.length ? errors : undefined,
     };
   } catch (err) {
+    if (integrationId) {
+      await publishRmmSyncEvent({
+        eventType: 'RMM_SYNC_FAILED',
+        tenantId: tenant,
+        actorUserId,
+        integrationId,
+        syncType: 'alerts',
+        errorMessage: axiosErrorToMessage(err),
+      });
+    }
     return { success: false, error: axiosErrorToMessage(err) };
   }
 });
