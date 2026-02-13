@@ -210,3 +210,4 @@ This plan intentionally continues the simplification arc:
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts` to validate immutable deep dot-path updates.
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.unsetNodeProp.test.ts` to validate cleanup behavior for empty objects.
   - Added `packages/billing/src/components/invoice-designer/state/patchOps.insertChild.test.ts` to validate deterministic child insertion ordering.
+  - Added `packages/billing/src/components/invoice-designer/state/patchOps.moveNode.test.ts` to validate reorder/reparent semantics + cycle prevention.
