@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "Add automated coverage for domain fallback matching in inbound email processing (integration tests)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",

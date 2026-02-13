@@ -40,6 +40,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Exact contact match first.
   - Else unique domain-to-client match and optional validated client default contact.
   - `targetLocationId` is null when resolved client differs from defaults client.
+- (2026-02-13) Added inbound-email integration coverage for domain fallback in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+  - Unique domain match sets ticket client_id.
+  - Default contact applied when configured on client properties.
+  - Ambiguous domain match falls back to defaults.
+  - Location_id cleared when resolved client differs from defaults.
 - (2026-02-13) There is existing “billing contact” (`clients.billing_contact_id`) UI in `packages/clients/src/components/clients/BillingConfigForm.tsx`, but it is billing-specific and not suitable as the inbound-email default contact.
 - (2026-02-13) Added "Default contact" picker to the client details screen: `packages/clients/src/components/clients/ClientDetails.tsx` persists `properties.primary_contact_id` and `properties.primary_contact_name`.
 - (2026-02-13) Client default contact picker supports clearing by selecting "None" (empties both `primary_contact_id` and `primary_contact_name`).
