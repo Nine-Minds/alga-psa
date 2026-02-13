@@ -40,4 +40,13 @@ describe('emailWorkflowActions: findUniqueClientIdByContactEmailDomain', () => {
     await expect(findUniqueClientIdByContactEmailDomain(' Example.COM ', 'tenant-1')).resolves.toBe('client-1');
     expect(builder.andWhereRaw).toHaveBeenCalledWith('lower(contacts.email) like ?', ['%@example.com']);
   });
+
+  it('returns null when multiple clients share the same domain (ambiguous match)', async () => {
+    const { trx } = makeContactsDomainLookupTrx({
+      rows: [{ client_id: 'client-1' }, { client_id: 'client-2' }],
+    });
+    trxImpl = trx;
+
+    await expect(findUniqueClientIdByContactEmailDomain('example.com', 'tenant-1')).resolves.toBeNull();
+  });
 });
