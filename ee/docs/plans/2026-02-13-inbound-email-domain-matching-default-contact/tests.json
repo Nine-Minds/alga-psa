@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "Integration: domain fallback sets ticket.contact_name_id to the matched client's configured default contact (client.properties.primary_contact_id)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F004", "F005"]
   },
   {
