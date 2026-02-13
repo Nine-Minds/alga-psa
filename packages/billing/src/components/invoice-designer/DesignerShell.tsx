@@ -561,18 +561,11 @@ export const DesignerShell: React.FC = () => {
         return false;
       }
 
-      const def = getDefinition(componentType);
-      const defaultMetadata = def ? buildDefaultMetadata(componentType, def.defaultMetadata) : undefined;
       const existingNodeIds = new Set(useInvoiceDesignerStore.getState().nodes.map((node) => node.id));
       addNode(
         componentType,
         dropPoint,
-        def
-          ? {
-              parentId: resolution.parentId,
-              defaults: { size: def.defaultSize, metadata: defaultMetadata },
-            }
-          : { parentId: resolution.parentId }
+        { parentId: resolution.parentId }
       );
       const inserted = useInvoiceDesignerStore
         .getState()
@@ -2315,37 +2308,3 @@ export const __designerShellTestUtils = {
 
 const createLocalId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-
-const deepClone = <T,>(value: T): T => {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-  return JSON.parse(JSON.stringify(value));
-};
-
-const buildDefaultMetadata = (
-  componentType: DesignerComponentType,
-  metadata?: Record<string, unknown>
-): Record<string, unknown> | undefined => {
-  if (!metadata) {
-    return undefined;
-  }
-  const clone = deepClone(metadata);
-  if (componentType === 'table' && Array.isArray((clone as { columns?: unknown }).columns)) {
-    (clone as { columns: Array<Record<string, unknown>> }).columns = (
-      (clone as { columns: Array<Record<string, unknown>> }).columns ?? []
-    ).map((column) => ({
-      ...column,
-      id: column.id ? `${column.id}-${createLocalId()}` : createLocalId(),
-    }));
-  }
-  if (componentType === 'attachment-list' && Array.isArray((clone as { items?: unknown }).items)) {
-    (clone as { items: Array<Record<string, unknown>> }).items = (
-      (clone as { items: Array<Record<string, unknown>> }).items ?? []
-    ).map((item) => ({
-      ...item,
-      id: item.id ? `${item.id}-${createLocalId()}` : createLocalId(),
-    }));
-  }
-  return clone;
-};

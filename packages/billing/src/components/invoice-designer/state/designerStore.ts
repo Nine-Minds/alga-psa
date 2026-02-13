@@ -12,6 +12,7 @@ import {
 } from './patchOps';
 import { getPresetById, LegacyLayoutPresetLayout } from '../constants/presets';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { getComponentSchema } from '../schema/componentSchema';
 
 export type DesignerComponentType =
   | 'document'
@@ -212,6 +213,36 @@ const generateId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+
+const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+
+const normalizeDefaultMetadataForNewNode = (
+  type: DesignerComponentType,
+  metadata: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined => {
+  if (!metadata) return undefined;
+  const clone = deepCloneJson(metadata);
+
+  if (type === 'table' && Array.isArray((clone as { columns?: unknown }).columns)) {
+    (clone as { columns: Array<Record<string, unknown>> }).columns = (
+      (clone as { columns: Array<Record<string, unknown>> }).columns ?? []
+    ).map((column) => ({
+      ...column,
+      id: typeof column.id === 'string' && column.id.length > 0 ? `${column.id}-${generateId()}` : generateId(),
+    }));
+  }
+
+  if (type === 'attachment-list' && Array.isArray((clone as { items?: unknown }).items)) {
+    (clone as { items: Array<Record<string, unknown>> }).items = (
+      (clone as { items: Array<Record<string, unknown>> }).items ?? []
+    ).map((item) => ({
+      ...item,
+      id: typeof item.id === 'string' && item.id.length > 0 ? `${item.id}-${generateId()}` : generateId(),
+    }));
+  }
+
+  return clone;
+};
 
 const snapToGridValue = (value: number, gridSize: number) => Math.round(value / gridSize) * gridSize;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -516,53 +547,50 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           }
         : relativeDropPoint;
 
-      const rawSize = options.defaults?.size ?? DEFAULT_SIZE;
+      const schema = getComponentSchema(type);
+      const rawSize = options.defaults?.size ?? schema?.defaults.size ?? DEFAULT_SIZE;
       const size = clampNodeSizeToPracticalMinimum(type, rawSize);
 
-      const defaultLayout: DesignerContainerLayout | undefined =
-        type === 'document' || type === 'page' || type === 'section' || type === 'container'
-          ? {
-              display: 'flex',
-              flexDirection: type === 'section' ? 'row' : 'column',
-              gap: type === 'section' || type === 'container' ? '16px' : '0px',
-              padding: type === 'section' || type === 'container' ? '16px' : '0px',
-              justifyContent: 'flex-start',
-              alignItems: 'stretch',
-            }
-          : undefined;
+      const defaultMetadata = normalizeDefaultMetadataForNewNode(type, schema?.defaults.metadata);
+      const overrideMetadata = normalizeDefaultMetadataForNewNode(type, options.defaults?.metadata);
+      const mergedMetadata = {
+        ...(defaultMetadata ?? {}),
+        ...(overrideMetadata ?? {}),
+      };
 
-	      const node: DesignerNode = {
-	        id: generateId(),
-	        type,
-	        name: `${type} ${get().nodes.length + 1}`,
-	        position,
-	        size,
-	        baseSize: size,
+      const baseStyle: DesignerNodeStyle = {
+        width: `${Math.round(size.width)}px`,
+        height: `${Math.round(size.height)}px`,
+      };
+
+      const node: DesignerNode = {
+        id: generateId(),
+        type,
+        name: schema?.defaults.name ?? `${schema?.label ?? type} ${get().nodes.length + 1}`,
+        position,
+        size,
+        baseSize: size,
         rotation: 0,
         canRotate: true,
         allowResize: true,
         ...options.defaults,
-        metadata: options.defaults?.metadata ?? {},
-        parentId: resolvedParentId,
-	        childIds: [],
-	        allowedChildren: getAllowedChildrenForType(type),
-	        layout: options.defaults?.layout ?? defaultLayout,
-	        style:
-	          options.defaults?.style ?? {
-	            width: `${Math.round(size.width)}px`,
-	            height: `${Math.round(size.height)}px`,
-	            ...(type === 'image' || type === 'logo' || type === 'qr'
-	              ? {
-	                  objectFit: 'contain' as const,
-	                  ...(type === 'qr' ? { aspectRatio: '1 / 1' } : {}),
-	                }
-	              : {}),
-	          },
-	      };
+        metadata: mergedMetadata,
+        parentId: null,
+        childIds: [],
+        allowedChildren: getAllowedChildrenForType(type),
+        layout: options.defaults?.layout ?? schema?.defaults.layout,
+        style: {
+          ...baseStyle,
+          ...(schema?.defaults.style ?? {}),
+          ...(options.defaults?.style ?? {}),
+        },
+      };
 
       setWithIndex((state) => {
         const appendedNodes = [...state.nodes, node];
-        const withParentLink = attachChildAtIndex(appendedNodes, resolvedParentId, node.id);
+        const parent = state.nodesById[resolvedParentId];
+        const insertIndex = parent ? parent.childIds.length : 0;
+        const withParentLink = patchInsertChild(appendedNodes, resolvedParentId, node.id, insertIndex);
         const { history, historyIndex } = appendHistory(state, withParentLink);
         return {
           nodes: withParentLink,

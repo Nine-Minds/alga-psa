@@ -86,3 +86,6 @@ This plan intentionally continues the simplification arc:
   - `packages/billing/src/components/invoice-designer/constants/componentCatalog.ts` now derives palette definitions from schema (schema is the new source of truth for palette metadata/defaults).
 - 2026-02-13: Hierarchy allowlists are now resolved via schema:
   - `packages/billing/src/components/invoice-designer/state/hierarchy.ts` is now a thin wrapper over `getComponentSchema(type).hierarchy`.
+- 2026-02-13: Palette insertion now uses schema defaults and generic tree ops:
+  - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `addNodeFromPalette` now pulls size/layout/style/metadata defaults from `getComponentSchema(type).defaults` and attaches nodes using `insertChild` semantics (`patchOps.insertChild`).
+  - Default metadata normalization for repeated insertions (table columns, attachment items) moved into the store (`normalizeDefaultMetadataForNewNode`), removing hardcoded defaults from `DesignerShell.tsx`.

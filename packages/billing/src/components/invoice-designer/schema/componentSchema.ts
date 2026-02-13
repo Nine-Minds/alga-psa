@@ -348,6 +348,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Media',
     defaults: {
       size: { width: 160, height: 120 },
+      style: {
+        objectFit: 'contain',
+      },
       metadata: {},
     },
     hierarchy: {
@@ -362,6 +365,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Media',
     defaults: {
       size: { width: 200, height: 120 },
+      style: {
+        objectFit: 'contain',
+      },
       metadata: {},
     },
     hierarchy: {
@@ -376,6 +382,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Media',
     defaults: {
       size: { width: 140, height: 140 },
+      style: {
+        objectFit: 'contain',
+        aspectRatio: '1 / 1',
+      },
       metadata: {},
     },
     hierarchy: {
@@ -509,4 +519,3 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
 
 export const getComponentSchema = (type: DesignerComponentType): DesignerComponentSchema =>
   DESIGNER_COMPONENT_SCHEMAS[type];
-
