@@ -1,0 +1,56 @@
+[
+  { "id": "T001", "description": "Unit: Provider unions accept `tacticalrmm` and compile for both UI and server codepaths.", "implemented": false, "featureIds": ["F001"] },
+  { "id": "T002", "description": "Unit: Provider display helper renders Tactical as \"Tactical RMM\" (no raw slug in UI).", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T003", "description": "Unit: Agent status typing + filter options include `overdue` and do not break existing online/offline/unknown behavior.", "implemented": false, "featureIds": ["F003"] },
+
+  { "id": "T010", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in CE build.", "implemented": false, "featureIds": ["F010"] },
+  { "id": "T011", "description": "E2E: Integrations Settings -> RMM tab shows Tactical RMM in EE build.", "implemented": false, "featureIds": ["F010"] },
+  { "id": "T012", "description": "E2E: Tactical settings panel can save instance URL + API key and shows \"credentials saved\" masked status.", "implemented": false, "featureIds": ["F011", "F020"] },
+  { "id": "T013", "description": "E2E: Tactical settings panel can save username/password and completes login when no TOTP is required.", "implemented": false, "featureIds": ["F011", "F032", "F020"] },
+  { "id": "T014", "description": "E2E: Tactical settings panel detects TOTP-required via checkcreds and completes login when TOTP is provided.", "implemented": false, "featureIds": ["F011", "F032"] },
+  { "id": "T015", "description": "E2E: Disconnect clears stored Tactical credentials and marks `rmm_integrations` inactive.", "implemented": false, "featureIds": ["F011", "F020", "F022"] },
+
+  { "id": "T020", "description": "Unit: Tactical server action masks secrets (only last 4 chars) when returning credential status.", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T021", "description": "Integration: Connection test uses API key mode header `X-API-KEY` and surfaces 401 as invalid credentials.", "implemented": false, "featureIds": ["F021", "F031"] },
+  { "id": "T022", "description": "Integration: Connection test uses Knox token header `Authorization: Token ...` and surfaces 401 by re-authing once.", "implemented": false, "featureIds": ["F021", "F033", "F032"] },
+  { "id": "T023", "description": "Integration: `rmm_integrations` row is created once per tenant+provider and updated on subsequent saves.", "implemented": false, "featureIds": ["F022"] },
+  { "id": "T024", "description": "Integration: Connection status summary returns correct counts for mapped orgs/devices/active alerts.", "implemented": false, "featureIds": ["F023"] },
+
+  { "id": "T030", "description": "Unit: Base URL normalization produces correct API root for inputs with/without trailing slashes and with/without /api segments.", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T031", "description": "Unit: Beta pagination helper iterates pages until `next` is null and honors `page_size=1000` cap.", "implemented": false, "featureIds": ["F034"] },
+  { "id": "T032", "description": "Unit: Knox flow: checkcreds returns `{totp:true}` triggers login with twofactor; `{totp:false}` still proceeds to login for normal token.", "implemented": false, "featureIds": ["F032"] },
+  { "id": "T033", "description": "Unit: Knox 401 retry occurs at most once per request to avoid infinite loops.", "implemented": false, "featureIds": ["F033"] },
+
+  { "id": "T040", "description": "Integration: Sync clients upserts `rmm_organization_mappings` rows for Tactical and updates names/metadata on rerun.", "implemented": false, "featureIds": ["F040"] },
+  { "id": "T041", "description": "E2E: Org mapping UI can assign an Alga Client to a Tactical mapping and persists `client_id`.", "implemented": false, "featureIds": ["F015", "F041"] },
+  { "id": "T042", "description": "E2E: Org mapping UI can toggle auto-sync and persists `auto_sync_assets`.", "implemented": false, "featureIds": ["F015", "F041"] },
+
+  { "id": "T050", "description": "Unit: Compute agent status = online when last_seen >= now - offline_time.", "implemented": false, "featureIds": ["F051"] },
+  { "id": "T051", "description": "Unit: Compute agent status = offline when now - overdue_time < last_seen < now - offline_time.", "implemented": false, "featureIds": ["F051"] },
+  { "id": "T052", "description": "Unit: Compute agent status = overdue when last_seen <= now - overdue_time.", "implemented": false, "featureIds": ["F051"] },
+  { "id": "T053", "description": "Unit: Compute agent status = offline when last_seen is null.", "implemented": false, "featureIds": ["F051"] },
+  { "id": "T054", "description": "Integration: Full device sync creates new assets for unmapped agent_id and writes `tenant_external_entity_mappings` with external_entity_id=agent_id.", "implemented": false, "featureIds": ["F050", "F054"] },
+  { "id": "T055", "description": "Integration: Full device sync updates existing assets when agent fields change, and updates last_seen/agent_status each run.", "implemented": false, "featureIds": ["F050", "F052", "F051"] },
+  { "id": "T056", "description": "Integration: Device sync stores site id/name in mapping metadata and stores client id as external_realm_id.", "implemented": false, "featureIds": ["F054"] },
+  { "id": "T057", "description": "Integration: Targeted sync single agent by agent_id updates the corresponding asset and mapping.", "implemented": false, "featureIds": ["F056"] },
+  { "id": "T058", "description": "Integration: Device deletion policy behaves as documented (mark inactive or skip) when an agent disappears from Tactical inventory.", "implemented": false, "featureIds": ["F055"] },
+
+  { "id": "T060", "description": "Integration: Webhook route `POST /api/webhooks/tacticalrmm` is reachable without x-api-key and returns 401 when secret header is missing/invalid.", "implemented": false, "featureIds": ["F060", "F061"] },
+  { "id": "T061", "description": "Integration: Webhook accepts minimal payload with agent_id and upserts an alert record.", "implemented": false, "featureIds": ["F062", "F063"] },
+  { "id": "T062", "description": "Integration: Webhook associates alert to asset when agent_id mapping exists; leaves asset_id null when not yet synced.", "implemented": false, "featureIds": ["F063"] },
+  { "id": "T063", "description": "Integration: Webhook triggers sync single agent and updates asset vitals/status after alert event.", "implemented": false, "featureIds": ["F064", "F056"] },
+
+  { "id": "T070", "description": "Integration: Alerts backfill uses `PATCH /alerts/` filters and upserts records without duplicating on rerun.", "implemented": false, "featureIds": ["F070"] },
+  { "id": "T071", "description": "Integration: Alerts backfill maps computed `agent_id` to assets via external mappings when available.", "implemented": false, "featureIds": ["F070"] },
+
+  { "id": "T080", "description": "Integration: Bulk software ingestion via `GET /software/` updates software inventory storage without calling per-agent refresh endpoints.", "implemented": false, "featureIds": ["F071"] },
+
+  { "id": "T081", "description": "Integration: Bulk software ingestion associates software rows to the correct asset via Tactical agent_id mapping.", "implemented": false, "featureIds": ["F071", "F054"] },
+  { "id": "T082", "description": "Integration: Bulk software ingestion is idempotent (re-running does not create duplicate software catalog entries).", "implemented": false, "featureIds": ["F071"] },
+
+  { "id": "T090", "description": "Integration: Tactical sync actions publish expected event-bus events (webhook received, sync started/completed/failed) where implemented.", "implemented": false, "featureIds": ["F080"] },
+  { "id": "T091", "description": "E2E: Tactical webhook config UI shows header name `X-Alga-Webhook-Secret` and renders a payload template containing `agent_id`.", "implemented": false, "featureIds": ["F016", "F062"] },
+  { "id": "T092", "description": "Integration: Webhook endpoint returns 200 for unknown/unmapped agent_id but still records the alert (asset association may be null).", "implemented": false, "featureIds": ["F063"] },
+  { "id": "T093", "description": "Integration: Device sync handles large fleets by paging beta endpoints without exceeding request timeouts (smoke test with mocked pagination).", "implemented": false, "featureIds": ["F034", "F050"] },
+  { "id": "T094", "description": "Integration: Tactical client sync tolerates client list being non-paginated and still upserts correctly.", "implemented": false, "featureIds": ["F040"] }
+]

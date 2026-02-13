@@ -1,0 +1,48 @@
+[
+  { "id": "F001", "description": "Add `tacticalrmm` to RMM provider unions/types (assets + rmm interfaces) so the provider can be persisted and rendered.", "implemented": true, "prdRefs": ["Goals", "Data / API / Integrations"] },
+  { "id": "F002", "description": "Update UI provider display helpers (e.g., status badge/indicator) to show a friendly name for `tacticalrmm`.", "implemented": false, "prdRefs": ["Goals", "UX / UI Notes"] },
+  { "id": "F003", "description": "Support a third agent status value `overdue` end-to-end (types, filters, badges) for Tactical’s computed status.", "implemented": false, "prdRefs": ["Goals", "Functional Requirements"] },
+
+  { "id": "F010", "description": "Add Tactical RMM entry to Integrations Settings -> RMM tab (CE + EE, not enterprise-gated).", "implemented": false, "prdRefs": ["Goals", "UX / UI Notes"] },
+  { "id": "F011", "description": "Create Tactical RMM settings panel UI with: instance URL input, auth mode selector, credential form, save/test/connect, and disconnect.", "implemented": false, "prdRefs": ["Users and Primary Flows", "UX / UI Notes"] },
+  { "id": "F012", "description": "Display Tactical connection status panel (connected, last sync, counts, last error).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F013", "description": "Add UI for syncing Tactical Clients (organizations) and show results (processed/created/updated/failed).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F014", "description": "Add UI for syncing Tactical Devices (agents) and show results (processed/created/updated/deleted/failed).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F015", "description": "Add UI section for org mapping: map Tactical Clients to Alga Clients, toggle auto-sync per org.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F016", "description": "Add UI section for webhook configuration: show webhook URL, required header name/value, and a copy/paste JSON payload template.", "implemented": false, "prdRefs": ["Functional Requirements", "UX / UI Notes"] },
+  { "id": "F017", "description": "Add optional UI action to sync/backfill Tactical alerts and show last backfill status.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F018", "description": "Add optional UI action to ingest bulk software inventory via Tactical `GET /software/` and show status.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F020", "description": "Implement server actions for Tactical settings: save/get credential status with masking, and clear credentials on disconnect.", "implemented": false, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
+  { "id": "F021", "description": "Implement server action to test Tactical connection (using current auth mode) with actionable error messages.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F022", "description": "Implement server actions for Tactical integration record management in `rmm_integrations` (create/update is_active, instance_url, settings JSON).", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F023", "description": "Implement server action to return Tactical connection status summary (counts of mapped orgs/devices/active alerts).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F030", "description": "Create Tactical API client wrapper with base URL normalization and shared request helpers.", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F031", "description": "Implement Tactical API key auth mode in the API client (`X-API-KEY`).", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F032", "description": "Implement Tactical Knox auth mode: checkcreds -> login (TOTP-aware), persist token + expiry, and attach `Authorization: Token ...` header.", "implemented": false, "prdRefs": ["Goals", "Data / API / Integrations"] },
+  { "id": "F033", "description": "Implement Knox re-auth on 401 for username/password mode (best-effort retry once per request).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
+  { "id": "F034", "description": "Implement beta pagination helpers (PageNumberPagination with `page_size` up to 1000).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
+
+  { "id": "F040", "description": "Implement Tactical inventory sync: fetch clients (`/beta/v1/client/`) and upsert into `rmm_organization_mappings` for provider `tacticalrmm`.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F041", "description": "Implement Tactical org mappings API: list and update mappings (client_id assignment, auto_sync_assets).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F050", "description": "Implement Tactical device sync engine (full sync): fetch sites and agents (paged) for mapped Tactical clients and upsert into Assets.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F051", "description": "Compute Tactical agent status as `online|offline|overdue` from last_seen/offline_time/overdue_time (list endpoint compatible).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F052", "description": "Implement mapping from Tactical agent fields into Alga asset base fields (name/serial/os/version/provider IDs, last seen, last sync).", "implemented": false, "prdRefs": ["Goals", "Data / API / Integrations"] },
+  { "id": "F053", "description": "Implement mapping from Tactical agent fields into cached RMM vitals fields (current_user, uptime_seconds, lan_ip, wan_ip) where possible.", "implemented": false, "prdRefs": ["Goals"] },
+  { "id": "F054", "description": "Upsert `tenant_external_entity_mappings` for Tactical agents using `external_entity_id=agent_id`, `external_realm_id=tactical_client_pk`, and include site id/name in metadata.", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F055", "description": "Implement device deletion handling policy for Tactical sync (either mark inactive when missing or explicitly skip; choose and document behavior).", "implemented": false, "prdRefs": ["Open Questions"] },
+  { "id": "F056", "description": "Implement targeted 'sync single agent' server action by `agent_id` (used by webhook and manual refresh).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F060", "description": "Add Tactical webhook endpoint `POST /api/webhooks/tacticalrmm` (CE + EE) and skip API-key auth middleware for this path.", "implemented": false, "prdRefs": ["Functional Requirements", "Security / Permissions"] },
+  { "id": "F061", "description": "Validate Tactical webhook requests using `X-Alga-Webhook-Secret` against the stored integration webhook secret.", "implemented": false, "prdRefs": ["Security / Permissions"] },
+  { "id": "F062", "description": "Define and document the expected Tactical webhook JSON contract (required: agent_id; recommended: client_id/site_id/event/severity/message/alert_time/alert_id).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F063", "description": "On webhook receive: upsert `rmm_alerts` for provider `tacticalrmm`, associate alert to asset via `agent_id` mapping when available.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F064", "description": "On webhook receive: trigger 'sync single agent' to refresh cached vitals + status for the affected asset.", "implemented": false, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F070", "description": "Implement Tactical alerts backfill via `PATCH /alerts/` and upsert into `rmm_alerts` (configurable filters).", "implemented": false, "prdRefs": ["Functional Requirements", "Open Questions"] },
+  { "id": "F071", "description": "Implement bulk software inventory ingestion via `GET /software/` and map results into Alga’s software inventory storage (initially minimal ingestion; no per-agent refresh).", "implemented": false, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F080", "description": "Publish existing event-bus events for Tactical integration actions where appropriate (RMM_WEBHOOK_RECEIVED, RMM_DEVICE_UPDATED/CREATED, INTEGRATION_SYNC_*).", "implemented": false, "prdRefs": ["Observability"] }
+]
