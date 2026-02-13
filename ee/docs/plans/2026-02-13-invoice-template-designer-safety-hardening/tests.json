@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "PatchOps: rejected patch emits developer-visible feedback (console warn and/or diagnostic hook).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
