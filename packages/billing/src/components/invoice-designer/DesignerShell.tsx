@@ -31,6 +31,7 @@ import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
 import { resolveInsertPositionFromRects } from './utils/dropIndicator';
+import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -946,104 +947,6 @@ export const DesignerShell: React.FC = () => {
     const metadata = (selectedNode.metadata ?? {}) as Record<string, any>;
     const applyMetadata = (patch: Record<string, unknown>) => updateNodeMetadata(selectedNode.id, patch);
 
-    if (selectedNode.type === 'section') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Section Border</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Border style</label>
-            <select
-              id="designer-section-border-style"
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.sectionBorderStyle ?? 'light'}
-              onChange={(event) => applyMetadata({ sectionBorderStyle: event.target.value })}
-            >
-              <option value="none">None</option>
-              <option value="light">Light</option>
-              <option value="strong">Strong</option>
-            </select>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'field') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Field Binding</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Binding key</label>
-            <Input
-              id="designer-field-binding"
-              value={metadata.bindingKey ?? ''}
-              onChange={(event) => applyMetadata({ bindingKey: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Format</label>
-            <select
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.format ?? 'text'}
-              onChange={(event) => applyMetadata({ format: event.target.value })}
-            >
-              <option value="text">Text</option>
-              <option value="number">Number</option>
-              <option value="currency">Currency</option>
-              <option value="date">Date</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Placeholder</label>
-            <Input
-              id="designer-field-placeholder"
-              value={metadata.placeholder ?? ''}
-              onChange={(event) => applyMetadata({ placeholder: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Border style</label>
-            <select
-              id="designer-field-border-style"
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.fieldBorderStyle ?? 'underline'}
-              onChange={(event) => applyMetadata({ fieldBorderStyle: event.target.value })}
-            >
-              <option value="none">None</option>
-              <option value="underline">Underline</option>
-              <option value="box">Box</option>
-            </select>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'label') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Label Text</p>
-          <Input
-            id="designer-label-text"
-            value={selectedNode.name ?? ''}
-            onChange={(event) => updateNodeName(selectedNode.id, event.target.value)}
-          />
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Weight</label>
-            <select
-              id="designer-label-weight"
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.fontWeight ?? metadata.labelFontWeight ?? 'semibold'}
-              onChange={(event) => applyMetadata({ fontWeight: event.target.value })}
-            >
-              <option value="normal">Normal</option>
-              <option value="medium">Medium</option>
-              <option value="semibold">Semibold</option>
-              <option value="bold">Bold</option>
-            </select>
-          </div>
-        </div>
-      );
-    }
-
     if (selectedNode.type === 'table' || selectedNode.type === 'dynamic-table') {
       const columns: Array<Record<string, any>> = Array.isArray(metadata.columns) ? metadata.columns : [];
       const tableBorderPreset =
@@ -1263,99 +1166,6 @@ export const DesignerShell: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-      );
-    }
-
-    if (['subtotal', 'tax', 'discount', 'custom-total'].includes(selectedNode.type)) {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Totals Row</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Label</label>
-            <Input
-              id="designer-total-label"
-              value={metadata.label ?? selectedNode.name ?? ''}
-              onChange={(event) => applyMetadata({ label: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Binding key</label>
-            <Input
-              id="designer-total-binding"
-              value={metadata.bindingKey ?? ''}
-              onChange={(event) => applyMetadata({ bindingKey: event.target.value })}
-            />
-          </div>
-          {selectedNode.type === 'custom-total' && (
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Computation notes</label>
-              <textarea
-                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-                value={metadata.notes ?? ''}
-                onChange={(event) => applyMetadata({ notes: event.target.value })}
-              />
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'action-button') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Button</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Label</label>
-            <Input
-              id="designer-button-label"
-              value={metadata.label ?? 'Button'}
-              onChange={(event) => applyMetadata({ label: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Action type</label>
-            <select
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.actionType ?? 'url'}
-              onChange={(event) => applyMetadata({ actionType: event.target.value })}
-            >
-              <option value="url">URL</option>
-              <option value="mailto">Email</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Action value</label>
-            <Input
-              id="designer-button-action"
-              value={metadata.actionValue ?? ''}
-              onChange={(event) => applyMetadata({ actionValue: event.target.value })}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'signature') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Signature Block</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Signer label</label>
-            <Input
-              id="designer-signature-label"
-              value={metadata.signerLabel ?? 'Authorized Signature'}
-              onChange={(event) => applyMetadata({ signerLabel: event.target.value })}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={Boolean(metadata.includeDate)}
-              onChange={(event) => applyMetadata({ includeDate: event.target.checked })}
-            />
-            Include signing date
-          </label>
         </div>
       );
     }
@@ -2139,6 +1949,7 @@ export const DesignerShell: React.FC = () => {
                   )}
                 </div>
               )}
+              <DesignerSchemaInspector node={selectedNode} />
               {renderMetadataInspector()}
               <Button id="designer-inspector-apply" variant="outline" onClick={commitPropertyChanges}>
                 Apply

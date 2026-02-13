@@ -5,6 +5,7 @@ import type {
   Size,
 } from '../state/designerStore';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import type { DesignerInspectorSchema } from './inspectorSchema';
 
 export type DesignerComponentCategory = 'Structure' | 'Content' | 'Media' | 'Dynamic';
 
@@ -29,9 +30,221 @@ export interface DesignerComponentSchema {
   defaults: DesignerComponentDefaults;
   hierarchy: DesignerComponentHierarchy;
 
-  // Future: inspector schema (field panels / widgets) will live here.
-  inspector?: unknown;
+  inspector?: DesignerInspectorSchema;
 }
+
+const SECTION_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'section-border',
+      title: 'Section Border',
+      fields: [
+        {
+          kind: 'enum',
+          id: 'sectionBorderStyle',
+          domId: 'designer-section-border-style',
+          label: 'Border style',
+          path: 'metadata.sectionBorderStyle',
+          options: [
+            { value: 'light', label: 'Light' },
+            { value: 'strong', label: 'Strong' },
+            { value: 'none', label: 'None' },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const FIELD_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'field-binding',
+      title: 'Field Binding',
+      fields: [
+        {
+          kind: 'string',
+          id: 'bindingKey',
+          domId: 'designer-field-binding',
+          label: 'Binding key',
+          path: 'metadata.bindingKey',
+        },
+        {
+          kind: 'enum',
+          id: 'format',
+          label: 'Format',
+          path: 'metadata.format',
+          options: [
+            { value: 'text', label: 'Text' },
+            { value: 'number', label: 'Number' },
+            { value: 'currency', label: 'Currency' },
+            { value: 'date', label: 'Date' },
+          ],
+        },
+        {
+          kind: 'string',
+          id: 'placeholder',
+          domId: 'designer-field-placeholder',
+          label: 'Placeholder',
+          path: 'metadata.placeholder',
+        },
+        {
+          kind: 'enum',
+          id: 'fieldBorderStyle',
+          domId: 'designer-field-border-style',
+          label: 'Border style',
+          path: 'metadata.fieldBorderStyle',
+          options: [
+            { value: 'underline', label: 'Underline' },
+            { value: 'box', label: 'Box' },
+            { value: 'none', label: 'None' },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const LABEL_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'label-style',
+      title: 'Label Text',
+      fields: [
+        {
+          kind: 'enum',
+          id: 'fontWeight',
+          domId: 'designer-label-weight',
+          label: 'Weight',
+          path: 'metadata.fontWeight',
+          options: [
+            { value: 'semibold', label: 'Semibold' },
+            { value: 'bold', label: 'Bold' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'normal', label: 'Normal' },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const TOTALS_ROW_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'totals-row',
+      title: 'Totals Row',
+      fields: [
+        {
+          kind: 'string',
+          id: 'label',
+          domId: 'designer-total-label',
+          label: 'Label',
+          path: 'metadata.label',
+        },
+        {
+          kind: 'string',
+          id: 'bindingKey',
+          domId: 'designer-total-binding',
+          label: 'Binding key',
+          path: 'metadata.bindingKey',
+        },
+      ],
+    },
+  ],
+};
+
+const CUSTOM_TOTAL_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'totals-row',
+      title: 'Totals Row',
+      fields: [
+        {
+          kind: 'string',
+          id: 'label',
+          domId: 'designer-total-label',
+          label: 'Label',
+          path: 'metadata.label',
+        },
+        {
+          kind: 'string',
+          id: 'bindingKey',
+          domId: 'designer-total-binding',
+          label: 'Binding key',
+          path: 'metadata.bindingKey',
+        },
+        {
+          kind: 'textarea',
+          id: 'notes',
+          label: 'Computation notes',
+          path: 'metadata.notes',
+        },
+      ],
+    },
+  ],
+};
+
+const ACTION_BUTTON_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'action-button',
+      title: 'Button',
+      fields: [
+        {
+          kind: 'string',
+          id: 'label',
+          domId: 'designer-button-label',
+          label: 'Label',
+          path: 'metadata.label',
+          placeholder: 'Button',
+        },
+        {
+          kind: 'enum',
+          id: 'actionType',
+          label: 'Action type',
+          path: 'metadata.actionType',
+          options: [
+            { value: 'url', label: 'URL' },
+            { value: 'mailto', label: 'Email' },
+          ],
+        },
+        {
+          kind: 'string',
+          id: 'actionValue',
+          domId: 'designer-button-action',
+          label: 'Action value',
+          path: 'metadata.actionValue',
+        },
+      ],
+    },
+  ],
+};
+
+const SIGNATURE_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'signature',
+      title: 'Signature Block',
+      fields: [
+        {
+          kind: 'string',
+          id: 'signerLabel',
+          domId: 'designer-signature-label',
+          label: 'Signer label',
+          path: 'metadata.signerLabel',
+          placeholder: 'Authorized Signature',
+        },
+        {
+          kind: 'boolean',
+          id: 'includeDate',
+          label: 'Include signing date',
+          path: 'metadata.includeDate',
+        },
+      ],
+    },
+  ],
+};
 
 export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
   document: {
@@ -123,6 +336,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['page'],
     },
+    inspector: SECTION_INSPECTOR,
   },
   column: {
     type: 'column',
@@ -251,6 +465,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: FIELD_INSPECTOR,
   },
   label: {
     type: 'label',
@@ -268,6 +483,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: LABEL_INSPECTOR,
   },
   subtotal: {
     type: 'subtotal',
@@ -286,6 +502,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: TOTALS_ROW_INSPECTOR,
   },
   tax: {
     type: 'tax',
@@ -304,6 +521,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: TOTALS_ROW_INSPECTOR,
   },
   discount: {
     type: 'discount',
@@ -322,6 +540,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: TOTALS_ROW_INSPECTOR,
   },
   'custom-total': {
     type: 'custom-total',
@@ -340,6 +559,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: CUSTOM_TOTAL_INSPECTOR,
   },
   image: {
     type: 'image',
@@ -409,6 +629,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: SIGNATURE_INSPECTOR,
   },
   'action-button': {
     type: 'action-button',
@@ -427,6 +648,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
+    inspector: ACTION_BUTTON_INSPECTOR,
   },
   'attachment-list': {
     type: 'attachment-list',

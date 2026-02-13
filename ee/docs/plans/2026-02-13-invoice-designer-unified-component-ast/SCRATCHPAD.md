@@ -105,3 +105,7 @@ This plan intentionally continues the simplification arc:
   - Removed `updateNodeSize` from `packages/billing/src/components/invoice-designer/state/designerStore.ts`.
   - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` now implements `resizeNode(...)` using `setNodeProp` writes (`size.*`, `baseSize.*`, `style.*`) with a single history commit on mouse-up.
   - `setNodeProp`/`unsetNodeProp` now mirror `name`/`style.*`/`layout.*`/`metadata.*` updates into both legacy fields and `props.*` during cutover.
+- 2026-02-13: Started schema-driven Inspector cutover:
+  - Added a minimal inspector schema format in `packages/billing/src/components/invoice-designer/schema/inspectorSchema.ts` and attached schemas to component definitions in `packages/billing/src/components/invoice-designer/schema/componentSchema.ts`.
+  - Implemented `packages/billing/src/components/invoice-designer/inspector/DesignerSchemaInspector.tsx` which renders panels/fields from the selected node's component schema and writes edits via `setNodeProp`/`unsetNodeProp` (commit-on-blur for text fields).
+  - Updated `packages/billing/src/components/invoice-designer/DesignerShell.tsx` to render the schema-driven inspector for supported metadata panels while leaving complex editors (tables/attachments/media) on the legacy path for now.
