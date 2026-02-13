@@ -60,7 +60,7 @@
   {
     "id": "T008",
     "description": "Designer store: legacy paths like `metadata.bindingKey` normalize to canonical `props.metadata.bindingKey` and only canonical state changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
