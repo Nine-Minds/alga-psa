@@ -923,6 +923,8 @@ export const DesignerShell: React.FC = () => {
       justifyContent: 'flex-start' as const,
       alignItems: 'stretch' as const,
     };
+    const isFlexLayout = layout.display === 'flex';
+    const isGridLayout = layout.display === 'grid';
 
     const parsePx = (value: unknown, fallback = 0) => {
       if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -942,14 +944,31 @@ export const DesignerShell: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-slate-500 block mb-1">Direction</label>
+            <label className="text-[10px] text-slate-500 block mb-1">Mode</label>
             <select
               className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-              value={layout.flexDirection ?? 'column'}
-              onChange={(e) => updateNodeLayout(selectedNode.id, { display: 'flex', flexDirection: e.target.value as 'row' | 'column' })}
+              value={layout.display}
+              onChange={(e) => {
+                const next = e.target.value as 'flex' | 'grid';
+                if (next === 'flex') {
+                  updateNodeLayout(selectedNode.id, {
+                    display: 'flex',
+                    flexDirection: layout.flexDirection ?? 'column',
+                    justifyContent: layout.justifyContent ?? 'flex-start',
+                    alignItems: layout.alignItems ?? 'stretch',
+                  });
+                  return;
+                }
+                updateNodeLayout(selectedNode.id, {
+                  display: 'grid',
+                  gridTemplateColumns: layout.gridTemplateColumns ?? 'repeat(2, minmax(0, 1fr))',
+                  gridTemplateRows: layout.gridTemplateRows,
+                  gridAutoFlow: layout.gridAutoFlow ?? 'row',
+                });
+              }}
             >
-              <option value="column">Vertical ↓</option>
-              <option value="row">Horizontal →</option>
+              <option value="flex">Stack (Flex)</option>
+              <option value="grid">Grid</option>
             </select>
           </div>
           <div>
@@ -964,6 +983,24 @@ export const DesignerShell: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
+          {isFlexLayout && (
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Direction</label>
+              <select
+                className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                value={layout.flexDirection ?? 'column'}
+                onChange={(e) =>
+                  updateNodeLayout(selectedNode.id, {
+                    display: 'flex',
+                    flexDirection: e.target.value as 'row' | 'column',
+                  })
+                }
+              >
+                <option value="column">Vertical ↓</option>
+                <option value="row">Horizontal →</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="text-[10px] text-slate-500 block mb-1">Padding (px)</label>
             <input
@@ -973,34 +1010,84 @@ export const DesignerShell: React.FC = () => {
               onChange={(e) => updateNodeLayout(selectedNode.id, { padding: `${Number(e.target.value) || 0}px` })}
             />
           </div>
-          <div>
-            <label className="text-[10px] text-slate-500 block mb-1">Align Items</label>
-            <select
-              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-              value={layout.alignItems ?? 'stretch'}
-              onChange={(e) => updateNodeLayout(selectedNode.id, { alignItems: e.target.value as any })}
-            >
-              <option value="flex-start">Start</option>
-              <option value="center">Center</option>
-              <option value="flex-end">End</option>
-              <option value="stretch">Stretch</option>
-            </select>
-          </div>
-          <div className="col-span-2">
-            <label className="text-[10px] text-slate-500 block mb-1">Justify Content</label>
-            <select
-              className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-              value={layout.justifyContent ?? 'flex-start'}
-              onChange={(e) => updateNodeLayout(selectedNode.id, { justifyContent: e.target.value as any })}
-            >
-              <option value="flex-start">Start</option>
-              <option value="center">Center</option>
-              <option value="flex-end">End</option>
-              <option value="space-between">Space Between</option>
-              <option value="space-around">Space Around</option>
-              <option value="space-evenly">Space Evenly</option>
-            </select>
-          </div>
+          {isGridLayout && (
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Auto Flow</label>
+              <select
+                className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                value={layout.gridAutoFlow ?? 'row'}
+                onChange={(e) => updateNodeLayout(selectedNode.id, { gridAutoFlow: e.target.value as any })}
+              >
+                <option value="row">row</option>
+                <option value="column">column</option>
+                <option value="dense">dense</option>
+                <option value="row dense">row dense</option>
+                <option value="column dense">column dense</option>
+              </select>
+            </div>
+          )}
+          {isFlexLayout && (
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Align Items</label>
+              <select
+                className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                value={layout.alignItems ?? 'stretch'}
+                onChange={(e) => updateNodeLayout(selectedNode.id, { alignItems: e.target.value as any })}
+              >
+                <option value="flex-start">Start</option>
+                <option value="center">Center</option>
+                <option value="flex-end">End</option>
+                <option value="stretch">Stretch</option>
+              </select>
+            </div>
+          )}
+          {isFlexLayout && (
+            <div className="col-span-2">
+              <label className="text-[10px] text-slate-500 block mb-1">Justify Content</label>
+              <select
+                className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                value={layout.justifyContent ?? 'flex-start'}
+                onChange={(e) => updateNodeLayout(selectedNode.id, { justifyContent: e.target.value as any })}
+              >
+                <option value="flex-start">Start</option>
+                <option value="center">Center</option>
+                <option value="flex-end">End</option>
+                <option value="space-between">Space Between</option>
+                <option value="space-around">Space Around</option>
+                <option value="space-evenly">Space Evenly</option>
+              </select>
+            </div>
+          )}
+          {isGridLayout && (
+            <div className="col-span-2">
+              <label className="text-[10px] text-slate-500 block mb-1">Template Columns</label>
+              <Input
+                id="designer-grid-template-columns"
+                value={layout.gridTemplateColumns ?? ''}
+                placeholder="repeat(2, minmax(0, 1fr))"
+                onChange={(event) =>
+                  updateNodeLayout(selectedNode.id, {
+                    gridTemplateColumns: normalizeCssValue(event.target.value),
+                  })
+                }
+              />
+            </div>
+          )}
+          {isGridLayout && (
+            <div className="col-span-2">
+              <label className="text-[10px] text-slate-500 block mb-1">Template Rows</label>
+              <Input
+                id="designer-grid-template-rows"
+                value={layout.gridTemplateRows ?? ''}
+                placeholder="auto"
+                onChange={(event) =>
+                  updateNodeLayout(selectedNode.id, {
+                    gridTemplateRows: normalizeCssValue(event.target.value),
+                  })
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
     );

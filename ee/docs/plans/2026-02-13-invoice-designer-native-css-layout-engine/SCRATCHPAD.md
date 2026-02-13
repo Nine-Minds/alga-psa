@@ -86,6 +86,12 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
   - Canvas already applies these values via `resolveNodeBoxStyle(node.style)`.
 
+- 2026-02-13: `F008` Grid container mode (CSS grid)
+  - Layout inspector now supports switching a container between `display:flex` and `display:grid`.
+  - When in grid mode, inspector exposes `grid-template-columns`, `grid-template-rows`, and `grid-auto-flow` (gap/padding remain shared):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas already renders grid containers via `resolveContainerLayoutStyle(node.layout)` + flow children rendering.
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
