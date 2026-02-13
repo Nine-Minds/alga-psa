@@ -7,7 +7,17 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 
 const isIntegerKey = (key: string): boolean => key !== '' && String(Number.parseInt(key, 10)) === key;
 
-const isSafePatchPath = (parts: string[]): boolean => !parts.some((part) => RESERVED_PATCH_PATH_SEGMENTS.has(part));
+const getUnsafePatchPathSegment = (parts: string[]): string | null =>
+  parts.find((part) => RESERVED_PATCH_PATH_SEGMENTS.has(part)) ?? null;
+
+const warnRejectedPatchPath = (op: 'setNodeProp' | 'unsetNodeProp', nodeId: string, path: string, segment: string) => {
+  // This is developer-facing feedback only; state updates must remain safe no-ops.
+  // Guard in case this runs in a non-Next browser context where `process` might be absent.
+  const isProd = typeof process !== 'undefined' && process?.env?.NODE_ENV === 'production';
+  if (isProd) return;
+  // eslint-disable-next-line no-console
+  console.warn(`[invoice-designer] ${op} rejected unsafe patch path segment`, { nodeId, path, segment });
+};
 
 const setIn = (value: unknown, path: string[], nextLeafValue: unknown): unknown => {
   if (path.length === 0) return nextLeafValue;
@@ -67,7 +77,11 @@ export const setNodeProp = (nodes: DesignerNode[], nodeId: string, path: string,
   const parts = splitDotPath(path);
   if (parts.length === 0) return nodes;
   // Safe no-op: do not attempt any updates for paths that could cause prototype pollution.
-  if (!isSafePatchPath(parts)) return nodes;
+  const unsafeSegment = getUnsafePatchPathSegment(parts);
+  if (unsafeSegment) {
+    warnRejectedPatchPath('setNodeProp', nodeId, path, unsafeSegment);
+    return nodes;
+  }
 
   const index = nodes.findIndex((node) => node.id === nodeId);
   if (index === -1) return nodes;
@@ -85,7 +99,11 @@ export const unsetNodeProp = (nodes: DesignerNode[], nodeId: string, path: strin
   const parts = splitDotPath(path);
   if (parts.length === 0) return nodes;
   // Safe no-op: do not attempt any updates for paths that could cause prototype pollution.
-  if (!isSafePatchPath(parts)) return nodes;
+  const unsafeSegment = getUnsafePatchPathSegment(parts);
+  if (unsafeSegment) {
+    warnRejectedPatchPath('unsetNodeProp', nodeId, path, unsafeSegment);
+    return nodes;
+  }
 
   const index = nodes.findIndex((node) => node.id === nodeId);
   if (index === -1) return nodes;

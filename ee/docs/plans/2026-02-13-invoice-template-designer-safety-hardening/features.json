@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Add developer-visible feedback when a patch is rejected (console warning and/or surfaced diagnostic).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {

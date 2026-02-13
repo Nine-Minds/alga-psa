@@ -34,6 +34,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Patch ops now reject prototype-pollution path segments (`__proto__`, `prototype`, `constructor`) at any depth (safe no-op):
   - `packages/billing/src/components/invoice-designer/state/patchOps.ts`
   - Rejection behavior: returns the original `nodes` reference and performs no mutation or history side-effects.
+  - Observability: rejected patches emit a dev-only `console.warn`.
 - (2026-02-13) Invoice template AST renderer emits CSS selectors/vars based on unvalidated identifiers:
   - `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
   - `packages/billing/src/lib/invoice-template-ast/schema.ts`
