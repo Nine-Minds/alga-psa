@@ -3,6 +3,7 @@ import type { Modifier } from '@dnd-kit/core';
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragMoveEvent,
   DragOverlay,
   DragStartEvent,
@@ -72,6 +73,10 @@ type DropFeedback = {
   tone: 'info' | 'error';
   message: string;
 };
+
+type DropIndicator =
+  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after' }
+  | null;
 
 type InsertBlockCallout = {
   sectionId: string;
@@ -350,6 +355,7 @@ export const DesignerShell: React.FC = () => {
   const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
   const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
   const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
   const [insertBlockCallout, setInsertBlockCallout] = useState<InsertBlockCallout | null>(null);
   const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
@@ -943,6 +949,7 @@ export const DesignerShell: React.FC = () => {
     setPreviewPositions({});
     setGuides([]);
     setActiveDrag(null);
+    setDropIndicator(null);
     updatePointerLocation(null);
   }, [updatePointerLocation]);
 
@@ -1828,6 +1835,54 @@ export const DesignerShell: React.FC = () => {
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const activeData = event.active.data.current;
+    if (!isNodeDragData(activeData) || activeData.layoutKind !== 'flow') {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
+      return;
+    }
+
+    const over = event.over;
+    if (!over) {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
+      return;
+    }
+
+    const overData = over.data.current;
+    if (!isNodeDragData(overData)) {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
+      return;
+    }
+
+    const overNode = nodesById.get(overData.nodeId) ?? null;
+    if (!overNode || !overNode.parentId) {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
+      return;
+    }
+
+    const parent = nodesById.get(overNode.parentId) ?? null;
+    const axis = parent?.layout?.display === 'flex' && parent.layout.flexDirection === 'row' ? 'x' : 'y';
+
+    const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+    const overRect = over.rect;
+    if (!activeRect || !overRect) {
+      return;
+    }
+
+    const activeCenter = axis === 'x' ? activeRect.left + activeRect.width / 2 : activeRect.top + activeRect.height / 2;
+    const overCenter = axis === 'x' ? overRect.left + overRect.width / 2 : overRect.top + overRect.height / 2;
+    const position: 'before' | 'after' = activeCenter < overCenter ? 'before' : 'after';
+    setDropIndicator({ kind: 'insert', overNodeId: overNode.id, position });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     try {
       if (activeDrag?.kind === 'component' || activeDrag?.kind === 'preset') {
@@ -2179,19 +2234,21 @@ export const DesignerShell: React.FC = () => {
             gridSize={gridSize}
             canvasScale={canvasScale}
             snapToGrid={snapToGrid}
-            guides={guides}
-            isDragActive={Boolean(activeDrag)}
-            forcedDropTarget={forcedDropTarget}
-            activeDrag={activeDrag}
-            modifiers={modifiers}
-            onPointerLocationChange={updatePointerLocation}
+	            guides={guides}
+	            isDragActive={Boolean(activeDrag)}
+              dropIndicator={dropIndicator}
+	            forcedDropTarget={forcedDropTarget}
+	            activeDrag={activeDrag}
+	            modifiers={modifiers}
+	            onPointerLocationChange={updatePointerLocation}
             onNodeSelect={selectNode}
-            onResize={updateNodeSize}
-            onDragStart={handleDragStart}
-            onDragMove={handleDragMove}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          />
+	            onResize={updateNodeSize}
+	            onDragStart={handleDragStart}
+	            onDragMove={handleDragMove}
+              onDragOver={handleDragOver}
+	            onDragEnd={handleDragEnd}
+	            onDragCancel={handleDragCancel}
+	          />
           <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
             <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
 	          {selectedNode ? (
@@ -2364,6 +2421,7 @@ type DesignerWorkspaceProps = {
   snapToGrid: boolean;
   guides: AlignmentGuide[];
   isDragActive: boolean;
+  dropIndicator: DropIndicator;
   forcedDropTarget: string | 'canvas' | null;
   activeDrag: ActiveDragState;
   modifiers: Modifier[];
@@ -2372,6 +2430,7 @@ type DesignerWorkspaceProps = {
   onResize: (nodeId: string, size: { width: number; height: number }, commit?: boolean) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragMove: (event: DragMoveEvent) => void;
+  onDragOver: (event: DragOverEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
   onDragCancel: () => void;
 };
@@ -2388,6 +2447,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   snapToGrid,
   guides,
   isDragActive,
+  dropIndicator,
   forcedDropTarget,
   activeDrag,
   modifiers,
@@ -2396,36 +2456,39 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   onResize,
   onDragStart,
   onDragMove,
+  onDragOver,
   onDragEnd,
   onDragCancel,
 }) => {
   useDndMonitor({
     onDragStart,
     onDragMove,
+    onDragOver,
     onDragEnd,
     onDragCancel,
   });
 
   return (
     <div className="flex-1 flex">
-        <DesignCanvas
-          nodes={nodes}
-          selectedNodeId={selectedNodeId}
-          activeReferenceNodeId={activeReferenceNodeId}
-          constrainedCounterpartNodeIds={constrainedCounterpartNodeIds}
-          showGuides={showGuides}
-        showRulers={showRulers}
-        gridSize={gridSize}
-        canvasScale={canvasScale}
-        snapToGrid={snapToGrid}
-        guides={guides}
-        isDragActive={isDragActive}
-        forcedDropTarget={forcedDropTarget}
-        droppableId={DROPPABLE_CANVAS_ID}
-        onPointerLocationChange={onPointerLocationChange}
-        onNodeSelect={onNodeSelect}
-        onResize={onResize}
-      />
+	        <DesignCanvas
+	          nodes={nodes}
+	          selectedNodeId={selectedNodeId}
+	          activeReferenceNodeId={activeReferenceNodeId}
+	          constrainedCounterpartNodeIds={constrainedCounterpartNodeIds}
+	          showGuides={showGuides}
+	        showRulers={showRulers}
+	        gridSize={gridSize}
+	        canvasScale={canvasScale}
+	        snapToGrid={snapToGrid}
+	        guides={guides}
+	        isDragActive={isDragActive}
+          dropIndicator={dropIndicator}
+	        forcedDropTarget={forcedDropTarget}
+	        droppableId={DROPPABLE_CANVAS_ID}
+	        onPointerLocationChange={onPointerLocationChange}
+	        onNodeSelect={onNodeSelect}
+	        onResize={onResize}
+	      />
       <DragOverlay modifiers={modifiers}>
         {activeDrag && (
           <div className="px-3 py-2 bg-white border rounded shadow-lg text-sm font-semibold">

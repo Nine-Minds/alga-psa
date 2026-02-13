@@ -110,6 +110,12 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - Reparenting via drag-drop is validated with `canNestWithinParent(childType, parentType)` and cycle prevention (no dropping into descendants):
     - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
 
+- 2026-02-13: `F013` Drop indicators (DOM-derived)
+  - Added a before/after insertion indicator line for flow-layout drags, derived from active/over DOM rect midpoints (no custom geometry solver):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Container drop targets are still highlighted via `useDroppable().isOver` rings (DOM-measured).
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

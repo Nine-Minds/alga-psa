@@ -35,6 +35,7 @@ interface DesignCanvasProps {
   snapToGrid: boolean;
   guides: AlignmentGuide[];
   isDragActive: boolean;
+  dropIndicator?: DropIndicator;
   forcedDropTarget: string | 'canvas' | null;
   droppableId: string;
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
@@ -46,6 +47,8 @@ interface DesignCanvasProps {
 
 const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 
+type DropIndicator = { kind: 'insert'; overNodeId: string; position: 'before' | 'after' } | null;
+
 interface CanvasNodeProps {
   node: DesignerNode;
   parentUsesFlowLayout: boolean;
@@ -55,6 +58,7 @@ interface CanvasNodeProps {
   isInSelectionContext: boolean;
   hasActiveSelection: boolean;
   isDragActive: boolean;
+  dropIndicator: DropIndicator;
   forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
@@ -718,6 +722,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   isInSelectionContext,
   hasActiveSelection,
   isDragActive,
+  dropIndicator,
   forcedDropTarget,
   onSelect,
   onResize,
@@ -895,7 +900,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       style={nodeStyle}
       data-automation-id={`designer-canvas-node-${node.id}`}
       className={clsx(
-        'select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
+        'relative select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
         isLabelNode
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
@@ -925,6 +930,14 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       onClick={handleNodeClick}
       {...(readOnly ? {} : attributes)}
     >
+      {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
+        <div
+          className={clsx(
+            'pointer-events-none absolute left-0 right-0 h-0.5 bg-emerald-500 z-20',
+            dropIndicator.position === 'before' ? '-top-1' : '-bottom-1'
+          )}
+        />
+      )}
       {isContainer ? (
         <div className="relative w-full h-full">
           {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
@@ -1060,6 +1073,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   snapToGrid,
   guides,
   isDragActive,
+  dropIndicator = null,
   forcedDropTarget,
   droppableId,
   onPointerLocationChange,
@@ -1176,6 +1190,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           isInSelectionContext={selectionContextNodeIds.has(node.id)}
           hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
+          dropIndicator={dropIndicator}
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
           onResize={onResize}
@@ -1207,6 +1222,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     childrenMap,
     nodesById,
     constrainedCounterpartNodeIds,
+    dropIndicator,
     forcedDropTarget,
     hasActiveRenderableSelection,
     isDragActive,
