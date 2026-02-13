@@ -94,3 +94,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F063: Webhook upserts `rmm_alerts` for `tacticalrmm` and associates `asset_id` when an agent external mapping exists.
 - (2026-02-13) F064: Webhook triggers a best-effort targeted single-agent refresh to update cached vitals/status after alert events.
 - (2026-02-13) F070: Implemented Tactical alerts backfill via `PATCH /api/alerts/` and upsert into `rmm_alerts` (current default: active alerts).
+- (2026-02-13) F071: Implemented Tactical bulk software ingestion via `GET /api/software/` into `software_catalog` + `asset_software` using Tactical agent_id mappings (no per-agent refresh calls).
