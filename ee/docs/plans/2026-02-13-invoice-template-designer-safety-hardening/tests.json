@@ -218,7 +218,7 @@
   {
     "id": "T027",
     "description": "Invoice template AST evaluation/rendering: schema validation failures surface as diagnostics and do not render malformed CSS.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014"
