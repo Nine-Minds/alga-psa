@@ -19,7 +19,16 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) In-app inbound email new-ticket creation happens in `shared/services/email/processInboundEmailInApp.ts` and currently:
   - Finds a contact strictly by exact normalized email (`findContactByEmail`).
   - Otherwise uses inbound ticket defaults `client_id` and leaves `contact_id` null.
+- (2026-02-13) Client "default contact" storage is already supported end-to-end via client `properties`:
+  - Types: `packages/types/src/interfaces/client.interfaces.ts` includes `properties.primary_contact_id` and `properties.primary_contact_name`.
+  - Client-side validation: `packages/clients/src/schemas/client.schema.ts` includes `primary_contact_id` and `primary_contact_name`.
+  - Server API schema: `server/src/lib/api/schemas/client.ts` allows `properties.primary_contact_id` (uuid) + `primary_contact_name`.
+  - Client update persistence merges `properties` into `clients.properties`: `packages/clients/src/actions/clientActions.ts`.
 - (2026-02-13) Added shared helper `extractEmailDomain()` in `shared/lib/email/addressUtils.ts` which normalizes via `normalizeEmailAddress()` then returns substring after `@` (lowercased).
+- (2026-02-13) Implemented `findUniqueClientIdByContactEmailDomain(domain, tenant)` in `shared/workflow/actions/emailWorkflowActions.ts`:
+  - Uses active contacts only (`contacts.is_inactive = false`), tenant-scoped.
+  - Matches by email suffix `@{domain}` (case-insensitive).
+  - Returns a client_id only when exactly one unique client matches; otherwise returns null.
 - (2026-02-13) The workflow runtime action `resolve_inbound_ticket_context` in `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` contains similar “find contact by email, else defaults” logic and should be kept in parity if workflows still invoke it.
 - (2026-02-13) There is existing “billing contact” (`clients.billing_contact_id`) UI in `packages/clients/src/components/clients/BillingConfigForm.tsx`, but it is billing-specific and not suitable as the inbound-email default contact.
 

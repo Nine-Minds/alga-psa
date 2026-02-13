@@ -12,7 +12,7 @@
   {
     "id": "F003",
     "description": "Define client default contact storage using existing client properties field `clients.properties.primary_contact_id` (+ optional `primary_contact_name`)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
